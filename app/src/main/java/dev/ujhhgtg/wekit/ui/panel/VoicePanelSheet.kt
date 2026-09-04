@@ -857,6 +857,10 @@ private fun VoicePanelContent(
                             TtsMode.CLONE -> selectedClone?.name?.let(PanelUiText::Raw)
                                 ?: panelUiText(R.string.tts_mode_clone)
                             TtsMode.TIAX -> panelUiText(R.string.tts_mode_tiax)
+                            TtsMode.FISH_AUDIO -> panelUiText(R.string.tts_mode_fish)
+                            TtsMode.YX520 -> panelUiText(R.string.tts_mode_yx520)
+                            TtsMode.BYTE_DANCE -> panelUiText(R.string.tts_mode_byte)
+                            TtsMode.VOCU -> panelUiText(R.string.tts_mode_vocu)
                         }
                     }.onFailure { operationMessage = it.toPanelUiText(R.string.voice_panel_error_tts_convert) }
                 }

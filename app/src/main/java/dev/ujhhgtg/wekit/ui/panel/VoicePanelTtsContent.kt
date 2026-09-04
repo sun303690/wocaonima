@@ -36,7 +36,7 @@ import dev.ujhhgtg.wekit.features.items.chat.EDGE_TTS_VOICES
 import dev.ujhhgtg.wekit.features.items.chat.panel.CloneVoice
 import dev.ujhhgtg.wekit.features.items.chat.panel.voice.TIAX_PRESET_VOICES
 
-internal enum class TtsMode { SYSTEM, EDGE, CLONE, TIAX, FISH_AUDIO, YX520, BYTE_DANCE, VOCU }
+enum class TtsMode { SYSTEM, EDGE, CLONE, TIAX, FISH_AUDIO, YX520, BYTE_DANCE, VOCU }
 
 /** 多引擎 TTS 音色条目（FISH_AUDIO/YX520 由 ys.php 拉取，BYTE_DANCE/VOCU 手动输入）。 */
 internal data class MultiEngineVoiceEntry(val id: String, val name: String)
