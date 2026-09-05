@@ -630,6 +630,8 @@
     <string name="feature_half_screen_album_picker_description">將聊天「+」面板的相冊選擇器、圖片預覽和搜索頁顯示爲半屏卡片, 上方可看到聊天內容 (圖片編輯器保持全屏)</string>
     <string name="feature_hide_messages_avatars_name">隱藏消息頭像</string>
     <string name="feature_hide_messages_avatars_description">隱藏消息的用戶頭像 (Telegram 風格)</string>
+    <string name="feature_avatar_time_display_name">頭像下顯示時間</string>
+    <string name="feature_avatar_time_display_description">在每條消息發送者頭像下方用粉紅色顯示消息時間 (HH:mm)，對方與自己的消息都顯示</string>
     <string name="feature_markdown_rendering_name">Markdown 渲染</string>
     <string name="feature_markdown_rendering_description">渲染 Markdown 消息</string>
     <string name="feature_merge_chat_message_context_menu_items_name">消息長按菜單項合併展示</string>
@@ -3930,4 +3932,27 @@
     <string name="parse_video_save_cover">儲存封面</string>
     <string name="parse_video_downloading_music">正在下載音樂…</string>
     <string name="parse_video_download_music_direct">儲存音樂</string>
-    <string name="parse_video_music_download_failed">音乐提取失败</string></resources>
+    <string name="parse_video_music_download_failed">音乐提取失败</string>    <string name="feature_ai_voice_assistant_name">AI語音助手</string>
+    <string name="feature_ai_voice_assistant_description">DeepSeek AI 自動回覆（觸發詞+記憶）並通過多引擎TTS發送語音回覆</string>
+    <string name="aivoice_section_ai">AI 對話設置</string>
+    <string name="aivoice_enabled">AI 自動回覆</string>
+    <string name="aivoice_api_url">API 地址</string>
+    <string name="aivoice_api_key">API Key</string>
+    <string name="aivoice_model">模型</string>
+    <string name="aivoice_trigger">觸發詞（如 *）</string>
+    <string name="aivoice_prompt">人設提示詞</string>
+    <string name="aivoice_memory_rounds">記憶輪數</string>
+    <string name="aivoice_voice_only">僅語音回覆</string>
+    <string name="aivoice_voice_only_desc">回覆時發送語音消息而非文字</string>
+    <string name="aivoice_section_tts">TTS 語音引擎</string>
+    <string name="aivoice_engine">引擎</string>
+    <string name="aivoice_engine_fish">FishAudio</string>
+    <string name="aivoice_engine_yx">yx520</string>
+    <string name="aivoice_engine_bv">火山豆包</string>
+    <string name="aivoice_engine_vocu">VoCu</string>
+    <string name="aivoice_engine_tiax">天X tiax</string>
+    <string name="aivoice_engine_key">引擎 API Key</string>
+    <string name="aivoice_engine_voice">音色 ID</string>
+    <string name="aivoice_save">保存</string>
+    <string name="aivoice_saved">設置已保存</string>
+</resources>

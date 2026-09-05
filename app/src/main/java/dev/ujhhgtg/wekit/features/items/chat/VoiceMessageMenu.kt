@@ -33,7 +33,7 @@ object VoiceMessageMenu : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
             imageVector = MaterialSymbols.Outlined.Volume_up,
             isSupported = { true },
         ) { view, _, _ ->
-            VoicePanel.openPanel(view)
+            AiVoiceSettingsDialog.show(view.context)
         },
     )
 }

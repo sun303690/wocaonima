@@ -670,6 +670,8 @@
     <string name="feature_half_screen_album_picker_description">Display the album selector, image preview and search page of the chat "+" panel as half-screen cards, with the chat content visible above (the image editor remains full-screen)</string>
     <string name="feature_hide_messages_avatars_name">Hide message avatar</string>
     <string name="feature_hide_messages_avatars_description">Hide user avatar for messages (Telegram style)</string>
+    <string name="feature_avatar_time_display_name">Time under avatar</string>
+    <string name="feature_avatar_time_display_description">Show each message send time (HH:mm) in pink under the sender avatar — both for others and yourself</string>
     <string name="feature_markdown_rendering_name">Markdown rendering</string>
     <string name="feature_markdown_rendering_description">Rendering Markdown messages</string>
     <string name="feature_merge_chat_message_context_menu_items_name">Merge message context-menu items</string>
@@ -3920,4 +3922,27 @@
     <string name="parse_video_save_cover">Save cover</string>
     <string name="parse_video_downloading_music">Downloading music…</string>
     <string name="parse_video_download_music_direct">Save music</string>
-    <string name="parse_video_music_download_failed">Music extraction failed</string></resources>
+    <string name="parse_video_music_download_failed">Music extraction failed</string>    <string name="feature_ai_voice_assistant_name">AI voice assistant</string>
+    <string name="feature_ai_voice_assistant_description">DeepSeek AI auto-reply (trigger word + memory) with multi-engine TTS voice reply</string>
+    <string name="aivoice_section_ai">AI Conversation</string>
+    <string name="aivoice_enabled">AI auto-reply</string>
+    <string name="aivoice_api_url">API URL</string>
+    <string name="aivoice_api_key">API Key</string>
+    <string name="aivoice_model">Model</string>
+    <string name="aivoice_trigger">Trigger word (e.g. *)</string>
+    <string name="aivoice_prompt">System prompt</string>
+    <string name="aivoice_memory_rounds">Memory rounds</string>
+    <string name="aivoice_voice_only">Voice-only reply</string>
+    <string name="aivoice_voice_only_desc">Reply with a voice message instead of text</string>
+    <string name="aivoice_section_tts">Voice Engine</string>
+    <string name="aivoice_engine">Engine</string>
+    <string name="aivoice_engine_fish">FishAudio</string>
+    <string name="aivoice_engine_yx">yx520</string>
+    <string name="aivoice_engine_bv">ByteDance (Doubao)</string>
+    <string name="aivoice_engine_vocu">VoCu</string>
+    <string name="aivoice_engine_tiax">tiax</string>
+    <string name="aivoice_engine_key">Engine API Key</string>
+    <string name="aivoice_engine_voice">Voice ID</string>
+    <string name="aivoice_save">Save</string>
+    <string name="aivoice_saved">Settings saved</string>
+</resources>

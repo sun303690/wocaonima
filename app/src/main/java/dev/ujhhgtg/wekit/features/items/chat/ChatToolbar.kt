@@ -97,7 +97,6 @@ import dev.ujhhgtg.wekit.features.api.ui.WeCurrentConversationApi
 import dev.ujhhgtg.wekit.features.core.ClickableFeature
 import dev.ujhhgtg.wekit.features.core.FeatureCategoryIds
 import dev.ujhhgtg.wekit.features.items.system.agent.WeAgentOverlayController
-import dev.ujhhgtg.wekit.features.items.chat.VoicePanel
 import dev.ujhhgtg.wekit.features.items.chat_input_bar_menu.ParseVideo
 import dev.ujhhgtg.wekit.preferences.WePrefs
 import dev.ujhhgtg.wekit.ui.content.AlertDialogContent
@@ -559,7 +558,7 @@ object ChatToolbar : ClickableFeature(), IResolveDex {
                             })
 
                             list.add(VOICE_MESSAGE_NAME to {
-                                VoicePanel.openPanel(activity)
+                                AiVoiceSettingsDialog.show(activity)
                             })
 
                             list.add(VIDEO_PARSE_NAME to {
