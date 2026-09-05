@@ -2706,6 +2706,12 @@
     <plurals name="batch_mass_send_partial">
         <item quantity="other">已群发到 %1$d/%2$d 个对象</item>
     </plurals>
+    <string name="batch_mass_send_timing_title">发送时机</string>
+    <string name="batch_mass_send_timing_now">立即发送</string>
+    <string name="batch_mass_send_timing_scheduled">定时发送</string>
+    <string name="batch_mass_send_timing_scheduled_label">定时时间（年-月-日 时:分:秒）</string>
+    <string name="batch_mass_send_schedule_invalid">请输入有效的日期和时间</string>
+    <string name="batch_mass_send_scheduled">将于 %1$s 发送…</string>
     <!-- Task 5 group 1: contacts -->
     <string name="contacts_auto_add_nearby_menu">自动加好友</string>
     <string name="contacts_auto_remark_format">备注格式</string>

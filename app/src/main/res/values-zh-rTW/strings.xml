@@ -2699,6 +2699,12 @@
     <plurals name="batch_mass_send_partial">
         <item quantity="other">已羣發到 %1$d/%2$d 個對象</item>
     </plurals>
+    <string name="batch_mass_send_timing_title">發送時機</string>
+    <string name="batch_mass_send_timing_now">立即發送</string>
+    <string name="batch_mass_send_timing_scheduled">定時發送</string>
+    <string name="batch_mass_send_timing_scheduled_label">定時時間（年-月-日 時:分:秒）</string>
+    <string name="batch_mass_send_schedule_invalid">請輸入有效的日期和時間</string>
+    <string name="batch_mass_send_scheduled">將於 %1$s 發送…</string>
     <string name="contacts_auto_add_nearby_menu">自動加好友</string>
     <string name="contacts_auto_remark_format">備註格式</string>
     <string name="contacts_auto_remark_insert_placeholder">點擊插入佔位符：</string>

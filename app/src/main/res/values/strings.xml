@@ -2689,6 +2689,12 @@
     <plurals name="batch_mass_send_progress"><item quantity="one">Sending to %1$d recipient…</item><item quantity="other">Sending to %1$d recipients…</item></plurals>
     <plurals name="batch_mass_send_done"><item quantity="one">Sent to %1$d recipient</item><item quantity="other">Sent to %1$d recipients</item></plurals>
     <plurals name="batch_mass_send_partial"><item quantity="one">Sent to %1$d of %2$d recipient</item><item quantity="other">Sent to %1$d of %2$d recipients</item></plurals>
+    <string name="batch_mass_send_timing_title">Send timing</string>
+    <string name="batch_mass_send_timing_now">Send now</string>
+    <string name="batch_mass_send_timing_scheduled">Scheduled send</string>
+    <string name="batch_mass_send_timing_scheduled_label">Scheduled time (yyyy-MM-dd HH:mm:ss)</string>
+    <string name="batch_mass_send_schedule_invalid">Enter a valid date and time</string>
+    <string name="batch_mass_send_scheduled">Will send at %1$s…</string>
 
     <!-- Task 5 group 1: contacts -->
     <string name="contacts_auto_add_nearby_menu">Add friends automatically</string>
