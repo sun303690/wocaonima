@@ -2,49 +2,52 @@ package dev.ujhhgtg.wekit.features.items.batch
 
 import android.content.Context
 import androidx.activity.ComponentActivity
-import androidx.annotation.StringRes
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import dev.ujhhgtg.wekit.R
 import dev.ujhhgtg.wekit.features.api.core.WeDatabaseApi
-import dev.ujhhgtg.wekit.features.api.core.WeMessageApi
-import dev.ujhhgtg.wekit.features.api.core.models.IWeContact
 import dev.ujhhgtg.wekit.features.core.ClickableFeature
 import dev.ujhhgtg.wekit.features.core.FeatureCategoryIds
 import dev.ujhhgtg.wekit.ui.content.AlertDialogContent
-import dev.ujhhgtg.wekit.ui.content.Button
+import dev.ujhhgtg.wekit.ui.content.Button as WeButton
 import dev.ujhhgtg.wekit.ui.content.ContactsSelector
-import dev.ujhhgtg.wekit.ui.content.DefaultColumn
-import dev.ujhhgtg.wekit.ui.content.TextButton
-import dev.ujhhgtg.wekit.ui.content.WeDateTimeField
-import dev.ujhhgtg.wekit.ui.content.WeDateTimeMode
-import dev.ujhhgtg.wekit.ui.content.formatDateTime
-import dev.ujhhgtg.wekit.ui.content.m3.RadioButtonWidget
+import dev.ujhhgtg.wekit.ui.content.TextButton as WeTextButton
+import dev.ujhhgtg.wekit.ui.content.WeTimeOfDayField
+import dev.ujhhgtg.wekit.ui.content.formatMinuteOfDay
 import dev.ujhhgtg.wekit.ui.utils.showComposeDialog
-import dev.ujhhgtg.wekit.utils.WeLogger
 import dev.ujhhgtg.wekit.utils.android.showToast
-import dev.ujhhgtg.wekit.utils.android.showToastSuspend
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * 定时群发：编写文本/卡片内容，选择发送时机（立即 / 定时到指定日期时间），
- * 再选多个好友或群聊，到点后批量发送。发送请求自动间隔，避免触发服务端风控。
+ * 定时群发：
+ * - 标签把群打包，发消息按标签一键选定目标群
+ * - 任务 = 消息内容 + 每天多个发送时间点(HH:mm，可添加多个) + 目标(标签/手选群)
+ * - 每个时间点每天到点自动发一次，消息随时可改
  */
 object MassSendMessage : ClickableFeature() {
 
-    override val technicalId = "群发消息"
+    override val technicalId = "定时群发"
     override val nameRes = R.string.feature_mass_send_message_name
     override val categoryIds = listOf(FeatureCategoryIds.BATCH)
     override val descriptionRes = R.string.feature_mass_send_message_description
@@ -53,197 +56,338 @@ object MassSendMessage : ClickableFeature() {
 
     override val noSwitchWidget = true
 
-    /** Space out sends to avoid WeChat's server-side rate limiting. */
-    private const val SEND_INTERVAL_MS = 800L
-
-    private enum class SendMode(
-        @StringRes val displayNameRes: Int,
-        @StringRes val hintRes: Int,
-        @StringRes val labelRes: Int,
-    ) {
-        TEXT(
-            R.string.batch_mass_send_text_mode,
-            R.string.batch_mass_send_text_hint,
-            R.string.batch_mass_send_text_label,
-        ),
-        CARD(
-            R.string.batch_mass_send_card_mode,
-            R.string.batch_mass_send_card_hint,
-            R.string.batch_mass_send_card_label,
-        ),
-    }
-
-    private enum class TimingMode(@StringRes val displayNameRes: Int) {
-        NOW(R.string.batch_mass_send_timing_now),
-        SCHEDULED(R.string.batch_mass_send_timing_scheduled),
-    }
-
     override fun onClick(context: ComponentActivity) {
-        val contacts = WeDatabaseApi.getFriends() + WeDatabaseApi.getGroups()
-
+        MassTaskStore.reload()
+        MassTaskStore.startScheduler()
         showComposeDialog(context) {
-            MassSendMessageDialog(
+            TaskListPage(
                 context = context,
-                contacts = contacts,
-                onDismiss = onDismiss
+                onChanged = { MassTaskStore.saveTasks() },
             )
         }
     }
 
-    @Composable
-    private fun MassSendMessageDialog(
-        context: Context,
-        contacts: List<IWeContact>,
-        onDismiss: () -> Unit
-    ) {
-        var text by remember { mutableStateOf("") }
-        var mode by remember { mutableStateOf(SendMode.TEXT) }
-        var timing by remember { mutableStateOf(TimingMode.NOW) }
-        var scheduleText by remember { mutableStateOf(formatDateTime(System.currentTimeMillis())) }
+    // ================= 页面1：任务列表 =================
 
-        fun scheduledMillis(): Long? {
-            if (timing == TimingMode.NOW) return null
-            val millis = dev.ujhhgtg.wekit.ui.content.parseDateTime(scheduleText) ?: return null
-            // Allow scheduling in the past (send immediately) but reject garbage formats via the field.
-            return millis
-        }
+    @Composable
+    private fun TaskListPage(
+        context: Context,
+        onChanged: () -> Unit,
+    ) {
+        val tasks = MassTaskStore.tasks
+        val tags = MassTaskStore.tags
 
         AlertDialogContent(
             title = { Text(stringResource(R.string.feature_mass_send_message_name)) },
             text = {
-                DefaultColumn {
-                    SendMode.entries.forEach { option ->
-                        RadioButtonWidget(
-                            iconPlaceholder = false,
-                            title = stringResource(option.displayNameRes),
-                            selected = mode == option,
-                            onClick = { mode = option },
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    if (tags.isEmpty() && tasks.isEmpty()) {
+                        Text(
+                            stringResource(R.string.mass_task_empty_hint),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    Text(stringResource(mode.hintRes))
-                    OutlinedTextField(
-                        value = text,
-                        onValueChange = { text = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text(stringResource(mode.labelRes)) },
-                        singleLine = false,
-                        minLines = 3,
-                        maxLines = 8
-                    )
 
-                    Text(stringResource(R.string.batch_mass_send_timing_title))
-                    TimingMode.entries.forEach { option ->
-                        RadioButtonWidget(
-                            iconPlaceholder = false,
-                            title = stringResource(option.displayNameRes),
-                            selected = timing == option,
-                            onClick = { timing = option },
-                        )
+                    if (tags.isNotEmpty()) {
+                        Text(stringResource(R.string.mass_task_tags_section), style = MaterialTheme.typography.titleSmall)
+                        tags.forEach { tag ->
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(tag.name, style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        stringResource(R.string.mass_task_tag_group_count, tag.wxids.size),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                TextButton(onClick = {
+                                    showComposeDialog(context) {
+                                        TagEditorPage(context, tag) { MassTaskStore.reload() }
+                                    }
+                                }) { Text(stringResource(R.string.mass_task_edit)) }
+                                TextButton(onClick = {
+                                    MassTaskStore.removeTag(tag.name)
+                                    onChanged()
+                                }) { Text(stringResource(R.string.mass_task_delete)) }
+                            }
+                        }
                     }
-                    if (timing == TimingMode.SCHEDULED) {
-                        WeDateTimeField(
-                            value = scheduleText,
-                            onValueChange = { scheduleText = it },
-                            label = stringResource(R.string.batch_mass_send_timing_scheduled_label),
-                            mode = WeDateTimeMode.DATE_TIME,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
+
+                    if (tasks.isNotEmpty()) {
+                        Text(stringResource(R.string.mass_task_tasks_section), style = MaterialTheme.typography.titleSmall)
+                        tasks.forEach { task ->
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        task.sortedMinutes.joinToString(" ") { formatMinuteOfDay(it) } +
+                                            " · " + task.content.take(20) + if (task.content.length > 20) "…" else "",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                    Text(
+                                        stringResource(R.string.mass_task_targets_count, MassTaskStore.resolveTargets(task).size) +
+                                            (if (!task.enabled) " · " + stringResource(R.string.mass_task_paused) else ""),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                TextButton(onClick = {
+                                    task.enabled = !task.enabled
+                                    MassTaskStore.saveTasks()
+                                    MassTaskStore.reload()
+                                }) {
+                                    Text(if (task.enabled) stringResource(R.string.mass_task_pause) else stringResource(R.string.mass_task_resume))
+                                }
+                                TextButton(onClick = {
+                                    showComposeDialog(context) {
+                                        TaskEditorPage(context, task) { MassTaskStore.reload() }
+                                    }
+                                }) { Text(stringResource(R.string.mass_task_edit)) }
+                                TextButton(onClick = {
+                                    MassTaskStore.removeTask(task.id)
+                                    onChanged()
+                                }) { Text(stringResource(R.string.mass_task_delete)) }
+                            }
+                        }
+                    }
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Button(onClick = {
+                            showComposeDialog(context) {
+                                TaskEditorPage(context, null) { MassTaskStore.reload() }
+                            }
+                        }) { Text(stringResource(R.string.mass_task_new_task)) }
+                        Button(onClick = {
+                            showComposeDialog(context) {
+                                TagEditorPage(context, null) { MassTaskStore.reload() }
+                            }
+                        }) { Text(stringResource(R.string.mass_task_new_tag)) }
                     }
                 }
             },
-            dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.dialog_cancel)) } },
-            confirmButton = {
-                Button(onClick = {
-                    if (text.isBlank()) {
-                        showToast(context.localizedBatchString(R.string.batch_mass_send_enter_content))
-                        return@Button
-                    }
-                    if (timing == TimingMode.SCHEDULED && scheduledMillis() == null) {
-                        showToast(context.localizedBatchString(R.string.batch_mass_send_schedule_invalid))
-                        return@Button
-                    }
-
-                    onDismiss()
-                    pickRecipientsAndSend(context, contacts, mode, text, scheduledMillis())
-                }) { Text(stringResource(R.string.batch_mass_send_select_recipients)) }
-            }
+            dismissButton = { WeTextButton(onDismiss) { Text(stringResource(R.string.dialog_cancel)) } },
+            confirmButton = {},
         )
     }
 
-    private fun pickRecipientsAndSend(
+    // ================= 页面2：任务编辑 =================
+
+    @Composable
+    private fun TaskEditorPage(
         context: Context,
-        contacts: List<IWeContact>,
-        mode: SendMode,
-        text: String,
-        scheduledMillis: Long?,
+        editing: MassTaskStore.MassTask?,
+        onDone: () -> Unit,
     ) {
-        showComposeDialog(context) {
-            ContactsSelector(
-                title = context.localizedBatchString(R.string.batch_mass_send_select_title),
-                contacts = contacts,
-                initialSelectedWxIds = emptySet(),
-                onDismiss = onDismiss,
-                onConfirm = { selectedWxIds ->
-                    if (selectedWxIds.isEmpty()) {
-                        showToast(context.localizedBatchString(R.string.batch_mass_send_select_at_least_one))
-                        return@ContactsSelector
+        var mode by remember { mutableStateOf(editing?.mode ?: MassTaskStore.MODE_TEXT) }
+        var content by remember { mutableStateOf(editing?.content ?: "") }
+        var minutes by remember { mutableStateOf(editing?.minutes?.toSet() ?: setOf(8 * 60)) }
+        var pendingMinute by remember { mutableStateOf(8 * 60) }
+        var selectedTags by remember { mutableStateOf(editing?.tags?.toSet() ?: emptySet()) }
+        var selectedWxids by remember { mutableStateOf(editing?.wxids?.toSet() ?: emptySet()) }
+
+        AlertDialogContent(
+            title = { Text(stringResource(if (editing == null) R.string.mass_task_new_task else R.string.mass_task_edit_task)) },
+            text = {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    // 消息类型
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf(
+                            MassTaskStore.MODE_TEXT to R.string.batch_mass_send_text_mode,
+                            MassTaskStore.MODE_CARD to R.string.batch_mass_send_card_mode,
+                        ).forEach { (m, label) ->
+                            FilterChip(
+                                selected = mode == m,
+                                onClick = { mode = m },
+                                label = { Text(stringResource(label)) },
+                            )
+                        }
                     }
 
-                    onDismiss()
-                    sendToAll(selectedWxIds, mode, text, scheduledMillis)
+                    OutlinedTextField(
+                        value = content,
+                        onValueChange = { content = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text(stringResource(R.string.batch_mass_send_text_label)) },
+                        singleLine = false,
+                        minLines = 3,
+                        maxLines = 8,
+                    )
+
+                    // 每天多个发送时间点：选时间 → 添加；chip 显示，可删
+                    Text(stringResource(R.string.mass_task_daily_time_label), style = MaterialTheme.typography.titleSmall)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        WeTimeOfDayField(
+                            minuteOfDay = pendingMinute,
+                            onMinuteChange = { pendingMinute = it },
+                            label = stringResource(R.string.mass_task_daily_time_picker_label),
+                            modifier = Modifier.weight(1f),
+                        )
+                        WeButton(onClick = {
+                            minutes = minutes + pendingMinute
+                        }) { Text(stringResource(R.string.mass_task_add_time)) }
+                    }
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        minutes.sorted().forEach { m ->
+                            FilterChip(
+                                selected = false,
+                                onClick = { minutes = minutes - m },
+                                label = { Text(formatMinuteOfDay(m) + " ✕") },
+                            )
+                        }
+                    }
+                    Text(
+                        stringResource(R.string.mass_task_times_count, minutes.size),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+
+                    // 标签选择
+                    Text(stringResource(R.string.mass_task_pick_tags), style = MaterialTheme.typography.titleSmall)
+                    if (MassTaskStore.tags.isEmpty()) {
+                        Text(
+                            stringResource(R.string.mass_task_no_tags_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        MassTaskStore.tags.forEach { tag ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(
+                                    checked = tag.name in selectedTags,
+                                    onCheckedChange = { checked ->
+                                        selectedTags = if (checked) selectedTags + tag.name else selectedTags - tag.name
+                                    },
+                                )
+                                Column {
+                                    Text(tag.name)
+                                    Text(
+                                        stringResource(R.string.mass_task_tag_group_count, tag.wxids.size),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // 手选群/好友
+                    Text(stringResource(R.string.mass_task_pick_groups), style = MaterialTheme.typography.titleSmall)
+                    WeButton(onClick = {
+                        val contacts = WeDatabaseApi.getFriends() + WeDatabaseApi.getGroups()
+                        showComposeDialog(context) {
+                            ContactsSelector(
+                                title = context.localizedBatchString(R.string.batch_mass_send_select_title),
+                                contacts = contacts,
+                                initialSelectedWxIds = selectedWxids,
+                                onDismiss = onDismiss,
+                                onConfirm = { picked ->
+                                    selectedWxids = picked
+                                    onDismiss()
+                                },
+                            )
+                        }
+                    }) {
+                        Text(stringResource(R.string.mass_task_pick_groups_button, selectedWxids.size))
+                    }
                 }
-            )
-        }
+            },
+            dismissButton = { WeTextButton(onDismiss) { Text(stringResource(R.string.dialog_cancel)) } },
+            confirmButton = {
+                WeButton(onClick = {
+                    if (content.isBlank()) {
+                        showToast(context.localizedBatchString(R.string.batch_mass_send_enter_content))
+                        return@WeButton
+                    }
+                    if (minutes.isEmpty()) {
+                        showToast(context.localizedBatchString(R.string.mass_task_need_time))
+                        return@WeButton
+                    }
+                    val task = (editing ?: MassTaskStore.MassTask()).apply {
+                        this.mode = mode
+                        this.content = content
+                        this.minutes = minutes.toMutableSet()
+                        this.tags = selectedTags.toMutableSet()
+                        this.wxids = selectedWxids.toMutableSet()
+                        this.enabled = true
+                    }
+                    MassTaskStore.upsertTask(task)
+                    MassTaskStore.startScheduler()
+                    showToast(context.localizedBatchString(R.string.mass_task_saved))
+                    onDismiss()
+                    onDone()
+                }) { Text(stringResource(R.string.mass_task_save)) }
+            },
+        )
     }
 
-    private fun sendToAll(
-        wxIds: Set<String>,
-        mode: SendMode,
-        text: String,
-        scheduledMillis: Long?,
+    // ================= 页面3：标签编辑 =================
+
+    @Composable
+    private fun TagEditorPage(
+        context: Context,
+        editing: MassTaskStore.MassTag?,
+        onDone: () -> Unit,
     ) {
-        CoroutineScope(Dispatchers.IO).launch {
-            if (scheduledMillis != null) {
-                val delayMillis = scheduledMillis - System.currentTimeMillis()
-                if (delayMillis > 0) {
-                    showToastSuspend(
-                        localizedBatchString(
-                            R.string.batch_mass_send_scheduled,
-                            formatDateTime(scheduledMillis),
-                        )
+        var name by remember { mutableStateOf(editing?.name ?: "") }
+        var wxids by remember { mutableStateOf(editing?.wxids?.toSet() ?: emptySet()) }
+
+        AlertDialogContent(
+            title = { Text(stringResource(if (editing == null) R.string.mass_task_new_tag else R.string.mass_task_edit_tag)) },
+            text = {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text(stringResource(R.string.mass_task_tag_name_label)) },
+                        singleLine = true,
                     )
-                    delay(delayMillis.milliseconds)
-                }
-            }
-
-            showToastSuspend(
-                localizedBatchQuantity(R.plurals.batch_mass_send_progress, wxIds.size, wxIds.size),
-            )
-
-            var success = 0
-            wxIds.forEachIndexed { index, wxId ->
-                val sent = runCatching {
-                    when (mode) {
-                        SendMode.TEXT -> WeMessageApi.sendText(wxId, text)
-                        SendMode.CARD -> WeMessageApi.sendXmlAppMsg(wxId, text)
+                    WeButton(onClick = {
+                        val groups = WeDatabaseApi.getGroups()
+                        showComposeDialog(context) {
+                            ContactsSelector(
+                                title = context.localizedBatchString(R.string.mass_task_tag_pick_title),
+                                contacts = groups,
+                                initialSelectedWxIds = wxids,
+                                onDismiss = onDismiss,
+                                onConfirm = { picked ->
+                                    wxids = picked
+                                    onDismiss()
+                                },
+                            )
+                        }
+                    }) {
+                        Text(stringResource(R.string.mass_task_tag_pick_groups_button, wxids.size))
                     }
-                }.getOrElse {
-                    WeLogger.e(TAG, "failed to send message to $wxId", it)
-                    false
                 }
-                if (sent) success++
-                if (index < wxIds.size - 1) delay(SEND_INTERVAL_MS.milliseconds)
-            }
-
-            showToastSuspend(
-                localizedBatchQuantity(
-                    if (success == wxIds.size) R.plurals.batch_mass_send_done
-                    else R.plurals.batch_mass_send_partial,
-                    wxIds.size,
-                    success,
-                    wxIds.size,
-                )
-            )
-        }
+            },
+            dismissButton = { WeTextButton(onDismiss) { Text(stringResource(R.string.dialog_cancel)) } },
+            confirmButton = {
+                WeButton(onClick = {
+                    if (name.isBlank()) {
+                        showToast(context.localizedBatchString(R.string.mass_task_tag_name_required))
+                        return@WeButton
+                    }
+                    MassTaskStore.upsertTag(MassTaskStore.MassTag(name = name.trim(), wxids = wxids.toMutableSet()))
+                    showToast(context.localizedBatchString(R.string.mass_task_saved))
+                    onDismiss()
+                    onDone()
+                }) { Text(stringResource(R.string.mass_task_save)) }
+            },
+        )
     }
 }

@@ -504,8 +504,8 @@
     <string name="feature_batch_mark_as_read_description">选择多个好友或群聊后, 将它们的对话一次性标记为已读</string>
     <string name="feature_batch_mute_conversations_name">批量免打扰</string>
     <string name="feature_batch_mute_conversations_description">选择多个好友或群聊后, 批量开启或关闭消息免打扰</string>
-    <string name="feature_mass_send_message_name">群发消息</string>
-    <string name="feature_mass_send_message_description">编写一条文本或卡片消息, 选择多个好友或群聊后批量发送, 请求会自动间隔以规避服务器风控</string>
+    <string name="feature_mass_send_message_name">定时群发</string>
+    <string name="feature_mass_send_message_description">创建定时群发任务: 用标签打包群聊, 消息随时编辑, 每天可设置多个发送时间点(时:分), 每个时间点到点自动群发一次</string>
     <string name="feature_add_main_screen_fab_name">主屏幕添加 FAB</string>
     <string name="feature_add_main_screen_fab_description">向微信主屏幕添加浮动操作按钮</string>
     <string name="feature_main_screen_media_drawer_name">主屏幕媒体侧栏</string>
@@ -2714,6 +2714,35 @@
     <string name="batch_mass_send_timing_scheduled_label">定时时间（年-月-日 时:分:秒）</string>
     <string name="batch_mass_send_schedule_invalid">请输入有效的日期和时间</string>
     <string name="batch_mass_send_scheduled">将于 %1$s 发送…</string>
+    <string name="mass_task_empty_hint">还没有标签或任务。先创建标签把群打包，再创建任务（消息内容 + 每天发送时间）。</string>
+    <string name="mass_task_tags_section">标签</string>
+    <string name="mass_task_tasks_section">任务</string>
+    <string name="mass_task_tag_group_count">%1$d 个群</string>
+    <string name="mass_task_targets_count">%1$d 个目标</string>
+    <string name="mass_task_paused">已暂停</string>
+    <string name="mass_task_pause">暂停</string>
+    <string name="mass_task_resume">恢复</string>
+    <string name="mass_task_edit">编辑</string>
+    <string name="mass_task_delete">删除</string>
+    <string name="mass_task_new_task">新建任务</string>
+    <string name="mass_task_edit_task">编辑任务</string>
+    <string name="mass_task_new_tag">新建标签</string>
+    <string name="mass_task_edit_tag">编辑标签</string>
+    <string name="mass_task_daily_time_label">每天发送时间（可添加多个）</string>
+    <string name="mass_task_daily_time_picker_label">时间（时:分）</string>
+    <string name="mass_task_add_time">添加</string>
+    <string name="mass_task_times_count">每天 %1$d 个时间点</string>
+    <string name="mass_task_need_time">请至少添加一个发送时间</string>
+    <string name="mass_task_pick_tags">应用标签</string>
+    <string name="mass_task_no_tags_hint">还没有标签，请先在上一页创建</string>
+    <string name="mass_task_pick_groups">手动选择</string>
+    <string name="mass_task_pick_groups_button">选择会话（已选 %1$d）</string>
+    <string name="mass_task_tag_name_label">标签名称</string>
+    <string name="mass_task_tag_pick_title">为标签选择群聊</string>
+    <string name="mass_task_tag_pick_groups_button">选择群聊（已选 %1$d）</string>
+    <string name="mass_task_tag_name_required">请输入标签名称</string>
+    <string name="mass_task_save">保存</string><string name="mass_task_saved">已保存</string>
+    <string name="mass_task_sent_done">定时群发：已发送 %1$d/%2$d</string>
     <!-- Task 5 group 1: contacts -->
     <string name="contacts_auto_add_nearby_menu">自动加好友</string>
     <string name="contacts_auto_remark_format">备注格式</string>

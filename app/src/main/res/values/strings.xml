@@ -542,8 +542,8 @@
     <string name="feature_batch_mark_as_read_description">After selecting multiple friends or group chats, mark their conversations as read at once</string>
     <string name="feature_batch_mute_conversations_name">Batch mute conversations</string>
     <string name="feature_batch_mute_conversations_description">After selecting multiple friends or group chats, turn on or off message do not disturb in batches</string>
-    <string name="feature_mass_send_message_name">Mass-send messages</string>
-    <string name="feature_mass_send_message_description">Write a text or card message, select multiple friends or group chats and send them in batches. Requests will be automatically spaced to avoid server anti-abuse controls.</string>
+    <string name="feature_mass_send_message_name">Scheduled mass-send</string>
+    <string name="feature_mass_send_message_description">Create scheduled mass-send tasks: group chats by tags, edit messages anytime, and pick one or more daily send times (HH:mm). Each time fires once per day automatically.</string>
     <string name="feature_add_main_screen_fab_name">Add home-screen FAB</string>
     <string name="feature_add_main_screen_fab_description">Add floating action buttons to WeChat home screen</string>
     <string name="feature_main_screen_media_drawer_name">Home-screen media drawer</string>
@@ -2697,6 +2697,35 @@
     <string name="batch_mass_send_timing_scheduled_label">Scheduled time (yyyy-MM-dd HH:mm:ss)</string>
     <string name="batch_mass_send_schedule_invalid">Enter a valid date and time</string>
     <string name="batch_mass_send_scheduled">Will send at %1$s…</string>
+    <string name="mass_task_empty_hint">No tags or tasks yet. Create a tag to group chats, then create a task with message content and daily send times.</string>
+    <string name="mass_task_tags_section">Tags</string>
+    <string name="mass_task_tasks_section">Tasks</string>
+    <string name="mass_task_tag_group_count">%1$d groups</string>
+    <string name="mass_task_targets_count">%1$d targets</string>
+    <string name="mass_task_paused">paused</string>
+    <string name="mass_task_pause">Pause</string>
+    <string name="mass_task_resume">Resume</string>
+    <string name="mass_task_edit">Edit</string>
+    <string name="mass_task_delete">Delete</string>
+    <string name="mass_task_new_task">New task</string>
+    <string name="mass_task_edit_task">Edit task</string>
+    <string name="mass_task_new_tag">New tag</string>
+    <string name="mass_task_edit_tag">Edit tag</string>
+    <string name="mass_task_daily_time_label">Daily send times (add as many as you want)</string>
+    <string name="mass_task_daily_time_picker_label">Time (HH:mm)</string>
+    <string name="mass_task_add_time">Add</string>
+    <string name="mass_task_times_count">%1$d time(s) per day</string>
+    <string name="mass_task_need_time">Add at least one send time</string>
+    <string name="mass_task_pick_tags">Apply tags</string>
+    <string name="mass_task_no_tags_hint">No tags yet — create one from the previous page first</string>
+    <string name="mass_task_pick_groups">Pick manually</string>
+    <string name="mass_task_pick_groups_button">Pick chats (%1$d selected)</string>
+    <string name="mass_task_tag_name_label">Tag name</string>
+    <string name="mass_task_tag_pick_title">Pick groups for this tag</string>
+    <string name="mass_task_tag_pick_groups_button">Pick groups (%1$d selected)</string>
+    <string name="mass_task_tag_name_required">Tag name is required</string>
+    <string name="mass_task_save">Save</string><string name="mass_task_saved">Saved</string>
+    <string name="mass_task_sent_done">Scheduled send: %1$d/%2$d delivered</string>
 
     <!-- Task 5 group 1: contacts -->
     <string name="contacts_auto_add_nearby_menu">Add friends automatically</string>
