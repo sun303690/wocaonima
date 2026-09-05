@@ -3951,7 +3951,7 @@
     <string name="aivoice_fetched">Got %1$d voices</string>
     <string name="aivoice_section_manual_tts">Text to voice</string>
     <string name="aivoice_tts_input">Type text to speak…</string>
-    <string name="aivoice_tts_send">Synthesize & send</string>
+    <string name="aivoice_tts_send">Synthesize &amp; send</string>
     <string name="aivoice_tts_empty">Enter some text first</string>
     <string name="aivoice_tts_no_talker">Open a chat window first</string>
     <string name="aivoice_tts_sent">Voice sent</string>
