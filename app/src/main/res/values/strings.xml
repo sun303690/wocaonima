@@ -3945,4 +3945,17 @@
     <string name="aivoice_engine_voice">Voice ID</string>
     <string name="aivoice_save">Save</string>
     <string name="aivoice_saved">Settings saved</string>
+    <string name="aivoice_no_model">No model — add one in WeAgent settings</string>
+    <string name="aivoice_fetch_voices">Fetch voices</string>
+    <string name="aivoice_fetch_failed">Fetch failed</string>
+    <string name="aivoice_fetched">Got %1$d voices</string>
+    <string name="aivoice_section_manual_tts">Text to voice</string>
+    <string name="aivoice_tts_input">Type text to speak…</string>
+    <string name="aivoice_tts_send">Synthesize & send</string>
+    <string name="aivoice_tts_empty">Enter some text first</string>
+    <string name="aivoice_tts_no_talker">Open a chat window first</string>
+    <string name="aivoice_tts_sent">Voice sent</string>
+    <string name="aivoice_tts_failed">Synthesis failed</string>
+    <string name="aivoice_tts_hint">Also works by sending “#tts 文字” in the chat</string>
+    <string name="aivoice_voice_manual">Manually enter voice ID</string>
 </resources>

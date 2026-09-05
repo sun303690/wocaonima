@@ -3973,4 +3973,17 @@
     <string name="aivoice_engine_voice">音色 ID</string>
     <string name="aivoice_save">保存</string>
     <string name="aivoice_saved">设置已保存</string>
+    <string name="aivoice_no_model">未配置模型，请在 WeAgent 设置中添加</string>
+    <string name="aivoice_fetch_voices">获取音色</string>
+    <string name="aivoice_fetch_failed">获取音色失败</string>
+    <string name="aivoice_fetched">获取到 %1$d 个音色</string>
+    <string name="aivoice_section_manual_tts">文字转语音</string>
+    <string name="aivoice_tts_input">输入要转成语音的文字…</string>
+    <string name="aivoice_tts_send">转换并发送</string>
+    <string name="aivoice_tts_empty">请先输入文字</string>
+    <string name="aivoice_tts_no_talker">请先打开聊天窗口</string>
+    <string name="aivoice_tts_sent">语音已发送</string>
+    <string name="aivoice_tts_failed">语音合成失败</string>
+    <string name="aivoice_tts_hint">也可在聊天里发送“#tts 文字”触发</string>
+    <string name="aivoice_voice_manual">手动填写音色 ID</string>
 </resources>

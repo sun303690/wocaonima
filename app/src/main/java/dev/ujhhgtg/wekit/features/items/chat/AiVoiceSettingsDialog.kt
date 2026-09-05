@@ -9,14 +9,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.ujhhgtg.wekit.R
+import dev.ujhhgtg.wekit.agent.data.WeAgentRepository
 import dev.ujhhgtg.wekit.ui.content.AlertDialogContent
 import dev.ujhhgtg.wekit.ui.content.Button
 import dev.ujhhgtg.wekit.ui.content.TextButton
@@ -26,8 +29,10 @@ import dev.ujhhgtg.wekit.ui.content.m3.SegmentedColumn
 import dev.ujhhgtg.wekit.ui.content.m3.SwitchWidget
 import dev.ujhhgtg.wekit.ui.utils.showComposeDialog
 import dev.ujhhgtg.wekit.utils.android.showToast
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
-/** AI 语音助手设置面板（卡片式）。 */
+/** AI 语音助手设置面板（卡片式）。音色下拉内置，支持文字转语音发送。 */
 internal object AiVoiceSettingsDialog {
 
     fun show(context: Context) {
@@ -39,32 +44,51 @@ internal object AiVoiceSettingsDialog {
     @Composable
     private fun AiVoiceSettingsContent(context: Context) {
         val a = AiVoiceAssistant
-        // AI 对话
-        var apiUrl by remember { mutableStateOf(a.apiUrl) }
-        var apiKey by remember { mutableStateOf(a.apiKey) }
-        var model by remember { mutableStateOf(a.model) }
-        var prompt by remember { mutableStateOf(a.prompt) }
+        val scope = rememberCoroutineScope()
+
+        // ---- AI 对话 ----
         var enabled by remember { mutableStateOf(a.enabled) }
         var trigger by remember { mutableStateOf(a.triggerWord) }
         var memoryRounds by remember { mutableStateOf(a.memoryRounds.toString()) }
         var voiceOnly by remember { mutableStateOf(a.voiceOnly) }
-        // TTS 引擎
+        var prompt by remember { mutableStateOf(a.prompt) }
+        var selectedModelId by remember { mutableStateOf(a.weAgentModelId) }
+        var models by remember { mutableStateOf(listOf<dev.ujhhgtg.wekit.agent.data.entity.ModelEntity>()) }
+
+        // ---- 音色 ----
         var engine by remember { mutableStateOf(a.engine) }
-        var fishKey by remember { mutableStateOf(a.fishKey) }
-        var fishVoice by remember { mutableStateOf(a.fishVoice) }
-        var yxKey by remember { mutableStateOf(a.yxKey) }
-        var yxVoice by remember { mutableStateOf(a.yxVoice) }
-        var bvKey by remember { mutableStateOf(a.bvKey) }
-        var bvVoice by remember { mutableStateOf(a.bvVoice) }
+        var selectedVoiceId by remember { mutableStateOf(currentEngineVoice(a)) }
+        var voiceOptions by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+
+        // ---- 文字转语音 ----
+        var ttsText by remember { mutableStateOf("") }
+        var sending by remember { mutableStateOf(false) }
+
+        // 加载 WeAgent 模型库
+        LaunchedEffect(Unit) {
+            models = WeAgentRepository.observeModels().first()
+            if (selectedModelId.isEmpty()) selectedModelId = a.weAgentModelId.ifBlank {
+                WeAgentRepository.firstModelId() ?: ""
+            }
+        }
+
+        // 引擎或配置变化时加载音色
+        LaunchedEffect(engine) {
+            selectedVoiceId = currentEngineVoice(a)
+            voiceOptions = a.engineVoices(engine)
+            if (voiceOptions.isEmpty() && (engine == "fishaudio" || engine == "yx520")) {
+                val fetched = a.fetchEngineVoices(engine).getOrNull()
+                if (fetched != null && fetched.isNotEmpty()) {
+                    voiceOptions = fetched
+                    selectedVoiceId = fetched.first().first
+                }
+            }
+        }
 
         AlertDialogContent(
             title = { Text(stringResource(R.string.feature_ai_voice_assistant_name)) },
             text = {
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
-                ) {
+                Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
                     SegmentedColumn(title = stringResource(R.string.aivoice_section_ai)) {
                         item {
                             SwitchWidget(
@@ -74,24 +98,14 @@ internal object AiVoiceSettingsDialog {
                             )
                         }
                         item {
-                            SettingsTextRow(
-                                title = stringResource(R.string.aivoice_api_url),
-                                value = apiUrl,
-                                onValueChange = { apiUrl = it },
-                            )
-                        }
-                        item {
-                            SettingsTextRow(
-                                title = stringResource(R.string.aivoice_api_key),
-                                value = apiKey,
-                                onValueChange = { apiKey = it },
-                            )
-                        }
-                        item {
-                            SettingsTextRow(
+                            DropDownMenuWidget(
                                 title = stringResource(R.string.aivoice_model),
-                                value = model,
-                                onValueChange = { model = it },
+                                description = models.firstOrNull { it.id == selectedModelId }?.displayName ?: selectedModelId,
+                                value = selectedModelId,
+                                options = models.map { DropdownOption(it.id, it.displayName) }
+                                    .ifEmpty { listOf(DropdownOption("", stringResource(R.string.aivoice_no_model))) },
+                                enabled = models.isNotEmpty(),
+                                onValueChange = { selectedModelId = it },
                             )
                         }
                         item {
@@ -141,45 +155,80 @@ internal object AiVoiceSettingsDialog {
                                 onValueChange = { engine = it },
                             )
                         }
-                        // 引擎相关配置（通用：Key + 音色ID）
                         item {
-                            SettingsTextRow(
-                                title = stringResource(R.string.aivoice_engine_key),
-                                value = when (engine) {
-                                    "fishaudio" -> fishKey
-                                    "yx520" -> yxKey
-                                    "bv" -> bvKey
-                                    else -> ""
+                            DropDownMenuWidget(
+                                title = stringResource(R.string.aivoice_engine_voice),
+                                description = selectedVoiceId,
+                                value = selectedVoiceId,
+                                options = voiceOptions.ifEmpty {
+                                    listOf(DropdownOption(a.currentEngineVoice(engine), stringResource(R.string.aivoice_voice_manual)))
                                 },
-                                onValueChange = { v ->
-                                    when (engine) {
-                                        "fishaudio" -> fishKey = v
-                                        "yx520" -> yxKey = v
-                                        "bv" -> bvKey = v
-                                        "vocu" -> a.vocuKey = v
-                                        "tiax" -> a.tiaxKey = v
-                                    }
-                                },
+                                enabled = voiceOptions.isNotEmpty(),
+                                onValueChange = { selectedVoiceId = it },
                             )
                         }
                         item {
                             SettingsTextRow(
-                                title = stringResource(R.string.aivoice_engine_voice),
-                                value = when (engine) {
-                                    "fishaudio" -> fishVoice
-                                    "yx520" -> yxVoice
-                                    "bv" -> bvVoice
-                                    else -> ""
-                                },
-                                onValueChange = { v ->
-                                    when (engine) {
-                                        "fishaudio" -> fishVoice = v
-                                        "yx520" -> yxVoice = v
-                                        "bv" -> bvVoice = v
-                                        "vocu" -> a.vocuVoice = v
-                                        "tiax" -> a.tiaxVoice = v
+                                title = stringResource(R.string.aivoice_engine_key),
+                                value = currentEngineKey(a),
+                                onValueChange = { setEngineKey(a, engine, it) },
+                            )
+                        }
+                        if (voiceOptions.isEmpty() && (engine == "fishaudio" || engine == "yx520")) {
+                            item {
+                                Button(onClick = {
+                                    scope.launch {
+                                        val fetched = a.fetchEngineVoices(engine).getOrNull()
+                                        if (fetched.isNullOrEmpty()) {
+                                            showToast(context, context.getString(R.string.aivoice_fetch_failed))
+                                        } else {
+                                            voiceOptions = fetched
+                                            selectedVoiceId = fetched.first().first
+                                            showToast(context, context.getString(R.string.aivoice_fetched, fetched.size))
+                                        }
                                     }
-                                },
+                                }) { Text(stringResource(R.string.aivoice_fetch_voices)) }
+                            }
+                        }
+                    }
+
+                    // ---- 文字转语音 ----
+                    SegmentedColumn(title = stringResource(R.string.aivoice_section_manual_tts)) {
+                        item {
+                            OutlinedTextField(
+                                value = ttsText,
+                                onValueChange = { ttsText = it },
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                                label = { Text(stringResource(R.string.aivoice_tts_input)) },
+                                singleLine = false,
+                                minLines = 3,
+                                maxLines = 6,
+                            )
+                        }
+                        item {
+                            Button(onClick = {
+                                val text = ttsText.trim()
+                                if (text.isEmpty()) { showToast(context, context.getString(R.string.aivoice_tts_empty)); return@Button }
+                                scope.launch {
+                                    sending = true
+                                    val talker = a.currentTalker()
+                                    if (talker.isNullOrEmpty()) {
+                                        showToast(context, context.getString(R.string.aivoice_tts_no_talker)); sending = false; return@launch
+                                    }
+                                    val ok = a.synthesizeAndSendText(talker, text)
+                                    sending = false
+                                    showToast(context, context.getString(if (ok) R.string.aivoice_tts_sent else R.string.aivoice_tts_failed))
+                                }
+                            }, enabled = !sending) {
+                                Text(stringResource(R.string.aivoice_tts_send))
+                            }
+                        }
+                        item {
+                            Text(
+                                stringResource(R.string.aivoice_tts_hint),
+                                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                             )
                         }
                     }
@@ -188,26 +237,57 @@ internal object AiVoiceSettingsDialog {
             dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.dialog_cancel)) } },
             confirmButton = {
                 Button(onClick = {
-                    a.apiUrl = apiUrl.trim()
-                    a.apiKey = apiKey.trim()
-                    a.model = model.trim()
-                    a.prompt = prompt.trim()
                     a.enabled = enabled
                     a.triggerWord = trigger.trim().ifBlank { "*" }
                     a.memoryRounds = memoryRounds.toIntOrNull()?.coerceIn(1, 999) ?: 5
                     a.voiceOnly = voiceOnly
+                    a.prompt = prompt.trim()
+                    a.weAgentModelId = selectedModelId
                     a.engine = engine
-                    a.fishKey = fishKey.trim()
-                    a.fishVoice = fishVoice.trim()
-                    a.yxKey = yxKey.trim()
-                    a.yxVoice = yxVoice.trim()
-                    a.bvKey = bvKey.trim()
-                    a.bvVoice = bvVoice.trim()
-                    showToast(context, context.getString(R.string.aivoice_saved))
+                    setEngineVoice(a, engine, selectedVoiceId)
                     onDismiss()
+                    showToast(context, context.getString(R.string.aivoice_saved))
                 }) { Text(stringResource(R.string.aivoice_save)) }
             },
         )
+    }
+
+    private fun currentEngineKey(a: AiVoiceAssistant): String = when (a.engine) {
+        "fishaudio" -> a.fishKey
+        "yx520" -> a.yxKey
+        "bv" -> a.bvKey
+        "vocu" -> a.vocuKey
+        "tiax" -> a.tiaxKey
+        else -> ""
+    }
+
+    private fun setEngineKey(a: AiVoiceAssistant, engine: String, value: String) {
+        when (engine) {
+            "fishaudio" -> a.fishKey = value
+            "yx520" -> a.yxKey = value
+            "bv" -> a.bvKey = value
+            "vocu" -> a.vocuKey = value
+            "tiax" -> a.tiaxKey = value
+        }
+    }
+
+    private fun currentEngineVoice(a: AiVoiceAssistant): String = when (a.engine) {
+        "fishaudio" -> a.fishVoice
+        "yx520" -> a.yxVoice
+        "bv" -> a.bvVoice
+        "vocu" -> a.vocuVoice
+        "tiax" -> a.tiaxVoice
+        else -> ""
+    }
+
+    private fun setEngineVoice(a: AiVoiceAssistant, engine: String, value: String) {
+        when (engine) {
+            "fishaudio" -> a.fishVoice = value
+            "yx520" -> a.yxVoice = value
+            "bv" -> a.bvVoice = value
+            "vocu" -> a.vocuVoice = value
+            "tiax" -> a.tiaxVoice = value
+        }
     }
 
     @Composable

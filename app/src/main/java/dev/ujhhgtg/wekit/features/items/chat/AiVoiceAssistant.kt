@@ -3,15 +3,22 @@ package dev.ujhhgtg.wekit.features.items.chat
 import android.content.ContentValues
 import androidx.activity.ComponentActivity
 import dev.ujhhgtg.wekit.R
+import dev.ujhhgtg.wekit.agent.data.WeAgentRepository
+import dev.ujhhgtg.wekit.agent.model.LlmMessage
+import dev.ujhhgtg.wekit.agent.model.LlmRole
+import dev.ujhhgtg.wekit.agent.model.LlmStreamEvent
+import dev.ujhhgtg.wekit.agent.model.ModelProviderManager
 import dev.ujhhgtg.wekit.features.api.core.WeDatabaseListenerApi
 import dev.ujhhgtg.wekit.features.api.core.WeMessageApi
 import dev.ujhhgtg.wekit.features.api.core.models.MessageType
+import dev.ujhhgtg.wekit.features.api.ui.WeCurrentConversationApi
 import dev.ujhhgtg.wekit.features.core.ClickableFeature
 import dev.ujhhgtg.wekit.features.core.FeatureCategoryIds
+import dev.ujhhgtg.wekit.features.items.chat.panel.voice.TIAX_PRESET_VOICES
 import dev.ujhhgtg.wekit.preferences.WePrefs
 import dev.ujhhgtg.wekit.utils.AudioUtils
+import dev.ujhhgtg.wekit.utils.HostInfo
 import dev.ujhhgtg.wekit.utils.MultiEngineTtsClient
-import dev.ujhhgtg.wekit.utils.TiaxTtsClient
 import dev.ujhhgtg.wekit.utils.TtsEngine
 import dev.ujhhgtg.wekit.utils.WeLogger
 import dev.ujhhgtg.wekit.utils.android.showToastSuspend
@@ -21,22 +28,16 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.io.path.toPath
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONArray
-import org.json.JSONObject
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
+import org.json.JSONArray
+import org.json.JSONObject
 
 /**
- * AI 智能语音助手：DeepSeek AI 自动回复（触发词 + 对话记忆 + 仅语音回复）。
+ * AI 智能语音助手：收到触发词开头的消息 → 调用 WeAgent 模型库中的 AI 模型 → 用多引擎 TTS
+ * 合成语音 → 转 silk 发送回聊天窗口。模型直接复用 WeAgent 配置的 provider/模型。
  *
- * 收到以触发词（默认 `*`）开头的消息 → 调用 DeepSeek 对话接口 → 用多引擎 TTS
- * 合成语音 → 转 silk 发送回聊天窗口。
- *
- * 设置面板为卡片式（API Key / 模型 / 触发词 / 人设 / 记忆轮数 / 各引擎音色）。
+ * 音色内置：豆包(122)/天X(459)；FishAudio/yx520 可拉取。支持面板内打字转语音发送。
  */
 object AiVoiceAssistant : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
 
@@ -49,15 +50,13 @@ object AiVoiceAssistant : ClickableFeature(), WeDatabaseListenerApi.IInsertListe
 
     override val noSwitchWidget = true
 
-    // ---- 配置（deepseek + 触发词 + 记忆） ----
-    private var apiUrl by WePrefs.prefOption("aivoice_api_url", "https://api.deepseek.com")
-    private var apiKey by WePrefs.prefOption("aivoice_api_key", "")
-    private var model by WePrefs.prefOption("aivoice_model", "deepseek-chat")
-    private var prompt by WePrefs.prefOption("aivoice_prompt", "你是一个乐于助人的AI助手")
-    private var enabled by WePrefs.prefOption("aivoice_enabled", false)
-    private var triggerWord by WePrefs.prefOption("aivoice_trigger", "*")
-    private var memoryRounds by WePrefs.prefOption("aivoice_memory_rounds", 5)
-    private var voiceOnly by WePrefs.prefOption("aivoice_voice_only", true)
+    // ---- 配置 ----
+    var enabled by WePrefs.prefOption("aivoice_enabled", false)
+    var triggerWord by WePrefs.prefOption("aivoice_trigger", "*")
+    var memoryRounds by WePrefs.prefOption("aivoice_memory_rounds", 5)
+    var voiceOnly by WePrefs.prefOption("aivoice_voice_only", true)
+    var weAgentModelId by WePrefs.prefOption("aivoice_weagent_model", "")
+    var prompt by WePrefs.prefOption("aivoice_prompt", "你是一个乐于助人的AI助手")
 
     // ---- TTS 引擎配置 ----
     var engine by WePrefs.prefOption("aivoice_engine", "fishaudio")
@@ -72,14 +71,9 @@ object AiVoiceAssistant : ClickableFeature(), WeDatabaseListenerApi.IInsertListe
     var tiaxKey by WePrefs.prefOption("aivoice_tiax_key", "")
     var tiaxVoice by WePrefs.prefOption("aivoice_tiax_voice", "")
 
-    // ---- 对话记忆：talker -> 消息列表(JSON) ----
+    // ---- 对话记忆 ----
     private val memories = ConcurrentHashMap<String, MutableList<JSONObject>>()
-
-    // ---- 协程 ----
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
-    private val httpClient by lazy { OkHttpClient() }
-    private val jsonMedia = "application/json; charset=utf-8".toMediaType()
 
     override fun onEnable() {
         WeDatabaseListenerApi.addListener(this)
@@ -92,42 +86,49 @@ object AiVoiceAssistant : ClickableFeature(), WeDatabaseListenerApi.IInsertListe
     }
 
     override fun onClick(context: ComponentActivity) {
-        // 设置面板（卡片式），在 Compose 中实现
-        dev.ujhhgtg.wekit.features.items.chat.AiVoiceSettingsDialog.show(context)
+        AiVoiceSettingsDialog.show(context)
     }
 
-    // ================= 消息监听：触发 AI 回复 =================
+    // ================= 消息监听：触发 AI 回复 + #tts 指令 =================
 
     override fun onInsert(table: String, values: ContentValues) {
         if (table != "message") return
-        if (!enabled) return
-        if (apiKey.isBlank()) return
         val type = values.getAsInteger("type") ?: return
         if (MessageType.fromCode(type)?.isText != true) return
         val isSend = values.getAsInteger("isSend") ?: 1
-        if (isSend != 0) return
         val talker = values.getAsString("talker") ?: return
         val content = values.getAsString("content") ?: return
 
+        // #tts 指令：自己发的消息，#tts 文字 → 转语音
+        if (isSend != 0 && content.trim().startsWith("#tts")) {
+            val text = content.trim().removePrefix("#tts").trim()
+            if (text.isNotEmpty() && talker.isNotEmpty()) {
+                scope.launch {
+                    val ok = synthesizeAndSendText(talker, text)
+                    if (ok) showToastSuspend("语音已发送")
+                    else showToastSuspend("语音合成失败，请检查引擎配置")
+                }
+            }
+            return
+        }
+
+        // AI 自动回复：收到的消息
+        if (isSend != 0) return
+        if (!enabled) return
         val tg = triggerWord.ifBlank { "*" }
-        // 兼容群聊 "昵称:\n内容" 前缀
         val clean = if (content.contains(":\n")) {
             val idx = content.indexOf(":\n")
             if (idx in 1..50) content.substring(idx + 2).trim() else content.trim()
         } else content.trim()
         if (!clean.startsWith(tg)) return
-
         val question = clean.substring(tg.length).trim().ifEmpty { clean }
-        scope.launch {
-            handleAiReply(talker, question)
-        }
+        scope.launch { handleAiReply(talker, question) }
     }
 
     private suspend fun handleAiReply(talker: String, question: String) {
         try {
-            val reply = askDeepSeek(talker, question)
+            val reply = askAi(talker, question)
             if (reply.startsWith("[")) {
-                // 错误
                 showToastSuspend(reply)
                 return
             }
@@ -142,49 +143,60 @@ object AiVoiceAssistant : ClickableFeature(), WeDatabaseListenerApi.IInsertListe
         }
     }
 
-    // ================= DeepSeek 对话 =================
+    // ================= WeAgent 模型调用 =================
 
-    private suspend fun askDeepSeek(talker: String, question: String): String =
+    private suspend fun askAi(talker: String, question: String): String =
         withContext(Dispatchers.IO) {
             try {
-                val url = apiUrl.trimEnd('/') + "/v1/chat/completions"
-                val body = JSONObject().apply {
-                    put("model", model)
-                    put("max_tokens", 2000)
-                    put("messages", buildMessages(talker, question))
+                val modelId = weAgentModelId.ifBlank {
+                    WeAgentRepository.firstModelId()
+                        ?: throw IllegalStateException("未配置AI模型，请先在 WeAgent 设置中添加模型")
                 }
-                val request = Request.Builder()
-                    .url(url)
-                    .post(body.toString().toRequestBody(jsonMedia))
-                    .header("Authorization", "Bearer $apiKey")
-                    .build()
+                val model = WeAgentRepository.getModel(modelId)
+                    ?: throw IllegalStateException("未找到模型: $modelId")
+                val provider = WeAgentRepository.getModelProvider(model.providerId)
+                    ?: throw IllegalStateException("未找到模型提供者: ${model.providerId}")
+                val client = ModelProviderManager.clientFor(provider)
 
-                httpClient.newCall(request).execute().use { resp ->
-                    if (!resp.isSuccessful) {
-                        val err = resp.body?.string().orEmpty()
-                        return@use "[err:${resp.code}] $err"
+                val messages = mutableListOf<LlmMessage>()
+                messages += LlmMessage(LlmRole.SYSTEM, prompt)
+                memories[talker]?.forEach { m ->
+                    val role = when (m.optString("role")) {
+                        "assistant" -> LlmRole.ASSISTANT
+                        "user" -> LlmRole.USER
+                        else -> return@forEach
                     }
-                    val json = JSONObject(resp.body?.string().orEmpty())
-                    val choices = json.optJSONArray("choices")
-                    val reply = choices?.optJSONObject(0)?.optJSONObject("message")?.optString("content").orEmpty()
-                    if (reply.isBlank()) "[err:空回复]" else {
-                        rememberMessage(talker, "user", question)
-                        rememberMessage(talker, "assistant", reply)
-                        reply
+                    messages += LlmMessage(role, m.optString("content"))
+                }
+                messages += LlmMessage(LlmRole.USER, question)
+
+                val request = ModelProviderManager.buildRequest(
+                    model = model,
+                    messages = messages,
+                    tools = emptyList(),
+                    stream = true,
+                )
+                val reply = StringBuilder()
+                client.stream(request).collect { event ->
+                    when (event) {
+                        is LlmStreamEvent.TextDelta -> reply.append(event.text)
+                        is LlmStreamEvent.Completed -> {
+                            if (reply.isEmpty()) reply.append(event.message.content ?: "")
+                        }
+                        is LlmStreamEvent.Failed -> throw event.error
+                        else -> {}
                     }
                 }
+                val text = reply.toString().trim()
+                if (text.isEmpty()) throw IllegalStateException("AI未生成有效回复")
+                rememberMessage(talker, "user", question)
+                rememberMessage(talker, "assistant", text)
+                text
             } catch (error: Exception) {
-                "[fail:${error.message}]"
+                WeLogger.e(TAG, "askAi failed", error)
+                "[${error.message}]"
             }
         }
-
-    private fun buildMessages(talker: String, question: String): JSONArray {
-        val msgs = JSONArray()
-        msgs.put(JSONObject().put("role", "system").put("content", prompt))
-        memories[talker]?.takeLast(memoryRounds.coerceIn(1, 999) * 2)?.forEach { msgs.put(it) }
-        msgs.put(JSONObject().put("role", "user").put("content", question))
-        return msgs
-    }
 
     private fun rememberMessage(talker: String, role: String, content: String) {
         val list = memories.getOrPut(talker) { mutableListOf() }
@@ -197,53 +209,64 @@ object AiVoiceAssistant : ClickableFeature(), WeDatabaseListenerApi.IInsertListe
     // ================= 语音发送 =================
 
     private suspend fun sendAiVoice(talker: String, text: String) {
-        val result = withContext(Dispatchers.IO) {
-            runCatching {
-                // 1. 用多引擎 TTS 合成 mp3
-                val mp3 = synthesizeMp3(text) ?: return@runCatching null
-                // 2. mp3 -> silk
-                val silk = File(File(mp3).parentFile, "ai_${System.nanoTime()}.silk").absolutePath
-                if (!AudioUtils.anyToSilk(mp3, silk)) return@runCatching null
-                // 3. 时长
-                val duration = AudioUtils.getDurationMs(silk).toInt()
-                // 4. 发送
-                WeMessageApi.sendVoice(talker, silk, duration)
-                silk
-            }.getOrNull()
-        }
-        if (result != null) {
-            showToastSuspend("AI语音已回复")
-        } else {
-            showToastSuspend("AI语音合成失败，请检查引擎配置")
-        }
+        val ok = synthesizeAndSendText(talker, text)
+        if (ok) showToastSuspend("AI语音已回复")
+        else showToastSuspend("AI语音合成失败，请检查引擎配置")
     }
 
-    /** 按当前引擎配置合成语音，返回 mp3 路径。 */
     private suspend fun synthesizeMp3(text: String): String? {
-        val cacheDir = dev.ujhhgtg.wekit.utils.HostInfo.application.cacheDir
-        val out = java.io.File(cacheDir, "ai_voice_${System.nanoTime()}.mp3").toPath()
+        val cacheDir = HostInfo.application.cacheDir
+        val out = File(cacheDir, "ai_voice_${System.nanoTime()}.mp3").toPath()
         val result = when (engine) {
-            "fishaudio" -> MultiEngineTtsClient.synthesizeToMp3(
-                TtsEngine.FISH_AUDIO, text, out, fishVoice, fishKey)
-            "yx520" -> MultiEngineTtsClient.synthesizeToMp3(
-                TtsEngine.YX520, text, out, yxVoice, yxKey)
-            "bv" -> MultiEngineTtsClient.synthesizeToMp3(
-                TtsEngine.BYTE_DANCE, text, out, bvVoice, bvKey)
-            "vocu" -> MultiEngineTtsClient.synthesizeToMp3(
-                TtsEngine.VOCU, text, out, vocuVoice, vocuKey)
-            "tiax" -> TiaxTtsClient.synthesizeToMp3(
+            "fishaudio" -> MultiEngineTtsClient.synthesizeToMp3(TtsEngine.FISH_AUDIO, text, out, fishVoice, fishKey)
+            "yx520" -> MultiEngineTtsClient.synthesizeToMp3(TtsEngine.YX520, text, out, yxVoice, yxKey)
+            "bv" -> MultiEngineTtsClient.synthesizeToMp3(TtsEngine.BYTE_DANCE, text, out, bvVoice, bvKey)
+            "vocu" -> MultiEngineTtsClient.synthesizeToMp3(TtsEngine.VOCU, text, out, vocuVoice, vocuKey)
+            "tiax" -> dev.ujhhgtg.wekit.utils.TiaxTtsClient.synthesizeToMp3(
                 text, out, tiaxVoice.toIntOrNull() ?: 0, tiaxKey)
             else -> null
         }
         return result.getOrNull()?.toString()
     }
 
+    /** 音色列表 (id to 名称)。豆包/天X 内置。 */
+    fun engineVoices(engine: String): List<Pair<String, String>> = when (engine) {
+        "bv" -> BYTE_DANCE_PRESET_VOICES
+        "tiax" -> TIAX_PRESET_VOICES.mapIndexed { index, v -> index.toString() to v.name }
+        else -> emptyList()
+    }
+
+    /** 拉取 FishAudio/yx520 音色。 */
+    suspend fun fetchEngineVoices(engine: String): Result<List<Pair<String, String>>> = runCatching {
+        when (engine) {
+            "fishaudio" -> MultiEngineTtsClient.fetchVoices(TtsEngine.FISH_AUDIO, fishKey).getOrThrow()
+            "yx520" -> MultiEngineTtsClient.fetchVoices(TtsEngine.YX520, yxKey).getOrThrow()
+            else -> emptyList()
+        }
+    }
+
+    /** 文本转语音并发送。 */
+    suspend fun synthesizeAndSendText(talker: String, text: String): Boolean =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val mp3 = synthesizeMp3(text) ?: return@runCatching false
+                val silk = File(File(mp3).parentFile, "ai_${System.nanoTime()}.silk").absolutePath
+                if (!AudioUtils.anyToSilk(mp3, silk)) return@runCatching false
+                val duration = AudioUtils.getDurationMs(silk).toInt()
+                WeMessageApi.sendVoice(talker, silk, duration)
+                true
+            }.getOrElse {
+                WeLogger.e(TAG, "synthesize+send failed", it)
+                false
+            }
+        }
+
+    /** 获取当前聊天会话 talker（面板文字转语音用）。 */
+    fun currentTalker(): String? = WeCurrentConversationApi.value.takeIf { it.isNotBlank() }
+
     // ================= 记忆持久化 =================
 
-    private fun memoryFile(): File {
-        val dir = File(dev.ujhhgtg.wekit.utils.HostInfo.application.cacheDir, "aivoice")
-        return File(dir, "ai_memory.json")
-    }
+    private fun memoryFile(): File = File(File(HostInfo.application.cacheDir, "aivoice"), "ai_memory.json")
 
     private fun loadMemories() {
         runCatching {
@@ -253,9 +276,7 @@ object AiVoiceAssistant : ClickableFeature(), WeDatabaseListenerApi.IInsertListe
             root.keys().forEach { tk ->
                 val arr = root.optJSONArray(tk) ?: return@forEach
                 val list = mutableListOf<JSONObject>()
-                for (i in 0 until arr.length()) {
-                    arr.optJSONObject(i)?.let { list.add(it) }
-                }
+                for (i in 0 until arr.length()) arr.optJSONObject(i)?.let { list.add(it) }
                 if (list.isNotEmpty()) memories[tk] = list
             }
         }.onFailure { WeLogger.e(TAG, "load memory failed", it) }
@@ -264,9 +285,7 @@ object AiVoiceAssistant : ClickableFeature(), WeDatabaseListenerApi.IInsertListe
     private fun saveMemories() {
         runCatching {
             val root = JSONObject()
-            memories.forEach { (tk, list) ->
-                if (list.isNotEmpty()) root.put(tk, JSONArray(list))
-            }
+            memories.forEach { (tk, list) -> if (list.isNotEmpty()) root.put(tk, JSONArray(list)) }
             val f = memoryFile()
             f.parentFile?.mkdirs()
             f.writeText(root.toString())
