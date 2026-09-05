@@ -62,6 +62,7 @@ object MassSendMessage : ClickableFeature() {
         showComposeDialog(context) {
             TaskListPage(
                 context = context,
+                onDismiss = onDismiss,
                 onChanged = { MassTaskStore.saveTasks() },
             )
         }
@@ -72,6 +73,7 @@ object MassSendMessage : ClickableFeature() {
     @Composable
     private fun TaskListPage(
         context: Context,
+        onDismiss: () -> Unit,
         onChanged: () -> Unit,
     ) {
         val tasks = MassTaskStore.tasks
@@ -107,7 +109,7 @@ object MassSendMessage : ClickableFeature() {
                                 }
                                 TextButton(onClick = {
                                     showComposeDialog(context) {
-                                        TagEditorPage(context, tag) { MassTaskStore.reload() }
+                                        TagEditorPage(context, tag, onDismiss) { MassTaskStore.reload() }
                                     }
                                 }) { Text(stringResource(R.string.mass_task_edit)) }
                                 TextButton(onClick = {
@@ -144,7 +146,7 @@ object MassSendMessage : ClickableFeature() {
                                 }
                                 TextButton(onClick = {
                                     showComposeDialog(context) {
-                                        TaskEditorPage(context, task) { MassTaskStore.reload() }
+                                        TaskEditorPage(context, task, onDismiss) { MassTaskStore.reload() }
                                     }
                                 }) { Text(stringResource(R.string.mass_task_edit)) }
                                 TextButton(onClick = {
@@ -158,12 +160,12 @@ object MassSendMessage : ClickableFeature() {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Button(onClick = {
                             showComposeDialog(context) {
-                                TaskEditorPage(context, null) { MassTaskStore.reload() }
+                                TaskEditorPage(context, null, onDismiss) { MassTaskStore.reload() }
                             }
                         }) { Text(stringResource(R.string.mass_task_new_task)) }
                         Button(onClick = {
                             showComposeDialog(context) {
-                                TagEditorPage(context, null) { MassTaskStore.reload() }
+                                TagEditorPage(context, null, onDismiss) { MassTaskStore.reload() }
                             }
                         }) { Text(stringResource(R.string.mass_task_new_tag)) }
                     }
@@ -180,6 +182,7 @@ object MassSendMessage : ClickableFeature() {
     private fun TaskEditorPage(
         context: Context,
         editing: MassTaskStore.MassTask?,
+        onDismiss: () -> Unit,
         onDone: () -> Unit,
     ) {
         var mode by remember { mutableStateOf(editing?.mode ?: MassTaskStore.MODE_TEXT) }
@@ -335,6 +338,7 @@ object MassSendMessage : ClickableFeature() {
     private fun TagEditorPage(
         context: Context,
         editing: MassTaskStore.MassTag?,
+        onDismiss: () -> Unit,
         onDone: () -> Unit,
     ) {
         var name by remember { mutableStateOf(editing?.name ?: "") }

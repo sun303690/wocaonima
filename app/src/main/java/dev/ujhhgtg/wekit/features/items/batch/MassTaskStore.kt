@@ -273,7 +273,7 @@ internal object MassTaskStore {
         }
     }
 
-    private fun markSent(taskId: String, date: String, minuteOfDay: Int) {
+    private suspend fun markSent(taskId: String, date: String, minuteOfDay: Int) {
         ioMutex.withLock {
             val task = tasks.firstOrNull { it.id == taskId } ?: return
             task.sentDates.add(sentKey(date, minuteOfDay))

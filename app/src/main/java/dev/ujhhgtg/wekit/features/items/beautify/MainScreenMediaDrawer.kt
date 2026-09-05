@@ -89,22 +89,22 @@ object MainScreenMediaDrawer : SwitchFeature() {
     // ---- 偏好（沿用上游的 key，便于后续配置互通） ----
     private var imageUris: Set<String>
         get() = WePrefs.getStringSetOrDef("main_media_image_uris", emptySet())
-        set(value) = WePrefs.putStringSet("main_media_image_uris", value)
+        set(value) { WePrefs.putStringSet("main_media_image_uris", value) }
     private var videoUris: Set<String>
         get() = WePrefs.getStringSetOrDef("main_media_video_uris", emptySet())
-        set(value) = WePrefs.putStringSet("main_media_video_uris", value)
+        set(value) { WePrefs.putStringSet("main_media_video_uris", value) }
     private var apiUrls: String
         get() = WePrefs.getStringOrDef("main_media_api_urls", DEFAULT_API)
-        set(value) = WePrefs.putString("main_media_api_urls", value)
+        set(value) { WePrefs.putString("main_media_api_urls", value) }
     private var intervalSeconds: Int
         get() = WePrefs.getIntOrDef("main_media_interval_seconds", 6)
-        set(value) = WePrefs.putInt("main_media_interval_seconds", value)
+        set(value) { WePrefs.putInt("main_media_interval_seconds", value) }
     private var muted: Boolean
         get() = WePrefs.getBoolOrDef("main_media_muted", true)
-        set(value) = WePrefs.putBool("main_media_muted", value)
+        set(value) { WePrefs.putBool("main_media_muted", value) }
     private var apiFirst: Boolean
         get() = WePrefs.getBoolOrDef("main_media_api_first", false)
-        set(value) = WePrefs.putBool("main_media_api_first", value)
+        set(value) { WePrefs.putBool("main_media_api_first", value) }
 
     override fun onEnable() {
         WeMainActivityBeautifyApi.methodDoOnCreate.hookAfter {
