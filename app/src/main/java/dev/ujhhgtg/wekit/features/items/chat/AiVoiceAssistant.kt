@@ -226,7 +226,7 @@ object AiVoiceAssistant : ClickableFeature(), WeDatabaseListenerApi.IInsertListe
                 text, out, tiaxVoice.toIntOrNull() ?: 0, tiaxKey)
             else -> null
         }
-        return result.getOrNull()?.toString()
+        return result?.getOrNull()?.toString()
     }
 
     /** 音色列表 (id to 名称)。豆包/天X 内置。 */

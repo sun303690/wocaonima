@@ -37,12 +37,12 @@ internal object AiVoiceSettingsDialog {
 
     fun show(context: Context) {
         showComposeDialog(context) {
-            AiVoiceSettingsContent(context)
+            AiVoiceSettingsContent(context, onDismiss)
         }
     }
 
     @Composable
-    private fun AiVoiceSettingsContent(context: Context) {
+    private fun AiVoiceSettingsContent(context: Context, onDismiss: () -> Unit) {
         val a = AiVoiceAssistant
         val scope = rememberCoroutineScope()
 
@@ -57,7 +57,7 @@ internal object AiVoiceSettingsDialog {
 
         // ---- 音色 ----
         var engine by remember { mutableStateOf(a.engine) }
-        var selectedVoiceId by remember { mutableStateOf(currentEngineVoice(a)) }
+        var selectedVoiceId by remember { mutableStateOf(currentEngineVoice(a, a.engine)) }
         var voiceOptions by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
 
         // ---- 文字转语音 ----
@@ -74,7 +74,7 @@ internal object AiVoiceSettingsDialog {
 
         // 引擎或配置变化时加载音色
         LaunchedEffect(engine) {
-            selectedVoiceId = currentEngineVoice(a)
+            selectedVoiceId = currentEngineVoice(a, engine)
             voiceOptions = a.engineVoices(engine)
             if (voiceOptions.isEmpty() && (engine == "fishaudio" || engine == "yx520")) {
                 val fetched = a.fetchEngineVoices(engine).getOrNull()
@@ -160,9 +160,10 @@ internal object AiVoiceSettingsDialog {
                                 title = stringResource(R.string.aivoice_engine_voice),
                                 description = selectedVoiceId,
                                 value = selectedVoiceId,
-                                options = voiceOptions.ifEmpty {
-                                    listOf(DropdownOption(a.currentEngineVoice(engine), stringResource(R.string.aivoice_voice_manual)))
-                                },
+                                options = voiceOptions.map { DropdownOption(it.first, it.second) }
+                                    .ifEmpty {
+                                        listOf(DropdownOption(selectedVoiceId, stringResource(R.string.aivoice_voice_manual)))
+                                    },
                                 enabled = voiceOptions.isNotEmpty(),
                                 onValueChange = { selectedVoiceId = it },
                             )
@@ -170,7 +171,7 @@ internal object AiVoiceSettingsDialog {
                         item {
                             SettingsTextRow(
                                 title = stringResource(R.string.aivoice_engine_key),
-                                value = currentEngineKey(a),
+                                value = currentEngineKey(a, engine),
                                 onValueChange = { setEngineKey(a, engine, it) },
                             )
                         }
@@ -252,7 +253,7 @@ internal object AiVoiceSettingsDialog {
         )
     }
 
-    private fun currentEngineKey(a: AiVoiceAssistant): String = when (a.engine) {
+    private fun currentEngineKey(a: AiVoiceAssistant, engine: String): String = when (engine) {
         "fishaudio" -> a.fishKey
         "yx520" -> a.yxKey
         "bv" -> a.bvKey
@@ -271,7 +272,7 @@ internal object AiVoiceSettingsDialog {
         }
     }
 
-    private fun currentEngineVoice(a: AiVoiceAssistant): String = when (a.engine) {
+    private fun currentEngineVoice(a: AiVoiceAssistant, engine: String): String = when (engine) {
         "fishaudio" -> a.fishVoice
         "yx520" -> a.yxVoice
         "bv" -> a.bvVoice
