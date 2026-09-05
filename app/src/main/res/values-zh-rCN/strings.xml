@@ -508,6 +508,8 @@
     <string name="feature_mass_send_message_description">编写一条文本或卡片消息, 选择多个好友或群聊后批量发送, 请求会自动间隔以规避服务器风控</string>
     <string name="feature_add_main_screen_fab_name">主屏幕添加 FAB</string>
     <string name="feature_add_main_screen_fab_description">向微信主屏幕添加浮动操作按钮</string>
+    <string name="feature_main_screen_media_drawer_name">主屏幕媒体侧栏</string>
+    <string name="feature_main_screen_media_drawer_description">在微信主界面左缘滑出图片、GIF 和 9:16 短视频侧栏</string>
     <string name="feature_apply_dialog_background_blur_name">对话框窗口级背景模糊</string>
     <string name="feature_apply_dialog_background_blur_description">为模块与微信的对话框添加窗口级模糊处理 [需 SDK &gt;= 31]</string>
     <string name="feature_apply_global_background_name">应用全局背景</string>
