@@ -2,7 +2,7 @@ package dev.ujhhgtg.wekit.ui.panel
 
 import dev.ujhhgtg.wekit.features.items.chat.panel.StickerDestination
 
-internal data class StickerPanelNavigation(
+data class StickerPanelNavigation(
     val destination: StickerDestination,
     val selectedLocalPackId: String?,
     val localPackDetailId: String?,
