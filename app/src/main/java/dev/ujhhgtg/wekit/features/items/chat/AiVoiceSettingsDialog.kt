@@ -47,7 +47,7 @@ internal object AiVoiceSettingsDialog {
         val scope = rememberCoroutineScope()
 
         // ---- AI 对话 ----
-        var enabled by remember { mutableStateOf(a.enabled) }
+        var enabled by remember { mutableStateOf(a.autoReplyEnabled) }
         var trigger by remember { mutableStateOf(a.triggerWord) }
         var memoryRounds by remember { mutableStateOf(a.memoryRounds.toString()) }
         var voiceOnly by remember { mutableStateOf(a.voiceOnly) }
@@ -238,7 +238,7 @@ internal object AiVoiceSettingsDialog {
             dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.dialog_cancel)) } },
             confirmButton = {
                 Button(onClick = {
-                    a.enabled = enabled
+                    a.autoReplyEnabled = enabled
                     a.triggerWord = trigger.trim().ifBlank { "*" }
                     a.memoryRounds = memoryRounds.toIntOrNull()?.coerceIn(1, 999) ?: 5
                     a.voiceOnly = voiceOnly

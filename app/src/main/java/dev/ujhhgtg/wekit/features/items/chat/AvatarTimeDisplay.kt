@@ -77,7 +77,7 @@ object AvatarTimeDisplay : ClickableFeature(),
         var timeView = avatarContainer.findViewWithTag<TextView>(AVATAR_TIME_TAG)
         if (timeView == null) {
             timeView = TextView(avatarContainer.context).apply {
-                tag = AVATAR_TIME_TAG
+                this.tag = AVATAR_TIME_TAG
                 setTextColor(PINK)
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, TEXT_SIZE_SP)
                 gravity = Gravity.CENTER_HORIZONTAL

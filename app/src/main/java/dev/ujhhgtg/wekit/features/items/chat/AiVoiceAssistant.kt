@@ -51,7 +51,7 @@ object AiVoiceAssistant : ClickableFeature(), WeDatabaseListenerApi.IInsertListe
     override val noSwitchWidget = true
 
     // ---- 配置 ----
-    var enabled by WePrefs.prefOption("aivoice_enabled", false)
+    var autoReplyEnabled by WePrefs.prefOption("aivoice_enabled", false)
     var triggerWord by WePrefs.prefOption("aivoice_trigger", "*")
     var memoryRounds by WePrefs.prefOption("aivoice_memory_rounds", 5)
     var voiceOnly by WePrefs.prefOption("aivoice_voice_only", true)
@@ -114,7 +114,7 @@ object AiVoiceAssistant : ClickableFeature(), WeDatabaseListenerApi.IInsertListe
 
         // AI 自动回复：收到的消息
         if (isSend != 0) return
-        if (!enabled) return
+        if (!autoReplyEnabled) return
         val tg = triggerWord.ifBlank { "*" }
         val clean = if (content.contains(":\n")) {
             val idx = content.indexOf(":\n")

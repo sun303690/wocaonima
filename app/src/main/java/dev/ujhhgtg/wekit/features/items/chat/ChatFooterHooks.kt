@@ -34,7 +34,7 @@ object ChatFooterHooks : ApiFeature(), IResolveDex {
                 view.javaClass.simpleName == "WeImageButton"
             }.map { it as ImageButton }.toList()
 
-            if (AiVoiceAssistant.enabled) {
+            if (AiVoiceAssistant.autoReplyEnabled) {
                 val voiceBtn = imgButtons.first()
                 voiceBtn.setOnLongClickListener { view ->
                     AiVoiceSettingsDialog.show(view.context)
