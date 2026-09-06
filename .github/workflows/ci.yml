@@ -130,6 +130,11 @@ jobs:
             echo "WEKIT_KEY_PASSWORD=wekitpass" >> $GITHUB_ENV
           fi
 
+      - name: Build native library
+        run: |
+          cargo xtask configure
+          cargo xtask build --native-only
+
       - name: Build Release (Signed)
         if: github.event_name != 'pull_request'
         env:
@@ -621,6 +626,8 @@ jobs:
           key: ${{ steps.proot_cache.outputs.cache-primary-key }}
 
       - name: Pack extensions
+        env:
+          WEKIT_ARCH_ROOTFS: ${{ runner.temp }}/arch-pack/ArchLinuxARM-aarch64-rootfs.tar.gz
         run: cargo xtask extensions pack
 
       - name: Skip if assets already published
