@@ -98,12 +98,18 @@ internal object AiVoiceSettingsDialog {
                             )
                         }
                         item {
+                            // 确保 selectedModelId 始终存在于 options，避免 DropDownMenuWidget 抛 NoSuchElementException
+                            val modelOptions = buildList {
+                                models.forEach { add(DropdownOption(it.id, it.displayName)) }
+                                if (none { it.value == selectedModelId }) {
+                                    add(DropdownOption(selectedModelId, stringResource(R.string.aivoice_no_model)))
+                                }
+                            }
                             DropDownMenuWidget(
                                 title = stringResource(R.string.aivoice_model),
                                 description = models.firstOrNull { it.id == selectedModelId }?.displayName ?: selectedModelId,
                                 value = selectedModelId,
-                                options = models.map { DropdownOption(it.id, it.displayName) }
-                                    .ifEmpty { listOf(DropdownOption("", stringResource(R.string.aivoice_no_model))) },
+                                options = modelOptions,
                                 enabled = models.isNotEmpty(),
                                 onValueChange = { selectedModelId = it },
                             )
@@ -156,15 +162,20 @@ internal object AiVoiceSettingsDialog {
                             )
                         }
                         item {
+                            // 确保 selectedVoiceId 始终存在于 options，否则 DropDownMenuWidget 内部
+                            // options.first{it.value==value} 会抛 NoSuchElementException 崩溃
+                            val safeOptions = buildList {
+                                voiceOptions.forEach { add(DropdownOption(it.first, it.second)) }
+                                if (none { it.value == selectedVoiceId }) {
+                                    add(DropdownOption(selectedVoiceId, stringResource(R.string.aivoice_voice_manual)))
+                                }
+                            }
                             DropDownMenuWidget(
                                 title = stringResource(R.string.aivoice_engine_voice),
                                 description = selectedVoiceId,
                                 value = selectedVoiceId,
-                                options = voiceOptions.map { DropdownOption(it.first, it.second) }
-                                    .ifEmpty {
-                                        listOf(DropdownOption(selectedVoiceId, stringResource(R.string.aivoice_voice_manual)))
-                                    },
-                                enabled = voiceOptions.isNotEmpty(),
+                                options = safeOptions,
+                                enabled = safeOptions.isNotEmpty(),
                                 onValueChange = { selectedVoiceId = it },
                             )
                         }
