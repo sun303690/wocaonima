@@ -506,8 +506,6 @@
     <string name="feature_mass_send_message_description">創建定時羣發任務: 用標籤打包羣聊, 消息隨時編輯, 每天可設置多個發送時間點(時:分), 每個時間點到點自動羣發一次</string>
     <string name="feature_add_main_screen_fab_name">主屏幕添加 FAB</string>
     <string name="feature_add_main_screen_fab_description">向微信主屏幕添加浮動操作按鈕</string>
-    <string name="feature_main_screen_media_drawer_name">主屏幕媒體側欄</string>
-    <string name="feature_main_screen_media_drawer_description">在微信主界面左緣滑出圖片、GIF 和 9:16 短視頻側欄</string>
     <string name="feature_apply_dialog_background_blur_name">對話框窗口級背景模糊</string>
     <string name="feature_apply_dialog_background_blur_description">爲模塊與微信的對話框添加窗口級模糊處理 [需 SDK &gt;= 31]</string>
     <string name="feature_apply_global_background_name">應用全局背景</string>
