@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Color
 import android.view.View
 import android.view.Window
+import android.view.WindowManager
 import androidx.activity.ComponentDialog
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.wrapContentSize
@@ -44,6 +45,9 @@ fun showComposeDialog(
         window!!.apply {
             setBackgroundDrawableResource(android.R.color.transparent)
             requestFeature(Window.FEATURE_NO_TITLE)
+            // 允许软键盘弹出并调整布局，否则输入框点不到键盘
+            setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or
+                WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
         }
 
         setCancelable(directlyDismissable)

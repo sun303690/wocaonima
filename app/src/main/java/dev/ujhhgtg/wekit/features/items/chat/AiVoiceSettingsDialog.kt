@@ -1,8 +1,11 @@
 package dev.ujhhgtg.wekit.features.items.chat
 
 import android.content.Context
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -59,6 +62,8 @@ internal object AiVoiceSettingsDialog {
         var engine by remember { mutableStateOf(a.engine) }
         var selectedVoiceId by remember { mutableStateOf(currentEngineVoice(a, a.engine)) }
         var voiceOptions by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+        // 当前引擎 Key 的本地输入(Compose state, 输入实时显示)
+        var engineKeyInput by remember { mutableStateOf(currentEngineKey(a, a.engine)) }
 
         // ---- 文字转语音 ----
         var ttsText by remember { mutableStateOf("") }
@@ -72,8 +77,9 @@ internal object AiVoiceSettingsDialog {
             }
         }
 
-        // 引擎或配置变化时加载音色
+        // 引擎或配置变化时加载音色 + 同步 Key 输入
         LaunchedEffect(engine) {
+            engineKeyInput = currentEngineKey(a, engine)
             selectedVoiceId = currentEngineVoice(a, engine)
             voiceOptions = a.engineVoices(engine)
             if (voiceOptions.isEmpty() && (engine == "fishaudio" || engine == "yx520")) {
@@ -88,7 +94,7 @@ internal object AiVoiceSettingsDialog {
         AlertDialogContent(
             title = { Text(stringResource(R.string.feature_ai_voice_assistant_name)) },
             text = {
-                Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+                Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).imePadding()) {
                     SegmentedColumn(title = stringResource(R.string.aivoice_section_ai)) {
                         item {
                             SwitchWidget(
@@ -158,7 +164,10 @@ internal object AiVoiceSettingsDialog {
                                     DropdownOption("vocu", stringResource(R.string.aivoice_engine_vocu)),
                                     DropdownOption("tiax", stringResource(R.string.aivoice_engine_tiax)),
                                 ),
-                                onValueChange = { engine = it },
+                                onValueChange = {
+                                    engine = it
+                                    a.engine = it  // 引擎即时持久化，重开面板保持上次选择
+                                },
                             )
                         }
                         item {
@@ -176,15 +185,30 @@ internal object AiVoiceSettingsDialog {
                                 value = selectedVoiceId,
                                 options = safeOptions,
                                 enabled = safeOptions.isNotEmpty(),
-                                onValueChange = { selectedVoiceId = it },
+                                onValueChange = {
+                                    selectedVoiceId = it
+                                    // 选中音色立即持久化，重开面板保持上次选择
+                                    setEngineVoice(a, engine, it)
+                                },
                             )
                         }
                         item {
                             SettingsTextRow(
                                 title = stringResource(R.string.aivoice_engine_key),
-                                value = currentEngineKey(a, engine),
-                                onValueChange = { setEngineKey(a, engine, it) },
+                                value = engineKeyInput,
+                                onValueChange = { engineKeyInput = it },
                             )
+                        }
+                        item {
+                            Row(
+                                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Button(onClick = {
+                                    setEngineKey(a, engine, engineKeyInput)
+                                    showToast(context, context.getString(R.string.aivoice_saved))
+                                }) { Text(stringResource(R.string.aivoice_save)) }
+                            }
                         }
                         if (voiceOptions.isEmpty() && (engine == "fishaudio" || engine == "yx520")) {
                             item {
