@@ -31,12 +31,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     if: |
-      (github.event_name == 'workflow_dispatch' && github.repository == 'Ujhhgtg/WeKit-Dev') ||
+      (github.event_name == 'workflow_dispatch' && github.repository == 'sun303690/wocaonima') ||
       (
         !startsWith(github.event.head_commit.message, '[skip ci]') && 
         (
           github.event_name == 'pull_request' ||
-          (github.repository == 'Ujhhgtg/WeKit-Dev' && github.ref == 'refs/heads/master')
+          (github.repository == 'sun303690/wocaonima' && github.ref == 'refs/heads/master')
         )
       )
     steps:
@@ -427,14 +427,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
-          if gh release view Dex-Test --repo Ujhhgtg/WeKit >/dev/null 2>&1; then
-            gh release edit Dex-Test --repo Ujhhgtg/WeKit \
+          if gh release view Dex-Test --repo ${{ github.repository }} >/dev/null 2>&1; then
+            gh release edit Dex-Test --repo ${{ github.repository }} \
               --title "Dex Test" \
               --prerelease \
               --notes-file dist/dex-test-release/release-notes.md
           else
             gh release create Dex-Test \
-              --repo Ujhhgtg/WeKit \
+              --repo ${{ github.repository }} \
               --title "Dex Test" \
               --prerelease \
               --notes-file dist/dex-test-release/release-notes.md
@@ -444,11 +444,11 @@ jobs:
           while IFS= read -r asset; do
             [[ -n "$asset" ]] && upload+=("dist/dex-test-release/$asset")
           done < dist/dex-test-release/assets.txt
-          gh release upload Dex-Test --repo Ujhhgtg/WeKit "${upload[@]}" --clobber
+          gh release upload Dex-Test --repo ${{ github.repository }} "${upload[@]}" --clobber
 
   extensions-changes:
     runs-on: ubuntu-latest
-    if: github.repository == 'Ujhhgtg/WeKit-Dev' && github.event_name == 'push'
+    if: github.repository == 'sun303690/wocaonima' && github.event_name == 'push'
     outputs:
       changed: ${{ steps.filter.outputs.extensions }}
     steps:
@@ -634,7 +634,7 @@ jobs:
             done | sort
           )
           published_assets=$(
-            gh api "repos/Ujhhgtg/WeKit/releases/tags/Extensions" \
+            gh api "repos/${{ github.repository }}/releases/tags/Extensions" \
               --jq '.assets[] | [.name, .digest] | @tsv' 2>/dev/null | sort || true
           )
           if [[ "$current_assets" == "$published_assets" ]]; then
@@ -649,9 +649,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
-          if ! gh release view Extensions --repo Ujhhgtg/WeKit >/dev/null 2>&1; then
+          if ! gh release view Extensions --repo ${{ github.repository }} >/dev/null 2>&1; then
             gh release create Extensions \
-              --repo Ujhhgtg/WeKit \
+              --repo ${{ github.repository }} \
               --title "Extensions" \
               --prerelease \
               --notes "扩展包资产。manifest.json 为最新版本索引, 本体按索引下载并校验 SHA-256。"
@@ -668,10 +668,10 @@ jobs:
             [[ "$asset" == dist/extensions/manifest.json ]] || pack_assets+=("$asset")
           done
           (( ${#pack_assets[@]} > 0 ))
-          gh release upload Extensions --repo Ujhhgtg/WeKit \
+          gh release upload Extensions --repo ${{ github.repository }} \
             "${pack_assets[@]}" \
             --clobber
-          gh release upload Extensions --repo Ujhhgtg/WeKit dist/extensions/manifest.json --clobber
+          gh release upload Extensions --repo ${{ github.repository }} dist/extensions/manifest.json --clobber
 
       - name: Remove stale pack assets
         if: steps.published.outputs.skip == 'false'
@@ -681,7 +681,7 @@ jobs:
           shopt -s nullglob
           current_files=(dist/extensions/*)
           (( ${#current_files[@]} > 0 ))
-          published_assets=$(gh release view Extensions --repo Ujhhgtg/WeKit --json assets --jq '.assets[].name')
+          published_assets=$(gh release view Extensions --repo ${{ github.repository }} --json assets --jq '.assets[].name')
 
           while IFS= read -r published_asset; do
             [[ -z "$published_asset" ]] && continue
@@ -693,14 +693,14 @@ jobs:
               fi
             done
             if [[ "$keep" == false ]]; then
-              gh release delete-asset Extensions --repo Ujhhgtg/WeKit "$published_asset" --yes
+              gh release delete-asset Extensions --repo ${{ github.repository }} "$published_asset" --yes
             fi
           done <<< "$published_assets"
 
   release-ci:
     needs: build
     runs-on: ubuntu-latest
-    if: ${{ always() && needs.build.result == 'success' && github.repository == 'Ujhhgtg/WeKit-Dev' && github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+    if: ${{ always() && needs.build.result == 'success' && github.repository == 'sun303690/wocaonima' && github.event_name == 'push' && github.ref == 'refs/heads/master' }}
     permissions:
       contents: write
 
@@ -721,8 +721,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
-          gh release delete CI --repo Ujhhgtg/WeKit --yes || true
-          gh api -X DELETE repos/Ujhhgtg/WeKit/git/refs/tags/CI || true
+          gh release delete CI --repo ${{ github.repository }} --yes || true
+          gh api -X DELETE repos/${{ github.repository }}/git/refs/tags/CI || true
 
       - name: Generate update.json
         run: |
@@ -758,7 +758,7 @@ jobs:
           } > "$RUNNER_TEMP/ci-notes.md"
 
           gh release create CI \
-            --repo Ujhhgtg/WeKit \
+            --repo ${{ github.repository }} \
             --title "CI" \
             --notes-file "$RUNNER_TEMP/ci-notes.md" \
             artifacts/*
@@ -766,7 +766,7 @@ jobs:
   upload-telegram:
     needs: build
     runs-on: ubuntu-latest
-    if: ${{ always() && needs.build.result == 'success' && github.repository == 'Ujhhgtg/WeKit-Dev' && github.event_name == 'workflow_dispatch' }}
+    if: ${{ always() && needs.build.result == 'success' && github.repository == 'sun303690/wocaonima' && github.event_name == 'workflow_dispatch' }}
     services:
       telegram-bot-api:
         image: aiogram/telegram-bot-api:latest
