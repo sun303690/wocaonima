@@ -682,6 +682,12 @@
     <string name="feature_message_entrance_animation_description">聊天界面中单条消息进入屏幕时播放入场动画, 支持弹跳/平移滑入/重力掉落, 可让历史消息全跳动</string>
     <string name="feature_message_time_enhancements_name">消息时间增强</string>
     <string name="feature_message_time_enhancements_description">显示精确消息发送时间并允许显示更多详情</string>
+    <string name="feature_display_message_time_by_avatar_name">显示消息时间</string>
+    <string name="feature_display_message_time_by_avatar_description">在头像旁显示发送时间</string>
+    <string name="avatar_time_format">时间格式</string>
+    <string name="avatar_time_font_size">字体大小</string>
+    <string name="avatar_time_color">字体颜色</string>
+    <string name="avatar_time_invalid_number">请输入有效的字体大小</string>
     <string name="feature_modify_text_message_display_name">修改文本消息显示</string>
     <string name="feature_modify_text_message_display_description">向消息长按菜单添加菜单项, 可修改本地消息显示内容</string>
     <string name="feature_monitor_group_member_operations_name">群成员行为监控</string>
@@ -4030,6 +4036,7 @@
     <string name="aivoice_voice_only_desc">回复时发送语音消息而非文字</string>
     <string name="aivoice_section_tts">TTS 语音引擎</string>
     <string name="aivoice_engine">引擎</string>
+    <string name="aivoice_engine_site">官方链接：</string>
     <string name="aivoice_engine_fish">FishAudio</string>
     <string name="aivoice_engine_yx">yx520</string>
     <string name="aivoice_engine_bv">火山豆包</string>

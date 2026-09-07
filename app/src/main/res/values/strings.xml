@@ -719,6 +719,12 @@
     <string name="feature_message_entrance_animation_description">When a single message enters the screen in the chat interface, the entry animation is played, and it supports bouncing/sliding in/gravity drop, allowing all historical messages to jump.</string>
     <string name="feature_message_time_enhancements_name">Enhanced message timestamps</string>
     <string name="feature_message_time_enhancements_description">Shows the precise time the message was sent and allows more details to be displayed</string>
+    <string name="feature_display_message_time_by_avatar_name">Show message time</string>
+    <string name="feature_display_message_time_by_avatar_description">Shows the send time next to the avatar</string>
+    <string name="avatar_time_format">Time format</string>
+    <string name="avatar_time_font_size">Font size</string>
+    <string name="avatar_time_color">Font color</string>
+    <string name="avatar_time_invalid_number">Enter a valid font size</string>
     <string name="feature_modify_text_message_display_name">Modify text message display</string>
     <string name="feature_modify_text_message_display_description">Add menu items to the message long press menu to modify the local message display content</string>
     <string name="feature_monitor_group_member_operations_name">Group member behavior monitoring</string>
@@ -4002,6 +4008,7 @@
     <string name="aivoice_voice_only_desc">Reply with a voice message instead of text</string>
     <string name="aivoice_section_tts">Voice Engine</string>
     <string name="aivoice_engine">Engine</string>
+    <string name="aivoice_engine_site">Official site:</string>
     <string name="aivoice_engine_fish">FishAudio</string>
     <string name="aivoice_engine_yx">yx520</string>
     <string name="aivoice_engine_bv">ByteDance (Doubao)</string>

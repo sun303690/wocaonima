@@ -135,6 +135,17 @@ internal object AiVoiceSettingsDialog {
                             )
                         }
                         item {
+                            Row(
+                                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Button(onClick = {
+                                    a.prompt = prompt.trim()
+                                    showToast(context, context.getString(R.string.aivoice_saved))
+                                }) { Text(stringResource(R.string.aivoice_save)) }
+                            }
+                        }
+                        item {
                             SettingsTextRow(
                                 title = stringResource(R.string.aivoice_memory_rounds),
                                 value = memoryRounds,
@@ -169,6 +180,17 @@ internal object AiVoiceSettingsDialog {
                                     a.engine = it  // 引擎即时持久化，重开面板保持上次选择
                                 },
                             )
+                        }
+                        item {
+                            val site = engineSite(engine)
+                            if (site.isNotEmpty()) {
+                                Text(
+                                    "${stringResource(R.string.aivoice_engine_site)} $site",
+                                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                                )
+                            }
                         }
                         item {
                             // 确保 selectedVoiceId 始终存在于 options，否则 DropDownMenuWidget 内部
@@ -242,24 +264,6 @@ internal object AiVoiceSettingsDialog {
                             )
                         }
                         item {
-                            Button(onClick = {
-                                val text = ttsText.trim()
-                                if (text.isEmpty()) { showToast(context, context.getString(R.string.aivoice_tts_empty)); return@Button }
-                                scope.launch {
-                                    sending = true
-                                    val talker = a.currentTalker()
-                                    if (talker.isNullOrEmpty()) {
-                                        showToast(context, context.getString(R.string.aivoice_tts_no_talker)); sending = false; return@launch
-                                    }
-                                    val ok = a.synthesizeAndSendText(talker, text)
-                                    sending = false
-                                    showToast(context, context.getString(if (ok) R.string.aivoice_tts_sent else R.string.aivoice_tts_failed))
-                                }
-                            }, enabled = !sending) {
-                                Text(stringResource(R.string.aivoice_tts_send))
-                            }
-                        }
-                        item {
                             Text(
                                 stringResource(R.string.aivoice_tts_hint),
                                 style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
@@ -280,10 +284,27 @@ internal object AiVoiceSettingsDialog {
                     a.prompt = prompt.trim()
                     a.weAgentModelId = selectedModelId
                     a.engine = engine
+                    setEngineKey(a, engine, engineKeyInput)
                     setEngineVoice(a, engine, selectedVoiceId)
-                    onDismiss()
-                    showToast(context, context.getString(R.string.aivoice_saved))
-                }) { Text(stringResource(R.string.aivoice_save)) }
+                    val text = ttsText.trim()
+                    if (text.isEmpty()) {
+                        showToast(context, context.getString(R.string.aivoice_saved))
+                    } else {
+                        scope.launch {
+                            sending = true
+                            val talker = a.currentTalker()
+                            if (talker.isNullOrEmpty()) {
+                                sending = false
+                                showToast(context, context.getString(R.string.aivoice_tts_no_talker))
+                            } else {
+                                val ok = a.synthesizeAndSendText(talker, text)
+                                sending = false
+                                showToast(context, context.getString(if (ok) R.string.aivoice_tts_sent else R.string.aivoice_tts_failed))
+                            }
+                            onDismiss()
+                        }
+                    }
+                }, enabled = !sending) { Text(stringResource(R.string.aivoice_tts_send)) }
             },
         )
     }
@@ -294,6 +315,15 @@ internal object AiVoiceSettingsDialog {
         "bv" -> a.bvKey
         "vocu" -> a.vocuKey
         "tiax" -> a.tiaxKey
+        else -> ""
+    }
+
+    private fun engineSite(engine: String): String = when (engine) {
+        "fishaudio" -> "https://www.fish.audio"
+        "yx520" -> "https://yx520.ltd"
+        "bv" -> "https://www.volcengine.com"
+        "vocu" -> "https://v1.vocu.studio"
+        "tiax" -> "https://www.tiax.pw"
         else -> ""
     }
 

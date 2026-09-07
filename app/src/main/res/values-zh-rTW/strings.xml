@@ -680,6 +680,12 @@
     <string name="feature_message_entrance_animation_description">聊天界面中單條消息進入屏幕時播放入場動畫, 支持彈跳/平移滑入/重力掉落, 可讓歷史消息全跳動</string>
     <string name="feature_message_time_enhancements_name">消息時間增強</string>
     <string name="feature_message_time_enhancements_description">顯示精確消息發送時間並允許顯示更多詳情</string>
+    <string name="feature_display_message_time_by_avatar_name">顯示消息時間</string>
+    <string name="feature_display_message_time_by_avatar_description">在頭像旁顯示發送時間</string>
+    <string name="avatar_time_format">時間格式</string>
+    <string name="avatar_time_font_size">字體大小</string>
+    <string name="avatar_time_color">字體顏色</string>
+    <string name="avatar_time_invalid_number">請輸入有效的字體大小</string>
     <string name="feature_modify_text_message_display_name">修改文本消息顯示</string>
     <string name="feature_modify_text_message_display_description">向消息長按菜單添加菜單項, 可修改本地消息顯示內容</string>
     <string name="feature_monitor_group_member_operations_name">羣成員行爲監控</string>
@@ -4012,6 +4018,7 @@
     <string name="aivoice_voice_only_desc">回覆時發送語音消息而非文字</string>
     <string name="aivoice_section_tts">TTS 語音引擎</string>
     <string name="aivoice_engine">引擎</string>
+    <string name="aivoice_engine_site">官方連結：</string>
     <string name="aivoice_engine_fish">FishAudio</string>
     <string name="aivoice_engine_yx">yx520</string>
     <string name="aivoice_engine_bv">火山豆包</string>
