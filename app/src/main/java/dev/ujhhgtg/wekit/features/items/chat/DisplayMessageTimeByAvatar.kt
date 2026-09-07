@@ -2,7 +2,9 @@ package dev.ujhhgtg.wekit.features.items.chat
 
 import android.annotation.SuppressLint
 import android.util.TypedValue
+import android.view.Gravity
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Column
@@ -41,7 +43,7 @@ import dev.ujhhgtg.wekit.utils.HookParam
 import dev.ujhhgtg.wekit.utils.android.showToast
 import dev.ujhhgtg.wekit.utils.formatEpoch
 
-/** 显示消息时间：在头像旁显示发送时间。 */
+/** 显示消息时间：在头像下方显示发送时间。 */
 object DisplayMessageTimeByAvatar : ClickableFeature(),
     WeChatMessageViewApi.ICreateViewListener {
 
@@ -54,12 +56,20 @@ object DisplayMessageTimeByAvatar : ClickableFeature(),
     private var textSize by prefOption("avatar_time_text_size", 6)
     private var textColor by prefOption("avatar_time_text_color", "#FF8AB22F")
 
+    /** Marks the time TextView we insert under the avatar, so a recycled row is reused, not re-added. */
+    private val avatarTimeTag = 0x7E000020
+
     override fun onEnable() {
         WeChatMessageViewApi.addListener(this)
     }
 
     override fun onDisable() {
         WeChatMessageViewApi.removeListener(this)
+    }
+
+    private fun epochToMillis(epoch: Long): Long {
+        // field_createTime 可能是秒（10 位）或毫秒（13 位），统一转毫秒
+        return if (epoch in 1_000_000_000L..9_999_999_999L) epoch * 1000 else epoch
     }
 
     @SuppressLint("SetTextI18n")
@@ -72,14 +82,36 @@ object DisplayMessageTimeByAvatar : ClickableFeature(),
         if (msgInfo.type?.isSystem == true) return
 
         val tag = view.tag ?: return
-        val time = tag.reflekt()
+        val avatar = tag.reflekt()
             .firstField {
-                name = "timeTV"
+                name = "avatarIV"
                 superclass()
             }
-            .get() as? TextView ?: return
+            .get() as? View ?: return
+        val mask = avatar.parent as? FrameLayout ?: return
 
-        time.text = formatEpoch(msgInfo.createTime, timePattern)
+        var time = mask.getTag(avatarTimeTag) as? TextView
+        if (time == null) {
+            time = TextView(mask.context)
+            time.tag = null
+            time.setTag(avatarTimeTag, true)
+            mask.addView(
+                time,
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    Gravity.TOP or Gravity.CENTER_HORIZONTAL,
+                )
+            )
+            // 位置：MaskLayout 与头像等高，把时间顶到 MaskLayout 下缘正下方。
+            time.post {
+                val lp = time.layoutParams as? FrameLayout.LayoutParams ?: return@post
+                lp.topMargin = mask.height
+                time.layoutParams = lp
+            }
+        }
+
+        time.text = formatEpoch(epochToMillis(msgInfo.createTime), timePattern)
         time.visibility = View.VISIBLE
 
         val parsedColor = runCatching { textColor.toColorInt() }.getOrElse { android.graphics.Color.GRAY }

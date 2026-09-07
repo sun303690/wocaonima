@@ -31,8 +31,8 @@ import kotlin.io.path.writeBytes
  *  - FISH_AUDIO  GET https://yx520.ltd/API/fishaudio/api.php?ys=<voice>&text=<t>&apikey=<key>&msg=mp3
  *                音色列表 https://yx520.ltd/API/fishaudio/ys.php（"id. name" 逐行，偶数行为 id）
  *                返回：原始 mp3 字节（>256 字节且魔数合法）
- *  - YX520       GET https://yx520.ltd/API/wzzyypromax/api.php?voice=<v>&apikey=<key>&text=<t>
- *                音色列表 https://yx520.ltd/API/wzzyypromax/ys.php（"id. name" 逐行）
+ *  - YX520       GET https://yx520.ltd/API/wzzyy/api.php?voice=<v>&apikey=<key>&text=<t>
+ *                音色列表 https://yx520.ltd/API/wzzyy/ys.php（"id. name" 逐行）
  *                返回：JSON {code/status, audio|url|data[.audio|.url]} → 二次下载；或原始 mp3
  *  - BYTE_DANCE  POST https://openspeech.bytedance.com/api/v3/tts/unidirectional
  *                Header: X-Api-Key / X-Api-Resource-Id(seed-tts-2.0|seed-icl-2.0) / X-Api-Request-Id
@@ -48,8 +48,8 @@ object MultiEngineTtsClient {
 
     const val FISH_YS_URL = "https://yx520.ltd/API/fishaudio/ys.php"
     const val FISH_API_URL = "https://yx520.ltd/API/fishaudio/api.php"
-    const val YX_YS_URL = "https://yx520.ltd/API/wzzyypromax/ys.php"
-    const val YX_API_URL = "https://yx520.ltd/API/wzzyypromax/api.php"
+    const val YX_YS_URL = "https://yx520.ltd/API/wzzyy/ys.php"
+    const val YX_API_URL = "https://yx520.ltd/API/wzzyy/api.php"
     const val BYTE_TTS_URL = "https://openspeech.bytedance.com/api/v3/tts/unidirectional"
     const val VOCU_TTS_URL = "https://v1.vocu.studio/api/tts/simple-generate"
     const val VOCU_VOICE_URL = "https://v1.vocu.studio/api/voice?"
