@@ -180,7 +180,7 @@ ANDROID_SERIAL=SERIAL ./x run
 可选：应用基准配置（Baseline Profile）：
 
 ```bash
-adb shell cmd package compile -m speed-profile dev.ujhhgtg.wekit
+adb shell cmd package compile -m speed-profile dev.sun.wechat
 ```
 
 ### 检查 Rust native 库

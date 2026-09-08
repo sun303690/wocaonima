@@ -1,7 +1,7 @@
 package me.hd.wauxv.data.bean.info
 
 import androidx.annotation.Keep
-import dev.ujhhgtg.wekit.features.api.core.WeDatabaseApi
+import dev.sun.wechat.features.api.core.WeDatabaseApi
 
 @Keep
 data class GroupData(

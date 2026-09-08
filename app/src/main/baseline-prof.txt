@@ -1,19 +1,19 @@
 # ====================================================================
 # XPOSED ENTRY POINTS (Critical Startup)
 # ====================================================================
-Ldev/ujhhgtg/wekit/loader/entry/lxp/LxpHookEntry;
-Ldev/ujhhgtg/wekit/loader/entry/xp51/Xp51HookEntry;
+Ldev/sun/wechat/loader/entry/lxp/LxpHookEntry;
+Ldev/sun/wechat/loader/entry/xp51/Xp51HookEntry;
 
 # ====================================================================
 # CORE APIs & INTERNAL HOOKING INTERFACES
 # ====================================================================
-Ldev/ujhhgtg/wekit/features/api/core/WeAppMsgApi;
-Ldev/ujhhgtg/wekit/features/api/core/WeConversationApi;
-Ldev/ujhhgtg/wekit/features/api/core/WeDatabaseApi;
-Ldev/ujhhgtg/wekit/features/api/core/WeDatabaseListenerApi;
-Ldev/ujhhgtg/wekit/features/api/core/WeMessageApi;
-Ldev/ujhhgtg/wekit/features/api/core/WeServiceApi;
-Ldev/ujhhgtg/wekit/features/api/core/WeUnsafeApi;
-Ldev/ujhhgtg/wekit/features/api/net/WeNetSceneApi;
-Ldev/ujhhgtg/wekit/features/api/net/WePacketHelper;
-Ldev/ujhhgtg/wekit/features/api/net/listener/WePacketDispatcher;
+Ldev/sun/wechat/features/api/core/WeAppMsgApi;
+Ldev/sun/wechat/features/api/core/WeConversationApi;
+Ldev/sun/wechat/features/api/core/WeDatabaseApi;
+Ldev/sun/wechat/features/api/core/WeDatabaseListenerApi;
+Ldev/sun/wechat/features/api/core/WeMessageApi;
+Ldev/sun/wechat/features/api/core/WeServiceApi;
+Ldev/sun/wechat/features/api/core/WeUnsafeApi;
+Ldev/sun/wechat/features/api/net/WeNetSceneApi;
+Ldev/sun/wechat/features/api/net/WePacketHelper;
+Ldev/sun/wechat/features/api/net/listener/WePacketDispatcher;

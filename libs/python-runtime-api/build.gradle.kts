@@ -6,7 +6,7 @@ plugins {
     id("com.android.library")
 }
 
-group = "dev.ujhhgtg.wekit"
+group = "dev.sun.wechat"
 version = providers.gradleProperty("wekitPythonApiVersion")
     .orElse(libs.versions.pythonRuntimeApiVersion).get()
 
@@ -23,7 +23,7 @@ kotlin {
 }
 
 configure<LibraryExtension> {
-    namespace = "dev.ujhhgtg.wekit.python.api"
+    namespace = "dev.sun.wechat.python.api"
 
     defaultConfig {
         minSdk = libs.versions.minSdk.get().toInt()
