@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name" translatable="false">WeKit</string>
+    <string name="app_name" translatable="false">WeChatKit</string>
     <string name="app_description">WeChat, now with superpowers\nsun303690@github</string>
     <string name="res_inject_success" translatable="false">Resources injection success</string>
 
