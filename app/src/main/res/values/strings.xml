@@ -4055,4 +4055,7 @@
 
     <string name="smart_reply_context_limit">Reference context (messages)</string>
     <string name="smart_reply_count">Candidate count</string>
+
+    <string name="smart_reply_style">Tone preset</string>
+    <string name="smart_reply_tap_generate">Choose a tone and tap Generate</string>
 </resources>

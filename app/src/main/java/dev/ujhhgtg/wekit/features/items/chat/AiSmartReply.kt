@@ -1,5 +1,8 @@
 package dev.ujhhgtg.wekit.features.items.chat
 
+import android.app.Activity
+import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -7,7 +10,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -23,8 +28,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.activity.ComponentActivity
-import androidx.compose.foundation.text.KeyboardOptions
 import com.composables.icons.materialsymbols.MaterialSymbols
 import com.composables.icons.materialsymbols.outlined.Auto_awesome
 import dev.ujhhgtg.wekit.R
@@ -50,16 +53,15 @@ import dev.ujhhgtg.wekit.ui.utils.showComposeDialog
 import dev.ujhhgtg.wekit.utils.WeLogger
 import dev.ujhhgtg.wekit.utils.android.showToast
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * 智能回复（移植自 FkWeChat"AI回复"）：
- * 长按消息 → 生成多条可编辑的回复候选 → 发送。
- *  - 参考上下文条数：从该会话取最近 N 条消息作为上下文（默认 10）
- *  - 生成备选数：一次生成几条候选（默认 5）
- *  - 候选可编辑后发送
+ * 长按智能回复（移植自 FkWeChat"AI回复"）：
+ * 快捷选择语气预设 → 按预设生成多条可编辑的回复候选 → 发送。
+ *  - 语气预设：10 种（智能全能/高情商/轻松闲聊/严谨正式/幽默阴阳/同理安慰/客气周到/霸道冷酷/可爱萌化/委婉拒绝）
+ *  - 参考上下文条数（默认10，取该会话最近N条）
+ *  - 生成备选数（默认20）
  *  AI 调用复用 WeAgent 模型库。
  */
 object AiSmartReply : ClickableFeature(),
@@ -73,10 +75,22 @@ object AiSmartReply : ClickableFeature(),
     private const val TAG = "AiSmartReply"
     private const val MENU_ID = 777042
 
-    /** 参考上下文条数 */
     var contextLimit by prefOption("ai_reply_context_limit", 10)
-    /** 生成备选数 */
     var replyCount by prefOption("ai_reply_count", 20)
+
+    /** 语气预设 name -> prompt（与 FkWeChat 一致） */
+    val STYLES = listOf(
+        "智能全能" to "分析当前对话氛围，给出最得体、自然的回复。",
+        "高情商" to "说话非常有艺术，能够化解尴尬，照顾对方感受，充满智慧。",
+        "轻松闲聊" to "语气随性自然，带一点点幽默感，不要官方和生硬。",
+        "严谨正式" to "语气礼貌、专业、客观，适用于职场或正式商务沟通。",
+        "幽默/阴阳" to "说话风趣，带点俏皮甚至一点点阴阳怪气，非常有意思。",
+        "同理/安慰" to "语气非常温柔，站在对方立场思考，给予对方情感上的支撑。",
+        "客气周到" to "非常有礼貌，多使用敬语，保持一定的礼貌距离。",
+        "霸道/冷酷" to "言简意赅，语气带有一点压迫感和冷酷的霸总风格。",
+        "可爱/萌化" to "说话活泼，多用呀、哒、呢，增加适量颜文字，非常可爱。",
+        "委婉拒绝" to "礼貌地拒绝对方的要求，不让对方感到难堪，语气委婉。",
+    )
 
     override fun onEnable() {
         WeChatMessageContextMenuApi.addProvider(this)
@@ -87,10 +101,7 @@ object AiSmartReply : ClickableFeature(),
     }
 
     override fun onClick(context: ComponentActivity) {
-        // 设置面板：改上下文条数和备选数
-        showComposeDialog(context) {
-            SettingsDialogContent()
-        }
+        showComposeDialog(context) { SettingsDialogContent(context) }
     }
 
     override fun getMenuItems(): List<MenuItem> = listOf(
@@ -108,7 +119,7 @@ object AiSmartReply : ClickableFeature(),
     )
 
     @Composable
-    private fun SettingsDialogContent() {
+    private fun SettingsDialogContent(context: android.content.Context) {
         var contextInput by remember { mutableStateOf(contextLimit.toString()) }
         var countInput by remember { mutableStateOf(replyCount.toString()) }
         AlertDialogContent(
@@ -156,7 +167,7 @@ object AiSmartReply : ClickableFeature(),
         )
     }
 
-    private fun showSmartReplyDialog(activity: android.app.Activity, msgInfo: MessageInfo) {
+    private fun showSmartReplyDialog(activity: Activity, msgInfo: MessageInfo) {
         showComposeDialog(activity) {
             SmartReplyDialogContent(msgInfo)
         }
@@ -166,18 +177,21 @@ object AiSmartReply : ClickableFeature(),
     private fun SmartReplyDialogContent(msgInfo: MessageInfo) {
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
+        var selectedStyle by remember { mutableStateOf("智能全能") }
         var candidates by remember { mutableStateOf<List<String>>(emptyList()) }
         var loading by remember { mutableStateOf(false) }
         var error by remember { mutableStateOf<String?>(null) }
-        var firstGenerate by remember { mutableStateOf(true) }
 
-        if (firstGenerate) {
-            firstGenerate = false
+        val text = remember(msgInfo.id) { msgMessageText(msgInfo) }
+
+        fun generate() {
+            if (loading) return
             scope.launch {
                 loading = true
-                val list = generateCandidates(msgInfo.talker, msgMessageText(msgInfo))
+                error = null
+                candidates = generateCandidates(msgInfo.talker, text, selectedStyle)
                 loading = false
-                if (list.isEmpty()) error = "生成失败，请检查模型配置" else candidates = list
+                if (candidates.isEmpty()) error = "生成失败，请检查模型配置"
             }
         }
 
@@ -185,51 +199,52 @@ object AiSmartReply : ClickableFeature(),
             title = { Text(stringResource(R.string.feature_ai_smart_reply_name)) },
             text = {
                 Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+                    // 快捷选择语气预设
+                    Text(stringResource(R.string.smart_reply_style), style = MaterialTheme.typography.titleSmall)
+                    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        STYLES.take(5).forEach { (name, _) ->
+                            FilterChip(selected = selectedStyle == name, onClick = { selectedStyle = name }, label = { Text(name) })
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        STYLES.drop(5).forEach { (name, _) ->
+                            FilterChip(selected = selectedStyle == name, onClick = { selectedStyle = name }, label = { Text(name) })
+                        }
+                    }
+
                     when {
                         loading -> Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(Modifier.padding(end = 8.dp))
                             Text(stringResource(R.string.ama_generating))
                         }
                         error != null -> Text(error!!, color = MaterialTheme.colorScheme.error)
-                        candidates.isEmpty() -> Text(stringResource(R.string.ama_no_content))
-                        else -> {
-                            candidates.forEach { text ->
-                                var editable by remember(text) { mutableStateOf(text) }
-                                Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-                                    OutlinedTextField(
-                                        value = editable,
-                                        onValueChange = { editable = it },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        minLines = 2,
-                                        maxLines = 5,
-                                    )
-                                    Button(
-                                        onClick = {
-                                            val finalText = editable.trim()
-                                            if (finalText.isEmpty()) {
-                                                showToast(context, context.getString(R.string.ama_tts_empty_v2))
-                                                return@Button
-                                            }
-                                            val ok = WeMessageApi.sendText(msgInfo.talker, finalText)
-                                            showToast(context, context.getString(if (ok) R.string.ama_sent else R.string.ama_send_failed))
-                                        },
-                                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                                    ) { Text(stringResource(R.string.ama_send)) }
-                                }
-                            }
-                            Button(onClick = {
-                                scope.launch {
-                                    loading = true
-                                    val list = generateCandidates(msgInfo.talker, msgMessageText(msgInfo))
-                                    loading = false
-                                    if (list.isEmpty()) error = "生成失败，请检查模型配置" else { error = null; candidates = list }
-                                }
-                            }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                                Text(stringResource(R.string.ama_regenerate))
+                        candidates.isEmpty() -> Text(stringResource(R.string.smart_reply_tap_generate), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        else -> candidates.forEach { cand ->
+                            var editable by remember(cand) { mutableStateOf(cand) }
+                            Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                                OutlinedTextField(
+                                    value = editable,
+                                    onValueChange = { editable = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    minLines = 2,
+                                    maxLines = 5,
+                                )
+                                Button(
+                                    onClick = {
+                                        val finalText = editable.trim()
+                                        if (finalText.isEmpty()) { showToast(context, context.getString(R.string.ama_tts_empty_v2)); return@Button }
+                                        val ok = WeMessageApi.sendText(msgInfo.talker, finalText)
+                                        showToast(context, context.getString(if (ok) R.string.ama_sent else R.string.ama_send_failed))
+                                    },
+                                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                                ) { Text(stringResource(R.string.ama_send)) }
                             }
                         }
                     }
                 }
+            },
+            confirmButton = {
+                Button(onClick = { generate() }, enabled = !loading) { Text(stringResource(R.string.ama_generate)) }
             },
             dismissButton = {
                 TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel)) }
@@ -240,64 +255,56 @@ object AiSmartReply : ClickableFeature(),
     private fun msgMessageText(msg: MessageInfo): String =
         msg.actualContent.ifBlank { msg.content }.trim()
 
-    /** 读取该会话最近 [contextLimit] 条消息作为上下文（含当前消息原文本）。 */
     private fun loadRecentContext(talker: String, limit: Int): String {
         if (talker.isEmpty()) return ""
         return try {
             val now = System.currentTimeMillis()
-            val messages = WeDatabaseApi.getMessagesInRange(talker, now - 7L * 86400000L, now)
+            WeDatabaseApi.getMessagesInRange(talker, now - 7L * 86400000L, now)
                 .filter { it.content.isNotBlank() }
                 .takeLast(limit)
-            messages.joinToString("\n") { msg ->
-                val prefix = if (msg.isSend != 0) "我：" else "对方："
-                prefix + msg.content
-            }
+                .joinToString("\n") { msg ->
+                    (if (msg.isSend != 0) "我：" else "对方：") + msg.content
+                }
         } catch (e: Exception) {
-            WeLogger.e(TAG, "load context failed", e)
-            ""
+            WeLogger.e(TAG, "load context failed", e); ""
         }
     }
 
-    /** 调用 WeAgent 模型生成多条候选回复，附加上下文。 */
-    private suspend fun generateCandidates(talker: String, content: String): List<String> = withContext(Dispatchers.IO) {
-        try {
-            val modelId = WeAgentRepository.firstModelId() ?: return@withContext emptyList()
-            val model = WeAgentRepository.getModel(modelId) ?: return@withContext emptyList()
-            val provider = WeAgentRepository.getModelProvider(model.providerId) ?: return@withContext emptyList()
-            val client = ModelProviderManager.clientFor(provider)
+    private suspend fun generateCandidates(talker: String, content: String, styleName: String): List<String> =
+        withContext(Dispatchers.IO) {
+            try {
+                val modelId = WeAgentRepository.firstModelId() ?: return@withContext emptyList()
+                val model = WeAgentRepository.getModel(modelId) ?: return@withContext emptyList()
+                val provider = WeAgentRepository.getModelProvider(model.providerId) ?: return@withContext emptyList()
+                val client = ModelProviderManager.clientFor(provider)
 
-            val count = replyCount.coerceIn(1, 20)
-            val contextText = loadRecentContext(talker, contextLimit.coerceIn(1, 50))
-            val systemPrompt = buildString {
-                append("你是微信聊天助手。根据对方的最后一条消息，生成$count条得体的回复。")
-                append("每条回复单独一行，不要序号，不要多余解释。")
-                if (contextText.isNotBlank()) {
-                    append("\n\n以下是最近聊天记录作参考：\n$contextText")
+                val count = replyCount.coerceIn(1, 20)
+                val stylePrompt = STYLES.firstOrNull { it.first == styleName }?.second ?: "回复自然得体，像正常人一样交流。"
+                val contextText = loadRecentContext(talker, contextLimit.coerceIn(1, 50))
+                val systemPrompt = buildString {
+                    append("你是微信聊天助手。语气要求：$stylePrompt\n")
+                    append("根据对方最后一条消息，生成$count条回复。每条单独一行，不要序号，不要多余解释。")
+                    if (contextText.isNotBlank()) append("\n\n最近聊天记录参考：\n$contextText")
                 }
-            }
-            val messages = listOf(
-                LlmMessage(LlmRole.SYSTEM, systemPrompt),
-                LlmMessage(LlmRole.USER, content),
-            )
-            val request = ModelProviderManager.buildRequest(model, messages, emptyList(), stream = true)
-            val sb = StringBuilder()
-            client.stream(request).collect { event ->
-                when (event) {
-                    is LlmStreamEvent.TextDelta -> sb.append(event.text)
-                    is LlmStreamEvent.Completed -> if (sb.isEmpty()) { event.message.content?.let { sb.append(it) } }
-                    is LlmStreamEvent.Failed -> throw event.error
-                    else -> {}
+                val messages = listOf(
+                    LlmMessage(LlmRole.SYSTEM, systemPrompt),
+                    LlmMessage(LlmRole.USER, content),
+                )
+                val request = ModelProviderManager.buildRequest(model, messages, emptyList(), stream = true)
+                val sb = StringBuilder()
+                client.stream(request).collect { event ->
+                    when (event) {
+                        is LlmStreamEvent.TextDelta -> sb.append(event.text)
+                        is LlmStreamEvent.Completed -> if (sb.isEmpty()) { event.message.content?.let { sb.append(it) } }
+                        is LlmStreamEvent.Failed -> throw event.error
+                        else -> {}
+                    }
                 }
+                sb.toString().lines().map { it.trim() }.filter { it.isNotEmpty() }
+                    .filter { !it.matches(Regex("^\\d+[.、．]?.*")) }.take(count)
+                    .ifEmpty { listOf(sb.toString().trim()) }
+            } catch (e: Exception) {
+                WeLogger.e(TAG, "generate failed", e); emptyList()
             }
-            sb.toString()
-                .lines()
-                .map { it.trim() }
-                .filter { it.isNotEmpty() && !it.startsWith("1.") && !it.startsWith("2.") }
-                .take(count)
-                .ifEmpty { listOf(sb.toString().trim()) }
-        } catch (e: Exception) {
-            WeLogger.e(TAG, "generate candidates failed", e)
-            emptyList()
         }
-    }
 }

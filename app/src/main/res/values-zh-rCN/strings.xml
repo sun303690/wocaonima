@@ -4083,4 +4083,7 @@
 
     <string name="smart_reply_context_limit">参考上下文条数（消息）</string>
     <string name="smart_reply_count">生成备选数（条）</string>
+
+    <string name="smart_reply_style">语气预设</string>
+    <string name="smart_reply_tap_generate">选择语气预设，点击生成回复</string>
 </resources>
