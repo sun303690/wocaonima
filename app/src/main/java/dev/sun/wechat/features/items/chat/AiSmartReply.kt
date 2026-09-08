@@ -49,6 +49,7 @@ import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.TextButton
 import dev.sun.wechat.ui.content.m3.SegmentedColumn
 import dev.sun.wechat.ui.utils.VectorPathDrawable
+import dev.sun.wechat.ui.utils.ShowComposeDialogScope
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToast
@@ -112,14 +113,14 @@ object AiSmartReply : ClickableFeature(),
                 "M19,8l-4,4h3c0,3.31 -2.69,6 -6,6c-1.01,0 -1.97,-0.25 -2.8,-0.7l-1.46,1.46C8.97,19.54 10.43,20 12,20c4.42,0 8,-3.58 8,-8h3L19,8zM6,12c0,-3.31 2.69,-6 6,-6c1.01,0 1.97,0.25 2.8,0.7l1.46,-1.46C15.03,4.46 13.57,4 12,4c-4.42,0 -8,3.58 -8,8H1l4,4l4,-4H6z",
             ),
             imageVector = MaterialSymbols.Outlined.Auto_awesome,
-            isSupported = { msg -> msg.type?.isText == true || msg.type?.isQuote == true },
+            isSupported = { msg -> msg.type?.isText == true },
         ) { view, ctx, msgInfo ->
             showSmartReplyDialog(ctx.activity, msgInfo)
         },
     )
 
     @Composable
-    private fun SettingsDialogContent(context: android.content.Context) {
+    private fun ShowComposeDialogScope.SettingsDialogContent(context: android.content.Context) {
         var contextInput by remember { mutableStateOf(contextLimit.toString()) }
         var countInput by remember { mutableStateOf(replyCount.toString()) }
         AlertDialogContent(
@@ -174,7 +175,7 @@ object AiSmartReply : ClickableFeature(),
     }
 
     @Composable
-    private fun SmartReplyDialogContent(msgInfo: MessageInfo) {
+    private fun ShowComposeDialogScope.SmartReplyDialogContent(msgInfo: MessageInfo) {
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
         var selectedStyle by remember { mutableStateOf("智能全能") }
@@ -283,7 +284,7 @@ object AiSmartReply : ClickableFeature(),
                 val contextText = loadRecentContext(talker, contextLimit.coerceIn(1, 50))
                 val systemPrompt = buildString {
                     append("你是微信聊天助手。语气要求：$stylePrompt\n")
-                    append("根据对方最后一条消息，生成$count条回复。每条单独一行，不要序号，不要多余解释。")
+                    append("根据对方最后一条消息，生成${count}条回复。每条单独一行，不要序号，不要多余解释。")
                     if (contextText.isNotBlank()) append("\n\n最近聊天记录参考：\n$contextText")
                 }
                 val messages = listOf(

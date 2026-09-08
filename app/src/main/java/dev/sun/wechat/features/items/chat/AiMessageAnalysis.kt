@@ -43,6 +43,7 @@ import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.TextButton
 import dev.sun.wechat.ui.utils.VectorPathDrawable
+import dev.sun.wechat.ui.utils.ShowComposeDialogScope
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
 import kotlinx.coroutines.Dispatchers
@@ -92,6 +93,10 @@ object AiMessageAnalysis : ClickableFeature(),
         WeChatMessageContextMenuApi.removeProvider(this)
     }
 
+    // 该功能仅通过聊天消息长按菜单(IMenuItemsProvider)触发，
+    // 不参与功能列表点击入口，故 onClick 留空实现。
+    override fun onClick(context: ComponentActivity) {}
+
     override fun getMenuItems(): List<MenuItem> = listOf(
         MenuItem(
             id = MENU_ID,
@@ -100,7 +105,7 @@ object AiMessageAnalysis : ClickableFeature(),
                 "M19,3H5c-1.1,0 -2,0.9 -2,2v14c0,1.1 0.9,2 2,2h14c1.1,0 2,-0.9 2,-2V5c0,-1.1 -0.9,-2 -2,-2zM9,17H7v-5h2V17zM13,17h-2V7h2V17zM17,17h-2v-4h2V17z",
             ),
             imageVector = MaterialSymbols.Outlined.Insights,
-            isSupported = { msg -> msg.type?.isText == true || msg.type?.isQuote == true },
+            isSupported = { msg -> msg.type?.isText == true },
         ) { view, ctx, msgInfo ->
             showAnalysisDialog(ctx.activity, msgInfo)
         },
@@ -113,7 +118,7 @@ object AiMessageAnalysis : ClickableFeature(),
     }
 
     @Composable
-    private fun AnalysisDialogContent(msgInfo: MessageInfo) {
+    private fun ShowComposeDialogScope.AnalysisDialogContent(msgInfo: MessageInfo) {
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
         var selectedStyle by remember { mutableStateOf("智能全能") }
