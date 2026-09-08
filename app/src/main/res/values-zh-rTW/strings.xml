@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_description">微信增強模組\nUjhhgtg@github</string>
+    <string name="app_description">微信增強模組\nsun303690@github</string>
     <string name="settings_title">設定</string>
     <string name="settings_section_interface">介面</string>
     <string name="settings_general_title">一般設定</string>
@@ -50,7 +50,7 @@
     <string name="module_app_about_description">%1$s 是一款基於 Xposed 框架的開源免費微信模塊</string>
     <string name="module_app_about_version">版本: %1$s</string>
     <string name="module_app_about_version_code">版本號: %1$d</string>
-    <string name="module_app_about_authors">作者：Ujhhgtg@github, cwuom@github</string>
+    <string name="module_app_about_authors">作者：sun303690@github, cwuom@github</string>
     <string name="contact_filter_all">全部</string>
     <string name="contact_filter_friends">好友</string>
     <string name="contact_filter_groups">羣聊</string>
