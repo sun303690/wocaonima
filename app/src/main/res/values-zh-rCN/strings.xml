@@ -4063,4 +4063,13 @@
     <string name="feature_show_friend_add_time_description">在联系人详情头部显示好友添加时间</string>
     <string name="feature_we_contact_header_api_name">联系人详情头部扩展</string>
     <string name="contacts_add_time_value">添加时间: %1$s</string>
+
+    <string name="feature_ai_message_analysis_name">AI 消息分析</string>
+    <string name="feature_ai_message_analysis_description">长按消息，分析对话氛围并生成 AI 回复建议</string>
+    <string name="ama_content_preview">内容预览</string>
+    <string name="ama_no_content">无可分析内容</string>
+    <string name="ama_today_stats">今日统计</string>
+    <string name="ama_reply_style">回复风格</string>
+    <string name="ama_generate">生成回复</string>
+    <string name="ama_generating">正在生成…</string>
 </resources>

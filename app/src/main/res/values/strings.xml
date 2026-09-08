@@ -4035,4 +4035,13 @@
     <string name="feature_show_friend_add_time_description">Display when a friend was added in the contact profile header</string>
     <string name="feature_we_contact_header_api_name">Contact profile header extensions</string>
     <string name="contacts_add_time_value">Added: %1$s</string>
+
+    <string name="feature_ai_message_analysis_name">AI message analysis</string>
+    <string name="feature_ai_message_analysis_description">Long-press a message to analyze the conversation and get AI reply suggestions</string>
+    <string name="ama_content_preview">Content</string>
+    <string name="ama_no_content">No analyzable content</string>
+    <string name="ama_today_stats">Today</string>
+    <string name="ama_reply_style">Reply style</string>
+    <string name="ama_generate">Generate</string>
+    <string name="ama_generating">Generating…</string>
 </resources>

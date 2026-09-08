@@ -4045,4 +4045,13 @@
     <string name="feature_show_friend_add_time_description">在聯絡人詳情頂部顯示好友新增時間</string>
     <string name="feature_we_contact_header_api_name">聯絡人詳情頂部擴充</string>
     <string name="contacts_add_time_value">新增時間: %1$s</string>
+
+    <string name="feature_ai_message_analysis_name">AI 消息分析</string>
+    <string name="feature_ai_message_analysis_description">長按消息，分析對話氛圍並生成 AI 回覆建議</string>
+    <string name="ama_content_preview">內容預覽</string>
+    <string name="ama_no_content">無可分析內容</string>
+    <string name="ama_today_stats">今日統計</string>
+    <string name="ama_reply_style">回覆風格</string>
+    <string name="ama_generate">生成回覆</string>
+    <string name="ama_generating">正在生成…</string>
 </resources>
