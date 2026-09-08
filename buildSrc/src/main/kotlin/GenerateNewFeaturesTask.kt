@@ -100,10 +100,31 @@ abstract class GenerateNewFeaturesTask : DefaultTask() {
         }
 
         return addedAt.mapNotNull { (path, addedEpoch) ->
-            val file = repo.resolve(path)
+            val currentPath = resolveCurrentPath(path)
+            val file = repo.resolve(currentPath)
             if (!file.isFile) return@mapNotNull null
-            newFeatureSourceKey(path, pathspec)?.let { it to addedEpoch }
+            newFeatureSourceKey(currentPath, pathspec)?.let { it to addedEpoch }
         }.sortedWith(compareByDescending<Pair<String, Long>> { it.second }.thenBy { it.first })
+    }
+
+    /**
+     * git log 对纯改名(rename)的文件返回其*初次加入时*的路径，而不是改名后的当前路径。
+     * 命名空间重构正是把 `dev/ujhhgtg/wekit/*` 整体 rename 到当前 namespace 下的同名路径，
+     * 因此这里把历史路径统一投影到 HEAD 的实际路径，使 source key 与 KSP 生成的
+     * `FeaturesProvider.SOURCE_KEY_BY_FEATURE`（基于当前包路径）保持一致。
+     */
+    private fun resolveCurrentPath(historicalPath: String): String {
+        if (repoDir.get().asFile.resolve(historicalPath).isFile) return historicalPath
+        // git log 对纯改名(rename)的文件返回其*初次加入时*的路径(如 dev/ujhhgtg/wekit/...)，
+        // 命名空间重构正是把该历史包名段整体 rename 到当前 namespace(如 dev/sun/wechat/)。
+        // 把历史路径投影到 HEAD 的实际路径，使 source key 与 KSP 产出的
+        // FeaturesProvider.SOURCE_KEY_BY_FEATURE(基于当前包路径)一致，否则"新增"列表恒为空。
+        val pkgSegment = "dev/ujhhgtg/wekit/"
+        if (pkgSegment in historicalPath) {
+            val ns = namespace.get().replace('.', '/')
+            return historicalPath.replace(pkgSegment, "$ns/")
+        }
+        return historicalPath
     }
 
     private fun git(vararg args: String): String? = runCatching {
