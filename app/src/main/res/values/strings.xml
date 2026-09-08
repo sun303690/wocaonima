@@ -4044,4 +4044,15 @@
     <string name="ama_reply_style">Reply style</string>
     <string name="ama_generate">Generate</string>
     <string name="ama_generating">Generating…</string>
+
+    <string name="feature_ai_smart_reply_name">Smart reply</string>
+    <string name="feature_ai_smart_reply_description">Long-press a message to generate editable AI reply candidates and send one</string>
+    <string name="ama_send">Send</string>
+    <string name="ama_sent">Sent</string>
+    <string name="ama_send_failed">Send failed</string>
+    <string name="ama_regenerate">Regenerate</string>
+    <string name="ama_tts_empty_v2">Reply cannot be empty</string>
+
+    <string name="smart_reply_context_limit">Reference context (messages)</string>
+    <string name="smart_reply_count">Candidate count</string>
 </resources>

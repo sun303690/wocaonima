@@ -4054,4 +4054,15 @@
     <string name="ama_reply_style">回覆風格</string>
     <string name="ama_generate">生成回覆</string>
     <string name="ama_generating">正在生成…</string>
+
+    <string name="feature_ai_smart_reply_name">智能回覆</string>
+    <string name="feature_ai_smart_reply_description">長按消息，生成可編輯的 AI 回覆候選併發送</string>
+    <string name="ama_send">發送</string>
+    <string name="ama_sent">已發送</string>
+    <string name="ama_send_failed">發送失敗</string>
+    <string name="ama_regenerate">重新生成</string>
+    <string name="ama_tts_empty_v2">回覆內容不能為空</string>
+
+    <string name="smart_reply_context_limit">參考上下文條數（訊息）</string>
+    <string name="smart_reply_count">生成備選數（條）</string>
 </resources>
