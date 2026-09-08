@@ -109,9 +109,7 @@ object AiSmartReply : ClickableFeature(),
         MenuItem(
             id = MENU_ID,
             text = "智能回复",
-            drawable = VectorPathDrawable(
-                "M19,8l-4,4h3c0,3.31 -2.69,6 -6,6c-1.01,0 -1.97,-0.25 -2.8,-0.7l-1.46,1.46C8.97,19.54 10.43,20 12,20c4.42,0 8,-3.58 8,-8h3L19,8zM6,12c0,-3.31 2.69,-6 6,-6c1.01,0 1.97,0.25 2.8,0.7l1.46,-1.46C15.03,4.46 13.57,4 12,4c-4.42,0 -8,3.58 -8,8H1l4,4l4,-4H6z",
-            ),
+            drawable = AiSmartReplyIcon,
             imageVector = MaterialSymbols.Outlined.Auto_awesome,
             isSupported = { msg -> msg.type?.isText == true },
         ) { view, ctx, msgInfo ->
@@ -309,3 +307,7 @@ object AiSmartReply : ClickableFeature(),
             }
         }
 }
+
+private class AiSmartReplyIcon : VectorPathDrawable(
+    "M19,8l-4,4h3c0,3.31 -2.69,6 -6,6c-1.01,0 -1.97,-0.25 -2.8,-0.7l-1.46,1.46C8.97,19.54 10.43,20 12,20c4.42,0 8,-3.58 8,-8h3L19,8zM6,12c0,-3.31 2.69,-6 6,-6c1.01,0 1.97,0.25 2.8,0.7l1.46,-1.46C15.03,4.46 13.57,4 12,4c-4.42,0 -8,3.58 -8,8H1l4,4l4,-4H6z"
+)

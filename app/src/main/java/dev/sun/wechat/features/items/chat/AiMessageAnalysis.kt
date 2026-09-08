@@ -102,9 +102,7 @@ object AiMessageAnalysis : ClickableFeature(),
         MenuItem(
             id = MENU_ID,
             text = "分析",
-            drawable = VectorPathDrawable(
-                "M19,3H5c-1.1,0 -2,0.9 -2,2v14c0,1.1 0.9,2 2,2h14c1.1,0 2,-0.9 2,-2V5c0,-1.1 -0.9,-2 -2,-2zM9,17H7v-5h2V17zM13,17h-2V7h2V17zM17,17h-2v-4h2V17z",
-            ),
+            drawable = AiMessageAnalysisIcon,
             imageVector = MaterialSymbols.Outlined.Insights,
             isSupported = { msg -> msg.type?.isText == true },
         ) { view, ctx, msgInfo ->
@@ -257,3 +255,7 @@ object AiMessageAnalysis : ClickableFeature(),
         }
     }
 }
+
+private class AiMessageAnalysisIcon : VectorPathDrawable(
+    "M19,3H5c-1.1,0 -2,0.9 -2,2v14c0,1.1 0.9,2 2,2h14c1.1,0 2,-0.9 2,-2V5c0,-1.1 -0.9,-2 -2,-2zM9,17H7v-5h2V17zM13,17h-2V7h2V17zM17,17h-2v-4h2V17z"
+)
