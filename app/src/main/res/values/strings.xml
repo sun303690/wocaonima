@@ -4065,6 +4065,17 @@
     <string name="ama_stat_night">Late-night messages: %1$d</string>
     <string name="ama_extra_request">Extra request (optional)</string>
     <string name="ama_summary_title">AI summary</string>
+    <string name="feature_mask_wechat_name">Close friend hiding</string>
+    <string name="feature_mask_wechat_description">MaskWechat engine: hide chosen chats/contacts, temporary unlock, anti-revoke tips, Moments hiding. Add via contact page or in-chat #hide</string>
+    <string name="mask_add_to_list">Add to list</string>
+    <string name="mask_remove_from_list">Remove from list</string>
+    <string name="mask_add_list_summary">Hide this contact\'s chats via MaskWechat</string>
+    <string name="mask_in_list_summary">Currently in the close-friend list</string>
+    <string name="mask_added_toast">Added to list: %1$s</string>
+    <string name="mask_removed_toast">Removed from list: %1$s</string>
+    <string name="mask_engine_started">MaskWechat engine running. In-chat command: #hide</string>
+    <string name="mask_engine_pending">Engine starts in WeChat main process</string>
+    <string name="mask_engine_error">Engine load failed: %1$s</string>
     <string name="asr_regenerate">Not satisfied? Regenerate</string>
     <string name="asr_thinking">AI thinking…</string>
 

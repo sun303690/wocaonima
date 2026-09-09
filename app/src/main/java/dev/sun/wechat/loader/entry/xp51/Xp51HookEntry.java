@@ -22,6 +22,11 @@ public class Xp51HookEntry implements IXposedHookLoadPackage, IXposedHookZygoteI
         return param;
     }
 
+    /** Null-safe variant for optional bridges (e.g. the MaskWechat engine). */
+    public static XC_LoadPackage.LoadPackageParam peekLoadPackageParam() {
+        return param;
+    }
+
     public static String getModulePath() {
         if (modulePath == null) {
             throw new IllegalStateException("Module path is null");

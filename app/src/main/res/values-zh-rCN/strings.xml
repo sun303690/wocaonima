@@ -4093,6 +4093,17 @@
     <string name="ama_stat_night">熬夜消息：%1$d 条</string>
     <string name="ama_extra_request">额外要求（可选）</string>
     <string name="ama_summary_title">AI 总结</string>
+    <string name="feature_mask_wechat_name">密友隐藏</string>
+    <string name="feature_mask_wechat_description">MaskWechat 引擎：隐藏指定会话/联系人、临时解除、防撤回提示、朋友圈隐藏。联系人页加名单，微信内 #hide 打开设置</string>
+    <string name="mask_add_to_list">加入名单</string>
+    <string name="mask_remove_from_list">移出名单</string>
+    <string name="mask_add_list_summary">将该联系人的聊天隐藏（MaskWechat 引擎）</string>
+    <string name="mask_in_list_summary">已在密友名单中</string>
+    <string name="mask_added_toast">已加入名单：%1$s</string>
+    <string name="mask_removed_toast">已移出名单：%1$s</string>
+    <string name="mask_engine_started">MaskWechat 引擎运行中。微信内输入 #hide 打开设置</string>
+    <string name="mask_engine_pending">引擎将在微信主进程启动</string>
+    <string name="mask_engine_error">引擎加载失败：%1$s</string>
     <string name="asr_regenerate">不满意？换一批</string>
     <string name="asr_thinking">AI 思考中…</string>
 

@@ -85,7 +85,8 @@ import dev.sun.wechat.features.api.core.WeDatabaseApi
 import dev.sun.wechat.features.api.ui.WeConversationListViewApi
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
-import dev.sun.wechat.features.items.contacts.HideContacts
+import dev.sun.wechat.features.items.contacts.maskwechat.MaskWechatConfig
+import dev.sun.wechat.features.items.contacts.maskwechat.MaskWechatLoader
 import dev.sun.wechat.i18n.LocalWeKitLocalizedContext
 import dev.sun.wechat.preferences.WePrefs
 import dev.sun.wechat.ui.content.AlertDialogContent
@@ -728,7 +729,7 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
         val predicate = activePredicate ?: return null
         if (!looksLikeConversationListQuery(sql)) return null
 
-        val hidden = if (HideContacts.isEnabled) HideContacts.hiddenContacts else emptySet()
+        val hidden = if (MaskWechatLoader.isStarted()) MaskWechatConfig.getMaskIds() else emptySet()
         val hiddenClause = if (hidden.isEmpty()) {
             ""
         } else {
