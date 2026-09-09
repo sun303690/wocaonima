@@ -57,7 +57,11 @@ object MaskWechatConfig {
     fun addMaskId(wxid: String, tagName: String? = null): Boolean {
         if (wxid.isBlank()) return false
         val current = readRawArray()
-        if (current.any { it.optString("maskId") == wxid }) return false
+        var already = false
+        for (i in 0 until current.length()) {
+            if (current.optJSONObject(i)?.optString("maskId") == wxid) { already = true; break }
+        }
+        if (already) return false
         val entry = org.json.JSONObject()
         entry.put("maskId", wxid)
         entry.put("tagName", tagName ?: wxid)

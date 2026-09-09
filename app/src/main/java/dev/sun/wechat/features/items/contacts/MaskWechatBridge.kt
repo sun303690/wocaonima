@@ -94,13 +94,14 @@ object MaskWechatBridge : ClickableFeature(), WeContactPrefsScreenApi.IContactIn
     override fun onItemClick(activity: Activity, key: String): Boolean {
         if (key != KEY_PREF_ITEM) return false
         val wxid = activity.currentWxId ?: return true
-        val changed = if (wxid in MaskWechatConfig.getMaskIds()) {
+        if (wxid.isBlank()) return true
+        if (wxid in MaskWechatConfig.getMaskIds()) {
             MaskWechatConfig.removeMaskId(wxid)
             showToast(activity, activity.getString(R.string.mask_removed_toast, wxid))
         } else {
             MaskWechatConfig.addMaskId(wxid)
             showToast(activity, activity.getString(R.string.mask_added_toast, wxid))
         }
-        return changed || true
+        return true
     }
 }
