@@ -4044,6 +4044,8 @@
     <string name="ama_reply_style">Reply style</string>
     <string name="ama_generate">Generate</string>
     <string name="ama_generating">Generating…</string>
+    <string name="ama_report_title">Analysis report</string>
+    <string name="ama_reply_suggestion">Suggested reply</string>
 
     <string name="feature_ai_smart_reply_name">Smart reply</string>
     <string name="feature_ai_smart_reply_description">Long-press a message to generate editable AI reply candidates and send one</string>

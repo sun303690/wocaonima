@@ -122,6 +122,7 @@ object AiMessageAnalysis : ClickableFeature(),
         val scope = rememberCoroutineScope()
         var selectedStyle by remember { mutableStateOf("智能全能") }
         var reply by remember { mutableStateOf<String?>(null) }
+        var report by remember { mutableStateOf<String?>(null) }
         var generating by remember { mutableStateOf(false) }
         var error by remember { mutableStateOf<String?>(null) }
         val preview = remember(msgInfo.id) { previewFromMessage(msgInfo) }
@@ -145,10 +146,18 @@ object AiMessageAnalysis : ClickableFeature(),
             generating = true
             error = null
             reply = null
+            report = null
             scope.launch {
+                // 完整版：并行/顺序生成 风格化回复 + 深度分析报告
                 val r = generateReply(text, selectedStyle)
+                val rep = generateReport(msgInfo.talker, text)
                 generating = false
-                if (r.isEmpty()) error = "生成失败，请检查模型配置" else reply = r
+                if (r.isEmpty() && rep.isEmpty()) {
+                    error = "生成失败，请检查模型配置"
+                } else {
+                    reply = r.ifEmpty { null }
+                    report = rep.ifEmpty { null }
+                }
             }
         }
 
@@ -194,8 +203,19 @@ object AiMessageAnalysis : ClickableFeature(),
                             Text(stringResource(R.string.ama_generating))
                         }
                         error != null -> Text(error!!, color = MaterialTheme.colorScheme.error)
-                        reply != null -> Box(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                            Text(reply!!, style = MaterialTheme.typography.bodyMedium)
+                        else -> {
+                            if (report != null) {
+                                Text(stringResource(R.string.ama_report_title), style = MaterialTheme.typography.titleSmall)
+                                Box(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                                    Text(report!!, style = MaterialTheme.typography.bodyMedium)
+                                }
+                            }
+                            if (reply != null) {
+                                Text(stringResource(R.string.ama_reply_suggestion), style = MaterialTheme.typography.titleSmall)
+                                Box(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                                    Text(reply!!, style = MaterialTheme.typography.bodyMedium)
+                                }
+                            }
                         }
                     }
                 }
@@ -218,6 +238,64 @@ object AiMessageAnalysis : ClickableFeature(),
             type?.isText == true -> msg.content
             else -> msg.content
         }.trim().take(500)
+    }
+
+    /** 拉取最近聊天上下文（供完整分析用）。 */
+    private fun loadRecentContext(talker: String, limit: Int): String {
+        if (talker.isEmpty()) return ""
+        return try {
+            val now = System.currentTimeMillis()
+            WeDatabaseApi.getMessagesInRange(talker, now - 7L * 86400000L, now)
+                .filter { it.content.isNotBlank() }
+                .takeLast(limit)
+                .joinToString("\n") { msg ->
+                    (if (msg.isSend != 0) "我：" else "对方：") + msg.content
+                }
+        } catch (e: Exception) {
+            WeLogger.e(TAG, "load context failed", e)
+            ""
+        }
+    }
+
+    /** 完整版深度分析报告：氛围/情绪/意图/关系/策略。 */
+    private suspend fun generateReport(talker: String, content: String): String = withContext(Dispatchers.IO) {
+        try {
+            val modelId = WeAgentRepository.firstModelId()
+                ?: return@withContext ""
+            val model = WeAgentRepository.getModel(modelId) ?: return@withContext ""
+            val provider = WeAgentRepository.getModelProvider(model.providerId) ?: return@withContext ""
+            val client = ModelProviderManager.clientFor(provider)
+
+            val contextText = loadRecentContext(talker, 20)
+            val systemPrompt = buildString {
+                append("你是微信聊天分析助手。基于最近聊天记录和最新消息，输出一份简洁的中文分析报告，严格按以下格式：\n")
+                append("【对话氛围】一句话\n")
+                append("【对方情绪】一句话\n")
+                append("【意图解读】一句话\n")
+                append("【关系状态】一句话\n")
+                append("【回复策略】2-3条要点，每条一行\n")
+                append("不要输出格式以外的内容。\n")
+                if (contextText.isNotBlank()) append("\n最近聊天记录：\n$contextText")
+            }
+            val messages = listOf(
+                LlmMessage(LlmRole.SYSTEM, systemPrompt),
+                LlmMessage(LlmRole.USER, content),
+            )
+            val request = ModelProviderManager.buildRequest(model, messages, emptyList(), stream = true)
+            val sb = StringBuilder()
+            client.stream(request).collect { event ->
+                when (event) {
+                    is LlmStreamEvent.TextDelta -> sb.append(event.text)
+                    is LlmStreamEvent.Completed -> if (sb.isEmpty()) { event.message.content?.let { sb.append(it) } }
+                    is LlmStreamEvent.Failed -> throw event.error
+                    else -> {}
+                }
+            }
+            sb.toString().trim()
+        } catch (e: Exception) {
+            WeLogger.e(TAG, "generate report failed", e)
+            ""
+        }
     }
 
     /** 调用 WeAgent 模型生成回复。 */
