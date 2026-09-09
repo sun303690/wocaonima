@@ -109,7 +109,7 @@ abstract class GenerateNewFeaturesTask : DefaultTask() {
 
     /**
      * git log 对纯改名(rename)的文件返回其*初次加入时*的路径，而不是改名后的当前路径。
-     * 命名空间重构正是把 `dev/ujhhgtg/wekit/*` 整体 rename 到当前 namespace 下的同名路径，
+     * 命名空间重构正是把 `dev/ujhhgtg/wekit` 整体 rename 到当前 namespace 下的同名路径，
      * 因此这里把历史路径统一投影到 HEAD 的实际路径，使 source key 与 KSP 生成的
      * `FeaturesProvider.SOURCE_KEY_BY_FEATURE`（基于当前包路径）保持一致。
      */
