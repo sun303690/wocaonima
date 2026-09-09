@@ -11,7 +11,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,6 +31,9 @@ import com.composables.icons.materialsymbols.MaterialSymbols
 import com.composables.icons.materialsymbols.outlined.Insights
 import dev.sun.wechat.R
 import dev.sun.wechat.agent.data.WeAgentRepository
+import dev.sun.wechat.agent.data.entity.ModelEntity
+import dev.sun.wechat.agent.model.LlmClient
+import dev.sun.wechat.utils.HostInfo
 import dev.sun.wechat.agent.model.LlmMessage
 import dev.sun.wechat.agent.model.LlmRole
 import dev.sun.wechat.agent.model.LlmStreamEvent
@@ -47,18 +52,19 @@ import dev.sun.wechat.ui.utils.VectorPathDrawable
 import dev.sun.wechat.ui.utils.ShowComposeDialogScope
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
+import java.util.Calendar
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * AI 消息分析（移植自 FkWeChat"分析"功能）：
+ * AI 消息分析（完整移植自 FkWeChat「长按分析消息」）：
  * 长按消息 → 分析 → 弹出面板：
- *  - 内容预览
- *  - 10 种回复风格选择
- *  - 生成 AI 回复建议（复用 WeAgent 模型库）
- *  - 今日消息统计（发送条数/活跃度）
+ *  - 时段选择：今日/昨日/本周/上周/本月/上月/今年/全部
+ *  - AI 聊天总结（FkWeChat 原版 prompt + 用户额外要求，复用 WeAgent 模型库）
+ *  - 智能洞察（本地统计）：五维评分/字数分布/时段分布
+ *  - 10 种回复风格选择 + 生成 AI 回复建议
+ * 开关：设置页「聊天」分类内，关闭后长按菜单不显示「分析」项。
  */
 object AiMessageAnalysis : ClickableFeature(),
     WeChatMessageContextMenuApi.IMenuItemsProvider {
@@ -71,6 +77,11 @@ object AiMessageAnalysis : ClickableFeature(),
     private const val TAG = "AiMessageAnalysis"
     private const val MENU_ID = 777041
     private const val DEFAULT_PROMPT = "分析当前对话氛围，给出最得体、自然的回复。"
+
+    /** FkWeChat 原版总结 prompt */
+    private const val SUMMARY_PROMPT =
+        "你是一个微信聊天分析助手。请根据以下聊天记录，总结出这段时间内大家聊了哪些主要内容，" +
+            "重点话题，整体氛围如何，并提取一些有趣的点。语言请幽默生动，排版清晰。如果记录较少请简短回复。"
 
     /** 预置回复风格 name -> prompt */
     private val STYLES = listOf(
@@ -121,42 +132,38 @@ object AiMessageAnalysis : ClickableFeature(),
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
         var selectedStyle by remember { mutableStateOf("智能全能") }
+        var period by remember { mutableStateOf(Period.THIS_WEEK) }
+        var extraRequest by remember { mutableStateOf("") }
+        var summary by remember { mutableStateOf<String?>(null) }
         var reply by remember { mutableStateOf<String?>(null) }
-        var report by remember { mutableStateOf<String?>(null) }
         var generating by remember { mutableStateOf(false) }
         var error by remember { mutableStateOf<String?>(null) }
-        val preview = remember(msgInfo.id) { previewFromMessage(msgInfo) }
 
-        // 今日该会话消息统计（活跃度/条数）
-        val todayStats by produceState(emptyList<WeMessage>()) {
+        // 时段消息(本地统计 + AI 总结共用)
+        val messages by produceState(emptyList<WeMessage>(), period) {
             val conv = msgInfo.talker
-            if (conv.isNotEmpty()) {
-                val now = System.currentTimeMillis()
-                val dayStart = now - (now % 86400000L)
-                value = withContext(Dispatchers.IO) {
-                    try { WeDatabaseApi.getMessagesInRange(conv, dayStart, now) } catch (e: Exception) { emptyList() }
-                }
+            value = if (conv.isEmpty()) emptyList() else withContext(Dispatchers.IO) {
+                try { WeDatabaseApi.getMessagesInRange(conv, period.startMs, period.endMs) } catch (e: Exception) { emptyList() }
             }
         }
 
         fun generate() {
             if (generating) return
-            val text = preview
-            if (text.isBlank()) { error = "无可分析内容"; return }
             generating = true
             error = null
+            summary = null
             reply = null
-            report = null
             scope.launch {
-                // 完整版：并行/顺序生成 风格化回复 + 深度分析报告
-                val r = generateReply(text, selectedStyle)
-                val rep = generateReport(msgInfo.talker, text)
+                val text = previewFromMessage(msgInfo)
+                val chatText = buildChatText(messages)
+                val sum = generateSummary(chatText, extraRequest.trim())
+                val rep = if (text.isBlank()) "" else generateReply(text, selectedStyle)
                 generating = false
-                if (r.isEmpty() && rep.isEmpty()) {
+                if (sum.isEmpty() && rep.isEmpty()) {
                     error = "生成失败，请检查模型配置"
                 } else {
-                    reply = r.ifEmpty { null }
-                    report = rep.ifEmpty { null }
+                    summary = sum.ifEmpty { null }
+                    reply = rep.ifEmpty { null }
                 }
             }
         }
@@ -165,15 +172,53 @@ object AiMessageAnalysis : ClickableFeature(),
             title = { Text(stringResource(R.string.feature_ai_message_analysis_name)) },
             text = {
                 Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-                    // 内容预览
-                    Text(stringResource(R.string.ama_content_preview), style = MaterialTheme.typography.titleSmall)
-                    Box(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                        Text(preview.ifBlank { stringResource(R.string.ama_no_content) }, style = MaterialTheme.typography.bodyMedium)
+                    // 时段选择
+                    Text(stringResource(R.string.ama_period), style = MaterialTheme.typography.titleSmall)
+                    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Period.entries.take(4).forEach { p ->
+                            FilterChip(
+                                selected = period == p,
+                                onClick = { period = p },
+                                label = { Text(periodLabel(p)) },
+                            )
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth().padding(bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Period.entries.drop(4).forEach { p ->
+                            FilterChip(
+                                selected = period == p,
+                                onClick = { period = p },
+                                label = { Text(periodLabel(p)) },
+                            )
+                        }
                     }
 
-                    // 今日统计
-                    Text(stringResource(R.string.ama_today_stats), style = MaterialTheme.typography.titleSmall)
-                    Text("${todayStats.size} 条", style = MaterialTheme.typography.bodyMedium)
+                    // 智能洞察(本地统计)
+                    val stats = remember(messages) { InsightStats.of(messages) }
+                    Text(stringResource(R.string.ama_insight_title), style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        stringResource(R.string.ama_insight_summary, messages.size, stats.sendCount, stats.recvCount),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    InsightRow(stringResource(R.string.ama_stat_activity), stats.activityScore)
+                    InsightRow(stringResource(R.string.ama_stat_interaction), stats.interactionScore)
+                    InsightRow(stringResource(R.string.ama_stat_expression), stats.expressionScore)
+                    InsightRow(stringResource(R.string.ama_stat_gold), stats.goldScore)
+                    InsightRow(stringResource(R.string.ama_stat_burst), stats.burstScore)
+                    Text(
+                        stringResource(R.string.ama_stat_night, stats.nightCount),
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(vertical = 2.dp),
+                    )
+
+                    // 用户额外要求
+                    OutlinedTextField(
+                        value = extraRequest,
+                        onValueChange = { extraRequest = it },
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        label = { Text(stringResource(R.string.ama_extra_request)) },
+                        singleLine = true,
+                    )
 
                     // 风格选择
                     Text(stringResource(R.string.ama_reply_style), style = MaterialTheme.typography.titleSmall)
@@ -204,10 +249,10 @@ object AiMessageAnalysis : ClickableFeature(),
                         }
                         error != null -> Text(error!!, color = MaterialTheme.colorScheme.error)
                         else -> {
-                            if (report != null) {
-                                Text(stringResource(R.string.ama_report_title), style = MaterialTheme.typography.titleSmall)
+                            if (summary != null) {
+                                Text(stringResource(R.string.ama_summary_title), style = MaterialTheme.typography.titleSmall)
                                 Box(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                                    Text(report!!, style = MaterialTheme.typography.bodyMedium)
+                                    Text(summary!!, style = MaterialTheme.typography.bodyMedium)
                                 }
                             }
                             if (reply != null) {
@@ -231,6 +276,17 @@ object AiMessageAnalysis : ClickableFeature(),
         )
     }
 
+    @Composable
+    private fun InsightRow(label: String, score: Int) {
+        Column(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+            Text("$label  $score%", style = MaterialTheme.typography.bodySmall)
+            LinearProgressIndicator(
+                progress = { score / 100f },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+
     private fun previewFromMessage(msg: MessageInfo): String {
         val type = msg.type
         return when {
@@ -240,97 +296,162 @@ object AiMessageAnalysis : ClickableFeature(),
         }.trim().take(500)
     }
 
-    /** 拉取最近聊天上下文（供完整分析用）。 */
-    private fun loadRecentContext(talker: String, limit: Int): String {
-        if (talker.isEmpty()) return ""
-        return try {
-            val now = System.currentTimeMillis()
-            WeDatabaseApi.getMessagesInRange(talker, now - 7L * 86400000L, now)
-                .filter { it.content.isNotBlank() }
-                .takeLast(limit)
-                .joinToString("\n") { msg ->
-                    (if (msg.isSend != 0) "我：" else "对方：") + msg.content
+    // ---------------- 数据 & 统计 ----------------
+
+    /** 分析时段 */
+    private enum class Period(val startMs: Long, val endMs: Long) {
+        TODAY(dayStart(0), Long.MAX_VALUE),
+        YESTERDAY(dayStart(1), dayStart(0)),
+        THIS_WEEK(weekStart(0), Long.MAX_VALUE),
+        LAST_WEEK(weekStart(1), weekStart(0)),
+        THIS_MONTH(monthStart(0), Long.MAX_VALUE),
+        LAST_MONTH(monthStart(1), monthStart(0)),
+        THIS_YEAR(yearStart(0), Long.MAX_VALUE),
+        ALL(0L, Long.MAX_VALUE),
+    }
+
+    private fun periodLabel(p: Period): String = when (p) {
+        Period.TODAY -> HostInfo.application.getString(R.string.ama_period_today)
+        Period.YESTERDAY -> HostInfo.application.getString(R.string.ama_period_yesterday)
+        Period.THIS_WEEK -> HostInfo.application.getString(R.string.ama_period_this_week)
+        Period.LAST_WEEK -> HostInfo.application.getString(R.string.ama_period_last_week)
+        Period.THIS_MONTH -> HostInfo.application.getString(R.string.ama_period_this_month)
+        Period.LAST_MONTH -> HostInfo.application.getString(R.string.ama_period_last_month)
+        Period.THIS_YEAR -> HostInfo.application.getString(R.string.ama_period_this_year)
+        Period.ALL -> HostInfo.application.getString(R.string.ama_period_all)
+    }
+
+    private fun dayStart(daysAgo: Int): Long = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        add(Calendar.DAY_OF_YEAR, -daysAgo)
+    }.timeInMillis
+
+    private fun weekStart(weeksAgo: Int): Long = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        set(Calendar.DAY_OF_WEEK, firstDayOfWeek)
+        add(Calendar.WEEK_OF_YEAR, -weeksAgo)
+    }.timeInMillis
+
+    private fun monthStart(monthsAgo: Int): Long = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        set(Calendar.DAY_OF_MONTH, 1)
+        add(Calendar.MONTH, -monthsAgo)
+    }.timeInMillis
+
+    private fun yearStart(yearsAgo: Int): Long = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        set(Calendar.DAY_OF_YEAR, 1)
+        add(Calendar.YEAR, -yearsAgo)
+    }.timeInMillis
+
+    /** 拼聊天记录文本(我:/对方: 格式, FkWeChat 同款) */
+    private fun buildChatText(messages: List<WeMessage>): String =
+        messages.filter { it.typeCode == 1 }
+            .takeLast(200)
+            .joinToString("\n") { msg ->
+                (if (msg.isSend != 0) "我" else "对方") + "：" + msg.content
+            }
+
+    /** 本地统计洞察(纯计算, 不耗 AI) */
+    private data class InsightStats(
+        val total: Int,
+        val sendCount: Int,
+        val recvCount: Int,
+        val nightCount: Int,
+        val avgLen: Double,
+        val maxLen: Int,
+        val burstFactor: Double,
+        val interactionFactor: Double,
+        val expressionFactor: Double,
+    ) {
+        val activityScore: Int get() = ((total.coerceAtMost(200)) / 200.0 * 100).toInt().coerceIn(1, 100)
+        val interactionScore: Int get() = (interactionFactor.coerceIn(0.5, 2.0) / 2.0 * 100).toInt().coerceIn(1, 100)
+        val expressionScore: Int get() = (expressionFactor.coerceIn(0.0, 80.0) / 80.0 * 100).toInt().coerceIn(1, 100)
+        val goldScore: Int get() = ((avgLen.coerceAtMost(60.0) / 60.0 * 60) + (burstFactor.coerceAtMost(3.0) / 3.0 * 40)).toInt().coerceIn(1, 100)
+        val burstScore: Int get() = (burstFactor.coerceIn(0.0, 5.0) / 5.0 * 100).toInt().coerceIn(1, 100)
+
+        companion object {
+            fun of(messages: List<WeMessage>): InsightStats {
+                val texts = messages.filter { it.typeCode == 1 }
+                val send = texts.count { it.isSend != 0 }
+                val recv = texts.size - send
+                val lens = texts.map { it.content.length }
+                val avg = if (lens.isEmpty()) 0.0 else lens.average()
+                val max = lens.maxOrNull() ?: 0
+                val night = texts.count {
+                    val h = Calendar.getInstance().apply { timeInMillis = it.createTime }.get(Calendar.HOUR_OF_DAY)
+                    h in 0..4
                 }
-        } catch (e: Exception) {
-            WeLogger.e(TAG, "load context failed", e)
-            ""
+                val burst = if (lens.isEmpty() || avg == 0.0) 0.0 else max / avg
+                val interaction = if (send == 0 || recv == 0) 0.5 else (send.coerceAtMost(recv).toDouble() / send.coerceAtLeast(recv)) * 2.0
+                val expression = if (send == 0) 0.0 else texts.filter { it.isSend != 0 }.map { it.content.length }.average()
+                return InsightStats(texts.size, send, recv, night, avg, max, burst, interaction, expression)
+            }
         }
     }
 
-    /** 完整版深度分析报告：氛围/情绪/意图/关系/策略。 */
-    private suspend fun generateReport(talker: String, content: String): String = withContext(Dispatchers.IO) {
-        try {
-            val modelId = WeAgentRepository.firstModelId()
-                ?: return@withContext ""
-            val model = WeAgentRepository.getModel(modelId) ?: return@withContext ""
-            val provider = WeAgentRepository.getModelProvider(model.providerId) ?: return@withContext ""
-            val client = ModelProviderManager.clientFor(provider)
+    // ---------------- AI 调用 ----------------
 
-            val contextText = loadRecentContext(talker, 20)
-            val systemPrompt = buildString {
-                append("你是微信聊天分析助手。基于最近聊天记录和最新消息，输出一份简洁的中文分析报告，严格按以下格式：\n")
-                append("【对话氛围】一句话\n")
-                append("【对方情绪】一句话\n")
-                append("【意图解读】一句话\n")
-                append("【关系状态】一句话\n")
-                append("【回复策略】2-3条要点，每条一行\n")
-                append("不要输出格式以外的内容。\n")
-                if (contextText.isNotBlank()) append("\n最近聊天记录：\n$contextText")
-            }
-            val messages = listOf(
-                LlmMessage(LlmRole.SYSTEM, systemPrompt),
-                LlmMessage(LlmRole.USER, content),
-            )
-            val request = ModelProviderManager.buildRequest(model, messages, emptyList(), stream = true)
-            val sb = StringBuilder()
-            client.stream(request).collect { event ->
-                when (event) {
-                    is LlmStreamEvent.TextDelta -> sb.append(event.text)
-                    is LlmStreamEvent.Completed -> if (sb.isEmpty()) { event.message.content?.let { sb.append(it) } }
-                    is LlmStreamEvent.Failed -> throw event.error
-                    else -> {}
+    /** FkWeChat 原版总结: 系统prompt + 额外要求 + 聊天记录 */
+    private suspend fun generateSummary(chatText: String, extraRequest: String): String =
+        withContext(Dispatchers.IO) {
+            if (chatText.isBlank()) return@withContext ""
+            try {
+                val modelId = WeAgentRepository.firstModelId() ?: return@withContext ""
+                val model = WeAgentRepository.getModel(modelId) ?: return@withContext ""
+                val provider = WeAgentRepository.getModelProvider(model.providerId) ?: return@withContext ""
+                val client = ModelProviderManager.clientFor(provider)
+                val userContent = buildString {
+                    if (extraRequest.isNotEmpty()) append("【用户额外要求】：$extraRequest\n")
+                    append("\n聊天记录：\n$chatText")
                 }
+                val messages = listOf(
+                    LlmMessage(LlmRole.SYSTEM, SUMMARY_PROMPT),
+                    LlmMessage(LlmRole.USER, userContent),
+                )
+                streamText(client, model, messages)
+            } catch (e: Exception) {
+                WeLogger.e(TAG, "generate summary failed", e)
+                ""
             }
-            sb.toString().trim()
-        } catch (e: Exception) {
-            WeLogger.e(TAG, "generate report failed", e)
-            ""
         }
-    }
 
-    /** 调用 WeAgent 模型生成回复。 */
+    /** 风格化回复 */
     private suspend fun generateReply(content: String, styleName: String): String = withContext(Dispatchers.IO) {
         try {
-            val modelId = WeAgentRepository.firstModelId()
-                ?: return@withContext ""
+            val modelId = WeAgentRepository.firstModelId() ?: return@withContext ""
             val model = WeAgentRepository.getModel(modelId) ?: return@withContext ""
             val provider = WeAgentRepository.getModelProvider(model.providerId) ?: return@withContext ""
             val client = ModelProviderManager.clientFor(provider)
-
             val stylePrompt = STYLES.firstOrNull { it.first == styleName }?.second ?: DEFAULT_PROMPT
-            val systemPrompt = buildString {
-                append("你是微信聊天助手。$stylePrompt\n")
-                append("只回复消息本身，不要多余解释。")
-            }
+            val systemPrompt = "你是微信聊天助手。$stylePrompt\n只回复消息本身，不要多余解释。"
             val messages = listOf(
                 LlmMessage(LlmRole.SYSTEM, systemPrompt),
                 LlmMessage(LlmRole.USER, content),
             )
-            val request = ModelProviderManager.buildRequest(model, messages, emptyList(), stream = true)
-            val sb = StringBuilder()
-            client.stream(request).collect { event ->
-                when (event) {
-                    is LlmStreamEvent.TextDelta -> sb.append(event.text)
-                    is LlmStreamEvent.Completed -> if (sb.isEmpty()) { event.message.content?.let { sb.append(it) } }
-                    is LlmStreamEvent.Failed -> throw event.error
-                    else -> {}
-                }
-            }
-            sb.toString().trim()
+            streamText(client, model, messages)
         } catch (e: Exception) {
             WeLogger.e(TAG, "generate reply failed", e)
             ""
         }
+    }
+
+    private suspend fun streamText(client: LlmClient, model: ModelEntity, messages: List<LlmMessage>): String {
+        val request = ModelProviderManager.buildRequest(model, messages, emptyList(), stream = true)
+        val sb = StringBuilder()
+        client.stream(request).collect { event ->
+            when (event) {
+                is LlmStreamEvent.TextDelta -> sb.append(event.text)
+                is LlmStreamEvent.Completed -> if (sb.isEmpty()) { event.message.content?.let { sb.append(it) } }
+                is LlmStreamEvent.Failed -> throw event.error
+                else -> {}
+            }
+        }
+        return sb.toString().trim()
     }
 }
 

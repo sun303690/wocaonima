@@ -4046,6 +4046,27 @@
     <string name="ama_generating">Generating…</string>
     <string name="ama_report_title">Analysis report</string>
     <string name="ama_reply_suggestion">Suggested reply</string>
+    <string name="ama_period">Period</string>
+    <string name="ama_period_today">Today</string>
+    <string name="ama_period_yesterday">Yesterday</string>
+    <string name="ama_period_this_week">This week</string>
+    <string name="ama_period_last_week">Last week</string>
+    <string name="ama_period_this_month">This month</string>
+    <string name="ama_period_last_month">Last month</string>
+    <string name="ama_period_this_year">This year</string>
+    <string name="ama_period_all">All</string>
+    <string name="ama_insight_title">Insights</string>
+    <string name="ama_insight_summary">%1$d messages (sent %2$d / received %3$d)</string>
+    <string name="ama_stat_activity">Activity</string>
+    <string name="ama_stat_interaction">Interaction</string>
+    <string name="ama_stat_expression">Expression</string>
+    <string name="ama_stat_gold">Gold value</string>
+    <string name="ama_stat_burst">Burst</string>
+    <string name="ama_stat_night">Late-night messages: %1$d</string>
+    <string name="ama_extra_request">Extra request (optional)</string>
+    <string name="ama_summary_title">AI summary</string>
+    <string name="asr_regenerate">Not satisfied? Regenerate</string>
+    <string name="asr_thinking">AI thinking…</string>
 
     <string name="feature_ai_smart_reply_name">Smart reply</string>
     <string name="feature_ai_smart_reply_description">Long-press a message to generate editable AI reply candidates and send one</string>

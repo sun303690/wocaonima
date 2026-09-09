@@ -4074,6 +4074,27 @@
     <string name="ama_generating">正在生成…</string>
     <string name="ama_report_title">分析报告</string>
     <string name="ama_reply_suggestion">建议回复</string>
+    <string name="ama_period">分析时段</string>
+    <string name="ama_period_today">今日</string>
+    <string name="ama_period_yesterday">昨日</string>
+    <string name="ama_period_this_week">本周</string>
+    <string name="ama_period_last_week">上周</string>
+    <string name="ama_period_this_month">本月</string>
+    <string name="ama_period_last_month">上月</string>
+    <string name="ama_period_this_year">今年</string>
+    <string name="ama_period_all">全部</string>
+    <string name="ama_insight_title">智能洞察</string>
+    <string name="ama_insight_summary">共 %1$d 条（我发 %2$d / 对方发 %3$d）</string>
+    <string name="ama_stat_activity">活跃度</string>
+    <string name="ama_stat_interaction">互动率</string>
+    <string name="ama_stat_expression">表达欲</string>
+    <string name="ama_stat_gold">含金量</string>
+    <string name="ama_stat_burst">爆发力</string>
+    <string name="ama_stat_night">熬夜消息：%1$d 条</string>
+    <string name="ama_extra_request">额外要求（可选）</string>
+    <string name="ama_summary_title">AI 总结</string>
+    <string name="asr_regenerate">不满意？换一批</string>
+    <string name="asr_thinking">AI 思考中…</string>
 
     <string name="feature_ai_smart_reply_name">智能回复</string>
     <string name="feature_ai_smart_reply_description">长按消息，生成可编辑的 AI 回复候选并发送</string>

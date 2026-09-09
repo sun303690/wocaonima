@@ -188,6 +188,8 @@ object AiSmartReply : ClickableFeature(),
             scope.launch {
                 loading = true
                 error = null
+                // 换一批: 先清空旧候选, 生成中显示思考态
+                candidates = emptyList()
                 candidates = generateCandidates(msgInfo.talker, text, selectedStyle)
                 loading = false
                 if (candidates.isEmpty()) error = "生成失败，请检查模型配置"
@@ -214,7 +216,7 @@ object AiSmartReply : ClickableFeature(),
                     when {
                         loading -> Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(Modifier.padding(end = 8.dp))
-                            Text(stringResource(R.string.ama_generating))
+                            Text(stringResource(R.string.asr_thinking))
                         }
                         error != null -> Text(error!!, color = MaterialTheme.colorScheme.error)
                         candidates.isEmpty() -> Text(stringResource(R.string.smart_reply_tap_generate), color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -243,7 +245,17 @@ object AiSmartReply : ClickableFeature(),
                 }
             },
             confirmButton = {
-                Button(onClick = { generate() }, enabled = !loading) { Text(stringResource(R.string.ama_generate)) }
+                Button(
+                    onClick = { generate() },
+                    enabled = !loading,
+                ) {
+                    Text(
+                        stringResource(
+                            if (candidates.isEmpty()) R.string.ama_generate
+                            else R.string.asr_regenerate
+                        )
+                    )
+                }
             },
             dismissButton = {
                 TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel)) }
