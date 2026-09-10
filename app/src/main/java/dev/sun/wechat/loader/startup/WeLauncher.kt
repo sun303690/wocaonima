@@ -42,14 +42,6 @@ object WeLauncher {
         runCatching {
             FeaturesLoader.loadFeatures()
         }.onFailure { WeLogger.e(TAG, "failed to load features", it) }
-
-        // MaskWechat 引擎桥：在 WeKit 功能全部加载后启动（微信主进程、lpparam 已就绪）
-        runCatching {
-            dev.sun.wechat.features.items.contacts.maskwechat.MaskWechatLoader.start(
-                appContext,
-                dev.sun.wechat.loader.entry.xp51.Xp51HookEntry.peekLoadPackageParam(),
-            )
-        }.onFailure { WeLogger.e(TAG, "MaskWechat bridge failed", it) }
     }
 
     private const val TAG = "WeLauncher"
