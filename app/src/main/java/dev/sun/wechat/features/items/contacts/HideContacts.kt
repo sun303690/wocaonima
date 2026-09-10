@@ -59,7 +59,7 @@ import dev.sun.wechat.ui.content.m3.SwitchWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.HostInfo
 import dev.sun.wechat.utils.WeLogger
-import dev.sun.wechat.features.api.core.WeCurrentConversationApi
+import dev.sun.wechat.features.api.ui.WeCurrentConversationApi
 import dev.sun.wechat.features.api.ui.WeContactPrefsScreenApi
 import dev.sun.wechat.utils.android.currentWxId
 import dev.sun.wechat.utils.android.getSystemService
