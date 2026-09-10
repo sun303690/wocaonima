@@ -76,6 +76,21 @@ object MaskWechatLoader {
             mainHookClass.getMethod("handleLoadPackage", XC_LoadPackage.LoadPackageParam::class.java)
                 .invoke(mainHook, lpparam)
 
+            // 3) 直接驱动 initPlugin: MaskWechat 原本依赖 hook Application.onCreate 自举,
+            //    但我们是在该方法已完成后的回调里才启动引擎, 它的 hook 永远不会再触发。
+            //    initPlugin 幂等(hasInit), 反射直调即完成插件注册(AppUtil.attachContext 等)。
+            runCatching {
+                val initPlugin = mainHookClass.getDeclaredMethod(
+                    "initPlugin",
+                    android.content.Context::class.java,
+                    XC_LoadPackage.LoadPackageParam::class.java,
+                ).apply { isAccessible = true }
+                initPlugin.invoke(mainHook, context.applicationContext, lpparam)
+            }.onFailure { t ->
+                WeLogger.w(TAG, "direct initPlugin failed: $t")
+                XposedBridge.log("[WeKit] MaskWechat direct initPlugin failed: $t")
+            }
+
             started.set(true)
             WeLogger.i(TAG, "MaskWechat bridge started (apk=${apkFile.name}, ${apkFile.length()} bytes)")
         } catch (t: Throwable) {

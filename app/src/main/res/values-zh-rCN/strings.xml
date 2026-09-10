@@ -4103,6 +4103,7 @@
     <string name="mask_removed_toast">已移出名单：%1$s</string>
     <string name="mask_engine_started">MaskWechat 引擎运行中。微信内输入 #hide 打开设置</string>
     <string name="mask_engine_pending">引擎将在微信主进程启动</string>
+    <string name="mask_use_in_wechat">引擎在微信内运行：打开微信聊天输入 #hide 唤起面板，或在联系人资料页加入名单</string>
     <string name="mask_engine_error">引擎加载失败：%1$s</string>
     <string name="asr_regenerate">不满意？换一批</string>
     <string name="asr_thinking">AI 思考中…</string>

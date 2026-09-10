@@ -3,6 +3,7 @@ package dev.sun.wechat.features.items.contacts
 import android.app.Activity
 import androidx.activity.ComponentActivity
 import dev.sun.wechat.R
+import dev.sun.wechat.constants.PackageNames
 import dev.sun.wechat.features.api.ui.WeContactPrefsScreenApi
 import dev.sun.wechat.features.api.ui.WeContactPrefsScreenApi.PreferenceItem
 import dev.sun.wechat.features.core.ClickableFeature
@@ -10,6 +11,7 @@ import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.items.contacts.maskwechat.MaskWechatConfig
 import dev.sun.wechat.features.items.contacts.maskwechat.MaskWechatLoader
 import dev.sun.wechat.preferences.WePrefs
+import dev.sun.wechat.utils.TargetProcesses
 import dev.sun.wechat.utils.android.currentWxId
 import dev.sun.wechat.utils.android.showToast
 
@@ -44,32 +46,45 @@ object MaskWechatBridge : ClickableFeature(), WeContactPrefsScreenApi.IContactIn
     }
 
     override fun onClick(context: ComponentActivity) {
-        if (!MaskWechatLoader.isStarted()) {
-            val err = MaskWechatLoader.getLoadError()
-            showToast(
-                context,
-                context.getString(
-                    R.string.mask_engine_error,
-                    err?.message ?: context.getString(R.string.mask_engine_pending),
-                ),
-            )
-            return
+        val err = MaskWechatLoader.getLoadError()
+        if (err != null) {
+            // 微信进程内初始化异常才是真失败
+            showToast(context, context.getString(R.string.mask_engine_error, err.message ?: "unknown"))
         }
-        // 拉起 MaskWechat 微信内管理面板：
-        // 其 WXConfigPlugin 会 hook LauncherUI.onCreate/onNewIntent，
-        // 带标记的 Intent 触发 showManagerConfigUI()。
-        runCatching {
-            val intent = android.content.Intent(context, context.javaClass).apply {
-                putExtra("KEY_INTENT_FROM_MASK", true)
-                putExtra("KEY_INTENT_PLUGIN_MODE", 1) // VALUE_INTENT_PLUGIN_MODE_MANAGER
-                addFlags(
-                    android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                        android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
-                )
+        if (TargetProcesses.isInMain && MaskWechatLoader.isStarted()) {
+            // 微信进程内: 向 LauncherUI 发带标记 Intent, WXConfigPlugin 的 onNewIntent
+            // hook 会拦截并弹出 ConfigManagerUI 管理面板
+            runCatching {
+                val intent = android.content.Intent(context, context.javaClass).apply {
+                    putExtra("KEY_INTENT_FROM_MASK", true)
+                    putExtra("KEY_INTENT_PLUGIN_MODE", 1) // VALUE_INTENT_PLUGIN_MODE_MANAGER
+                    addFlags(
+                        android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                            android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    )
+                }
+                context.startActivity(intent)
+            }.onFailure {
+                showToast(context, context.getString(R.string.mask_engine_error, it.message ?: "open failed"))
             }
-            context.startActivity(intent)
-        }.onFailure {
-            showToast(context, context.getString(R.string.mask_engine_error, it.message ?: "open failed"))
+        } else {
+            // WeKit App 进程: 显式拉起微信 LauncherUI 并带上标记 extras,
+            // 引擎(WXConfigPlugin) 在微信进程拦截 onCreate/onNewIntent 后弹出管理面板
+            runCatching {
+                val intent = android.content.Intent().apply {
+                    setClassName(PackageNames.WECHAT, "com.tencent.mm.ui.LauncherUI")
+                    putExtra("KEY_INTENT_FROM_MASK", true)
+                    putExtra("KEY_INTENT_PLUGIN_MODE", 1) // VALUE_INTENT_PLUGIN_MODE_MANAGER
+                    addFlags(
+                        android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                            android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                            android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    )
+                }
+                context.startActivity(intent)
+            }.onFailure {
+                showToast(context, context.getString(R.string.mask_engine_error, it.message ?: "open wechat failed"))
+            }
         }
     }
 

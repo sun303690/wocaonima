@@ -4075,6 +4075,7 @@
     <string name="mask_removed_toast">Removed from list: %1$s</string>
     <string name="mask_engine_started">MaskWechat engine running. In-chat command: #hide</string>
     <string name="mask_engine_pending">Engine starts in WeChat main process</string>
+    <string name="mask_use_in_wechat">Engine runs inside WeChat. Open a chat and type #hide, or add contacts from their profile page</string>
     <string name="mask_engine_error">Engine load failed: %1$s</string>
     <string name="asr_regenerate">Not satisfied? Regenerate</string>
     <string name="asr_thinking">AI thinking…</string>
