@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 object MaskWechatLoader {
 
     private const val TAG = "MaskWechatLoader"
-    private const val ASSET_APK = "maskwechat/maskwechat.apk"
+    private const val ASSET_APK = "maskwechat/maskwechat.bin"
     private const val MAIN_HOOK = "com.lu.wxmask.MainHook"
     private const val TARGET_PACKAGE = "com.tencent.mm"
 
