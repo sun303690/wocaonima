@@ -2926,6 +2926,15 @@
     <string name="contacts_hide_schedule_description">到点自动临时显示或恢复隐藏，不会改动隐藏列表</string>
     <string name="contacts_hide_triple_click">三击标题切换显隐</string>
     <string name="contacts_hide_triple_click_description">连续三击主页顶部标题栏，可临时显示或恢复隐藏联系人</string>
+    <string name="contacts_hide_remove_from_list">移出隐藏名单</string>
+    <string name="contacts_hide_no_conversation">当前没有会话</string>
+    <string name="contacts_hide_already_in_list">该联系人已在隐藏名单中</string>
+    <string name="contacts_hide_add_to_list">加入隐藏名单</string>
+    <string name="contacts_hide_removed_toast">已取消隐藏：%1$s</string>
+    <string name="contacts_hide_in_list_summary">已在隐藏名单中</string>
+    <string name="contacts_hide_add_list_summary">隐藏该联系人的聊天与会话</string>
+    <string name="contacts_hide_added_toast">已隐藏：%1$s</string>
+    <string name="contacts_hide_not_in_list">该联系人不在隐藏名单中</string>
     <string name="contacts_schedule_monday">周一</string>
     <string name="contacts_schedule_tuesday">周二</string>
     <string name="contacts_schedule_wednesday">周三</string>

@@ -2918,6 +2918,15 @@
     <string name="contacts_hide_schedule_description">到點自動臨時顯示或恢復隱藏，不會改動隱藏列表</string>
     <string name="contacts_hide_triple_click">三擊標題切換顯隱</string>
     <string name="contacts_hide_triple_click_description">連續三擊主頁頂部標題欄，可臨時顯示或恢復隱藏聯繫人</string>
+    <string name="contacts_hide_remove_from_list">移出隱藏名單</string>
+    <string name="contacts_hide_no_conversation">目前沒有會話</string>
+    <string name="contacts_hide_already_in_list">該聯絡人已在隱藏名單中</string>
+    <string name="contacts_hide_add_to_list">加入隱藏名單</string>
+    <string name="contacts_hide_removed_toast">已取消隱藏：%1$s</string>
+    <string name="contacts_hide_in_list_summary">已在隱藏名單中</string>
+    <string name="contacts_hide_add_list_summary">隱藏該聯絡人的聊天與會話</string>
+    <string name="contacts_hide_added_toast">已隱藏：%1$s</string>
+    <string name="contacts_hide_not_in_list">該聯絡人不在隱藏名單中</string>
     <string name="contacts_schedule_monday">週一</string>
     <string name="contacts_schedule_tuesday">週二</string>
     <string name="contacts_schedule_wednesday">週三</string>

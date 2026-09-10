@@ -2886,6 +2886,15 @@
     <string name="contacts_hide_schedule_description">Temporarily show or hide contacts on schedule without changing the hidden list</string>
     <string name="contacts_hide_triple_click">Triple-tap title to toggle</string>
     <string name="contacts_hide_triple_click_description">Triple-tap the title bar at the top of the home screen to temporarily show or hide contacts</string>
+    <string name="contacts_hide_remove_from_list">Remove from hidden list</string>
+    <string name="contacts_hide_no_conversation">No active conversation</string>
+    <string name="contacts_hide_already_in_list">Already in the hidden list</string>
+    <string name="contacts_hide_add_to_list">Add to hidden list</string>
+    <string name="contacts_hide_removed_toast">Unhidden: %1$s</string>
+    <string name="contacts_hide_in_list_summary">Currently in the hidden list</string>
+    <string name="contacts_hide_add_list_summary">Hide this contact\'s chats and conversations</string>
+    <string name="contacts_hide_added_toast">Hidden: %1$s</string>
+    <string name="contacts_hide_not_in_list">Not in the hidden list</string>
     <string name="contacts_schedule_monday">Mon</string>
     <string name="contacts_schedule_tuesday">Tue</string>
     <string name="contacts_schedule_wednesday">Wed</string>
