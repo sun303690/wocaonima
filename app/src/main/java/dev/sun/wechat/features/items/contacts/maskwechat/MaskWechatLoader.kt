@@ -7,6 +7,7 @@ import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 import java.io.File
+import java.util.zip.ZipFile
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -101,19 +102,24 @@ object MaskWechatLoader {
     }
 
     private fun extractApk(context: Context): File {
-        val outFile = File(context.codeCacheDir, "maskwechat.apk")
-        val assetLen = context.assets.open(ASSET_APK).use { it.available().toLong() }
-        // 命中缓存: 同尺寸视为同版本, 避免每次启动解压
-        if (outFile.isFile && outFile.length() == assetLen) return outFile
-        context.assets.open(ASSET_APK).use { input ->
-            outFile.outputStream().use { output -> input.copyTo(output, DEFAULT_BUFFER_SIZE * 8) }
+        val outFile = File(context.codeCacheDir, "maskwechat.bin")
+        // 注意: 微信进程里的 context.assets 是微信 APK 的 assets, 读不到 WeKit 的资源!
+        // 必须从 WeKit 模块 APK(StartupInfo.modulePath) 里解出内嵌的引擎包。
+        val moduleApk = File(dev.sun.wechat.loader.startup.StartupInfo.modulePath)
+        ZipFile(moduleApk).use { zip ->
+            val entry = zip.getEntry(ASSET_APK)
+                ?: throw IllegalStateException("engine bundle missing in module apk: $ASSET_APK")
+            if (outFile.isFile && outFile.length() == entry.size) return outFile
+            zip.getInputStream(entry).use { input ->
+                outFile.outputStream().use { output -> input.copyTo(output, DEFAULT_BUFFER_SIZE * 8) }
+            }
         }
-        WeLogger.i(TAG, "extracted $ASSET_APK -> ${outFile.absolutePath}")
+        WeLogger.i(TAG, "extracted $ASSET_APK from ${moduleApk.name} -> ${outFile.absolutePath}")
         return outFile
     }
 
-    private fun getWeKitApkPath(context: Context): String =
-        context.packageCodePath
+    private fun getWeKitApkPath(@Suppress("UNUSED_PARAMETER") context: Context): String =
+        dev.sun.wechat.loader.startup.StartupInfo.modulePath
 
     private fun defaultReturn(type: Class<*>): Any? = when {
         type == Boolean::class.javaPrimitiveType || type == Boolean::class.java -> false
