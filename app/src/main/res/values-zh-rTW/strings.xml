@@ -655,6 +655,13 @@
     <string name="feature_fabricate_chat_history_message_name">僞造聊天記錄消息</string>
     <string name="feature_fabricate_chat_history_message_description">創建僞造的聊天記錄並生成卡片消息 XML</string>
     <string name="feature_fake_voice_duration_name">僞裝語音時長</string>
+    <string name="feature_ai_reply_moments_name">AI 回覆朋友圈</string>
+    <string name="feature_ai_reply_moments_description">AI 根據朋友圈內容產生並發佈評論</string>
+    <string name="aim_prompt_label">系統提示詞</string>
+    <string name="aim_max_comment_length_label">最大評論長度</string>
+    <string name="aim_max_tokens_label">最大輸出 Tokens</string>
+    <string name="aim_temperature_label">Temperature</string>
+    <string name="aim_list_mode_title">名單模式</string>
     <string name="feature_fake_voice_duration_description">預設定僞裝發送語音顯示的時長</string>
     <string name="feature_floating_chat_footer_name">懸浮輸入框</string>
     <string name="feature_floating_chat_footer_description">將聊天輸入框改爲懸浮卡片形式, 帶有圓角、陰影和側邊距\n</string>

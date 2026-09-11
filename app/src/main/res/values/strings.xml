@@ -694,6 +694,13 @@
     <string name="feature_fabricate_chat_history_message_name">Fabricate chat history message</string>
     <string name="feature_fabricate_chat_history_message_description">Create fake chat history and generate card message XML</string>
     <string name="feature_fake_voice_duration_name">Fake voice duration</string>
+    <string name="feature_ai_reply_moments_name">AI reply to Moments</string>
+    <string name="feature_ai_reply_moments_description">Generate and post comments on Moments via AI</string>
+    <string name="aim_prompt_label">System prompt</string>
+    <string name="aim_max_comment_length_label">Max comment length</string>
+    <string name="aim_max_tokens_label">Max output tokens</string>
+    <string name="aim_temperature_label">Temperature</string>
+    <string name="aim_list_mode_title">List mode</string>
     <string name="feature_fake_voice_duration_description">Preset the duration of disguised voice display</string>
     <string name="feature_floating_chat_footer_name">Floating input box</string>
     <string name="feature_floating_chat_footer_description">Change the chat input box to a floating card form, with rounded corners, shadow and side margins</string>

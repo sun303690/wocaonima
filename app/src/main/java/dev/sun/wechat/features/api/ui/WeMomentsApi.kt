@@ -142,6 +142,7 @@ object WeMomentsApi : ApiFeature(), IResolveDex {
 
     private const val SNS_INFO_CLASS = "com.tencent.mm.plugin.sns.storage.SnsInfo"
     private const val LIKE_COMMENT_TYPE = 1
+    private const val COMMENT_TYPE = 2
 
     private val classSnsService by dexClass {
         searchPackages("com.tencent.mm.plugin.sns.model")
@@ -913,6 +914,25 @@ object WeMomentsApi : ApiFeature(), IResolveDex {
 
     fun unlike(context: WeMomentsContextMenuApi.MomentsContext): ActionResult =
         unlike(context.snsInfo)
+
+    /**
+     * 给某条朋友圈发一条文本评论。复用 SnsService 的 sendLike 静态方法
+     * (type=1 点赞 / type=2 评论)，arg2 传评论文本。
+     */
+    fun comment(snsInfo: Any?, text: String, sourceScene: Int = 0): ActionResult {
+        val normalized = normalizeSnsInfo(snsInfo)
+            ?: return ActionResult(success = false, sent = false, message = "snsInfo is null or unsupported")
+        if (text.isBlank()) {
+            return ActionResult(success = false, sent = false, message = "comment text is blank")
+        }
+        return runCatching {
+            sendLikeMethod().invoke(null, normalized, COMMENT_TYPE, text, sourceScene)
+            ActionResult(success = true, sent = true, message = "comment request sent")
+        }.getOrElse { error ->
+            WeLogger.e(TAG, "failed to send Moments comment", error)
+            ActionResult(success = false, sent = false, message = error.message ?: "failed to send comment", error = error)
+        }
+    }
 
     fun isLiked(snsInfo: Any?): Boolean {
         val normalized = normalizeSnsInfo(snsInfo) ?: return false
