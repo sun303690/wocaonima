@@ -3569,6 +3569,8 @@
     <string name="payment_red_packet_delay">延遲搶紅包</string>
     <string name="payment_red_packet_immediate">收到後立即搶紅包</string>
     <string name="payment_red_packet_notification">搶到後通知</string>
+    <string name="payment_red_packet_send_record_to_self">領取後私聊自己</string>
+    <string name="payment_red_packet_send_record_to_self_enabled">成功領取後向自己的微信帳號發送領取記錄</string>
     <string name="payment_red_packet_notification_enabled">顯示搶到的金額與來源</string>
     <string name="payment_red_packet_auto_reply">搶到後自動回覆</string>
     <string name="payment_red_packet_amount_placeholder">使用 $amount 表示搶到的金額</string>

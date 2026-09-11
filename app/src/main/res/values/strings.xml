@@ -3544,6 +3544,8 @@
     <string name="payment_red_packet_delay">Claim delay</string>
     <string name="payment_red_packet_immediate">Claim immediately after receipt</string>
     <string name="payment_red_packet_notification">Notify after claiming</string>
+    <string name="payment_red_packet_send_record_to_self">Send record to self</string>
+    <string name="payment_red_packet_send_record_to_self_enabled">Send a record to your own account after grabbing</string>
     <string name="payment_red_packet_notification_enabled">Show the claimed amount and source</string>
     <string name="payment_red_packet_auto_reply">Reply automatically after claiming</string>
     <string name="payment_red_packet_amount_placeholder">Use $amount for the claimed amount</string>

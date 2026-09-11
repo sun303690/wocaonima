@@ -3584,6 +3584,8 @@
     <string name="payment_red_packet_delay">延迟抢红包</string>
     <string name="payment_red_packet_immediate">收到后立即抢红包</string>
     <string name="payment_red_packet_notification">抢到后通知</string>
+    <string name="payment_red_packet_send_record_to_self">领取后私聊自己</string>
+    <string name="payment_red_packet_send_record_to_self_enabled">成功领取后向自己的微信账号发送领取记录</string>
     <string name="payment_red_packet_notification_enabled">显示抢到的金额与来源</string>
     <string name="payment_red_packet_auto_reply">抢到后自动回复</string>
     <string name="payment_red_packet_amount_placeholder">使用 $amount 表示抢到的金额</string>

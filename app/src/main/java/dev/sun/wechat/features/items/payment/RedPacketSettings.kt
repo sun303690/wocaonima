@@ -86,6 +86,7 @@ object RedPacketSettings {
         val skipKeyword: AutomationKeywordRule = AutomationKeywordRule(),
         val delay: DelayRule = DelayRule(),
         val notification: AutomationToggleRule = AutomationToggleRule(),
+        val sendRecordToSelf: AutomationToggleRule = AutomationToggleRule(),
         val autoReply: ReplyRule = ReplyRule()
     ) {
         fun delayMillis(): Long {
@@ -113,6 +114,7 @@ object RedPacketSettings {
         val skipKeyword: AutomationKeywordRule? = null,
         val delay: DelayRule? = null,
         val notification: AutomationToggleRule? = null,
+        val sendRecordToSelf: AutomationToggleRule? = null,
         val autoReply: ReplyRule? = null
     ) {
         fun isEmpty(): Boolean = overriddenCount() == 0
@@ -126,6 +128,7 @@ object RedPacketSettings {
             skipKeyword,
             delay,
             notification,
+            sendRecordToSelf,
             autoReply
         ).count { it != null }
     }
@@ -154,6 +157,7 @@ object RedPacketSettings {
         SKIP_KEYWORD,
         DELAY,
         NOTIFICATION,
+        SEND_RECORD_TO_SELF,
         AUTO_REPLY
     }
 
@@ -711,6 +715,30 @@ object RedPacketSettings {
                     )
                 }
 
+                item(key = "send_record_to_self") {
+                    PaymentRuleRow(
+                        title = stringResource(R.string.payment_red_packet_send_record_to_self),
+                        summary = stringResource(
+                            if (rules.sendRecordToSelf.enabled) {
+                                R.string.payment_red_packet_send_record_to_self_enabled
+                            } else {
+                                R.string.automation_notification_disabled
+                            }
+                        ),
+                        checked = rules.sendRecordToSelf.enabled,
+                        overridden = overridden(RuleKey.SEND_RECORD_TO_SELF),
+                        parentLabel = parentLabel,
+                        onActivate = { onActivate(RuleKey.SEND_RECORD_TO_SELF) },
+                        onReset = { onReset(RuleKey.SEND_RECORD_TO_SELF) },
+                        onCheckedChange = {
+                            onChange(
+                                RuleKey.SEND_RECORD_TO_SELF,
+                                rules.copy(sendRecordToSelf = rules.sendRecordToSelf.copy(enabled = it)),
+                            )
+                        },
+                    )
+                }
+
                 item(key = "auto_reply") {
                     PaymentRuleRow(
                         title = stringResource(R.string.payment_red_packet_auto_reply),
@@ -772,6 +800,7 @@ object RedPacketSettings {
             skipKeyword = overrides.skipKeyword ?: skipKeyword,
             delay = overrides.delay ?: delay,
             notification = overrides.notification ?: notification,
+            sendRecordToSelf = overrides.sendRecordToSelf ?: sendRecordToSelf,
             autoReply = overrides.autoReply ?: autoReply
         )
     }
@@ -785,6 +814,7 @@ object RedPacketSettings {
         if (skipKeyword != null) add(RuleKey.SKIP_KEYWORD)
         if (delay != null) add(RuleKey.DELAY)
         if (notification != null) add(RuleKey.NOTIFICATION)
+        if (sendRecordToSelf != null) add(RuleKey.SEND_RECORD_TO_SELF)
         if (autoReply != null) add(RuleKey.AUTO_REPLY)
     }
 
@@ -797,6 +827,7 @@ object RedPacketSettings {
         RuleKey.SKIP_KEYWORD -> copy(skipKeyword = rules.skipKeyword)
         RuleKey.DELAY -> copy(delay = rules.delay)
         RuleKey.NOTIFICATION -> copy(notification = rules.notification)
+        RuleKey.SEND_RECORD_TO_SELF -> copy(sendRecordToSelf = rules.sendRecordToSelf)
         RuleKey.AUTO_REPLY -> copy(autoReply = rules.autoReply)
     }
 
@@ -809,6 +840,7 @@ object RedPacketSettings {
         RuleKey.SKIP_KEYWORD -> copy(skipKeyword = null)
         RuleKey.DELAY -> copy(delay = null)
         RuleKey.NOTIFICATION -> copy(notification = null)
+        RuleKey.SEND_RECORD_TO_SELF -> copy(sendRecordToSelf = null)
         RuleKey.AUTO_REPLY -> copy(autoReply = null)
     }
 
