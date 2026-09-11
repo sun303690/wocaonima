@@ -5,6 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -74,6 +76,15 @@ object AiSmartReply : ClickableFeature(),
     override val descriptionRes = R.string.feature_ai_smart_reply_description
 
     private const val TAG = "AiSmartReply"
+
+    private fun stylePromptKey(name: String) = "asr_style_prompt_$name"
+
+    /** 风格提示词: 优先用户改过的, 否则内置默认 */
+    private fun currentPromptFor(name: String): String =
+        WePrefs.getStringOrDef(
+            stylePromptKey(name),
+            STYLES.firstOrNull { it.first == name }?.second ?: "",
+        )
     private const val MENU_ID = 777042
 
     var contextLimit by prefOption("ai_reply_context_limit", 10)
@@ -173,10 +184,12 @@ object AiSmartReply : ClickableFeature(),
     }
 
     @Composable
+    @OptIn(ExperimentalLayoutApi::class)
     private fun ShowComposeDialogScope.SmartReplyDialogContent(msgInfo: MessageInfo) {
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
         var selectedStyle by remember { mutableStateOf("智能全能") }
+        var stylePromptInput by remember(selectedStyle) { mutableStateOf(currentPromptFor(selectedStyle)) }
         var candidates by remember { mutableStateOf<List<String>>(emptyList()) }
         var loading by remember { mutableStateOf(false) }
         var error by remember { mutableStateOf<String?>(null) }
@@ -188,9 +201,11 @@ object AiSmartReply : ClickableFeature(),
             scope.launch {
                 loading = true
                 error = null
+                // 保存该风格的提示词修改
+                WePrefs.putString(stylePromptKey(selectedStyle), stylePromptInput.trim())
                 // 换一批: 先清空旧候选, 生成中显示思考态
                 candidates = emptyList()
-                candidates = generateCandidates(msgInfo.talker, text, selectedStyle)
+                candidates = generateCandidates(msgInfo.talker, text, selectedStyle, stylePromptInput.trim())
                 loading = false
                 if (candidates.isEmpty()) error = "生成失败，请检查模型配置"
             }
@@ -202,16 +217,25 @@ object AiSmartReply : ClickableFeature(),
                 Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
                     // 快捷选择语气预设
                     Text(stringResource(R.string.smart_reply_style), style = MaterialTheme.typography.titleSmall)
-                    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        STYLES.take(5).forEach { (name, _) ->
+                    FlowRow(
+                        Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        STYLES.forEach { (name, _) ->
                             FilterChip(selected = selectedStyle == name, onClick = { selectedStyle = name }, label = { Text(name) })
                         }
                     }
-                    Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        STYLES.drop(5).forEach { (name, _) ->
-                            FilterChip(selected = selectedStyle == name, onClick = { selectedStyle = name }, label = { Text(name) })
-                        }
-                    }
+
+                    // 选中风格的介绍(提示词), 可直接编辑, 生成时生效
+                    OutlinedTextField(
+                        value = stylePromptInput,
+                        onValueChange = { stylePromptInput = it },
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        label = { Text(stringResource(R.string.asr_style_prompt_label)) },
+                        minLines = 2,
+                        maxLines = 4,
+                    )
 
                     when {
                         loading -> Row(verticalAlignment = Alignment.CenterVertically) {
@@ -281,7 +305,7 @@ object AiSmartReply : ClickableFeature(),
         }
     }
 
-    private suspend fun generateCandidates(talker: String, content: String, styleName: String): List<String> =
+    private suspend fun generateCandidates(talker: String, content: String, styleName: String, promptOverride: String? = null): List<String> =
         withContext(Dispatchers.IO) {
             try {
                 val modelId = WeAgentRepository.firstModelId() ?: return@withContext emptyList()
@@ -290,7 +314,9 @@ object AiSmartReply : ClickableFeature(),
                 val client = ModelProviderManager.clientFor(provider)
 
                 val count = replyCount.coerceIn(1, 20)
-                val stylePrompt = STYLES.firstOrNull { it.first == styleName }?.second ?: "回复自然得体，像正常人一样交流。"
+                val stylePrompt = promptOverride?.takeIf { it.isNotBlank() }
+                    ?: STYLES.firstOrNull { it.first == styleName }?.second
+                    ?: "回复自然得体，像正常人一样交流。"
                 val contextText = loadRecentContext(talker, contextLimit.coerceIn(1, 50))
                 val systemPrompt = buildString {
                     append("你是微信聊天助手。语气要求：$stylePrompt\n")

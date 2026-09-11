@@ -4,6 +4,8 @@ import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -128,6 +130,7 @@ object AiMessageAnalysis : ClickableFeature(),
     }
 
     @Composable
+    @OptIn(ExperimentalLayoutApi::class)
     private fun ShowComposeDialogScope.AnalysisDialogContent(msgInfo: MessageInfo) {
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
@@ -174,17 +177,12 @@ object AiMessageAnalysis : ClickableFeature(),
                 Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
                     // 时段选择
                     Text(stringResource(R.string.ama_period), style = MaterialTheme.typography.titleSmall)
-                    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Period.entries.take(4).forEach { p ->
-                            FilterChip(
-                                selected = period == p,
-                                onClick = { period = p },
-                                label = { Text(periodLabel(p)) },
-                            )
-                        }
-                    }
-                    Row(Modifier.fillMaxWidth().padding(bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Period.entries.drop(4).forEach { p ->
+                    FlowRow(
+                        Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Period.entries.forEach { p ->
                             FilterChip(
                                 selected = period == p,
                                 onClick = { period = p },
@@ -222,17 +220,12 @@ object AiMessageAnalysis : ClickableFeature(),
 
                     // 风格选择
                     Text(stringResource(R.string.ama_reply_style), style = MaterialTheme.typography.titleSmall)
-                    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        STYLES.take(5).forEach { (name, _) ->
-                            FilterChip(
-                                selected = selectedStyle == name,
-                                onClick = { selectedStyle = name },
-                                label = { Text(name) },
-                            )
-                        }
-                    }
-                    Row(Modifier.fillMaxWidth().padding(bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        STYLES.drop(5).forEach { (name, _) ->
+                    FlowRow(
+                        Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        STYLES.forEach { (name, _) ->
                             FilterChip(
                                 selected = selectedStyle == name,
                                 onClick = { selectedStyle = name },
