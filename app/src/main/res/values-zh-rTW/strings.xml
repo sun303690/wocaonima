@@ -1843,6 +1843,8 @@
     <string name="chat_placeholder_insert_hint">點擊插入佔位符：</string>
     <string name="chat_fake_voice_duration_millis">語音時長（毫秒）</string>
     <string name="chat_fake_voice_duration_invalid">時長格式不正確！</string>
+    <string name="chat_fake_voice_duration_seconds">語音時長（秒，1-60）</string>
+    <string name="chat_fake_voice_duration_hint">0 = 不偽裝（透傳真實時長）；1-60 秒自動校正</string>
     <string name="chat_hide_avatar_incoming">隱藏私聊對方頭像</string>
     <string name="chat_hide_avatar_incoming_description">僅在私聊中隱藏對方的用戶頭像</string>
     <string name="chat_hide_avatar_outgoing">隱藏發送消息頭像</string>

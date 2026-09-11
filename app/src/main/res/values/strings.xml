@@ -1893,6 +1893,8 @@
     <string name="chat_placeholder_insert_hint">Tap to insert a placeholder:</string>
     <string name="chat_fake_voice_duration_millis">Voice duration (milliseconds)</string>
     <string name="chat_fake_voice_duration_invalid">Invalid duration format</string>
+    <string name="chat_fake_voice_duration_seconds">Voice duration (seconds, 1-60)</string>
+    <string name="chat_fake_voice_duration_hint">0 = no faking (pass through). 1-60 seconds are clamped automatically.</string>
     <string name="chat_hide_avatar_incoming">Hide the other person’s avatar in private chats</string>
     <string name="chat_hide_avatar_incoming_description">Hide the other person’s avatar in private chats only</string>
     <string name="chat_hide_avatar_outgoing">Hide avatars on sent messages</string>

@@ -1847,6 +1847,8 @@
     <string name="chat_placeholder_insert_hint">点击插入占位符：</string>
     <string name="chat_fake_voice_duration_millis">语音时长（毫秒）</string>
     <string name="chat_fake_voice_duration_invalid">时长格式不正确！</string>
+    <string name="chat_fake_voice_duration_seconds">语音时长（秒，1-60）</string>
+    <string name="chat_fake_voice_duration_hint">0 = 不伪装（透传真实时长）；1-60 秒自动校正</string>
     <string name="chat_hide_avatar_incoming">隐藏私聊对方头像</string>
     <string name="chat_hide_avatar_incoming_description">仅在私聊中隐藏对方的用户头像</string>
     <string name="chat_hide_avatar_outgoing">隐藏发送消息头像</string>
