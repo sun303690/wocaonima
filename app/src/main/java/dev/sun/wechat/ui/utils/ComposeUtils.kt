@@ -32,8 +32,6 @@ import dev.sun.wechat.ui.utils.theme.ThemeSettings
 fun showComposeDialog(
     context: Context,
     directlyDismissable: Boolean = true,
-    softInputMode: Int = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or
-        WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN,
     content: @Composable ShowComposeDialogScope.() -> Unit
 ) {
     val context = CommonContextWrapper(context)
@@ -47,7 +45,9 @@ fun showComposeDialog(
         window!!.apply {
             setBackgroundDrawableResource(android.R.color.transparent)
             requestFeature(Window.FEATURE_NO_TITLE)
-            setSoftInputMode(softInputMode)
+            // 允许软键盘弹出并调整布局，否则输入框点不到键盘
+            setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or
+                WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
         }
 
         setCancelable(directlyDismissable)

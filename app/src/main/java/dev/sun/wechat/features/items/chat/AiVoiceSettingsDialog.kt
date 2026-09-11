@@ -1,7 +1,6 @@
 package dev.sun.wechat.features.items.chat
 
 import android.content.Context
-import android.view.WindowManager
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -40,9 +39,7 @@ import kotlinx.coroutines.launch
 internal object AiVoiceSettingsDialog {
 
     fun show(context: Context) {
-        // 多行 TTS 输入框：去掉 STATE_ALWAYS_HIDDEN (每次聚焦强制收起/弹出键盘导致布局跳动)，
-        // 仅用 ADJUST_RESIZE + 面板内的 imePadding() 平滑跟随软键盘。
-        showComposeDialog(context, softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE) {
+        showComposeDialog(context) {
             AiVoiceSettingsContent(context, onDismiss)
         }
     }
