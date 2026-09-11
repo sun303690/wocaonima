@@ -38,11 +38,12 @@ import dev.sun.wechat.ui.content.TextButton
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToast
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.concurrent.thread
 
 /**
  * AI 回复朋友圈（独立功能，移植自 Nuke，不挂到 WeKit 朋友圈自动化框架）：
@@ -90,6 +91,8 @@ object AiReplyMoments : ClickableFeature(),
     private val lastAttemptAt = ConcurrentHashMap<String, Long>()
     private val actionLock = Any()
 
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     @Volatile
     private var lastActionSentAt = 0L
 
@@ -129,7 +132,7 @@ object AiReplyMoments : ClickableFeature(),
     }
 
     private fun scanCachedMoments() {
-        thread(name = "AiReplyMomentsScanThread") {
+        scope.launch {
             runCatching {
                 WeMomentsApi.rawQuerySnsInfo(
                     """
@@ -150,13 +153,13 @@ object AiReplyMoments : ClickableFeature(),
     }
 
     private fun processAsync(snsInfo: Any) {
-        thread(name = "AiReplyMomentsProcessThread") {
+        scope.launch {
             runCatching { processSnsInfo(snsInfo) }
                 .onFailure { WeLogger.w(TAG, "process moments failed", it) }
         }
     }
 
-    private fun processSnsInfo(snsInfo: Any) {
+    private suspend fun processSnsInfo(snsInfo: Any) {
         val owner = WeMomentsApi.getOwnerWxId(snsInfo)?.trim().orEmpty()
         if (owner.isBlank() || owner == WeApi.selfWxId) return
         if (!matchesListMode(owner)) return

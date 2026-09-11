@@ -45,6 +45,7 @@ import dev.sun.wechat.features.api.ui.WeChatMessageContextMenuApi
 import dev.sun.wechat.features.api.ui.WeChatMessageContextMenuApi.MenuItem
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
+import dev.sun.wechat.preferences.WePrefs
 import dev.sun.wechat.preferences.WePrefs.Companion.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
