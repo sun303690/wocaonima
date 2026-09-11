@@ -252,7 +252,10 @@ object AiVoiceAssistant : ClickableFeature(), WeDatabaseListenerApi.IInsertListe
                 val mp3 = synthesizeMp3(text) ?: return@runCatching false
                 val silk = File(File(mp3).parentFile, "ai_${System.nanoTime()}.silk").absolutePath
                 if (!AudioUtils.anyToSilk(mp3, silk)) return@runCatching false
-                val duration = AudioUtils.getDurationMs(silk).toInt()
+                val duration = FakeVoiceDuration.fakeDurationMs()
+                    .takeIf { it > 0L }
+                    ?.toInt()
+                    ?: AudioUtils.getDurationMs(silk).toInt()
                 WeMessageApi.sendVoice(talker, silk, duration)
                 true
             }.getOrElse {

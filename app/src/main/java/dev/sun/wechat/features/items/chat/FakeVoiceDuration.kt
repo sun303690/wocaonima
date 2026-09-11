@@ -46,12 +46,18 @@ object FakeVoiceDuration : ClickableFeature(), IResolveDex {
     private const val MIN_SECONDS = 1L
     private const val MAX_SECONDS = 60L
 
+    /** 供 TTS 等发送路径复用：返回伪装毫秒数；0 表示不伪装。 */
+    fun fakeDurationMs(): Long {
+        val seconds = WePrefs.getLongOrDef(KEY_DURATION, 0L)
+        return if (seconds > 0L) seconds.coerceIn(MIN_SECONDS, MAX_SECONDS) * 1000L else 0L
+    }
+
     override fun onEnable() {
         methodVoiceRecorderGetLength.hookBefore {
             // 存的是秒; 0 表示不伪装, 其余 clamp 到 [1,60] 秒 ×1000 = 毫秒
-            val seconds = WePrefs.getLongOrDef(KEY_DURATION, 0L)
-            if (seconds > 0L) {
-                result = seconds.coerceIn(MIN_SECONDS, MAX_SECONDS) * 1000L
+            val fake = fakeDurationMs()
+            if (fake > 0L) {
+                result = fake
             }
         }
     }
