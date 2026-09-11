@@ -3590,6 +3590,8 @@
     <string name="payment_transfer_delay">接收延遲</string>
     <string name="payment_transfer_immediate">立即接收轉賬</string>
     <string name="payment_transfer_notification">接收後通知</string>
+    <string name="payment_transfer_send_record_to_self">收款後私聊自己</string>
+    <string name="payment_transfer_send_record_to_self_enabled">成功收款後向自己的微信帳號發送收款記錄</string>
     <string name="payment_transfer_notification_enabled">顯示收到的金額與來源</string>
     <string name="payment_transfer_auto_reply">接收後自動回覆</string>
     <string name="payment_transfer_amount_placeholder">使用 $amount 表示轉賬金額</string>

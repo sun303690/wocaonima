@@ -3605,6 +3605,8 @@
     <string name="payment_transfer_delay">接收延迟</string>
     <string name="payment_transfer_immediate">立即接收转账</string>
     <string name="payment_transfer_notification">接收后通知</string>
+    <string name="payment_transfer_send_record_to_self">收款后私聊自己</string>
+    <string name="payment_transfer_send_record_to_self_enabled">成功收款后向自己的微信账号发送收款记录</string>
     <string name="payment_transfer_notification_enabled">显示收到的金额与来源</string>
     <string name="payment_transfer_auto_reply">接收后自动回复</string>
     <string name="payment_transfer_amount_placeholder">使用 $amount 表示转账金额</string>

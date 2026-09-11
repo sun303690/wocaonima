@@ -101,6 +101,7 @@ object TransferSettings {
         val memoKeyword: AutomationKeywordRule = AutomationKeywordRule(),
         val delay: DelayRule = DelayRule(),
         val notification: AutomationToggleRule = AutomationToggleRule(),
+        val sendRecordToSelf: AutomationToggleRule = AutomationToggleRule(),
         val autoReply: ReplyRule = ReplyRule()
     ) {
         fun accepts(totalFeeCents: Long, payMemo: String): Boolean =
@@ -118,6 +119,7 @@ object TransferSettings {
         val memoKeyword: AutomationKeywordRule? = null,
         val delay: DelayRule? = null,
         val notification: AutomationToggleRule? = null,
+        val sendRecordToSelf: AutomationToggleRule? = null,
         val autoReply: ReplyRule? = null
     ) {
         fun overriddenCount(): Int = listOf(
@@ -127,6 +129,7 @@ object TransferSettings {
             memoKeyword,
             delay,
             notification,
+            sendRecordToSelf,
             autoReply
         ).count { it != null }
 
@@ -148,6 +151,7 @@ object TransferSettings {
         MEMO_KEYWORD,
         DELAY,
         NOTIFICATION,
+        SEND_RECORD_TO_SELF,
         AUTO_REPLY
     }
 
@@ -675,6 +679,30 @@ object TransferSettings {
                     )
                 }
 
+                item(key = "send_record_to_self") {
+                    PaymentRuleRow(
+                        title = stringResource(R.string.payment_transfer_send_record_to_self),
+                        summary = stringResource(
+                            if (rules.sendRecordToSelf.enabled) {
+                                R.string.payment_transfer_send_record_to_self_enabled
+                            } else {
+                                R.string.automation_notification_disabled
+                            }
+                        ),
+                        checked = rules.sendRecordToSelf.enabled,
+                        overridden = overridden(RuleKey.SEND_RECORD_TO_SELF),
+                        parentLabel = parentLabel,
+                        onActivate = { onActivate(RuleKey.SEND_RECORD_TO_SELF) },
+                        onReset = { onReset(RuleKey.SEND_RECORD_TO_SELF) },
+                        onCheckedChange = {
+                            onChange(
+                                RuleKey.SEND_RECORD_TO_SELF,
+                                rules.copy(sendRecordToSelf = rules.sendRecordToSelf.copy(enabled = it)),
+                            )
+                        },
+                    )
+                }
+
                 item(key = "auto_reply") {
                     PaymentRuleRow(
                         title = stringResource(R.string.payment_transfer_auto_reply),
@@ -734,6 +762,7 @@ object TransferSettings {
             memoKeyword = overrides.memoKeyword ?: memoKeyword,
             delay = overrides.delay ?: delay,
             notification = overrides.notification ?: notification,
+            sendRecordToSelf = overrides.sendRecordToSelf ?: sendRecordToSelf,
             autoReply = overrides.autoReply ?: autoReply
         )
     }
@@ -745,6 +774,7 @@ object TransferSettings {
         if (memoKeyword != null) add(RuleKey.MEMO_KEYWORD)
         if (delay != null) add(RuleKey.DELAY)
         if (notification != null) add(RuleKey.NOTIFICATION)
+        if (sendRecordToSelf != null) add(RuleKey.SEND_RECORD_TO_SELF)
         if (autoReply != null) add(RuleKey.AUTO_REPLY)
     }
 
@@ -755,6 +785,7 @@ object TransferSettings {
         RuleKey.MEMO_KEYWORD -> copy(memoKeyword = rules.memoKeyword)
         RuleKey.DELAY -> copy(delay = rules.delay)
         RuleKey.NOTIFICATION -> copy(notification = rules.notification)
+        RuleKey.SEND_RECORD_TO_SELF -> copy(sendRecordToSelf = rules.sendRecordToSelf)
         RuleKey.AUTO_REPLY -> copy(autoReply = rules.autoReply)
     }
 
@@ -765,6 +796,7 @@ object TransferSettings {
         RuleKey.MEMO_KEYWORD -> copy(memoKeyword = null)
         RuleKey.DELAY -> copy(delay = null)
         RuleKey.NOTIFICATION -> copy(notification = null)
+        RuleKey.SEND_RECORD_TO_SELF -> copy(sendRecordToSelf = null)
         RuleKey.AUTO_REPLY -> copy(autoReply = null)
     }
 

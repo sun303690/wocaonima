@@ -3566,6 +3566,8 @@
     <string name="payment_transfer_delay">Acceptance delay</string>
     <string name="payment_transfer_immediate">Accept transfers immediately</string>
     <string name="payment_transfer_notification">Notify after acceptance</string>
+    <string name="payment_transfer_send_record_to_self">Send record to self</string>
+    <string name="payment_transfer_send_record_to_self_enabled">Send a record to your own account after receiving</string>
     <string name="payment_transfer_notification_enabled">Show the received amount and source</string>
     <string name="payment_transfer_auto_reply">Reply automatically after acceptance</string>
     <string name="payment_transfer_amount_placeholder">Use $amount for the transfer amount</string>
