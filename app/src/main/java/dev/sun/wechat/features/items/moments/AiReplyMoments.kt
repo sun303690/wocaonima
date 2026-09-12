@@ -2,14 +2,6 @@ package dev.sun.wechat.features.items.moments
 
 import android.content.ContentValues
 import androidx.activity.ComponentActivity
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,9 +9,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import dev.sun.wechat.R
 import dev.sun.wechat.agent.data.WeAgentRepository
 import dev.sun.wechat.agent.model.LlmMessage
@@ -27,28 +30,35 @@ import dev.sun.wechat.agent.model.LlmRole
 import dev.sun.wechat.agent.model.LlmStreamEvent
 import dev.sun.wechat.agent.model.ModelProviderManager
 import dev.sun.wechat.features.api.core.WeApi
+import dev.sun.wechat.features.api.core.WeDatabaseApi
 import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
 import dev.sun.wechat.features.api.ui.WeMomentsApi
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
+import dev.sun.wechat.i18n.LocalWeKitLocalizedContext
 import dev.sun.wechat.preferences.WePrefs
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
+import dev.sun.wechat.ui.content.ContactsSelector
 import dev.sun.wechat.ui.content.TextButton
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToast
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * AI 回复朋友圈（独立功能，移植自 Nuke，不挂到 WeKit 朋友圈自动化框架）：
- *  - 监听朋友圈动态(SnsInfo 表 insert/update)，也扫描本地缓存
- *  - 名单模式：全部 / 白名单(仅回复选中) / 黑名单(跳过选中)
+ * AI 回复朋友圈（独立功能，移植 Nuke 完整版，不挂到 WeKit 朋友圈自动化框架）：
+ *  - 检测朋友圈动态(SnsInfo 表 insert/update)；处理范围：刷到时处理 / 全部已加载内容
+ *  - 名单模式：全部 / 白名单(仅回复选中) / 黑名单(跳过选中)，可配置联系人名单
+ *  - 回复间隔(ms)、自动刷新朋友圈(固定间隔拉取并继续回复)
  *  - 用 WeAgent 模型库生成评论(系统提示词可自定义)，截断到最大评论长度
  *  - 通过 WeMomentsApi.comment() 发送(type=2 评论)
  */
@@ -64,6 +74,14 @@ object AiReplyMoments : ClickableFeature(),
     private const val TAG = "AiReplyMoments"
     private const val RETRY_INTERVAL_MS = 30_000L
 
+    // 处理范围
+    private const val MODE_WHEN_SEEN = 0
+    private const val MODE_ALL_LOADED = 1
+    // 名单模式
+    private const val LIST_ALL = 0
+    private const val LIST_WHITELIST = 1
+    private const val LIST_BLACKLIST = 2
+
     private const val DEFAULT_PROMPT =
         "你是微信朋友圈评论助手。根据用户的朋友圈内容，生成一句自然、贴切、有礼貌的中文评论。" +
             "只输出评论本身，不要解释，不要引号。"
@@ -73,8 +91,11 @@ object AiReplyMoments : ClickableFeature(),
     var temperature by WePrefs.prefOption("ai_reply_moments_temperature", 0.7f)
     var maxTokens by WePrefs.prefOption("ai_reply_moments_max_tokens", 128)
     var maxCommentLength by WePrefs.prefOption("ai_reply_moments_max_comment_length", 200)
-    var listMode by WePrefs.prefOption("ai_reply_moments_list_mode", 0) // 0=全部 1=白名单 2=黑名单
+    var listMode by WePrefs.prefOption("ai_reply_moments_list_mode", LIST_ALL)
+    var processMode by WePrefs.prefOption("ai_reply_moments_process_mode", MODE_WHEN_SEEN)
     var replyIntervalMs by WePrefs.prefOption("ai_reply_moments_interval_ms", 0L)
+    var autoRefresh by WePrefs.prefOption("ai_reply_moments_auto_refresh", false)
+    var refreshIntervalMin by WePrefs.prefOption("ai_reply_moments_refresh_interval_min", 30)
 
     private var whitelist: Set<String>
         get() = WePrefs.getStringSetOrDef(KEY_WHITELIST, emptySet())
@@ -96,16 +117,20 @@ object AiReplyMoments : ClickableFeature(),
     @Volatile
     private var lastActionSentAt = 0L
 
+    private var refreshJob: Job? = null
+
     override fun onEnable() {
         WeDatabaseListenerApi.addListener(this)
         handledSnsIds.clear()
         lastAttemptAt.clear()
-        scanCachedMoments()
+        if (processMode == MODE_ALL_LOADED) scanCachedMoments()
+        startRefreshJob()
     }
 
     override fun onDisable() {
         WeDatabaseListenerApi.removeListener(this)
         handledSnsIds.clear()
+        stopRefreshJob()
     }
 
     override fun onClick(context: ComponentActivity) {
@@ -152,6 +177,24 @@ object AiReplyMoments : ClickableFeature(),
         }
     }
 
+    private fun startRefreshJob() {
+        stopRefreshJob()
+        if (!autoRefresh) return
+        refreshJob = scope.launch {
+            while (isActive) {
+                val minutes = refreshIntervalMin.coerceIn(1, 9999)
+                delay(minutes * 60_000L)
+                WeLogger.d(TAG, "auto refresh scanning cached moments")
+                scanCachedMoments()
+            }
+        }
+    }
+
+    private fun stopRefreshJob() {
+        refreshJob?.cancel()
+        refreshJob = null
+    }
+
     private fun processAsync(snsInfo: Any) {
         scope.launch {
             runCatching { processSnsInfo(snsInfo) }
@@ -169,10 +212,6 @@ object AiReplyMoments : ClickableFeature(),
         if (!canAttempt(snsTableId)) return
 
         val content = WeMomentsApi.getContentText(snsInfo).orEmpty().trim()
-        if (content.isBlank()) {
-            // 纯图片/视频动态：没有文字，用占位说明
-            // 仍可评论，但交给 AI 用空内容兜底
-        }
 
         val text = runCatching { generateComment(content) }.getOrNull()?.trim().orEmpty()
         if (text.isBlank()) return
@@ -195,8 +234,8 @@ object AiReplyMoments : ClickableFeature(),
     }
 
     private fun matchesListMode(owner: String): Boolean = when (listMode) {
-        1 -> owner in whitelist
-        2 -> owner !in blacklist
+        LIST_WHITELIST -> owner in whitelist
+        LIST_BLACKLIST -> owner !in blacklist
         else -> true
     }
 
@@ -245,58 +284,118 @@ object AiReplyMoments : ClickableFeature(),
 
     // ---------------- 配置 UI ----------------
 
+    @Composable
+    private fun TextFieldRow(
+        value: String,
+        onValueChange: (String) -> Unit,
+        label: String,
+        allowedFilter: (Char) -> Boolean = { true },
+    ) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            label = { Text(label) },
+            singleLine = true,
+        )
+    }
+
     private fun showConfigDialog(context: ComponentActivity) {
         showComposeDialog(context) {
-            val scope = rememberCoroutineScope()
+            val newScope = rememberCoroutineScope()
+            val localizedContext by rememberUpdatedState(LocalWeKitLocalizedContext.current)
+
             var promptInput by remember { mutableStateOf(prompt) }
             var tempInput by remember { mutableStateOf(temperature.toString()) }
             var tokensInput by remember { mutableStateOf(maxTokens.toString()) }
             var lengthInput by remember { mutableStateOf(maxCommentLength.toString()) }
-            var modeInput by remember { mutableStateOf(listMode) }
+            var listModeInput by remember { mutableStateOf(listMode) }
+            var processModeInput by remember { mutableStateOf(processMode) }
+            var intervalInput by remember { mutableStateOf(replyIntervalMs.toString()) }
+            var autoRefreshInput by remember { mutableStateOf(autoRefresh) }
+            var refreshIntervalInput by remember { mutableStateOf(refreshIntervalMin.toString()) }
+
+            fun openContactPicker(title: String, kind: Int) {
+                onDismiss()
+                showComposeDialog(context) {
+                    ContactsSelector(
+                        title = title,
+                        contacts = WeDatabaseApi.getContacts(),
+                        initialSelectedWxIds = if (kind == LIST_WHITELIST) whitelist else blacklist,
+                        onDismiss = onDismiss,
+                        onConfirm = { selected ->
+                            if (kind == LIST_WHITELIST) whitelist = selected else blacklist = selected
+                            showToast(
+                                context,
+                                localizedContext.getString(R.string.aim_selected_count, selected.size),
+                            )
+                            onDismiss()
+                        },
+                    )
+                }
+            }
 
             AlertDialogContent(
                 title = { Text(stringResource(R.string.feature_ai_reply_moments_name)) },
                 text = {
                     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-                        OutlinedTextField(
-                            value = promptInput,
-                            onValueChange = { promptInput = it },
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                            label = { Text(stringResource(R.string.aim_prompt_label)) },
-                            singleLine = false,
-                            minLines = 2,
-                            maxLines = 4,
-                        )
-                        OutlinedTextField(
-                            value = lengthInput,
-                            onValueChange = { lengthInput = it.filter(Char::isDigit) },
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                            label = { Text(stringResource(R.string.aim_max_comment_length_label)) },
-                            singleLine = true,
-                        )
-                        OutlinedTextField(
-                            value = tokensInput,
-                            onValueChange = { tokensInput = it.filter(Char::isDigit) },
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                            label = { Text(stringResource(R.string.aim_max_tokens_label)) },
-                            singleLine = true,
-                        )
-                        OutlinedTextField(
-                            value = tempInput,
-                            onValueChange = { tempInput = it },
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                            label = { Text(stringResource(R.string.aim_temperature_label)) },
-                            singleLine = true,
-                        )
-                        Text(stringResource(R.string.aim_list_mode_title))
+                        TextFieldRow(promptInput, { promptInput = it }, localizedContext.getString(R.string.aim_prompt_label))
+                        TextFieldRow(lengthInput, { lengthInput = it.filter(Char::isDigit) }, localizedContext.getString(R.string.aim_max_comment_length_label)) { it.isDigit() }
+                        TextFieldRow(tokensInput, { tokensInput = it.filter(Char::isDigit) }, localizedContext.getString(R.string.aim_max_tokens_label)) { it.isDigit() }
+                        TextFieldRow(tempInput, { tempInput = it }, localizedContext.getString(R.string.aim_temperature_label))
+
+                        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+
+                        Text(localizedContext.getString(R.string.aim_list_mode_title))
                         Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            listOf(0 to "全部", 1 to "白名单", 2 to "黑名单").forEach { (mode, label) ->
-                                FilterChip(
-                                    selected = modeInput == mode,
-                                    onClick = { modeInput = mode },
-                                    label = { Text(label) },
-                                )
+                            listOf(
+                                LIST_ALL to localizedContext.getString(R.string.aim_list_mode_all),
+                                LIST_WHITELIST to localizedContext.getString(R.string.aim_list_mode_whitelist),
+                                LIST_BLACKLIST to localizedContext.getString(R.string.aim_list_mode_blacklist),
+                            ).forEach { (mode, label) ->
+                                FilterChip(selected = listModeInput == mode, onClick = { listModeInput = mode }, label = { Text(label) })
                             }
+                        }
+                        if (listModeInput == LIST_WHITELIST) {
+                            Button(
+                                onClick = { openContactPicker(localizedContext.getString(R.string.aim_configure_whitelist), LIST_WHITELIST) },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(localizedContext.getString(R.string.aim_configure_whitelist) + " (${whitelist.size})")
+                            }
+                        } else if (listModeInput == LIST_BLACKLIST) {
+                            Button(
+                                onClick = { openContactPicker(localizedContext.getString(R.string.aim_configure_blacklist), LIST_BLACKLIST) },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(localizedContext.getString(R.string.aim_configure_blacklist) + " (${blacklist.size})")
+                            }
+                        }
+
+                        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+
+                        Text(localizedContext.getString(R.string.aim_process_mode_title))
+                        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf(
+                                MODE_WHEN_SEEN to localizedContext.getString(R.string.aim_process_mode_seen),
+                                MODE_ALL_LOADED to localizedContext.getString(R.string.aim_process_mode_all_loaded),
+                            ).forEach { (mode, label) ->
+                                FilterChip(selected = processModeInput == mode, onClick = { processModeInput = mode }, label = { Text(label) })
+                            }
+                        }
+
+                        TextFieldRow(intervalInput, { intervalInput = it.filter(Char::isDigit) }, localizedContext.getString(R.string.aim_reply_interval_label)) { it.isDigit() }
+
+                        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Text(localizedContext.getString(R.string.aim_auto_refresh_title), modifier = Modifier.weight(1f))
+                            Switch(checked = autoRefreshInput, onCheckedChange = { autoRefreshInput = it })
+                        }
+                        if (autoRefreshInput) {
+                            TextFieldRow(
+                                refreshIntervalInput,
+                                { refreshIntervalInput = it.filter(Char::isDigit) },
+                                localizedContext.getString(R.string.aim_refresh_interval_label),
+                            ) { it.isDigit() }
                         }
                     }
                 },
@@ -307,8 +406,15 @@ object AiReplyMoments : ClickableFeature(),
                         maxCommentLength = lengthInput.toIntOrNull()?.coerceIn(1, 2000) ?: 200
                         maxTokens = tokensInput.toIntOrNull()?.coerceIn(1, 32768) ?: 128
                         temperature = tempInput.toFloatOrNull()?.coerceIn(0f, 2f) ?: 0.7f
-                        listMode = modeInput.coerceIn(0, 2)
+                        listMode = listModeInput.coerceIn(0, 2)
+                        processMode = processModeInput.coerceIn(0, 1)
+                        replyIntervalMs = intervalInput.toLongOrNull()?.coerceIn(0L, 300_000L) ?: 0L
+                        autoRefresh = autoRefreshInput
+                        refreshIntervalMin = refreshIntervalInput.toIntOrNull()?.coerceIn(1, 9999) ?: 30
                         onDismiss()
+                        // 立即应用: 按新模式扫描 + 重建刷新任务
+                        if (processMode == MODE_ALL_LOADED) scanCachedMoments()
+                        startRefreshJob()
                     }) { Text(stringResource(R.string.dialog_confirm)) }
                 },
             )

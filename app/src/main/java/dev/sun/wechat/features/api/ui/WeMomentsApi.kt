@@ -22,6 +22,7 @@ import dev.ujhhgtg.reflekt.utils.toClass
 import dev.sun.wechat.R
 import dev.sun.wechat.constants.PackageNames
 import dev.sun.wechat.dexkit.abc.IResolveDex
+import dev.sun.wechat.dexkit.dsl.DexMethodDelegate
 import dev.sun.wechat.dexkit.dsl.data
 import dev.sun.wechat.dexkit.dsl.dexClass
 import dev.sun.wechat.dexkit.dsl.dexConstructor
@@ -141,8 +142,11 @@ object WeMomentsApi : ApiFeature(), IResolveDex {
     )
 
     private const val SNS_INFO_CLASS = "com.tencent.mm.plugin.sns.storage.SnsInfo"
+    private const val SNS_CMT_POST_CONTENT_DATA_CLASS =
+        "com.tencent.mm.plugin.sns.ui.comment.emoticon.data.SnsCmtPostContentData"
     private const val LIKE_COMMENT_TYPE = 1
     private const val COMMENT_TYPE = 2
+    private const val AD_COMMENT_FLAG = 8
 
     private val classSnsService by dexClass {
         searchPackages("com.tencent.mm.plugin.sns.model")
@@ -191,6 +195,52 @@ object WeMomentsApi : ApiFeature(), IResolveDex {
             returnType(Void.TYPE)
         }
     }
+    /**
+     * 微信 SnsService.sendComment(SnsInfo, int, String, long, String, boolean, int) —— static + void。
+     * 签名取自 Nuke 1.0.5 的 DexKit 查询键 `.MethodSendTextComment`（用 paramTypes 精确锁定，避免抓错重载）。
+     */
+    private val methodSendTextComment by dexMethod(allowFailure = true) {
+        matcher {
+            declaredClass(classSnsService.data.name)
+            modifiers = Modifier.STATIC
+            name = "sendComment"
+            paramTypes(
+                SNS_INFO_CLASS,
+                "int",
+                "java.lang.String",
+                "long",
+                "java.lang.String",
+                "boolean",
+                "int",
+            )
+            returnType(Void.TYPE)
+        }
+    }
+
+    /**
+     * 微信 SnsService.sendCommentWithFlag(SnsInfo, int, ?, ?, boolean, int, int) —— static + void。
+     * 扩展动态(isExtFlag)必须走这条；第 3 参数类型随微信版本变化，运行时用 parameterTypes[2] 取真身。
+     * 取自 Nuke 的 `.MethodSendTimelineComment`。
+     */
+    private val methodSendCommentWithFlag by dexMethod(allowFailure = true) {
+        matcher {
+            declaredClass(classSnsService.data.name)
+            modifiers = Modifier.STATIC
+            name = "sendCommentWithFlag"
+            paramTypes(SNS_INFO_CLASS, "int", null, null, "boolean", "int", "int")
+            returnType(Void.TYPE)
+        }
+    }
+
+    /** sendCommentWithFlag 第 3 参数的载体（SnsCmtPostContentData）的 setText(String)。取自 Nuke `.MethodSetCommentContentText`。 */
+    private val methodSetCommentContentText by dexMethod(allowFailure = true) {
+        matcher {
+            declaredClass(SNS_CMT_POST_CONTENT_DATA_CLASS)
+            name = "setText"
+            paramTypes("java.lang.String")
+        }
+    }
+
     private val methodGetSnsInfoByLocalId by dexMethod {
         matcher {
             paramTypes("int")
@@ -916,8 +966,13 @@ object WeMomentsApi : ApiFeature(), IResolveDex {
         unlike(context.snsInfo)
 
     /**
-     * 给某条朋友圈发一条文本评论。复用 SnsService 的 sendLike 静态方法
-     * (type=1 点赞 / type=2 评论)，arg2 传评论文本。
+     * 给某条朋友圈发一条文本评论。
+     *
+     * 复刻 Nuke 1.0.5 的实际发送逻辑（`i2.S()`，接收者恒为 null —— SnsService 这几个方法都是 static）：
+     *  - `SnsInfo.isExtFlag == true` → `sendCommentWithFlag(SnsInfo, flag, SnsCmtPostContentData, null, true, scene, scene)`
+     *    其中 flag = isAd ? 8 : 2；内容对象用 `parameterTypes[2]` 的无参构造建出来再 `setText(text)`
+     *  - 否则 → `sendComment(SnsInfo, 2, text, 0L, "", false, scene)`
+     *  两条路径都解析不出来时直接返回失败，不再退回其它重载。
      */
     fun comment(snsInfo: Any?, text: String, sourceScene: Int = 0): ActionResult {
         val normalized = normalizeSnsInfo(snsInfo)
@@ -925,13 +980,63 @@ object WeMomentsApi : ApiFeature(), IResolveDex {
         if (text.isBlank()) {
             return ActionResult(success = false, sent = false, message = "comment text is blank")
         }
+        val withFlag = methodSendCommentWithFlag.resolvedMethod
+        val plain = methodSendTextComment.resolvedMethod
+        if (withFlag == null && plain == null) {
+            return ActionResult(success = false, sent = false, message = "sendComment not resolved by DexKit")
+        }
         return runCatching {
-            sendLikeMethod().invoke(null, normalized, COMMENT_TYPE, text, sourceScene)
+            when {
+                withFlag != null && readSnsFlag(normalized, "isExtFlag") ->
+                    withFlag.invoke(
+                        null,
+                        normalized,
+                        if (readSnsFlag(normalized, "isAd")) AD_COMMENT_FLAG else COMMENT_TYPE,
+                        buildCommentContentData(withFlag, text),
+                        null,
+                        true,
+                        sourceScene,
+                        sourceScene,
+                    )
+
+                else ->
+                    plain!!.invoke(null, normalized, COMMENT_TYPE, text, 0L, "", false, sourceScene)
+            }
             ActionResult(success = true, sent = true, message = "comment request sent")
         }.getOrElse { error ->
             WeLogger.e(TAG, "failed to send Moments comment", error)
             ActionResult(success = false, sent = false, message = error.message ?: "failed to send comment", error = error)
         }
+    }
+
+    /** 解析成功才返回 Method，否则返回 null（allowFailure 的委托调用 .method 会直接 error）。 */
+    private val DexMethodDelegate.resolvedMethod: Method?
+        get() = if (isPlaceholder) null else runCatching { method }.getOrNull()
+
+    /** sendCommentWithFlag 的内容载体：用第 3 参数的运行时真实类型无参构造，再 setText 文本。 */
+    private fun buildCommentContentData(withFlag: Method, text: String): Any {
+        val dataType = withFlag.parameterTypes[2]
+        val data = dataType.getDeclaredConstructor().newInstance()
+        methodSetCommentContentText.resolvedMethod?.takeIf { it.declaringClass.isInstance(data) }?.invoke(data, text)
+        return data
+    }
+
+    /** 读 SnsInfo 上的布尔标记（isExtFlag / isAd）：先无参方法，再退到同名字段。 */
+    private fun readSnsFlag(snsInfo: Any, flagName: String): Boolean {
+        (snsInfo.reflekt().firstMethodOrNull { name = flagName; parameters(); superclass() }?.invoke() as? Boolean)
+            ?.let { return it }
+        var clazz: Class<*>? = snsInfo.javaClass
+        while (clazz != null) {
+            clazz.declaredFields.firstOrNull {
+                    it.name == flagName || it.name == "field_$flagName" || it.name == "field_${flagName.removePrefix("is")}"
+                }
+                ?.let { field ->
+                    field.isAccessible = true
+                    return (field.get(snsInfo) as? Boolean) ?: runCatching { field.getBoolean(snsInfo) }.getOrDefault(false)
+                }
+            clazz = clazz.superclass
+        }
+        return false
     }
 
     fun isLiked(snsInfo: Any?): Boolean {
