@@ -302,7 +302,6 @@ object AiReplyMoments : ClickableFeature(),
 
     private fun showConfigDialog(context: ComponentActivity) {
         showComposeDialog(context) {
-            val newScope = rememberCoroutineScope()
             val localizedContext by rememberUpdatedState(LocalWeKitLocalizedContext.current)
 
             var promptInput by remember { mutableStateOf(prompt) }
