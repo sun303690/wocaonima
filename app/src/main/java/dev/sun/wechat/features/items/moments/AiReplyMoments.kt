@@ -315,7 +315,7 @@ object AiReplyMoments : ClickableFeature(),
             var refreshIntervalInput by remember { mutableStateOf(refreshIntervalMin.toString()) }
 
             fun openContactPicker(title: String, kind: Int) {
-                onDismiss()
+                // 不关掉设置框, 否则配完名单回来时其它未保存的输入会丢
                 showComposeDialog(context) {
                     ContactsSelector(
                         title = title,

@@ -17,6 +17,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import dev.sun.wechat.i18n.LocalWeKitLocalizedContext
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -293,11 +295,12 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
             val modeInput = remember { mutableStateOf(listMode) }
             val whitelistInput = remember { mutableStateOf(whitelist) }
             val blacklistInput = remember { mutableStateOf(blacklist) }
+            val localizedContext by rememberUpdatedState(LocalWeKitLocalizedContext.current)
 
             fun openPicker() {
                 val useWhitelist = modeInput.value == LIST_WHITELIST
                 val current = if (useWhitelist) whitelistInput.value else blacklistInput.value
-                onDismiss()
+                // 不关掉设置框, 否则配完名单回来时其它未保存的输入会丢
                 dev.sun.wechat.ui.utils.showComposeDialog(context) {
                     ContactsSelector(
                         title = stringResource(
@@ -308,7 +311,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                         onDismiss = onDismiss,
                     ) { selected ->
                         if (useWhitelist) whitelistInput.value = selected else blacklistInput.value = selected
-                        showToast(stringResource(R.string.ai_chat_selected_count, selected.size))
+                        showToast(localizedContext.getString(R.string.ai_chat_selected_count, selected.size))
                         onDismiss()
                     }
                 }
@@ -329,7 +332,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                         FieldRow(
                             label = stringResource(R.string.ai_chat_temperature),
                             value = temperatureInput.value,
-                            onValueChange = { temperatureInput.value = it.filter(Char::isDigit || it == '.') },
+                            onValueChange = { temperatureInput.value = it.filter { c -> c.isDigit() || c == '.' } },
                             description = stringResource(R.string.ai_chat_temperature_description),
                         )
                         FieldRow(
