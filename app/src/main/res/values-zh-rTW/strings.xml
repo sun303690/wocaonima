@@ -3963,8 +3963,8 @@
     <string name="settings_page_transition_animation_title">頁面過渡動畫</string>
     <string name="settings_page_transition_animation_aosp">AOSP</string>
     <string name="settings_page_transition_animation_miuix">Miuix</string>
-    <string name="feature_ai_reply_name">AI回覆</string>
-    <string name="feature_ai_reply_description">在訊息長按選單新增AI回覆入口，點擊後呼叫AI生成回覆內容</string>
+    <string name="feature_ai_reply_name">AI聊天助手</string>
+    <string name="feature_ai_reply_description">在訊息長按選單新增AI聊天助手入口，點擊後呼叫AI產生候選回覆</string>
     <string name="feature_group_chat_summary_name">群聊摘要</string>
     <string name="feature_group_chat_summary_description">在群聊长按菜单添加 AI 摘要入口</string>
     <string name="monet_options_title">自訂莫奈模組</string>
@@ -4138,4 +4138,27 @@
 
     <string name="smart_reply_style">語氣預設</string>
     <string name="smart_reply_tap_generate">選擇語氣預設，點擊生成回覆</string>
+    <string name="feature_ai_chat_name">AI 聊天</string>
+    <string name="feature_ai_chat_description">讓 AI 對名單內收到的每則文字訊息進行連續對話回覆</string>
+    <string name="ai_chat_config_title">AI 聊天設定</string>
+    <string name="ai_chat_system_prompt">系統提示詞</string>
+    <string name="ai_chat_system_prompt_description">選填。修改介面、模型、提示詞或上下文輪數後會清除既有對話上下文。</string>
+    <string name="ai_chat_temperature">Temperature</string>
+    <string name="ai_chat_temperature_description">數值越高回覆越隨機，建議使用 0.7。</string>
+    <string name="ai_chat_max_tokens">最大輸出 Tokens</string>
+    <string name="ai_chat_max_tokens_description">限制每次 AI 回覆的最大輸出長度。</string>
+    <string name="ai_chat_context_rounds">上下文輪數</string>
+    <string name="ai_chat_context_rounds_description">每個對話分別保留最近幾輪問答；填 0 表示不保留上下文。</string>
+    <string name="ai_chat_reply_delay">回覆延遲（毫秒）</string>
+    <string name="ai_chat_reply_delay_description">收到訊息後等待指定時間再請求 AI。</string>
+    <string name="ai_chat_list_mode">對話名單模式</string>
+    <string name="ai_chat_list_whitelist">白名單</string>
+    <string name="ai_chat_list_blacklist">黑名單</string>
+    <string name="ai_chat_whitelist_description">只回覆所選好友和群聊；空名單不會回覆任何對話。</string>
+    <string name="ai_chat_blacklist_description">回覆所選好友和群聊以外的對話；空名單表示全部允許。</string>
+    <string name="ai_chat_configure_whitelist">設定白名單</string>
+    <string name="ai_chat_configure_blacklist">設定黑名單</string>
+    <string name="ai_chat_selected_count">已選 %1$d 個</string>
+    <string name="ai_chat_select_whitelist_title">選擇 AI 聊天白名單</string>
+    <string name="ai_chat_select_blacklist_title">選擇 AI 聊天黑名單</string>
 </resources>

@@ -3981,8 +3981,8 @@
     <string name="settings_page_transition_animation_title">页面过渡动画</string>
     <string name="settings_page_transition_animation_aosp">AOSP</string>
     <string name="settings_page_transition_animation_miuix">Miuix</string>
-    <string name="feature_ai_reply_name">AI回复</string>
-    <string name="feature_ai_reply_description">在消息长按菜单添加AI回复入口，点击后调用AI生成回复内容</string>
+    <string name="feature_ai_reply_name">AI聊天助手</string>
+    <string name="feature_ai_reply_description">在消息长按菜单添加AI聊天助手入口，点击后调用AI生成候选回复</string>
     <string name="feature_group_chat_summary_name">群聊总结</string>
     <string name="feature_group_chat_summary_description">在群聊消息长按菜单添加AI总结入口，点击后获取最近消息并生成群聊总结</string>
     <string name="monet_options_title">自定义莫奈模块</string>
@@ -4156,4 +4156,27 @@
 
     <string name="smart_reply_style">语气预设</string>
     <string name="smart_reply_tap_generate">选择语气预设，点击生成回复</string>
+    <string name="feature_ai_chat_name">AI 聊天</string>
+    <string name="feature_ai_chat_description">让 AI 对名单内收到的每条文字消息进行连续对话回复</string>
+    <string name="ai_chat_config_title">AI 聊天设置</string>
+    <string name="ai_chat_system_prompt">系统提示词</string>
+    <string name="ai_chat_system_prompt_description">可选。修改接口、模型、提示词或上下文轮数后会清空已有对话上下文。</string>
+    <string name="ai_chat_temperature">Temperature</string>
+    <string name="ai_chat_temperature_description">数值越高回复越随机，推荐 0.7。</string>
+    <string name="ai_chat_max_tokens">最大输出 Tokens</string>
+    <string name="ai_chat_max_tokens_description">限制单次 AI 回复的最大输出长度。</string>
+    <string name="ai_chat_context_rounds">上下文轮数</string>
+    <string name="ai_chat_context_rounds_description">每个会话分别保留最近几轮问答；填 0 表示不保留上下文。</string>
+    <string name="ai_chat_reply_delay">回复延迟（毫秒）</string>
+    <string name="ai_chat_reply_delay_description">收到消息后等待指定时间再请求 AI。</string>
+    <string name="ai_chat_list_mode">会话名单模式</string>
+    <string name="ai_chat_list_whitelist">白名单</string>
+    <string name="ai_chat_list_blacklist">黑名单</string>
+    <string name="ai_chat_whitelist_description">只回复所选好友和群聊；空名单不会回复任何会话。</string>
+    <string name="ai_chat_blacklist_description">回复除所选好友和群聊以外的会话；空名单表示全部允许。</string>
+    <string name="ai_chat_configure_whitelist">配置白名单</string>
+    <string name="ai_chat_configure_blacklist">配置黑名单</string>
+    <string name="ai_chat_selected_count">已选 %1$d 个</string>
+    <string name="ai_chat_select_whitelist_title">选择 AI 聊天白名单</string>
+    <string name="ai_chat_select_blacklist_title">选择 AI 聊天黑名单</string>
 </resources>

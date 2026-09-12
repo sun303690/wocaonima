@@ -3953,8 +3953,8 @@
     <string name="settings_page_transition_animation_title">Page transition animation</string>
     <string name="settings_page_transition_animation_aosp">AOSP</string>
     <string name="settings_page_transition_animation_miuix">Miuix</string>
-    <string name="feature_ai_reply_name">AI Reply</string>
-    <string name="feature_ai_reply_description">Add AI reply entry to message long-press menu</string>
+    <string name="feature_ai_reply_name">AI Chat Assistant</string>
+    <string name="feature_ai_reply_description">Add an AI Chat Assistant entry to the message long-press menu to generate candidate replies</string>
     <string name="feature_group_chat_summary_name">Group Chat Summary</string>
     <string name="feature_group_chat_summary_description">Add AI summary entry to group chat long-press menu</string>
     <string name="monet_options_title">Customize Monet module</string>
@@ -4128,4 +4128,27 @@
 
     <string name="smart_reply_style">Tone preset</string>
     <string name="smart_reply_tap_generate">Choose a tone and tap Generate</string>
+    <string name="feature_ai_chat_name">AI Chat</string>
+    <string name="feature_ai_chat_description">Let AI continuously reply to every text message received from conversations in the list</string>
+    <string name="ai_chat_config_title">AI Chat Settings</string>
+    <string name="ai_chat_system_prompt">System Prompt</string>
+    <string name="ai_chat_system_prompt_description">Optional. Changing the provider, model, prompt or context rounds clears existing conversation context.</string>
+    <string name="ai_chat_temperature">Temperature</string>
+    <string name="ai_chat_temperature_description">Higher values make replies more random. 0.7 is recommended.</string>
+    <string name="ai_chat_max_tokens">Max Output Tokens</string>
+    <string name="ai_chat_max_tokens_description">Limits the maximum output length of a single AI reply.</string>
+    <string name="ai_chat_context_rounds">Context Rounds</string>
+    <string name="ai_chat_context_rounds_description">How many recent Q/A rounds to keep per conversation; 0 keeps no context.</string>
+    <string name="ai_chat_reply_delay">Reply Delay (ms)</string>
+    <string name="ai_chat_reply_delay_description">Wait this long after receiving a message before requesting the AI.</string>
+    <string name="ai_chat_list_mode">Conversation List Mode</string>
+    <string name="ai_chat_list_whitelist">Whitelist</string>
+    <string name="ai_chat_list_blacklist">Blacklist</string>
+    <string name="ai_chat_whitelist_description">Only reply to the selected contacts and groups; an empty list replies to nothing.</string>
+    <string name="ai_chat_blacklist_description">Reply to every conversation except the selected contacts and groups; an empty list allows all.</string>
+    <string name="ai_chat_configure_whitelist">Configure whitelist</string>
+    <string name="ai_chat_configure_blacklist">Configure blacklist</string>
+    <string name="ai_chat_selected_count">%1$d selected</string>
+    <string name="ai_chat_select_whitelist_title">Select AI Chat Whitelist</string>
+    <string name="ai_chat_select_blacklist_title">Select AI Chat Blacklist</string>
 </resources>

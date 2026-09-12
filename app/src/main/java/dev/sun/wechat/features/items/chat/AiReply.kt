@@ -42,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.composables.icons.materialsymbols.MaterialSymbols
 import com.composables.icons.materialsymbols.outlined.Auto_awesome
@@ -115,7 +116,7 @@ object AiReply : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItemsProvider
     override fun getMenuItems(): List<WeChatMessageContextMenuApi.MenuItem> = listOf(
         WeChatMessageContextMenuApi.MenuItem(
             id = AI_REPLY_MENU_ID,
-            text = "智能回复",
+            text = "AI聊天助手",
             drawable = AiReplyIcon(),
             imageVector = MaterialSymbols.Outlined.Auto_awesome,
             isSupported = ::isSupportedMessage,
@@ -221,7 +222,7 @@ object AiReply : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItemsProvider
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "智能回复",
+                    text = stringResource(R.string.feature_ai_reply_name),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                 )
