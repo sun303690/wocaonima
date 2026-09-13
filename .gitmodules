@@ -24,3 +24,7 @@
 	path = libs/common/scripta
 	url = https://github.com/Ujhhgtg/scripta
 	branch = main
+[submodule "third_party/OpenMinis"]
+	path = third_party/OpenMinis
+	url = https://github.com/OpenMinis/OpenMinis.git
+	shallow = true
