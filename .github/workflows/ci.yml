@@ -654,71 +654,71 @@ jobs:
 #            fi
 #          done <<< "$published_assets"
 #
-#  release-ci:
-#    needs: build
-#    runs-on: ubuntu-latest
-#    if: ${{ always() && needs.build.result == 'success' && github.repository == 'sun303690/wocaonima' && github.event_name == 'push' && github.ref == 'refs/heads/master' }}
-#    permissions:
-#      contents: write
-#
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v7
-#        with:
-#          fetch-depth: 0
-#          submodules: recursive
-#
-#      - name: Download APK artifact
-#        uses: actions/download-artifact@v8
-#        with:
-#          name: wekit-apk
-#          path: artifacts
-#
-#      - name: Delete existing CI release (if exists)
-#        env:
-#          GH_TOKEN: ${{ github.token }}
-#        run: |
-#          gh release delete CI --repo ${{ github.repository }} --yes || true
-#          gh api -X DELETE repos/${{ github.repository }}/git/refs/tags/CI || true
-#
-#      - name: Generate update.json
-#        run: |
-#          COMMIT_COUNT=$(git rev-list --count HEAD)
-#          GIT_HASH=$(git rev-parse --short HEAD)
-#
-#          cat > artifacts/update.json <<EOF
-#          {
-#            "versionCode": ${COMMIT_COUNT},
-#            "versionName": "git+${GIT_HASH}",
-#            "commit": "${GIT_HASH}"
-#          }
-#          EOF
-#
-#          echo "Generated update.json:"
-#          cat artifacts/update.json
-#
-#      - name: Create CI release on WeKit and upload artifacts
-#        env:
-#          GH_TOKEN: ${{ github.token }}
-#          COMMIT_SHA: ${{ github.sha }}
-#          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
-#        run: |
-#          {
-#            echo "本 Release 始终包含最新的 CI 构建产物, 便于未登录 GitHub 的用户下载模块或模块内置更新器更新"
-#            echo ""
-#            echo "提交 SHA: \`${COMMIT_SHA}\`"
-#            echo ""
-#            echo "提交消息:"
-#            echo '```'
-#            echo "${COMMIT_MESSAGE}"
-#            echo '```'
-#          } > "$RUNNER_TEMP/ci-notes.md"
-#
-#          gh release create CI \
-#            --repo ${{ github.repository }} \
-#            --title "CI" \
-#            --notes-file "$RUNNER_TEMP/ci-notes.md" \
-#            artifacts/*
+  release-ci:
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ always() && needs.build.result == 'success' && github.repository == 'sun303690/wocaonima' && github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: wekit-apk
+          path: artifacts
+
+      - name: Delete existing CI release (if exists)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete CI --repo ${{ github.repository }} --yes || true
+          gh api -X DELETE repos/${{ github.repository }}/git/refs/tags/CI || true
+
+      - name: Generate update.json
+        run: |
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          GIT_HASH=$(git rev-parse --short HEAD)
+
+          cat > artifacts/update.json <<EOF
+          {
+            "versionCode": ${COMMIT_COUNT},
+            "versionName": "git+${GIT_HASH}",
+            "commit": "${GIT_HASH}"
+          }
+          EOF
+
+          echo "Generated update.json:"
+          cat artifacts/update.json
+
+      - name: Create CI release on WeKit and upload artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT_SHA: ${{ github.sha }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          {
+            echo "本 Release 始终包含最新的 CI 构建产物, 便于未登录 GitHub 的用户下载模块或模块内置更新器更新"
+            echo ""
+            echo "提交 SHA: \`${COMMIT_SHA}\`"
+            echo ""
+            echo "提交消息:"
+            echo '```'
+            echo "${COMMIT_MESSAGE}"
+            echo '```'
+          } > "$RUNNER_TEMP/ci-notes.md"
+
+          gh release create CI \
+            --repo ${{ github.repository }} \
+            --title "CI" \
+            --notes-file "$RUNNER_TEMP/ci-notes.md" \
+            artifacts/*
 #
 #  upload-telegram:
 #    needs: build
