@@ -4161,4 +4161,26 @@
     <string name="ai_chat_selected_count">已選 %1$d 個</string>
     <string name="ai_chat_select_whitelist_title">選擇 AI 聊天白名單</string>
     <string name="ai_chat_select_blacklist_title">選擇 AI 聊天黑名單</string>
+    <string name="feature_glg_description">在白名單群內自動移出傳送連結或小程式的成員</string>
+    <string name="feature_glg_name">群連結小程式守衛</string>
+    <string name="glg_action">處理動作</string>
+    <string name="glg_action_hint">只發提示</string>
+    <string name="glg_action_kick">只移出群組</string>
+    <string name="glg_action_kick_hint">移出群組並發提示</string>
+    <string name="glg_banned_desc">名單內成員再次命中不受冷卻限制，直接移出；已存 %1$d 個</string>
+    <string name="glg_config_title">群連結守衛</string>
+    <string name="glg_configure_banned">黑名單</string>
+    <string name="glg_configure_exempt">豁免名單</string>
+    <string name="glg_cooldown">每人冷卻（毫秒）</string>
+    <string name="glg_cooldown_desc">同一人在同一群該時間窗內最多處理一次</string>
+    <string name="glg_detect_card">連結卡片</string>
+    <string name="glg_detect_miniapp">小程式卡片</string>
+    <string name="glg_detect_text">純文字裡的連結</string>
+    <string name="glg_detect_text_desc">匹配一般文字訊息中的 http(s):// 與 www. 連結</string>
+    <string name="glg_exempt_desc">名單內成員永不處理；已存 %1$d 個</string>
+    <string name="glg_groups_desc">只處理這些群，其他群完全忽略；已選 %1$d 個</string>
+    <string name="glg_hint_text">提示文字</string>
+    <string name="glg_hint_text_desc">踢出後在群裡發送；留空則不發</string>
+    <string name="glg_pick_groups">選擇要保護的群</string>
+    <string name="glg_whitelisted_groups">生效群（白名單）</string>
 </resources>
