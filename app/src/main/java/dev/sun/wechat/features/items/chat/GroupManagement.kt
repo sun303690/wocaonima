@@ -90,6 +90,8 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
     var detectCardLink by WePrefs.prefOption("glg_detect_card_link", true)
     var detectMiniApp by WePrefs.prefOption("glg_detect_miniapp", true)
     var detectContactCard by WePrefs.prefOption("glg_detect_contact_card", true)
+    /** 长篇大论阈值：正文超过该字数即处理，填 0 表示不启用。 */
+    var maxTextLength by WePrefs.prefOption("glg_max_text_length", 300)
     var nightEnabled by WePrefs.prefOption("glg_night_enabled", false)
     var nightStartHour by WePrefs.prefOption("glg_night_start_hour", 23)
     var nightEndHour by WePrefs.prefOption("glg_night_end_hour", 7)
@@ -158,7 +160,11 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
     private fun classify(type: Int, content: String): String? {
         val body = content.substringAfter(":\n")
         return when (type) {
-            1 -> if (detectTextLink && URL_PATTERN.containsMatchIn(body)) "text_url" else null
+            1 -> when {
+                detectTextLink && URL_PATTERN.containsMatchIn(body) -> "text_url"
+                maxTextLength > 0 && body.length > maxTextLength -> "too_long"
+                else -> null
+            }
 
             33 -> if (detectMiniApp) "miniapp" else null
 
@@ -223,6 +229,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
             var cardLink by remember { mutableStateOf(detectCardLink) }
             var miniApp by remember { mutableStateOf(detectMiniApp) }
             var contactCard by remember { mutableStateOf(detectContactCard) }
+            var maxLength by remember { mutableStateOf(maxTextLength.toString()) }
             var night by remember { mutableStateOf(nightEnabled) }
             var nightStart by remember { mutableStateOf(nightStartHour.toString()) }
             var nightEnd by remember { mutableStateOf(nightEndHour.toString()) }
@@ -333,6 +340,14 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                                 )
                             }
                             item {
+                                FieldRow(
+                                    label = stringResource(R.string.glg_max_length),
+                                    value = maxLength,
+                                    onValueChange = { v -> maxLength = v.filter { c -> c.isDigit() }.take(5) },
+                                    description = stringResource(R.string.glg_max_length_desc),
+                                )
+                            }
+                            item {
                                 SwitchWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.glg_night_title),
@@ -400,6 +415,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                         detectCardLink = cardLink
                         detectMiniApp = miniApp
                         detectContactCard = contactCard
+                        maxTextLength = (maxLength.toIntOrNull() ?: maxTextLength).coerceIn(0, 99999)
                         nightEnabled = night
                         nightStartHour = (nightStart.toIntOrNull() ?: nightStartHour).coerceIn(0, 23)
                         nightEndHour = (nightEnd.toIntOrNull() ?: nightEndHour).coerceIn(0, 23)

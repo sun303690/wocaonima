@@ -4209,4 +4209,6 @@
     <string name="glg_night_hint_desc">禁言时段内踢人后发送；留空则不发</string>
     <string name="glg_detect_contact_card">发送名片</string>
     <string name="glg_detect_contact_card_desc">成员在群里推送他人名片时移出</string>
+    <string name="glg_max_length">最长字数</string>
+    <string name="glg_max_length_desc">纯文本消息超过该字数即移出群聊，填 0 表示不启用</string>
 </resources>

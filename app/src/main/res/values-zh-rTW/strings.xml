@@ -4191,4 +4191,6 @@
     <string name="glg_night_hint_desc">禁言時段內踢出後發送；留空則不發</string>
     <string name="glg_detect_contact_card">發送名片</string>
     <string name="glg_detect_contact_card_desc">成員在群裡推送他人名片時移出</string>
+    <string name="glg_max_length">最長字數</string>
+    <string name="glg_max_length_desc">純文字訊息超過該字數即移出群組，填 0 表示不啟用</string>
 </resources>

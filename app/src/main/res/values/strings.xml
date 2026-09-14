@@ -4181,4 +4181,6 @@
     <string name="glg_night_hint_desc">Sent after a member is removed during silent hours; empty to skip</string>
     <string name="glg_detect_contact_card">Contact cards</string>
     <string name="glg_detect_contact_card_desc">Members who share another contact get removed</string>
+    <string name="glg_max_length">Max message length</string>
+    <string name="glg_max_length_desc">Members whose text exceeds this many characters get removed; 0 disables</string>
 </resources>
