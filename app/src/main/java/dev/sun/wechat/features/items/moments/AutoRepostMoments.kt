@@ -140,7 +140,7 @@ object AutoRepostMoments : AutoMomentsBase(),
         """.trimIndent()
 
         val result = mutableListOf<Long>()
-        WeMomentsApi.rawQuerySnsInfo(sql, arrayOf(scope.publishedAfterSeconds.toString())).use { cursor ->
+        WeMomentsApi.rawQuerySnsInfo(sql, arrayOf(scope.publishedAfterSeconds.toString()))?.use { cursor ->
             while (cursor.moveToNext()) {
                 val snsId = cursor.getLong(0)
                 val owner = cursor.getString(1).orEmpty()

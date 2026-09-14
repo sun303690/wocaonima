@@ -264,16 +264,21 @@ object WeMomentsApi : ApiFeature(), IResolveDex {
             )
         }
     }
-    val methodGetSnsInfoStorage by dexMethod {
+    /**
+     * SnsInfoStorage 单例获取器。
+     *
+     * 旧实现拿 "com.tencent.mm.plugin.sns.model.SnsCore" + "getSnsInfoStorage" 两个字符串做锚点，
+     * 但微信 8.0.74 里已经没有任何方法引用 "getSnsInfoStorage" 字符串（MT 实测零命中），
+     * 于是这里解析失败；而 getSnsInfoBySnsId / rawQuerySnsInfo 都依赖它 —— 整条朋友圈链路
+     * （自动点赞、自动转发、AI 回复朋友圈）会静默不工作。
+     * 改成只按 包名 + STATIC + 0 参 + 返回 SnsInfoStorage 类型 定位，多命中取第一个，并允许失败。
+     */
+    val methodGetSnsInfoStorage by dexMethod(allowMultiple = true, allowFailure = true) {
         searchPackages("com.tencent.mm.plugin.sns.model")
         matcher {
             modifiers = Modifier.STATIC
             paramCount(0)
             returnType(methodGetSnsInfoByLocalId.data.declaredClassName)
-            usingStrings(
-                "com.tencent.mm.plugin.sns.model.SnsCore",
-                "getSnsInfoStorage"
-            )
         }
     }
     private val methodGetSnsInfoBySnsId by dexMethod {
@@ -1125,8 +1130,8 @@ object WeMomentsApi : ApiFeature(), IResolveDex {
         (normalizeSnsInfo(snsInfo)!!.reflekt().getField("field_createTime", true) as Int).toLong()
 
     /** Queries the database owned by SnsInfoStorage; the caller must close the cursor. */
-    fun rawQuerySnsInfo(sql: String, args: Array<String> = emptyArray()): Cursor {
-        val storage = methodGetSnsInfoStorage.method.invoke(null)!!
+    fun rawQuerySnsInfo(sql: String, args: Array<String> = emptyArray()): Cursor? {
+        val storage = methodGetSnsInfoStorage.resolvedMethod?.invoke(null) ?: return null
         return storage.reflekt().firstMethod {
             name = "rawQuery"
             parameters(String::class, Array<String>::class)
@@ -1137,7 +1142,7 @@ object WeMomentsApi : ApiFeature(), IResolveDex {
     fun getSnsInfoBySnsId(snsId: Long): Any? {
         if (snsId == 0L) return null
         return runCatching {
-            val storage = methodGetSnsInfoStorage.method.invoke(null)
+            val storage = methodGetSnsInfoStorage.resolvedMethod?.invoke(null) ?: return@runCatching null
             methodGetSnsInfoBySnsId.method.invoke(storage, snsId)
         }.getOrElse { error ->
             WeLogger.e(TAG, "failed to get Moments snsInfo by snsId=$snsId", error)

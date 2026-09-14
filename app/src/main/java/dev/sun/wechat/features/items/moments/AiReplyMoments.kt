@@ -167,7 +167,7 @@ object AiReplyMoments : ClickableFeature(),
                       AND (sourceType & ${WeMomentsApi.AD_SOURCE_FLAG}) = 0
                     ORDER BY createTime DESC
                     """.trimIndent()
-                ).use { cursor ->
+                )?.use { cursor ->
                     while (cursor.moveToNext()) {
                         val snsId = cursor.getLong(0)
                         WeMomentsApi.getSnsInfoBySnsId(snsId)?.let { processAsync(it) }
