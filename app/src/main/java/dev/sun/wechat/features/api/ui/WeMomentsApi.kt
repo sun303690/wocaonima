@@ -149,12 +149,6 @@ object WeMomentsApi : ApiFeature(), IResolveDex {
     private const val SEND_COMMENT_WITH_FLAG_ANCHOR = "sendCommentWithFlag"
     private const val SET_TEXT_ANCHOR = "setText"
 
-    /** 评论正文载体（8.0.74 里混淆为 zb4.a），用自身类名字符串定位。 */
-    private val classSnsCmtPostContentData by dexClass(allowFailure = true) {
-        matcher {
-            usingEqStrings(SNS_CMT_POST_CONTENT_DATA_CLASS)
-        }
-    }
     private const val LIKE_COMMENT_TYPE = 1
     private const val COMMENT_TYPE = 2
     private const val AD_COMMENT_FLAG = 8
@@ -210,7 +204,7 @@ object WeMomentsApi : ApiFeature(), IResolveDex {
      * 微信 SnsService.sendComment(SnsInfo, int, String, long, String, boolean, int) —— static + void。
      * 签名取自 Nuke 1.0.5 的 DexKit 查询键 `.MethodSendTextComment`（用 paramTypes 精确锁定，避免抓错重载）。
      */
-    private val methodSendTextComment by dexMethod(allowFailure = true) {
+    private val methodSendTextComment by dexMethod(allowMultiple = true, allowFailure = true) {
         matcher {
             declaredClass(classSnsService.data.name)
             modifiers = Modifier.STATIC
@@ -235,7 +229,7 @@ object WeMomentsApi : ApiFeature(), IResolveDex {
      * 扩展动态(isExtFlag)必须走这条；第 3 参数类型随微信版本变化，运行时用 parameterTypes[2] 取真身。
      * 取自 Nuke 的 `.MethodSendTimelineComment`。
      */
-    private val methodSendCommentWithFlag by dexMethod(allowFailure = true) {
+    private val methodSendCommentWithFlag by dexMethod(allowMultiple = true, allowFailure = true) {
         matcher {
             declaredClass(classSnsService.data.name)
             modifiers = Modifier.STATIC
@@ -244,10 +238,16 @@ object WeMomentsApi : ApiFeature(), IResolveDex {
         }
     }
 
-    /** sendCommentWithFlag 第 3 参数的载体（SnsCmtPostContentData）的 setText(String)。取自 Nuke `.MethodSetCommentContentText`。 */
-    private val methodSetCommentContentText by dexMethod(allowFailure = true) {
+    /**
+     * sendCommentWithFlag 第 3 参数载体的 setText(String)。取自 Nuke `.MethodSetCommentContentText`。
+     *
+     * 不按类名限定：混淆类名逐版本变，而且"引用了 SnsCmtPostContentData 类名字符串"的类在 8.0.74 里有 5 个
+     * （d6 / SnsCommentFooter / SnsCommentFooter$$j / rf / zb4.a），按类名匹配会多命中并抛异常，
+     * 连带把整个朋友圈服务的 Dex 解析批次一起搞挂。这里只用 (String)V + 两个字符串锚点全局定位，
+     * 允许多命中取第一个，调用前再用 isInstance 校验归属。
+     */
+    private val methodSetCommentContentText by dexMethod(allowMultiple = true, allowFailure = true) {
         matcher {
-            declaredClass(classSnsCmtPostContentData.data.name)
             paramTypes("java.lang.String")
             returnType(Void.TYPE)
             usingStrings(SET_TEXT_ANCHOR, SNS_CMT_POST_CONTENT_DATA_CLASS)
