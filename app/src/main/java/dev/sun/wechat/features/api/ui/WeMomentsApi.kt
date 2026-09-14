@@ -144,6 +144,17 @@ object WeMomentsApi : ApiFeature(), IResolveDex {
     private const val SNS_INFO_CLASS = "com.tencent.mm.plugin.sns.storage.SnsInfo"
     private const val SNS_CMT_POST_CONTENT_DATA_CLASS =
         "com.tencent.mm.plugin.sns.ui.comment.emoticon.data.SnsCmtPostContentData"
+    private const val SNS_SERVER_CLASS = "com.tencent.mm.plugin.sns.model.SnsLogic\$SnsServer"
+    private const val SEND_COMMENT_ANCHOR = "sendComment"
+    private const val SEND_COMMENT_WITH_FLAG_ANCHOR = "sendCommentWithFlag"
+    private const val SET_TEXT_ANCHOR = "setText"
+
+    /** 评论正文载体（8.0.74 里混淆为 zb4.a），用自身类名字符串定位。 */
+    private val classSnsCmtPostContentData by dexClass(allowFailure = true) {
+        matcher {
+            usingEqStrings(SNS_CMT_POST_CONTENT_DATA_CLASS)
+        }
+    }
     private const val LIKE_COMMENT_TYPE = 1
     private const val COMMENT_TYPE = 2
     private const val AD_COMMENT_FLAG = 8
@@ -203,7 +214,6 @@ object WeMomentsApi : ApiFeature(), IResolveDex {
         matcher {
             declaredClass(classSnsService.data.name)
             modifiers = Modifier.STATIC
-            name = "sendComment"
             paramTypes(
                 SNS_INFO_CLASS,
                 "int",
@@ -213,7 +223,10 @@ object WeMomentsApi : ApiFeature(), IResolveDex {
                 "boolean",
                 "int",
             )
-            returnType(Void.TYPE)
+            // 微信方法名会被混淆成 d6.m 这种, 但 SnsMethodCalculate.markStartTimeMs("原名","原类名")
+            // 把原始名字以字符串常量留在方法体里 —— 用字符串锚点匹配, 跨版本可用(与 Nuke 一致)。
+            // 返回类型是 r45.e86 之类, 不能限定 void。
+            usingStrings(SEND_COMMENT_ANCHOR, SNS_SERVER_CLASS)
         }
     }
 
@@ -226,18 +239,18 @@ object WeMomentsApi : ApiFeature(), IResolveDex {
         matcher {
             declaredClass(classSnsService.data.name)
             modifiers = Modifier.STATIC
-            name = "sendCommentWithFlag"
             paramTypes(SNS_INFO_CLASS, "int", null, null, "boolean", "int", "int")
-            returnType(Void.TYPE)
+            usingStrings(SEND_COMMENT_WITH_FLAG_ANCHOR, SNS_SERVER_CLASS)
         }
     }
 
     /** sendCommentWithFlag 第 3 参数的载体（SnsCmtPostContentData）的 setText(String)。取自 Nuke `.MethodSetCommentContentText`。 */
     private val methodSetCommentContentText by dexMethod(allowFailure = true) {
         matcher {
-            declaredClass(SNS_CMT_POST_CONTENT_DATA_CLASS)
-            name = "setText"
+            declaredClass(classSnsCmtPostContentData.data.name)
             paramTypes("java.lang.String")
+            returnType(Void.TYPE)
+            usingStrings(SET_TEXT_ANCHOR, SNS_CMT_POST_CONTENT_DATA_CLASS)
         }
     }
 
