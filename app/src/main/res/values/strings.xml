@@ -4151,14 +4151,14 @@
     <string name="ai_chat_selected_count">%1$d selected</string>
     <string name="ai_chat_select_whitelist_title">Select AI Chat Whitelist</string>
     <string name="ai_chat_select_blacklist_title">Select AI Chat Blacklist</string>
-    <string name="feature_glg_description">In whitelisted groups, auto-remove members who post links or mini programs</string>
-    <string name="feature_glg_name">Group Link Guard</string>
+    <string name="feature_glg_description">Whitelisted-group moderation: kick members who post links or mini programs, plus a silent-hours window</string>
+    <string name="feature_glg_name">Group Management</string>
     <string name="glg_action">Action</string>
     <string name="glg_action_hint">Send hint only</string>
     <string name="glg_action_kick">Remove member only</string>
     <string name="glg_action_kick_hint">Remove member and send hint</string>
     <string name="glg_banned_desc">Members here are removed without cooldown; %1$d saved</string>
-    <string name="glg_config_title">Group Link Guard</string>
+    <string name="glg_config_title">Group Management</string>
     <string name="glg_configure_banned">Ban list</string>
     <string name="glg_configure_exempt">Exempt list</string>
     <string name="glg_cooldown">Per-member cooldown (ms)</string>
@@ -4173,4 +4173,12 @@
     <string name="glg_hint_text_desc">Sent to the group after a member is removed; leave empty to skip</string>
     <string name="glg_pick_groups">Select Groups to Protect</string>
     <string name="glg_whitelisted_groups">Protected groups</string>
+    <string name="glg_night_title">Silent hours</string>
+    <string name="glg_night_desc">Inside the window, any member who posts to the group is removed (group owner and exempt list excluded)</string>
+    <string name="glg_night_start">Start hour</string>
+    <string name="glg_night_end">End hour</string>
+    <string name="glg_night_hint">Silent-hours hint</string>
+    <string name="glg_night_hint_desc">Sent after a member is removed during silent hours; empty to skip</string>
+    <string name="glg_detect_contact_card">Contact cards</string>
+    <string name="glg_detect_contact_card_desc">Members who share another contact get removed</string>
 </resources>

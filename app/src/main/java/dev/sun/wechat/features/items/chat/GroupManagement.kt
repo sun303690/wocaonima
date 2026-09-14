@@ -2,7 +2,9 @@ package dev.sun.wechat.features.items.chat
 
 import android.content.ContentValues
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -49,7 +51,8 @@ import kotlinx.coroutines.launch
  *
  * 规格（按需求确认）：
  *  - 只处理**白名单群**：不在名单里的群完全忽略
- *  - 检测三类内容：纯文本里的 URL、链接卡片、小程序卡片（可分别开关）
+ *  - 检测四类内容：纯文本里的 URL、链接卡片、小程序卡片、联系人名片（可分别开关）
+ *  - 夜间禁言时段（默认 23:00–07:00，可关可改）：时段内在该群发**任何**消息的成员直接移出
  *  - **每人冷却**：同一人在同一群 cooldownMs 内只处理一次
  *  - **自动发提示**：踢人后在群里发一条提示（文本可改，可关）
  *  - **被踢者加入黑名单**：已在黑名单的人再次命中时跳过冷却，直接踢
@@ -59,18 +62,20 @@ import kotlinx.coroutines.launch
  * 所以这里只能移出群聊；[WeGroupApi.delMembers] 是 fire-and-forget，无结果回调，
  * 只能以"是否抛异常"判断是否已发出。
  */
-object GroupLinkGuard : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
+object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
 
-    override val technicalId = "群链接小程序守卫"
+    override val technicalId = "群管理"
     override val nameRes = R.string.feature_glg_name
     override val descriptionRes = R.string.feature_glg_description
     override val categoryIds = listOf(FeatureCategoryIds.CHAT)
 
-    private const val TAG = "GroupLinkGuard"
+    private const val TAG = "GroupManagement"
 
     private const val ACTION_KICK_AND_HINT = 0
     private const val ACTION_KICK_ONLY = 1
     private const val ACTION_HINT_ONLY = 2
+
+    private const val REASON_NIGHT = "night_silence"
 
     private const val DEFAULT_HINT = "群内禁止发送链接和小程序，已自动移出群聊。"
 
@@ -84,6 +89,11 @@ object GroupLinkGuard : ClickableFeature(), WeDatabaseListenerApi.IInsertListene
     var detectTextLink by WePrefs.prefOption("glg_detect_text_link", true)
     var detectCardLink by WePrefs.prefOption("glg_detect_card_link", true)
     var detectMiniApp by WePrefs.prefOption("glg_detect_miniapp", true)
+    var detectContactCard by WePrefs.prefOption("glg_detect_contact_card", true)
+    var nightEnabled by WePrefs.prefOption("glg_night_enabled", false)
+    var nightStartHour by WePrefs.prefOption("glg_night_start_hour", 23)
+    var nightEndHour by WePrefs.prefOption("glg_night_end_hour", 7)
+    var nightHintText by WePrefs.prefOption("glg_night_hint_text", "禁言时段内发言，已自动移出群聊。")
 
     // 名单统一以 
  连接存成字符串：SharedPreferences 的 StringSet 返回的是共享实例，
@@ -125,11 +135,12 @@ object GroupLinkGuard : ClickableFeature(), WeDatabaseListenerApi.IInsertListene
         val type = values.getAsInteger("type") ?: return
         val content = values.getAsString("content") ?: return
 
-        val sender = senderOf(talker, content) ?: return
+        val sender = senderOf(content) ?: return
         if (sender == WeApi.selfWxId || sender.isBlank()) return
         if (sender in exemptIds) return
 
-        val reason = classify(type, content) ?: return
+        // 夜间禁言时段内不看内容, 发任何消息都算违规
+        val reason = (if (nightEnabled && inSilenceWindow()) REASON_NIGHT else null) ?: classify(type, content) ?: return
         if (!allowHandle(talker, sender)) return
 
         scope.launch { handle(talker, sender, reason) }
@@ -151,6 +162,8 @@ object GroupLinkGuard : ClickableFeature(), WeDatabaseListenerApi.IInsertListene
 
             33 -> if (detectMiniApp) "miniapp" else null
 
+            42 -> if (detectContactCard) "contact_card" else null
+
             5, 49, 16777265 -> when {
                 detectMiniApp && (body.contains("<weappinfo") || body.contains("weapp")) -> "miniapp"
                 detectCardLink && (body.contains("<url>") || body.contains("http://") || body.contains("https://")) -> "link_card"
@@ -159,6 +172,14 @@ object GroupLinkGuard : ClickableFeature(), WeDatabaseListenerApi.IInsertListene
 
             else -> null
         }
+    }
+
+    /** 跨午夜窗口: start=23,end=7 → [23,24) ∪ [0,7)。start==end 视为全天禁言。 */
+    private fun inSilenceWindow(): Boolean {
+        val start = nightStartHour.coerceIn(0, 23)
+        val end = nightEndHour.coerceIn(0, 23)
+        val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+        return if (start == end) true else if (start < end) hour in start until end else hour >= start || hour < end
     }
 
     /** 冷却：黑名单里的人（惯犯）不受冷却限制。 */
@@ -181,8 +202,9 @@ object GroupLinkGuard : ClickableFeature(), WeDatabaseListenerApi.IInsertListene
                 banned = saveSet(bannedIds + sender)
                 WeLogger.i(TAG, "kicked $sender from $talker (reason=$reason)")
             }
-            if (action != ACTION_KICK_ONLY && hintText.isNotBlank()) {
-                WeMessageApi.sendText(talker, hintText.trim())
+            val hint = if (reason == REASON_NIGHT) nightHintText else hintText
+            if (action != ACTION_KICK_ONLY && hint.isNotBlank()) {
+                WeMessageApi.sendText(talker, hint.trim())
             }
         }.onFailure { WeLogger.e(TAG, "guard handling failed for $sender in $talker", it) }
     }
@@ -200,6 +222,11 @@ object GroupLinkGuard : ClickableFeature(), WeDatabaseListenerApi.IInsertListene
             var textLink by remember { mutableStateOf(detectTextLink) }
             var cardLink by remember { mutableStateOf(detectCardLink) }
             var miniApp by remember { mutableStateOf(detectMiniApp) }
+            var contactCard by remember { mutableStateOf(detectContactCard) }
+            var night by remember { mutableStateOf(nightEnabled) }
+            var nightStart by remember { mutableStateOf(nightStartHour.toString()) }
+            var nightEnd by remember { mutableStateOf(nightEndHour.toString()) }
+            var nightHint by remember { mutableStateOf(nightHintText) }
 
             fun openGroupPicker() {
                 showComposeDialog(context) {
@@ -297,6 +324,51 @@ object GroupLinkGuard : ClickableFeature(), WeDatabaseListenerApi.IInsertListene
                                 )
                             }
                             item {
+                                SwitchWidget(
+                                    iconPlaceholder = false,
+                                    title = stringResource(R.string.glg_detect_contact_card),
+                                    description = stringResource(R.string.glg_detect_contact_card_desc),
+                                    checked = contactCard,
+                                    onCheckedChange = { contactCard = it },
+                                )
+                            }
+                            item {
+                                SwitchWidget(
+                                    iconPlaceholder = false,
+                                    title = stringResource(R.string.glg_night_title),
+                                    description = stringResource(R.string.glg_night_desc),
+                                    checked = night,
+                                    onCheckedChange = { night = it },
+                                )
+                            }
+                            item {
+                                Row(Modifier.fillMaxWidth()) {
+                                    Box(Modifier.weight(1f)) {
+                                        FieldRow(
+                                            label = stringResource(R.string.glg_night_start),
+                                            value = nightStart,
+                                            onValueChange = { v -> nightStart = v.filter { c -> c.isDigit() }.take(2) },
+                                        )
+                                    }
+                                    Box(Modifier.weight(1f)) {
+                                        FieldRow(
+                                            label = stringResource(R.string.glg_night_end),
+                                            value = nightEnd,
+                                            onValueChange = { v -> nightEnd = v.filter { c -> c.isDigit() }.take(2) },
+                                        )
+                                    }
+                                }
+                            }
+                            item {
+                                FieldRow(
+                                    label = stringResource(R.string.glg_night_hint),
+                                    value = nightHint,
+                                    onValueChange = { nightHint = it },
+                                    description = stringResource(R.string.glg_night_hint_desc),
+                                    singleLine = false,
+                                )
+                            }
+                            item {
                                 BaseWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.glg_configure_banned),
@@ -327,6 +399,11 @@ object GroupLinkGuard : ClickableFeature(), WeDatabaseListenerApi.IInsertListene
                         detectTextLink = textLink
                         detectCardLink = cardLink
                         detectMiniApp = miniApp
+                        detectContactCard = contactCard
+                        nightEnabled = night
+                        nightStartHour = (nightStart.toIntOrNull() ?: nightStartHour).coerceIn(0, 23)
+                        nightEndHour = (nightEnd.toIntOrNull() ?: nightEndHour).coerceIn(0, 23)
+                        nightHintText = nightHint
                         lastHandledAt.clear()
                         WeLogger.i(TAG, "config saved: groups=${groupsInput.size} cooldown=$cooldown action=$actionInput")
                         onDismiss()

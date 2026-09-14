@@ -4179,14 +4179,14 @@
     <string name="ai_chat_selected_count">已选 %1$d 个</string>
     <string name="ai_chat_select_whitelist_title">选择 AI 聊天白名单</string>
     <string name="ai_chat_select_blacklist_title">选择 AI 聊天黑名单</string>
-    <string name="feature_glg_description">在白名单群内自动移出发送链接或小程序的成员</string>
-    <string name="feature_glg_name">群链接小程序守卫</string>
+    <string name="feature_glg_description">白名单群管理：发送链接/小程序的成员自动移出，另可设禁言时段（时段内发言即移出）</string>
+    <string name="feature_glg_name">群管理</string>
     <string name="glg_action">处理动作</string>
     <string name="glg_action_hint">只发提示</string>
     <string name="glg_action_kick">只移出群聊</string>
     <string name="glg_action_kick_hint">移出群聊并发提示</string>
     <string name="glg_banned_desc">名单内成员再次命中不受冷却限制，直接移出；已存 %1$d 个</string>
-    <string name="glg_config_title">群链接守卫</string>
+    <string name="glg_config_title">群管理</string>
     <string name="glg_configure_banned">黑名单</string>
     <string name="glg_configure_exempt">豁免名单</string>
     <string name="glg_cooldown">每人冷却（毫秒）</string>
@@ -4201,4 +4201,12 @@
     <string name="glg_hint_text_desc">踢人后在群里发送；留空则不发</string>
     <string name="glg_pick_groups">选择要保护的群</string>
     <string name="glg_whitelisted_groups">生效群（白名单）</string>
+    <string name="glg_night_title">禁言时段</string>
+    <string name="glg_night_desc">时段内在该群发任何消息的成员直接移出（豁免名单不处理）；跨零点写法如 23 → 7</string>
+    <string name="glg_night_start">开始小时</string>
+    <string name="glg_night_end">结束小时</string>
+    <string name="glg_night_hint">禁言时段提示</string>
+    <string name="glg_night_hint_desc">禁言时段内踢人后发送；留空则不发</string>
+    <string name="glg_detect_contact_card">发送名片</string>
+    <string name="glg_detect_contact_card_desc">成员在群里推送他人名片时移出</string>
 </resources>
