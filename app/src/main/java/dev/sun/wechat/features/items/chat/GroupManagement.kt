@@ -204,6 +204,14 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
         }.onFailure { WeLogger.e(TAG, "inspect group message failed", it) }
     }
 
+    /** 群消息 content 形如 `发送者wxId:\n正文`；取不到发送者前缀就返回 null（不能瞎踢）。 */
+    private fun senderOf(content: String): String? {
+        val i = content.indexOf(":\n")
+        if (i <= 0 || i > 80) return null
+        val candidate = content.substring(0, i)
+        return candidate.takeIf { s -> s.isNotBlank() && s.none { c -> c.isWhitespace() || c == '<' } }
+    }
+
     private fun detect(type: Int, body: String, flooded: Boolean, atAll: Boolean): Verdict? {
         if (nightEnabled && inSilenceWindow()) return Verdict(REASON_NIGHT)
         if (flooded) return Verdict(REASON_FLOOD)
