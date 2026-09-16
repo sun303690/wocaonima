@@ -27,7 +27,6 @@ import dev.sun.wechat.features.api.core.WeDatabaseApi
 import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
 import dev.sun.wechat.features.api.core.WeGroupApi
 import dev.sun.wechat.features.api.core.WeMessageApi
-import dev.sun.wechat.features.api.core.models.MessageInfo
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.i18n.LocalWeKitLocalizedContext
@@ -180,35 +179,39 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
         val isSend = values.getAsInteger("isSend") ?: 1
         if (isSend != 0) return
 
+        val type = values.getAsInteger("type") ?: return
+        val content = values.getAsString("content") ?: return
+
         runCatching {
-            val msg = MessageInfo(WeMessageApi.convertMsgInfoInstanceFromContentValues(values))
-            val sender = msg.sender.trim()
-            if (sender.isEmpty() || sender == WeApi.selfWxId) return
+            // 不依赖 MessageInfo（8.0.74 的 MsgInfo.convertFrom 签名变了，没有 (ContentValues, Boolean) 重载）
+            val sender = senderOf(content) ?: return
+            if (sender == WeApi.selfWxId) return
             if (sender in exemptIds) return
             if (ownerExempt && sender == groupOwner(talker)) return
 
-            val svrId = msg.serverId
+            val svrId = values.getAsLong("msgSvrId") ?: 0L
             if (svrId != 0L && !handledSvrIds.add(svrId)) return
             if (handledSvrIds.size > 4000) handledSvrIds.clear()
 
             // 刷屏统计对每条消息都累计，所以先算再判违规
             val flooded = floodEnabled && bumpFlood(talker, sender)
-            val verdict = detect(talker, sender, msg, flooded) ?: return
+            val body = content.substringAfter(":\n")
+            val atAll = atAllEnabled && content.contains("announcement@all")
+            val verdict = detect(type, body, flooded, atAll) ?: return
             if (!allowHandle(talker, sender)) return
 
             scope.launch { handle(talker, sender, verdict) }
         }.onFailure { WeLogger.e(TAG, "inspect group message failed", it) }
     }
 
-    private fun detect(talker: String, sender: String, msg: MessageInfo, flooded: Boolean): Verdict? {
+    private fun detect(type: Int, body: String, flooded: Boolean, atAll: Boolean): Verdict? {
         if (nightEnabled && inSilenceWindow()) return Verdict(REASON_NIGHT)
         if (flooded) return Verdict(REASON_FLOOD)
-        if (atAllEnabled && msg.isAnnounceAll) return Verdict(REASON_AT_ALL)
+        if (atAll) return Verdict(REASON_AT_ALL)
 
-        classifyMedia(msg)?.let { return Verdict(it) }
+        classifyMedia(type, body)?.let { return Verdict(it) }
 
-        val body = msg.actualContent.trim()
-        if (maxTextLength > 0 && msg.typeCode == TYPE_TEXT && body.length > maxTextLength) {
+        if (maxTextLength > 0 && type == TYPE_TEXT && body.length > maxTextLength) {
             return Verdict(REASON_TOO_LONG)
         }
         matchRule(body)?.let { (pattern, ruleAction) ->
@@ -217,9 +220,8 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
         return null
     }
 
-    private fun classifyMedia(msg: MessageInfo): String? = when (msg.typeCode) {
+    private fun classifyMedia(type: Int, body: String): String? = when (type) {
         TYPE_TEXT -> {
-            val body = msg.actualContent
             when {
                 detectTextLink && URL_PATTERN.containsMatchIn(body) -> REASON_TEXT_URL
                 else -> null
@@ -231,7 +233,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
         TYPE_VIDEO, TYPE_MICRO_VIDEO -> if (detectVideo) REASON_VIDEO else null
 
         TYPE_APP -> {
-            val xml = msg.actualContent
+            val xml = body
             when {
                 detectMiniApp && (xml.contains("<weappinfo") || xml.contains("weapp")) -> REASON_MINIAPP
                 detectFile && xml.contains("<type>6</type>") -> REASON_FILE
