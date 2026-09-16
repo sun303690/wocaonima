@@ -27,6 +27,7 @@ import dev.sun.wechat.features.api.core.WeDatabaseApi
 import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
 import dev.sun.wechat.features.api.core.WeGroupApi
 import dev.sun.wechat.features.api.core.WeMessageApi
+import dev.sun.wechat.features.api.core.models.MessageType
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.i18n.LocalWeKitLocalizedContext
@@ -240,7 +241,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
         TYPE_VOICE -> if (detectVoice) REASON_VOICE else null
         TYPE_VIDEO, TYPE_MICRO_VIDEO -> if (detectVideo) REASON_VIDEO else null
 
-        TYPE_APP -> {
+        TYPE_APP, TYPE_LINK, MessageType.LINK.code, MessageType.MUSIC.code, MessageType.PRODUCT.code -> {
             val xml = body
             when {
                 detectMiniApp && (xml.contains("<weappinfo") || xml.contains("weapp")) -> REASON_MINIAPP
@@ -251,7 +252,9 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
         }
 
         TYPE_CARD -> if (detectContactCard) REASON_CONTACT_CARD else null
-        TYPE_LINK -> if (detectCardLink) REASON_LINK_CARD else null
+
+        33 -> if (detectMiniApp) REASON_MINIAPP else null
+
         else -> null
     }
 

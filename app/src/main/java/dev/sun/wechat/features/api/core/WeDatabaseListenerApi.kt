@@ -102,23 +102,28 @@ object WeDatabaseListenerApi : ApiFeature() {
     // ==================== Insert Hook ====================
 
     private fun hookDatabaseInsert() {
-        SQLiteDatabase::class.reflekt()
-            .firstMethod {
-                name = "insertWithOnConflict"
-                parameters(String::class, String::class, ContentValues::class, Int::class)
-            }.hookAfter {
-                try {
-                    if (insertListeners.isEmpty()) return@hookAfter
-
-                    val table = args[0] as String
-                    val values = args[2] as ContentValues
-
-                    logWithStack("Insert", table, args, result)
-                    insertListeners.forEach { it.onInsert(table, values) }
-                } catch (e: Throwable) {
-                    WeLogger.e(TAG, "Insert dispatch failed", e)
+        listOf(
+            "com.tencent.wcdb.compat.SQLiteDatabase", "com.tencent.wcdb.database.SQLiteDatabase"
+        ).forEach { className ->
+            className.toClass().reflekt()
+                .firstMethod {
+                    name = "insertWithOnConflict"
+                    parameters(String::class, String::class, ContentValues::class, Int::class)
                 }
-            }
+                .hookAfter {
+                    try {
+                        if (insertListeners.isEmpty()) return@hookAfter
+
+                        val table = args[0] as String
+                        val values = args[2] as ContentValues
+
+                        logWithStack("Insert", table, args, result)
+                        insertListeners.forEach { it.onInsert(table, values) }
+                    } catch (e: Throwable) {
+                        WeLogger.e(TAG, "Insert dispatch failed", e)
+                    }
+                }
+        }
     }
 
     // ==================== Update Hook ====================
