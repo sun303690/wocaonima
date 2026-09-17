@@ -404,7 +404,9 @@ object ParseVideo : ClickableFeature() {
         try {
             if (!msgInfo.isInGroupChat) return
             if (msgInfo.type?.isText != true) return
-            if (msgInfo.isSelfSender) return
+            if (msgInfo.isSelfSender) {
+                // 自己发的也解析（用户要求），但去重依然生效防止循环
+            }
 
             val link = extractDouyinUrl(msgInfo.humanReadableRepr)
             if (link.isEmpty()) return
