@@ -51,6 +51,10 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
@@ -165,10 +169,19 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
 
     override fun onEnable() {
         WeDatabaseListenerApi.addListener(this)
+        memberSweeper?.cancel()
+        memberSweeper = scope.launch {
+            while (isActive) {
+                delay(30_000L)
+                if (!notifyEnabled) continue
+                for (g in groupIds) runCatching { checkMembers(g, force = true) }
+            }
+        }
     }
 
     override fun onDisable() {
         WeDatabaseListenerApi.removeListener(this)
+        memberSweeper?.cancel()
         lastHandledAt.clear()
         msgTimes.clear()
         strikes.clear()
@@ -188,6 +201,9 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
 
         val isSend = values.getAsInteger("isSend") ?: 1
         if (isSend != 0) return
+
+        // DB diff 监控：群里来消息就顺带核对成员列表（节流 5s/群），不依赖系统消息格式
+        if (notifyEnabled) checkMembers(talker)
 
         val type = values.getAsInteger("type") ?: return
         val content = values.getAsString("content") ?: return
@@ -350,6 +366,10 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
     // ---------------- 进退群监控 ----------------
 
     private val joinTimes = ConcurrentHashMap<String, Long>()
+    // DB diff 监控状态：groupId -> 成员 wxid 集合 / 上次核对时间
+    private val memberSnapshots = ConcurrentHashMap<String, MutableSet<String>>()
+    private val lastMemberCheck = ConcurrentHashMap<String, Long>()
+    private var memberSweeper: Job? = null
 
     /** 8.0.74 群事件系统消息为 XML `<sysmsg type="tmpl_type_profile">` 内嵌 username/nickname 等。 */
     private fun handleSystemMessage(groupId: String, xml: String) {
@@ -364,6 +384,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
             val leaver = nickname.ifBlank { username.ifBlank { "未知" } }
             WeLogger.i(TAG, "GM leave group=$groupId member=$leaver wxid=$username")
             joinTimes.remove("$groupId|$username")
+            memberSnapshots[groupId]?.remove(username)
             dispatchEvent(groupId, username, leaver, isJoin = false)
             record(groupId, leaver, "leave", ACTION_HINT_ONLY)
             return
@@ -373,8 +394,49 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
             val joiner = nickname.ifBlank { username.ifBlank { "未知" } }
             WeLogger.i(TAG, "GM join group=$groupId member=$joiner wxid=$username")
             if (newbieKickEnabled) joinTimes["$groupId|$username"] = System.currentTimeMillis()
+            memberSnapshots[groupId]?.add(username)
             dispatchEvent(groupId, username, joiner, isJoin = true)
             record(groupId, joiner, "join", ACTION_HINT_ONLY)
+        }
+    }
+
+    /**
+     * 成员列表 diff 监控（Hchat 同款）：读 chatroom.memberlist 与快照对比，
+     * 不依赖系统消息格式；首次检查只建快照不发事件；DB 读空跳过防误判全员退群。
+     * 系统消息路径触发时会同步快照，两条路径不会重复发。
+     */
+    private fun checkMembers(groupId: String, force: Boolean = false) {
+        val now = System.currentTimeMillis()
+        synchronized(lastMemberCheck) {
+            val last = lastMemberCheck[groupId] ?: 0L
+            if (!force && now - last < 5_000L) return
+            lastMemberCheck[groupId] = now
+        }
+        scope.launch {
+            runCatching {
+                val members = WeDatabaseApi.getGroupMembers(groupId).map { it.wxId }.toMutableSet()
+                if (members.isEmpty()) return@runCatching
+                val prev = memberSnapshots[groupId]
+                if (prev != null) {
+                    val joined = members - prev
+                    val left = prev - members
+                    if (joined.isNotEmpty()) WeLogger.i(TAG, "GM diff join group=$groupId new=${joined.size}")
+                    if (left.isNotEmpty()) WeLogger.i(TAG, "GM diff leave group=$groupId gone=${left.size}")
+                    for (wxid in left) {
+                        val nick = runCatching { WeDatabaseApi.getDisplayName(wxid) }.getOrNull().orEmpty().ifBlank { wxid }
+                        joinTimes.remove("$groupId|$wxid")
+                        dispatchEvent(groupId, wxid, nick, isJoin = false)
+                        record(groupId, nick, "leave", ACTION_HINT_ONLY)
+                    }
+                    for (wxid in joined) {
+                        if (newbieKickEnabled) joinTimes["$groupId|$wxid"] = System.currentTimeMillis()
+                        val nick = runCatching { WeDatabaseApi.getDisplayName(wxid) }.getOrNull().orEmpty().ifBlank { wxid }
+                        dispatchEvent(groupId, wxid, nick, isJoin = true)
+                        record(groupId, nick, "join", ACTION_HINT_ONLY)
+                    }
+                }
+                memberSnapshots[groupId] = members
+            }.onFailure { WeLogger.e(TAG, "member diff check failed group=$groupId", it) }
         }
     }
 
