@@ -4218,6 +4218,8 @@
     <string name="glg_welcome_desc">Sent to the group when a member joins; empty to skip</string>
     <string name="glg_leave">Leave message</string>
     <string name="glg_leave_desc">Sent to the group when a member leaves; empty to skip</string>
+    <string name="glg_card_switch">Card mode</string>
+    <string name="glg_card_switch_desc">Join/leave sends an image card (avatar + notice) instead of the plain text above</string>
     <string name="glg_newbie_title">Newbie probation</string>
     <string name="glg_newbie_desc">Remove members who send any message within the probation window after joining</string>
     <string name="glg_newbie_minutes">Probation (minutes)</string>

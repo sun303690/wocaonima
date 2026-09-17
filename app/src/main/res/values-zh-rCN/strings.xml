@@ -4246,6 +4246,8 @@
     <string name="glg_welcome_desc">成员加入时发到群里；留空不发</string>
     <string name="glg_leave">退群提醒</string>
     <string name="glg_leave_desc">成员退出时发到群里；留空不发</string>
+    <string name="glg_card_switch">卡片模式</string>
+    <string name="glg_card_switch_desc">进群/退群时发送图片卡片（头像+通知文本），关闭则用上方纯文本</string>
     <string name="glg_newbie_title">新人冷静期</string>
     <string name="glg_newbie_desc">新人进群后 X 分钟内发任何消息即移出</string>
     <string name="glg_newbie_minutes">冷静期（分钟）</string>

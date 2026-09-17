@@ -114,6 +114,8 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
     var notifyEnabled by WePrefs.prefOption("glg_notify_enabled", false)
     var welcomeText by WePrefs.prefOption("glg_welcome_text", "欢迎新成员入群！")
     var leaveText by WePrefs.prefOption("glg_leave_text", "")
+    // 卡片模式：进退群发图片卡片（头像+通知文本），关闭则用下方纯文本
+    var cardEnabled by WePrefs.prefOption("glg_card_enabled", false)
     var newbieKickEnabled by WePrefs.prefOption("glg_newbie_kick", false)
     var newbieMinutes by WePrefs.prefOption("glg_newbie_minutes", 10)
     var floodEnabled by WePrefs.prefOption("glg_flood_enabled", false)
@@ -362,11 +364,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
             val leaver = nickname.ifBlank { username.ifBlank { "未知" } }
             WeLogger.i(TAG, "GM leave group=$groupId member=$leaver wxid=$username")
             joinTimes.remove("$groupId|$username")
-            val text = leaveText.trim()
-            if (text.isNotBlank()) {
-                val replaced = text.replace("%userName%", leaver).replace("%userWxid%", username).replace("%groupName%", groupId)
-                scope.launch { WeMessageApi.sendText(groupId, replaced) }
-            }
+            dispatchEvent(groupId, username, leaver, isJoin = false)
             record(groupId, leaver, "leave", ACTION_HINT_ONLY)
             return
         }
@@ -375,14 +373,50 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
             val joiner = nickname.ifBlank { username.ifBlank { "未知" } }
             WeLogger.i(TAG, "GM join group=$groupId member=$joiner wxid=$username")
             if (newbieKickEnabled) joinTimes["$groupId|$username"] = System.currentTimeMillis()
-            val text = welcomeText.trim()
-            if (text.isNotBlank()) {
-                val replaced = text.replace("%userName%", joiner).replace("%userWxid%", username)
-                    .replace("%groupName%", groupId).replace("%time%", SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date()))
-                scope.launch { WeMessageApi.sendText(groupId, replaced) }
-            }
+            dispatchEvent(groupId, username, joiner, isJoin = true)
             record(groupId, joiner, "join", ACTION_HINT_ONLY)
         }
+    }
+
+    /**
+     * 进退群事件输出：卡片模式渲染图片卡片（头像+通知文本）经 [WeMessageApi.sendImage] 发出；
+     * 否则回退纯文本（welcomeText/leaveText，支持 %userName% %userWxid% %groupName% %time%）。
+     */
+    private fun dispatchEvent(groupId: String, wxid: String, nick: String, isJoin: Boolean) {
+        if (cardEnabled) {
+            scope.launch {
+                runCatching {
+                    val groupNick = runCatching { WeDatabaseApi.getGroupMemberDisplayName(groupId, wxid) }
+                        .getOrNull().orEmpty()
+                    val inviterWxid = if (isJoin) runCatching { WeDatabaseApi.getGroupMemberInviter(groupId, wxid) }
+                        .getOrNull().orEmpty() else ""
+                    val inviter = if (inviterWxid.isBlank() || inviterWxid == wxid) ""
+                        else runCatching { WeDatabaseApi.getDisplayName(inviterWxid) }.getOrNull().orEmpty()
+                    val tail = groupNick.ifBlank { nick }.takeIf { it.isNotBlank() }?.takeLast(1).orEmpty()
+                    val card = GroupEventCard.Event(
+                        isJoin = isJoin,
+                        wxid = wxid,
+                        weNick = nick,
+                        groupNick = groupNick,
+                        inviter = inviter,
+                        realNameTail = tail,
+                        groupName = groupName(groupId),
+                    )
+                    val file = GroupEventCard.render(card) ?: error("card render failed")
+                    WeMessageApi.sendImage(groupId, file.absolutePath)
+                    file.delete()
+                }.onFailure { WeLogger.e(TAG, "GM event card failed group=$groupId wxid=$wxid", it) }
+            }
+            return
+        }
+        val text = (if (isJoin) welcomeText else leaveText).trim()
+        if (text.isBlank()) return
+        val replaced = text
+            .replace("%userName%", nick)
+            .replace("%userWxid%", wxid)
+            .replace("%groupName%", groupName(groupId))
+            .replace("%time%", SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date()))
+        scope.launch { WeMessageApi.sendText(groupId, replaced) }
     }
 
     private fun xmlTag(xml: String, tag: String): String =
@@ -472,6 +506,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
             var notify by remember { mutableStateOf(notifyEnabled) }
             var welcomeInput by remember { mutableStateOf(welcomeText) }
             var leaveInput by remember { mutableStateOf(leaveText) }
+            var card by remember { mutableStateOf(cardEnabled) }
             var newbie by remember { mutableStateOf(newbieKickEnabled) }
             var newbieMinutesInput by remember { mutableStateOf(newbieMinutes.toString()) }
             var flood by remember { mutableStateOf(floodEnabled) }
@@ -634,6 +669,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                                     singleLine = false,
                                 )
                             }
+                            item { SwitchRow(R.string.glg_card_switch, R.string.glg_card_switch_desc, card) { card = it } }
                             item { SwitchRow(R.string.glg_newbie_title, R.string.glg_newbie_desc, newbie) { newbie = it } }
                             item {
                                 FieldRow(
@@ -716,6 +752,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                         notifyEnabled = notify
                         welcomeText = welcomeInput
                         leaveText = leaveInput
+                        cardEnabled = card
                         newbieKickEnabled = newbie
                         newbieMinutes = (newbieMinutesInput.toIntOrNull() ?: newbieMinutes).coerceIn(1, 9999)
                         floodEnabled = flood
