@@ -143,7 +143,6 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
     private val lastHandledAt = ConcurrentHashMap<String, Long>()
     private val msgTimes = ConcurrentHashMap<String, ArrayDeque<Long>>()
     private val strikes = ConcurrentHashMap<String, Int>()
-    private val ownerCache = ConcurrentHashMap<String, String?>()
     private val handledSvrIds = ConcurrentHashMap.newKeySet<Long>()
     private val actionLock = Any()
     private var lastActionSentAt = 0L
@@ -184,8 +183,16 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
         val content = values.getAsString("content") ?: return
 
         runCatching {
-            // 不依赖 MessageInfo（8.0.74 的 MsgInfo.convertFrom 签名变了，没有 (ContentValues, Boolean) 重载）
-            val sender = senderOf(content) ?: return
+            val sender = senderOf(content)
+                ?: values.getAsString("sender")?.takeIf { it.isNotBlank() }
+                ?: values.getAsString("msgUser")?.takeIf { it.isNotBlank() }
+            if (sender == null) {
+                // 诊断：content 无发送者前缀，且 ContentValues 里也没有 sender/msgUser 字段
+                WeLogger.i(TAG, "GM no-sender group=$talker type=$type content=${content.take(80)}")
+                return
+            }
+            val body = content.substringAfter(":\n")
+            WeLogger.i(TAG, "GM inspect group=$talker type=$type sender=$sender body=${body.take(40)}")
             if (sender == WeApi.selfWxId) return
             if (sender in exemptIds) return
             if (ownerExempt && sender == groupOwner(talker)) return
@@ -196,9 +203,10 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
 
             // 刷屏统计对每条消息都累计，所以先算再判违规
             val flooded = floodEnabled && bumpFlood(talker, sender)
-            val body = content.substringAfter(":\n")
             val atAll = atAllEnabled && content.contains("announcement@all")
-            val verdict = detect(type, body, flooded, atAll) ?: return
+            val verdict = detect(type, body, flooded, atAll)
+            WeLogger.i(TAG, "GM detect group=$talker sender=$sender -> ${verdict?.reason ?: "null"}")
+            if (verdict == null) return
             if (!allowHandle(talker, sender)) return
 
             scope.launch { handle(talker, sender, verdict) }
@@ -309,18 +317,16 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
         return true
     }
 
-    /** 群主：ChatRoom 表的 ChatRoomOwner 列；列名大小写按游标实际返回匹配。 */
-    private fun groupOwner(groupId: String): String? = ownerCache.getOrPut(groupId) {
-        runCatching {
-            WeDatabaseApi.executeQuery("SELECT * FROM ChatRoom WHERE ChatRoomName = ?", arrayOf(groupId))
-                .firstOrNull()
-                ?.entries
-                ?.firstOrNull { it.key.equals("chatroomowner", ignoreCase = true) }
-                ?.value
-                ?.toString()
-                ?.takeIf { it.isNotBlank() }
-        }.onFailure { WeLogger.w(TAG, "read group owner failed: $groupId", it) }.getOrNull()
-    }
+    /** 群主：ChatRoom 表的 ChatRoomOwner 列；列名大小写按游标实际返回匹配。不加缓存（ConcurrentHashMap 不允许 null 值，曾经因此 NPE 把每条群消息都搞挂）。 */
+    private fun groupOwner(groupId: String): String? = runCatching {
+        WeDatabaseApi.executeQuery("SELECT * FROM ChatRoom WHERE ChatRoomName = ?", arrayOf(groupId))
+            .firstOrNull()
+            ?.entries
+            ?.firstOrNull { it.key.equals("chatroomowner", ignoreCase = true) }
+            ?.value
+            ?.toString()
+            ?.takeIf { it.isNotBlank() }
+    }.onFailure { WeLogger.w(TAG, "read group owner failed: $groupId", it) }.getOrNull()
 
     // ---------------- 处置 ----------------
 
