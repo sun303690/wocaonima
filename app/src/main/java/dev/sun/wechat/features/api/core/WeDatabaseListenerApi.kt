@@ -4,7 +4,7 @@ import android.annotation.SuppressLint
 import android.content.ContentValues
 import com.tencent.wcdb.database.SQLiteDatabase
 import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.toClass
+import dev.ujhhgtg.reflekt.utils.toClassOrNull
 import dev.sun.wechat.R
 import dev.sun.wechat.constants.Preferences
 import dev.sun.wechat.constants.WeChatVersions
@@ -105,12 +105,16 @@ object WeDatabaseListenerApi : ApiFeature() {
         listOf(
             "com.tencent.wcdb.compat.SQLiteDatabase", "com.tencent.wcdb.database.SQLiteDatabase"
         ).forEach { className ->
-            className.toClass().reflekt()
-                .firstMethod {
-                    name = "insertWithOnConflict"
-                    parameters(String::class, String::class, ContentValues::class, Int::class)
-                }
-                .hookAfter {
+            // 类/方法解析与宿主版本相关，单个类不匹配时只跳过并记日志，不能拖垮其它 hook 的安装
+            val db = className.toClassOrNull() ?: run {
+                WeLogger.w(TAG, "insert hook skipped, class not found: $className")
+                return@forEach
+            }
+            db.reflekt().firstMethodOrNull {
+                name = "insertWithOnConflict"
+                parameters(String::class, String::class, ContentValues::class, Int::class)
+            }?.run {
+                hookAfter {
                     try {
                         if (insertListeners.isEmpty()) return@hookAfter
 
@@ -123,6 +127,7 @@ object WeDatabaseListenerApi : ApiFeature() {
                         WeLogger.e(TAG, "Insert dispatch failed", e)
                     }
                 }
+            } ?: WeLogger.w(TAG, "insert hook skipped, insertWithOnConflict not found in: $className")
         }
     }
 
@@ -132,18 +137,21 @@ object WeDatabaseListenerApi : ApiFeature() {
         listOf(
             "com.tencent.wcdb.compat.SQLiteDatabase", "com.tencent.wcdb.database.SQLiteDatabase"
         ).forEach { className ->
-            className.toClass().reflekt()
-                .firstMethod {
-                    name = "updateWithOnConflict"
-                    parameters(
-                        String::class,
-                        ContentValues::class,
-                        String::class,
-                        Array<String>::class,
-                        Int::class
-                    )
-                }
-                .hookBefore {
+            val db = className.toClassOrNull() ?: run {
+                WeLogger.w(TAG, "update hook skipped, class not found: $className")
+                return@forEach
+            }
+            db.reflekt().firstMethodOrNull {
+                name = "updateWithOnConflict"
+                parameters(
+                    String::class,
+                    ContentValues::class,
+                    String::class,
+                    Array<String>::class,
+                    Int::class
+                )
+            }?.run {
+                hookBefore {
                     try {
                         if (updateListeners.isEmpty()) return@hookBefore
 
@@ -162,6 +170,7 @@ object WeDatabaseListenerApi : ApiFeature() {
                         WeLogger.e(TAG, "update dispatch failed", e)
                     }
                 }
+            } ?: WeLogger.w(TAG, "update hook skipped, updateWithOnConflict not found in: $className")
         }
     }
 
