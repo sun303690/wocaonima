@@ -4098,8 +4098,6 @@
     <string name="feature_we_contact_header_api_name">联系人详情头部扩展</string>
     <string name="contacts_add_time_value">添加时间: %1$s</string>
 
-    <string name="feature_ai_message_analysis_name">AI 消息分析</string>
-    <string name="feature_ai_message_analysis_description">长按消息，分析对话氛围并生成 AI 回复建议</string>
     <string name="ama_content_preview">内容预览</string>
     <string name="ama_no_content">无可分析内容</string>
     <string name="ama_today_stats">今日统计</string>
@@ -4242,4 +4240,13 @@
     <string name="glg_logs_clear">清空</string>
     <string name="glg_logs_cleared">记录已清空</string>
     <string name="glg_saved">已保存</string>
+    <string name="glg_notify_title">进退群监控</string>
+    <string name="glg_notify_desc">进群发欢迎语，退群发提醒</string>
+    <string name="glg_welcome">进群欢迎语</string>
+    <string name="glg_welcome_desc">成员加入时发到群里；留空不发</string>
+    <string name="glg_leave">退群提醒</string>
+    <string name="glg_leave_desc">成员退出时发到群里；留空不发</string>
+    <string name="glg_newbie_title">新人冷静期</string>
+    <string name="glg_newbie_desc">新人进群后 X 分钟内发任何消息即移出</string>
+    <string name="glg_newbie_minutes">冷静期（分钟）</string>
 </resources>

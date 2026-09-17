@@ -46,6 +46,7 @@ import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToast
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -108,6 +109,13 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
     var nightStartHour by WePrefs.prefOption("glg_night_start_hour", 23)
     var nightEndHour by WePrefs.prefOption("glg_night_end_hour", 7)
     var nightHintText by WePrefs.prefOption("glg_night_hint_text", DEFAULT_NIGHT_HINT)
+
+    // ---- 进退群监控 ----
+    var notifyEnabled by WePrefs.prefOption("glg_notify_enabled", false)
+    var welcomeText by WePrefs.prefOption("glg_welcome_text", "欢迎新成员入群！")
+    var leaveText by WePrefs.prefOption("glg_leave_text", "")
+    var newbieKickEnabled by WePrefs.prefOption("glg_newbie_kick", false)
+    var newbieMinutes by WePrefs.prefOption("glg_newbie_minutes", 10)
     var floodEnabled by WePrefs.prefOption("glg_flood_enabled", false)
     var floodWindowSec by WePrefs.prefOption("glg_flood_window_sec", 60)
     var floodCount by WePrefs.prefOption("glg_flood_count", 10)
@@ -182,6 +190,15 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
         val type = values.getAsInteger("type") ?: return
         val content = values.getAsString("content") ?: return
 
+        // ---- 系统消息（进群/退群事件，8.0.74 为 XML 格式）----
+        if (type == TYPE_SYSTEM) {
+            if (!notifyEnabled) return
+            if (!content.contains("<sysmsg")) return
+            runCatching { handleSystemMessage(talker, content) }
+                .onFailure { WeLogger.e(TAG, "system message handling failed", it) }
+            return
+        }
+
         runCatching {
             val sender = senderOf(content)
                 ?: values.getAsString("sender")?.takeIf { it.isNotBlank() }
@@ -204,7 +221,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
             // 刷屏统计对每条消息都累计，所以先算再判违规
             val flooded = floodEnabled && bumpFlood(talker, sender)
             val atAll = atAllEnabled && content.contains("announcement@all")
-            val verdict = detect(type, body, flooded, atAll)
+            val verdict = if (isNewbie(talker, sender)) Verdict(REASON_NEWBIE) else detect(type, body, flooded, atAll)
             WeLogger.i(TAG, "GM detect group=$talker sender=$sender -> ${verdict?.reason ?: "null"}")
             if (verdict == null) return
             if (!allowHandle(talker, sender)) return
@@ -328,6 +345,56 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
             ?.takeIf { it.isNotBlank() }
     }.onFailure { WeLogger.w(TAG, "read group owner failed: $groupId", it) }.getOrNull()
 
+    // ---------------- 进退群监控 ----------------
+
+    private val joinTimes = ConcurrentHashMap<String, Long>()
+
+    /** 8.0.74 群事件系统消息为 XML `<sysmsg type="tmpl_type_profile">` 内嵌 username/nickname 等。 */
+    private fun handleSystemMessage(groupId: String, xml: String) {
+        WeLogger.i(TAG, "GM sysmsg group=$groupId xml=${xml.take(120)}")
+
+        // 提取 XML 内的字段
+        val username = xmlTag(xml, "username")
+        val nickname = xmlTag(xml, "nickname")
+
+        // 退群
+        if (xml.contains("退出了群聊") || xml.contains("tmpl_type_profile")) {
+            val leaver = nickname.ifBlank { username.ifBlank { "未知" } }
+            WeLogger.i(TAG, "GM leave group=$groupId member=$leaver wxid=$username")
+            joinTimes.remove("$groupId|$username")
+            val text = leaveText.trim()
+            if (text.isNotBlank()) {
+                val replaced = text.replace("%userName%", leaver).replace("%userWxid%", username).replace("%groupName%", groupId)
+                scope.launch { WeMessageApi.sendText(groupId, replaced) }
+            }
+            record(groupId, leaver, "leave", ACTION_HINT_ONLY)
+            return
+        }
+        // 进群
+        if (xml.contains("加入了群聊") || xml.contains("邀请")) {
+            val joiner = nickname.ifBlank { username.ifBlank { "未知" } }
+            WeLogger.i(TAG, "GM join group=$groupId member=$joiner wxid=$username")
+            if (newbieKickEnabled) joinTimes["$groupId|$username"] = System.currentTimeMillis()
+            val text = welcomeText.trim()
+            if (text.isNotBlank()) {
+                val replaced = text.replace("%userName%", joiner).replace("%userWxid%", username)
+                    .replace("%groupName%", groupId).replace("%time%", SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date()))
+                scope.launch { WeMessageApi.sendText(groupId, replaced) }
+            }
+            record(groupId, joiner, "join", ACTION_HINT_ONLY)
+        }
+    }
+
+    private fun xmlTag(xml: String, tag: String): String =
+        Regex("""<$tag>([^<]{1,200})</$tag>""").find(xml)?.groupValues?.get(1)?.trim() ?: ""
+
+    /** 新人冷静期：进群后 X 分钟内发消息即触发。 */
+    private fun isNewbie(talker: String, sender: String): Boolean {
+        if (!newbieKickEnabled) return false
+        val joinTime = joinTimes["$talker|$sender"] ?: return false
+        return System.currentTimeMillis() - joinTime < newbieMinutes.coerceAtLeast(1) * 60_000L
+    }
+
     // ---------------- 处置 ----------------
 
     private fun handle(groupId: String, memberId: String, verdict: Verdict) {
@@ -402,6 +469,11 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
             var nightStart by remember { mutableStateOf(nightStartHour.toString()) }
             var nightEnd by remember { mutableStateOf(nightEndHour.toString()) }
             var nightHint by remember { mutableStateOf(nightHintText) }
+            var notify by remember { mutableStateOf(notifyEnabled) }
+            var welcomeInput by remember { mutableStateOf(welcomeText) }
+            var leaveInput by remember { mutableStateOf(leaveText) }
+            var newbie by remember { mutableStateOf(newbieKickEnabled) }
+            var newbieMinutesInput by remember { mutableStateOf(newbieMinutes.toString()) }
             var flood by remember { mutableStateOf(floodEnabled) }
             var floodWindow by remember { mutableStateOf(floodWindowSec.toString()) }
             var floodLimit by remember { mutableStateOf(floodCount.toString()) }
@@ -542,6 +614,35 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                                 )
                             }
 
+                            item { SectionLabel(stringResource(R.string.glg_notify_title)) }
+                            item { SwitchRow(R.string.glg_notify_title, R.string.glg_notify_desc, notify) { notify = it } }
+                            item {
+                                FieldRow(
+                                    label = stringResource(R.string.glg_welcome),
+                                    value = welcomeInput,
+                                    onValueChange = { welcomeInput = it },
+                                    description = stringResource(R.string.glg_welcome_desc),
+                                    singleLine = false,
+                                )
+                            }
+                            item {
+                                FieldRow(
+                                    label = stringResource(R.string.glg_leave),
+                                    value = leaveInput,
+                                    onValueChange = { leaveInput = it },
+                                    description = stringResource(R.string.glg_leave_desc),
+                                    singleLine = false,
+                                )
+                            }
+                            item { SwitchRow(R.string.glg_newbie_title, R.string.glg_newbie_desc, newbie) { newbie = it } }
+                            item {
+                                FieldRow(
+                                    label = stringResource(R.string.glg_newbie_minutes),
+                                    value = newbieMinutesInput,
+                                    onValueChange = { v -> newbieMinutesInput = v.filter { c -> c.isDigit() }.take(4) },
+                                )
+                            }
+
                             item { SectionLabel(stringResource(R.string.glg_section_misc)) }
                             item { SwitchRow(R.string.glg_flood_title, R.string.glg_flood_desc, flood) { flood = it } }
                             item {
@@ -612,6 +713,11 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                         nightStartHour = (nightStart.toIntOrNull() ?: nightStartHour).coerceIn(0, 23)
                         nightEndHour = (nightEnd.toIntOrNull() ?: nightEndHour).coerceIn(0, 23)
                         nightHintText = nightHint
+                        notifyEnabled = notify
+                        welcomeText = welcomeInput
+                        leaveText = leaveInput
+                        newbieKickEnabled = newbie
+                        newbieMinutes = (newbieMinutesInput.toIntOrNull() ?: newbieMinutes).coerceIn(1, 9999)
                         floodEnabled = flood
                         floodWindowSec = (floodWindow.toIntOrNull() ?: floodWindowSec).coerceIn(1, 3600)
                         floodCount = (floodLimit.toIntOrNull() ?: floodCount).coerceIn(2, 999)
@@ -762,6 +868,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
     private const val MAX_WAIT_MS = 5_000L
 
     private const val TYPE_TEXT = 1
+    private const val TYPE_SYSTEM = 10000
     private const val TYPE_LINK = 5
     private const val TYPE_IMAGE = 3
     private const val TYPE_VOICE = 34
@@ -782,6 +889,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
     private const val REASON_NIGHT = "night_silence"
     private const val REASON_FLOOD = "flood"
     private const val REASON_AT_ALL = "at_all"
+    private const val REASON_NEWBIE = "newbie"
     private const val REASON_RULE = "rule:"
 
     private val URL_PATTERN = Regex("""https?://\S+|www\.[A-Za-z0-9.\-]+""")

@@ -4070,8 +4070,6 @@
     <string name="feature_we_contact_header_api_name">Contact profile header extensions</string>
     <string name="contacts_add_time_value">Added: %1$s</string>
 
-    <string name="feature_ai_message_analysis_name">AI message analysis</string>
-    <string name="feature_ai_message_analysis_description">Long-press a message to analyze the conversation and get AI reply suggestions</string>
     <string name="ama_content_preview">Content</string>
     <string name="ama_no_content">No analyzable content</string>
     <string name="ama_today_stats">Today</string>
@@ -4214,4 +4212,13 @@
     <string name="glg_logs_clear">Clear</string>
     <string name="glg_logs_cleared">Log cleared</string>
     <string name="glg_saved">Saved</string>
+    <string name="glg_notify_title">Join/Leave monitor</string>
+    <string name="glg_notify_desc">Send welcome on join and notification on leave</string>
+    <string name="glg_welcome">Welcome message</string>
+    <string name="glg_welcome_desc">Sent to the group when a member joins; empty to skip</string>
+    <string name="glg_leave">Leave message</string>
+    <string name="glg_leave_desc">Sent to the group when a member leaves; empty to skip</string>
+    <string name="glg_newbie_title">Newbie probation</string>
+    <string name="glg_newbie_desc">Remove members who send any message within the probation window after joining</string>
+    <string name="glg_newbie_minutes">Probation (minutes)</string>
 </resources>
