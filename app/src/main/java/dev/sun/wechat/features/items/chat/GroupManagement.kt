@@ -370,6 +370,8 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
     private val memberSnapshots = ConcurrentHashMap<String, MutableSet<String>>()
     private val lastMemberCheck = ConcurrentHashMap<String, Long>()
     private var memberSweeper: Job? = null
+    // 进退群事件去重：踢人/sysmsg/diff 三条路径可能对同一事件各发一次，30s 内只发一次。
+    private val dispatchedRecently = ConcurrentHashMap<String, Long>()
 
     /** 8.0.74 群事件系统消息为 XML `<sysmsg type="tmpl_type_profile">` 内嵌 username/nickname 等。 */
     private fun handleSystemMessage(groupId: String, xml: String) {
@@ -445,6 +447,12 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
      * 否则回退纯文本（welcomeText/leaveText，支持 %userName% %userWxid% %groupName% %time%）。
      */
     private fun dispatchEvent(groupId: String, wxid: String, nick: String, isJoin: Boolean) {
+        // 踢人/sysmsg/diff 三路径去重：30s 内同一 (群,成员,事件类型) 只发一次
+        val dkey = "$groupId|$wxid|$isJoin"
+        val now = System.currentTimeMillis()
+        val last = dispatchedRecently[dkey] ?: 0L
+        if (now - last < 30_000L) return
+        dispatchedRecently[dkey] = now
         if (cardEnabled) {
             scope.launch {
                 runCatching {
@@ -510,6 +518,12 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
             if (shouldKick) {
                 WeGroupApi.delMember(groupId, memberId)
                 if (shouldBan) banned = saveSet(loadSet(banned) + "$groupId|$memberId")
+                // 踢人后同步发退群卡片（与 sysmsg/diff 路径经 dispatchedRecently 去重，不会重发）
+                joinTimes.remove("$groupId|$memberId")
+                memberSnapshots[groupId]?.remove(memberId)
+                val kickNick = runCatching { WeDatabaseApi.getDisplayName(memberId) }
+                    .getOrNull().orEmpty().ifBlank { memberId }
+                dispatchEvent(groupId, memberId, kickNick, isJoin = false)
             }
             if (shouldHint) {
                 val text = if (verdict.reason == REASON_NIGHT) nightHintText else hintText
