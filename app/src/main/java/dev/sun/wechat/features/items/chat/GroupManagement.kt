@@ -375,7 +375,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
 
     /** 8.0.74 群事件系统消息为 XML `<sysmsg type="tmpl_type_profile">` 内嵌 username/nickname 等。 */
     private fun handleSystemMessage(groupId: String, xml: String) {
-        WeLogger.i(TAG, "GM sysmsg group=$groupId xml=${xml.take(120)}")
+        WeLogger.i(TAG, "GM sysmsg group=$groupId len=${xml.length} xml=$xml")
 
         // 提取 XML 内的字段
         val username = xmlTag(xml, "username")
@@ -385,6 +385,10 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
         if (xml.contains("退出了群聊") || xml.contains("tmpl_type_profile")) {
             val leaver = nickname.ifBlank { username.ifBlank { "未知" } }
             WeLogger.i(TAG, "GM leave group=$groupId member=$leaver wxid=$username")
+            if (username.isBlank()) {
+                WeLogger.w(TAG, "GM leave skip: empty wxid (sysmsgtemplate 未解析出成员), group=$groupId")
+                return
+            }
             joinTimes.remove("$groupId|$username")
             memberSnapshots[groupId]?.remove(username)
             dispatchEvent(groupId, username, leaver, isJoin = false)
@@ -395,6 +399,10 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
         if (xml.contains("加入了群聊") || xml.contains("邀请")) {
             val joiner = nickname.ifBlank { username.ifBlank { "未知" } }
             WeLogger.i(TAG, "GM join group=$groupId member=$joiner wxid=$username")
+            if (username.isBlank()) {
+                WeLogger.w(TAG, "GM join skip: empty wxid (sysmsgtemplate 未解析出成员), group=$groupId")
+                return
+            }
             if (newbieKickEnabled) joinTimes["$groupId|$username"] = System.currentTimeMillis()
             memberSnapshots[groupId]?.add(username)
             dispatchEvent(groupId, username, joiner, isJoin = true)
@@ -422,6 +430,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                 if (prev != null) {
                     val joined = members - prev
                     val left = prev - members
+                    WeLogger.d(TAG, "GM diff group=$groupId prev=${prev.size} cur=${members.size} joined=${joined.size} left=${left.size}")
                     if (joined.isNotEmpty()) WeLogger.i(TAG, "GM diff join group=$groupId new=${joined.size}")
                     if (left.isNotEmpty()) WeLogger.i(TAG, "GM diff leave group=$groupId gone=${left.size}")
                     for (wxid in left) {
