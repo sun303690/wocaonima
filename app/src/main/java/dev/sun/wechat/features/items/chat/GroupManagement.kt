@@ -208,10 +208,10 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
         val type = values.getAsInteger("type") ?: return
         val content = values.getAsString("content") ?: return
 
-        // ---- 系统消息（进群/退群事件，8.0.74 为 XML 格式）----
-        if (type == TYPE_SYSTEM) {
+        // ---- 系统消息（进群/退群事件，8.0.74 为 <sysmsg type="sysmsgtemplate"> XML）----
+        // type 因版本而异（8.0.74 实测 570425393，并非 10000），按内容识别更稳。
+        if (content.contains("<sysmsg")) {
             if (!notifyEnabled) return
-            if (!content.contains("<sysmsg")) return
             runCatching { handleSystemMessage(talker, content) }
                 .onFailure { WeLogger.e(TAG, "system message handling failed", it) }
             return

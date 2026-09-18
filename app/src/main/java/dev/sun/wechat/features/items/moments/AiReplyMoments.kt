@@ -52,6 +52,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -107,10 +109,13 @@ object AiReplyMoments : ClickableFeature(),
 
     private const val KEY_WHITELIST = "ai_reply_moments_whitelist"
     private const val KEY_BLACKLIST = "ai_reply_moments_blacklist"
+    private const val KEY_COMMENTED = "ai_reply_moments_commented"
 
     private val handledSnsIds = ConcurrentHashMap.newKeySet<String>()
     private val lastAttemptAt = ConcurrentHashMap<String, Long>()
     private val actionLock = Any()
+    /** 串行化「生成+发送」，避免并发突发打爆 LLM RPM 配额并杜绝同一朋友圈并发重复评论。 */
+    private val processMutex = Mutex()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -121,7 +126,9 @@ object AiReplyMoments : ClickableFeature(),
 
     override fun onEnable() {
         WeDatabaseListenerApi.addListener(this)
+        // 从持久化重载已评论记录，避免微信/模块重启后重复评论所有朋友圈
         handledSnsIds.clear()
+        runCatching { handledSnsIds.addAll(WePrefs.getStringSetOrDef(KEY_COMMENTED, emptySet())) }
         lastAttemptAt.clear()
         if (processMode == MODE_ALL_LOADED) scanCachedMoments()
         startRefreshJob()
@@ -213,24 +220,35 @@ object AiReplyMoments : ClickableFeature(),
 
         val content = WeMomentsApi.getContentText(snsInfo).orEmpty().trim()
 
-        val text = runCatching { generateComment(content) }.getOrNull()?.trim().orEmpty()
-        if (text.isBlank()) return
+        // 串行化：拿到锁前先粗筛，拿到锁后二次确认（别的协程可能刚评完）。
+        processMutex.withLock {
+            if (snsTableId in handledSnsIds) return@withLock
 
-        val result = synchronized(actionLock) {
-            if (replyIntervalMs > 0L) {
-                val wait = replyIntervalMs - (System.currentTimeMillis() - lastActionSentAt)
-                if (wait > 0L) Thread.sleep(wait)
+            val text = runCatching { generateComment(content) }.getOrNull()?.trim().orEmpty()
+            if (text.isBlank()) return@withLock
+
+            val result = synchronized(actionLock) {
+                if (replyIntervalMs > 0L) {
+                    val wait = replyIntervalMs - (System.currentTimeMillis() - lastActionSentAt)
+                    if (wait > 0L) Thread.sleep(wait)
+                }
+                val r = WeMomentsApi.comment(snsInfo, text)
+                if (r.sent) lastActionSentAt = System.currentTimeMillis()
+                r
             }
-            val r = WeMomentsApi.comment(snsInfo, text)
-            if (r.sent) lastActionSentAt = System.currentTimeMillis()
-            r
+            if (result.success) {
+                handledSnsIds.add(snsTableId)
+                persistCommented()
+                WeLogger.i(TAG, "AI commented moments owner=$owner sns=$snsTableId")
+            } else {
+                WeLogger.w(TAG, "AI comment failed owner=$owner sns=$snsTableId msg=${result.message}")
+            }
         }
-        if (result.success) {
-            handledSnsIds.add(snsTableId)
-            WeLogger.i(TAG, "AI commented moments owner=$owner sns=$snsTableId")
-        } else {
-            WeLogger.w(TAG, "AI comment failed owner=$owner sns=$snsTableId msg=${result.message}")
-        }
+    }
+
+    private fun persistCommented() {
+        runCatching { WePrefs.putStringSet(KEY_COMMENTED, handledSnsIds.toSet()) }
+            .onFailure { WeLogger.w(TAG, "persist commented snsIds failed", it) }
     }
 
     private fun matchesListMode(owner: String): Boolean = when (listMode) {
