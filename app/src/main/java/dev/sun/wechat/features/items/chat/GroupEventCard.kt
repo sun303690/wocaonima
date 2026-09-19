@@ -18,6 +18,11 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import kotlin.io.path.deleteIfExists
+import kotlin.io.path.getLastModifiedTime
+import kotlin.io.path.isRegularFile
+import kotlin.io.path.listDirectoryEntries
+import kotlin.io.path.name
 import kotlin.math.abs
 import kotlin.math.min
 
@@ -35,6 +40,7 @@ object GroupEventCard {
     private const val TITLE_SIZE = 40
     private const val BODY_SIZE = 30
     private const val LINE = 44
+    private const val CARD_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000L
 
     private val AVATAR_COLORS = intArrayOf(
         Color.rgb(0, 171, 122),
@@ -59,6 +65,7 @@ object GroupEventCard {
 
     /** 渲染卡片，返回临时文件；失败返回 null。 */
     fun render(ev: Event): File? {
+        cleanupStaleCards()
         val bmp = try {
             draw(ev)
         } catch (t: Throwable) {
@@ -95,6 +102,19 @@ object GroupEventCard {
         val groupName = runCatching { WeDatabaseApi.getGroup(groupId)?.nickname }
             .getOrNull()?.takeIf { it.isNotBlank() } ?: groupId
         return render(Event(isJoin, wxid, weNick, groupNick, inviter, tail, groupName))
+    }
+
+    /** 清理 24h 前残留的 gmev-*.png（进程被杀 / 延时删除没跑时的兜底）。 */
+    private fun cleanupStaleCards() {
+        val cutoff = System.currentTimeMillis() - CARD_CACHE_MAX_AGE_MS
+        runCatching {
+            KnownPaths.moduleCache.listDirectoryEntries().filter {
+                it.isRegularFile() &&
+                    it.name.startsWith("gmev-") &&
+                    it.name.endsWith(".png") &&
+                    it.getLastModifiedTime().toMillis() < cutoff
+            }.forEach { it.deleteIfExists() }
+        }.onFailure { WeLogger.w(TAG, "failed to clean stale cards", it) }
     }
 
     private fun draw(ev: Event): Bitmap {

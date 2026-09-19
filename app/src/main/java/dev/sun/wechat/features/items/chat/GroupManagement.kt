@@ -86,6 +86,8 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
     override val categoryIds = listOf(FeatureCategoryIds.CHAT)
 
     private const val TAG = "GroupManagement"
+    // sendImage 是异步提交任务：上传线程读走 PNG 之前不能删文件，否则发送失败
+    private const val CARD_FILE_KEEP_MS = 60_000L
 
     // 动作
     const val ACTION_KICK_AND_HINT = 0
@@ -482,9 +484,21 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                         groupName = groupName(groupId),
                     )
                     val file = GroupEventCard.render(card) ?: error("card render failed")
-                    val ok = WeMessageApi.sendImage(groupId, file.absolutePath)
-                    file.delete()
-                    WeLogger.i(TAG, "GM event card sent group=$groupId wxid=$wxid isJoin=$isJoin ok=$ok")
+                    val submitted = WeMessageApi.sendImage(groupId, file.absolutePath)
+                    if (submitted) {
+                        // 上传是异步的：给足时间让微信读走 PNG 再删，否则文件消失导致发送失败
+                        scope.launch {
+                            delay(CARD_FILE_KEEP_MS)
+                            runCatching { file.delete() }
+                        }
+                    } else {
+                        file.delete()
+                    }
+                    WeLogger.i(
+                        TAG,
+                        "GM event card submitted group=$groupId wxid=$wxid isJoin=$isJoin " +
+                            "submitted=$submitted file=${file.name}",
+                    )
                 }.onFailure { WeLogger.e(TAG, "GM event card failed group=$groupId wxid=$wxid", it) }
             }
             return

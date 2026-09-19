@@ -141,13 +141,15 @@ object MonitorGroupMemberOperations : SwitchFeature(), IResolveDex, WeDatabaseLi
         val name = displayName.ifBlank { wxId }
         val file = GroupEventCard.renderEvent(group, wxId, name, isJoin)
         if (file != null) {
-            // sendImage 是同步 IO，放后台线程避免阻塞 DB 监听线程
+            // sendImage 只提交发送任务，放后台线程避免阻塞 DB 监听线程
             Thread {
-                val ok = runCatching { WeMessageApi.sendImage(group, file.absolutePath) }
+                val submitted = runCatching { WeMessageApi.sendImage(group, file.absolutePath) }
                     .onFailure { WeLogger.e(TAG, "send card image failed group=$group wxid=$wxId", it) }
                     .getOrDefault(false)
-                WeLogger.i(TAG, "MGMO card sent group=$group wxid=$wxId isJoin=$isJoin ok=$ok")
-                file.delete()
+                WeLogger.i(TAG, "MGMO card submitted group=$group wxid=$wxId isJoin=$isJoin submitted=$submitted")
+                // 上传是异步的：等微信读走 PNG 再删，否则文件消失导致发送失败
+                if (submitted) Thread.sleep(5_000L)
+                runCatching { file.delete() }
             }.start()
             return
         }
