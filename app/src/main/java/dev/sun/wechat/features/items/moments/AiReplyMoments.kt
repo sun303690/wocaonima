@@ -221,13 +221,16 @@ object AiReplyMoments : ClickableFeature(),
 
         // 时效过滤：只回最近 maxAgeDays 天内的朋友圈，超过不回；0 = 不限制
         if (maxAgeDays > 0) {
-            val createdSec = WeMomentsApi.getCreateTimeSeconds(snsInfo)
+            val createdSec = runCatching { WeMomentsApi.getCreateTimeSeconds(snsInfo) }.getOrDefault(0L)
             if (createdSec > 0) {
                 val ageDays = (System.currentTimeMillis() / 1000L - createdSec) / 86_400L
+                WeLogger.d(TAG, "moment age owner=$owner sns=$snsTableId createTime=$createdSec age=${ageDays}d limit=${maxAgeDays}d")
                 if (ageDays > maxAgeDays) {
-                    WeLogger.d(TAG, "skip old moment owner=$owner sns=$snsTableId age=${ageDays}d > ${maxAgeDays}d")
+                    WeLogger.i(TAG, "skip old moment owner=$owner sns=$snsTableId age=${ageDays}d > ${maxAgeDays}d")
                     return
                 }
+            } else {
+                WeLogger.w(TAG, "moment age unknown (createTime=0), cannot filter owner=$owner sns=$snsTableId maxAgeDays=$maxAgeDays")
             }
         }
 
@@ -236,6 +239,10 @@ object AiReplyMoments : ClickableFeature(),
         // 串行化：拿到锁前先粗筛，拿到锁后二次确认（别的协程可能刚评完）。
         processMutex.withLock {
             if (snsTableId in handledSnsIds) return@withLock
+            // 先标记已处理：无论后续生成/发送成功失败，每条朋友圈只尝试一次，
+            // 不再跨天重复评论（持久化到 KEY_COMMENTED，重启也不重试）。
+            handledSnsIds.add(snsTableId)
+            persistCommented()
 
             val text = runCatching { generateComment(content) }.getOrNull()?.trim().orEmpty()
             if (text.isBlank()) return@withLock
@@ -250,11 +257,9 @@ object AiReplyMoments : ClickableFeature(),
                 r
             }
             if (result.success) {
-                handledSnsIds.add(snsTableId)
-                persistCommented()
                 WeLogger.i(TAG, "AI commented moments owner=$owner sns=$snsTableId")
             } else {
-                WeLogger.w(TAG, "AI comment failed owner=$owner sns=$snsTableId msg=${result.message}")
+                WeLogger.w(TAG, "AI comment failed (won't retry, marked done) owner=$owner sns=$snsTableId msg=${result.message}")
             }
         }
     }
