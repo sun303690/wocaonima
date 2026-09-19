@@ -2667,6 +2667,7 @@
     <string name="chat_voice_none_selected">没有选择语音</string>
     <string name="chat_voice_not_found">语音不存在</string>
     <string name="chat_group_member_left">退出了群组</string>
+    <string name="chat_group_member_joined">加入了群组</string>
     <string name="chat_group_member_no_nickname">（无）</string>
     <string name="chat_group_member_nickname_changed">修改群昵称：%1$s → %2$s</string>
     <string name="chat_sticker_selected_image_read_failed">无法读取所选图片</string>

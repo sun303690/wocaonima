@@ -88,6 +88,10 @@ object MonitorGroupMemberOperations : SwitchFeature(), IResolveDex, WeDatabaseLi
                     group, origMembers, origDisplayNames, newRawMembers, newMemberCount,
                     cursor.getInt(cursor.getColumnIndex("memberCount"))
                 )
+                handleMemberJoin(
+                    group, origMembers, newRawMembers, newMemberCount,
+                    cursor.getInt(cursor.getColumnIndex("memberCount"))
+                )
                 handleDisplayNameChange(group, origDisplayNames, newRoomData)
             }
         }.onFailure { WeLogger.e(TAG, "failed to handle group member operations", it) }
@@ -109,18 +113,56 @@ object MonitorGroupMemberOperations : SwitchFeature(), IResolveDex, WeDatabaseLi
 
         leavers.forEach { wxId ->
             val displayName = (origDisplayNames[wxId] ?: "").ifEmpty { WeDatabaseApi.getDisplayName(wxId) }
-            val displayString = if (displayName.isNotEmpty()) "$displayName ($wxId)" else wxId
-
-            val href = "weixin://weixinhongbao/wekit/chatroom_userinfo/$wxId"
-            val content = """<_wc_custom_link_ color="#28C445" href="$href">$displayString</_wc_custom_link_> ${localizedChatString(R.string.chat_group_member_left)}"""
-
-            WeMessageApi.createSimpleMsgInfoAndInsert(
-                type = MessageType.SYSTEM.code,
-                talker = group,
-                content = content,
-                currentTime = System.currentTimeMillis()
-            )
+            dispatchCard(group, wxId, displayName, isJoin = false)
         }
+    }
+
+    private fun handleMemberJoin(
+        group: String,
+        origMembers: List<String>,
+        newRawMembers: String?,
+        newMemberCount: Int?,
+        origMemberCount: Int
+    ) {
+        if (newRawMembers == null || newMemberCount == null) return
+        if (newMemberCount <= origMemberCount) return
+
+        val newMembers = newRawMembers.split(';').toSet()
+        val joiners = newMembers - origMembers
+
+        joiners.forEach { wxId ->
+            val displayName = WeDatabaseApi.getDisplayName(wxId)
+            dispatchCard(group, wxId, displayName, isJoin = true)
+        }
+    }
+
+    /** 渲染进退群卡片图片并发到群里；渲染失败回退原文本系统消息。 */
+    private fun dispatchCard(group: String, wxId: String, displayName: String, isJoin: Boolean) {
+        val name = displayName.ifBlank { wxId }
+        val file = GroupEventCard.renderEvent(group, wxId, name, isJoin)
+        if (file != null) {
+            // sendImage 是同步 IO，放后台线程避免阻塞 DB 监听线程
+            Thread {
+                runCatching { WeMessageApi.sendImage(group, file.absolutePath) }
+                    .onFailure { WeLogger.e(TAG, "send card image failed group=$group wxid=$wxId", it) }
+                file.delete()
+            }.start()
+            return
+        }
+        // 卡片渲染失败，回退文本系统消息
+        val displayString = if (displayName.isNotEmpty()) "$displayName ($wxId)" else wxId
+        val href = "weixin://weixinhongbao/wekit/chatroom_userinfo/$wxId"
+        val content = if (isJoin) {
+            """<_wc_custom_link_ color="#28C445" href="$href">$displayString</_wc_custom_link_> ${localizedChatString(R.string.chat_group_member_joined)}"""
+        } else {
+            """<_wc_custom_link_ color="#28C445" href="$href">$displayString</_wc_custom_link_> ${localizedChatString(R.string.chat_group_member_left)}"""
+        }
+        WeMessageApi.createSimpleMsgInfoAndInsert(
+            type = MessageType.SYSTEM.code,
+            talker = group,
+            content = content,
+            currentTime = System.currentTimeMillis()
+        )
     }
 
     private fun handleDisplayNameChange(group: String, origDisplayNames: Map<String, String>, newRoomData: ByteArray?) {

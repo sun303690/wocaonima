@@ -2690,6 +2690,7 @@
     <string name="chat_voice_none_selected">No voice messages selected</string>
     <string name="chat_voice_not_found">Voice message not found</string>
     <string name="chat_group_member_left">left the group</string>
+    <string name="chat_group_member_joined">joined the group</string>
     <string name="chat_group_member_no_nickname">(none)</string>
     <string name="chat_group_member_nickname_changed">changed their group nickname: %1$s → %2$s</string>
     <string name="chat_sticker_selected_image_read_failed">Failed to read the selected image</string>

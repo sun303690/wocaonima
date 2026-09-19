@@ -77,6 +77,26 @@ object GroupEventCard {
         }
     }
 
+    /**
+     * 便捷入口：给定群ID、成员wxid、微信昵称、是否进群，
+     * 内部解析群内昵称/邀请人/实名尾字/群名，渲染卡片返回临时文件。
+     * 调用方负责 [WeMessageApi.sendImage] 发出后删除文件。
+     */
+    fun renderEvent(groupId: String, wxid: String, weNick: String, isJoin: Boolean): File? {
+        val groupNick = runCatching { WeDatabaseApi.getGroupMemberDisplayName(groupId, wxid) }
+            .getOrNull().orEmpty()
+        val inviter = if (isJoin) {
+            val inviterWxid = runCatching { WeDatabaseApi.getGroupMemberInviter(groupId, wxid) }
+                .getOrNull().orEmpty()
+            if (inviterWxid.isBlank() || inviterWxid == wxid) ""
+            else runCatching { WeDatabaseApi.getDisplayName(inviterWxid) }.getOrNull().orEmpty()
+        } else ""
+        val tail = groupNick.ifBlank { weNick }.takeIf { it.isNotBlank() }?.takeLast(1).orEmpty()
+        val groupName = runCatching { WeDatabaseApi.getGroup(groupId)?.nickname }
+            .getOrNull()?.takeIf { it.isNotBlank() } ?: groupId
+        return render(Event(isJoin, wxid, weNick, groupNick, inviter, tail, groupName))
+    }
+
     private fun draw(ev: Event): Bitmap {
         val who = if (ev.isJoin) "进群者" else "退群者"
         val time = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())

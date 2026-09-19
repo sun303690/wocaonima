@@ -527,12 +527,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
             if (shouldKick) {
                 WeGroupApi.delMember(groupId, memberId)
                 if (shouldBan) banned = saveSet(loadSet(banned) + "$groupId|$memberId")
-                // 踢人后同步发退群卡片（与 sysmsg/diff 路径经 dispatchedRecently 去重，不会重发）
-                joinTimes.remove("$groupId|$memberId")
-                memberSnapshots[groupId]?.remove(memberId)
-                val kickNick = runCatching { WeDatabaseApi.getDisplayName(memberId) }
-                    .getOrNull().orEmpty().ifBlank { memberId }
-                dispatchEvent(groupId, memberId, kickNick, isJoin = false)
+                // 踢人卡片由「群成员行为监控」功能统一发（监听 chatroom 表更新），这里不重复发
             }
             if (shouldHint) {
                 val text = if (verdict.reason == REASON_NIGHT) nightHintText else hintText

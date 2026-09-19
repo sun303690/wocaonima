@@ -2661,6 +2661,7 @@
     <string name="chat_voice_none_selected">沒有選擇語音</string>
     <string name="chat_voice_not_found">語音不存在</string>
     <string name="chat_group_member_left">退出了羣組</string>
+    <string name="chat_group_member_joined">加入了羣組</string>
     <string name="chat_group_member_no_nickname">（無）</string>
     <string name="chat_group_member_nickname_changed">修改羣暱稱：%1$s → %2$s</string>
     <string name="chat_sticker_selected_image_read_failed">無法讀取所選圖片</string>
