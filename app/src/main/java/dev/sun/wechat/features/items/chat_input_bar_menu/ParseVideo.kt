@@ -402,7 +402,7 @@ object ParseVideo : ClickableFeature() {
      */
     private fun handleAutoReply(msgInfo: MessageInfo) {
         try {
-            if (!msgInfo.isInGroupChat) return
+            // 群聊 + 私聊均触发（用户要求好友发抖音链接也自动解析）
             if (msgInfo.type?.isText != true) return
             if (msgInfo.isSelfSender) {
                 // 自己发的也解析（用户要求），但去重依然生效防止循环
