@@ -282,13 +282,12 @@ object ParseVideo : ClickableFeature() {
     }
 
     private fun parseVideo(link: String): Result<VideoParseResult> = runCatching {
-        // 主线路优先：dy.51web.eu.org（多清晰度无水印）；失败/无有效地址自动回退 kit9 聚合解析
-        parseByPrimary(link).getOrElse { primaryError ->
-            WeLogger.w(TAG, "primary parse failed, fallback to backup: ${primaryError.message}")
-            parseByBackup(link).getOrElse { backupError ->
-                // 两条线路都失败：优先抛备用线路错误（其信息更通用），日志保留主线路原因
-                WeLogger.e(TAG, "backup parse also failed", backupError)
-                throw backupError
+        // kit9 聚合解析优先（实测稳定可用）；失败再回退 dy.51web.eu.org（多清晰度，但域名常不稳定/易死）
+        parseByBackup(link).getOrElse { backupError ->
+            WeLogger.w(TAG, "backup parse failed, fallback to primary: ${backupError.message}")
+            parseByPrimary(link).getOrElse { primaryError ->
+                WeLogger.e(TAG, "primary parse also failed", primaryError)
+                throw primaryError
             }
         }
     }
