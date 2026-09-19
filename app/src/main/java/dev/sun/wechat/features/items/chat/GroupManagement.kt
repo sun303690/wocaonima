@@ -482,8 +482,9 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                         groupName = groupName(groupId),
                     )
                     val file = GroupEventCard.render(card) ?: error("card render failed")
-                    WeMessageApi.sendImage(groupId, file.absolutePath)
+                    val ok = WeMessageApi.sendImage(groupId, file.absolutePath)
                     file.delete()
+                    WeLogger.i(TAG, "GM event card sent group=$groupId wxid=$wxid isJoin=$isJoin ok=$ok")
                 }.onFailure { WeLogger.e(TAG, "GM event card failed group=$groupId wxid=$wxid", it) }
             }
             return
@@ -498,8 +499,11 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
         scope.launch { WeMessageApi.sendText(groupId, replaced) }
     }
 
-    private fun xmlTag(xml: String, tag: String): String =
-        Regex("""<$tag>([^<]{1,200})</$tag>""").find(xml)?.groupValues?.get(1)?.trim() ?: ""
+    private fun xmlTag(xml: String, tag: String): String {
+        // 支持 <tag>value</tag> 和 <tag><![CDATA[value]]></tag>（8.0.74 sysmsgtemplate 用 CDATA 包裹）
+        val raw = Regex("""<$tag>([\s\S]{0,800}?)</$tag>""").find(xml)?.groupValues?.get(1)?.trim() ?: ""
+        return raw.removePrefix("<![CDATA[").removeSuffix("]]>").trim()
+    }
 
     /** 新人冷静期：进群后 X 分钟内发消息即触发。 */
     private fun isNewbie(talker: String, sender: String): Boolean {

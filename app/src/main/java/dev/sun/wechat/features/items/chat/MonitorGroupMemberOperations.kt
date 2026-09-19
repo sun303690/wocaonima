@@ -143,8 +143,10 @@ object MonitorGroupMemberOperations : SwitchFeature(), IResolveDex, WeDatabaseLi
         if (file != null) {
             // sendImage 是同步 IO，放后台线程避免阻塞 DB 监听线程
             Thread {
-                runCatching { WeMessageApi.sendImage(group, file.absolutePath) }
+                val ok = runCatching { WeMessageApi.sendImage(group, file.absolutePath) }
                     .onFailure { WeLogger.e(TAG, "send card image failed group=$group wxid=$wxId", it) }
+                    .getOrDefault(false)
+                WeLogger.i(TAG, "MGMO card sent group=$group wxid=$wxId isJoin=$isJoin ok=$ok")
                 file.delete()
             }.start()
             return
