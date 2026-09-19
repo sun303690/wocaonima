@@ -670,6 +670,8 @@
     <string name="aim_process_mode_title">處理範圍</string>
     <string name="aim_configure_blacklist">配置黑名單</string>
     <string name="aim_refresh_interval_label">重新整理間隔（分鐘）</string>
+    <string name="aim_max_age_days_label">只回覆最近 N 天內的動態</string>
+    <string name="aim_max_age_days_desc">依發布天數過濾，0 = 不限制（全部回覆），預設 30 = 超過一個月不回。</string>
     <string name="aim_auto_refresh_title">自動重新整理朋友圈</string>
     <string name="aim_process_mode_seen">刷到時處理</string>
     <string name="aim_selected_count">已選擇 %1$d 項</string>

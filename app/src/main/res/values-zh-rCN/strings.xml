@@ -672,6 +672,8 @@
     <string name="aim_process_mode_title">处理范围</string>
     <string name="aim_configure_blacklist">配置黑名单</string>
     <string name="aim_refresh_interval_label">刷新间隔（分钟）</string>
+    <string name="aim_max_age_days_label">只回复最近 N 天内的朋友圈</string>
+    <string name="aim_max_age_days_desc">按发布天数过滤，0 = 不限制（全部回复），默认 30 = 超过一个月不回。</string>
     <string name="aim_auto_refresh_title">自动刷新朋友圈</string>
     <string name="aim_process_mode_seen">刷到时处理</string>
     <string name="aim_selected_count">已选择 %1$d 项</string>

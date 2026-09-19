@@ -709,6 +709,8 @@
     <string name="aim_process_mode_title">Process scope</string>
     <string name="aim_configure_blacklist">Configure blacklist</string>
     <string name="aim_refresh_interval_label">Refresh interval (min)</string>
+    <string name="aim_max_age_days_label">Only reply to moments within N days</string>
+    <string name="aim_max_age_days_desc">Days since posted. 0 = no limit (reply to all). Default 30 = skip moments older than one month.</string>
     <string name="aim_auto_refresh_title">Auto refresh Moments</string>
     <string name="aim_process_mode_seen">When seen</string>
     <string name="aim_selected_count">Selected %1$d items</string>

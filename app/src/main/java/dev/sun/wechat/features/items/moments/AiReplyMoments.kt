@@ -98,6 +98,7 @@ object AiReplyMoments : ClickableFeature(),
     var replyIntervalMs by WePrefs.prefOption("ai_reply_moments_interval_ms", 0L)
     var autoRefresh by WePrefs.prefOption("ai_reply_moments_auto_refresh", false)
     var refreshIntervalMin by WePrefs.prefOption("ai_reply_moments_refresh_interval_min", 30)
+    var maxAgeDays by WePrefs.prefOption("ai_reply_moments_max_age_days", 30)
 
     private var whitelist: Set<String>
         get() = WePrefs.getStringSetOrDef(KEY_WHITELIST, emptySet())
@@ -218,6 +219,18 @@ object AiReplyMoments : ClickableFeature(),
         if (snsTableId in handledSnsIds) return
         if (!canAttempt(snsTableId)) return
 
+        // 时效过滤：只回最近 maxAgeDays 天内的朋友圈，超过不回；0 = 不限制
+        if (maxAgeDays > 0) {
+            val createdSec = WeMomentsApi.getCreateTimeSeconds(snsInfo)
+            if (createdSec > 0) {
+                val ageDays = (System.currentTimeMillis() / 1000L - createdSec) / 86_400L
+                if (ageDays > maxAgeDays) {
+                    WeLogger.d(TAG, "skip old moment owner=$owner sns=$snsTableId age=${ageDays}d > ${maxAgeDays}d")
+                    return
+                }
+            }
+        }
+
         val content = WeMomentsApi.getContentText(snsInfo).orEmpty().trim()
 
         // 串行化：拿到锁前先粗筛，拿到锁后二次确认（别的协程可能刚评完）。
@@ -331,6 +344,7 @@ object AiReplyMoments : ClickableFeature(),
             var intervalInput by remember { mutableStateOf(replyIntervalMs.toString()) }
             var autoRefreshInput by remember { mutableStateOf(autoRefresh) }
             var refreshIntervalInput by remember { mutableStateOf(refreshIntervalMin.toString()) }
+            var maxAgeInput by remember { mutableStateOf(maxAgeDays.toString()) }
 
             fun openContactPicker(title: String, kind: Int) {
                 // 不关掉设置框, 否则配完名单回来时其它未保存的输入会丢
@@ -414,6 +428,18 @@ object AiReplyMoments : ClickableFeature(),
                                 localizedContext.getString(R.string.aim_refresh_interval_label),
                             ) { it.isDigit() }
                         }
+
+                        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+
+                        TextFieldRow(
+                            maxAgeInput,
+                            { maxAgeInput = it.filter(Char::isDigit) },
+                            localizedContext.getString(R.string.aim_max_age_days_label),
+                        ) { it.isDigit() }
+                        Text(
+                            localizedContext.getString(R.string.aim_max_age_days_desc),
+                            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                        )
                     }
                 },
                 dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.dialog_cancel)) } },
@@ -428,6 +454,7 @@ object AiReplyMoments : ClickableFeature(),
                         replyIntervalMs = intervalInput.toLongOrNull()?.coerceIn(0L, 300_000L) ?: 0L
                         autoRefresh = autoRefreshInput
                         refreshIntervalMin = refreshIntervalInput.toIntOrNull()?.coerceIn(1, 9999) ?: 30
+                        maxAgeDays = maxAgeInput.toIntOrNull()?.coerceIn(0, 36500) ?: 30
                         onDismiss()
                         // 立即应用: 按新模式扫描 + 重建刷新任务
                         if (processMode == MODE_ALL_LOADED) scanCachedMoments()
