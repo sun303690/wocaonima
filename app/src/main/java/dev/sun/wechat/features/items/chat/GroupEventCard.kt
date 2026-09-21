@@ -42,6 +42,7 @@ object GroupEventCard {
     private const val BODY_SIZE = 30
     private const val LINE = 44
     private const val CARD_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000L
+    private const val REAL_NAME_WAIT_MS = 4_000L
 
     private val AVATAR_COLORS = intArrayOf(
         Color.rgb(0, 171, 122),
@@ -66,7 +67,7 @@ object GroupEventCard {
      * 取成员实名（掩码，如 `**辰` / `A*辰`）。数据来自模块已有的实名缓存：
      * [DisplayGroupMemberRealNamesLastChar]（尾字，走 beforetransfer CGI）与
      * [BruteForceGroupMemberRealNamesFirstChar]（首字，爆破）；两者都未命中时返回空串。
-     * 只读缓存，不在此处触发网络请求，避免进退群事件批量打转账 CGI。
+     * 本函数只读缓存；卡片组装用 [resolveRealName]，后者在缓存未命中时会补抓一次。
      */
     fun realName(wxid: String): String {
         if (wxid.isBlank()) return ""
@@ -83,6 +84,18 @@ object GroupEventCard {
             first != null -> "$first?"
             else -> last.orEmpty()
         }
+    }
+
+    /**
+     * 卡片用实名：先读缓存；未命中且「显示群成员实名尾字」已启用时，主动补抓一次并最多等
+     * [REAL_NAME_WAIT_MS]。开关关闭时不补抓（其缓存未加载，写入会覆盖用户已有缓存）。
+     * 必须在非主线程调用。
+     */
+    private fun resolveRealName(wxid: String, groupId: String): String {
+        realName(wxid).takeIf { it.isNotBlank() }?.let { return it }
+        if (wxid.isBlank() || !DisplayGroupMemberRealNamesLastChar.isActive) return ""
+        DisplayGroupMemberRealNamesLastChar.fetchRealNameBlocking(wxid, groupId, REAL_NAME_WAIT_MS)
+        return realName(wxid)
     }
 
     private val avatarCache = HashMap<String, Bitmap>()
@@ -122,7 +135,7 @@ object GroupEventCard {
         } else ""
         val groupName = runCatching { WeDatabaseApi.getGroup(groupId)?.nickname }
             .getOrNull()?.takeIf { it.isNotBlank() } ?: groupId
-        return Event(isJoin, wxid, weNick, groupNick, inviter, realName(wxid), groupName)
+        return Event(isJoin, wxid, weNick, groupNick, inviter, resolveRealName(wxid, groupId), groupName)
     }
 
     /**
