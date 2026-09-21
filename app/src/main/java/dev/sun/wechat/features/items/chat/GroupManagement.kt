@@ -473,7 +473,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                         .getOrNull().orEmpty() else ""
                     val inviter = if (inviterWxid.isBlank() || inviterWxid == wxid) ""
                         else runCatching { WeDatabaseApi.getDisplayName(inviterWxid) }.getOrNull().orEmpty()
-                    val tail = groupNick.ifBlank { nick }.takeIf { it.isNotBlank() }?.takeLast(1).orEmpty()
+                    val tail = GroupEventCard.realName(wxid)
                     val card = GroupEventCard.Event(
                         isJoin = isJoin,
                         wxid = wxid,

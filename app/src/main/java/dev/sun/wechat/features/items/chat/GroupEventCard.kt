@@ -57,9 +57,32 @@ object GroupEventCard {
         val weNick: String,       // %userName% 微信昵称
         val groupNick: String,    // %groupNickname% 群内昵称（空则回退微信昵称）
         val inviter: String,      // %inviter% 邀请人（仅进群）
-        val realNameTail: String, // %realNameTail% 实名尾字
+        val realNameTail: String, // 实名（掩码，如 "**辰"；来源见 [realName]）
         val groupName: String,    // %groupName%
     )
+
+    /**
+     * 取成员实名（掩码，如 `**辰` / `A*辰`）。数据来自模块已有的实名缓存：
+     * [DisplayGroupMemberRealNamesLastChar]（尾字，走 beforetransfer CGI）与
+     * [BruteForceGroupMemberRealNamesFirstChar]（首字，爆破）；两者都未命中时返回空串。
+     * 只读缓存，不在此处触发网络请求，避免进退群事件批量打转账 CGI。
+     */
+    fun realName(wxid: String): String {
+        if (wxid.isBlank()) return ""
+        val last = DisplayGroupMemberRealNamesLastChar
+            .takeIf { it.isActive }?.realNames?.get(wxid)
+        val first = BruteForceGroupMemberRealNamesFirstChar
+            .takeIf { it.isActive }?.realNames?.get(wxid)
+        return when {
+            first != null && last != null -> {
+                val tail = last.last()
+                val middle = last.dropLast(1)
+                if (middle.isEmpty()) "$first$tail" else "$first*$tail"
+            }
+            first != null -> "$first?"
+            else -> last.orEmpty()
+        }
+    }
 
     private val avatarCache = HashMap<String, Bitmap>()
 
@@ -98,7 +121,7 @@ object GroupEventCard {
             if (inviterWxid.isBlank() || inviterWxid == wxid) ""
             else runCatching { WeDatabaseApi.getDisplayName(inviterWxid) }.getOrNull().orEmpty()
         } else ""
-        val tail = groupNick.ifBlank { weNick }.takeIf { it.isNotBlank() }?.takeLast(1).orEmpty()
+        val tail = realName(wxid)
         val groupName = runCatching { WeDatabaseApi.getGroup(groupId)?.nickname }
             .getOrNull()?.takeIf { it.isNotBlank() } ?: groupId
         return render(Event(isJoin, wxid, weNick, groupNick, inviter, tail, groupName))
@@ -122,12 +145,12 @@ object GroupEventCard {
         val time = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
         val body = buildList {
             add("时间：$time")
-            add("群昵称：${ev.groupName}")
+            add("群名称：${ev.groupName}")
             add("${who}微信昵称：${ev.weNick}")
             add("${who}群内昵称：${ev.groupNick.ifBlank { ev.weNick }}")
             add("${who}ID：${ev.wxid.ifBlank { "未知" }}")
             if (ev.isJoin && ev.inviter.isNotBlank()) add("邀请人：${ev.inviter}")
-            add("实名尾字：${ev.realNameTail.ifBlank { "-" }}")
+            add("实名：${ev.realNameTail.ifBlank { "-" }}")
         }
         val h = PAD + TITLE_SIZE + 26 + body.size * LINE + PAD
         val bmp = Bitmap.createBitmap(W, h, Bitmap.Config.ARGB_8888)
