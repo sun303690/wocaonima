@@ -90,6 +90,7 @@ import kotlin.io.path.readBytes
 import kotlin.io.path.setLastModifiedTime
 import kotlin.io.path.writeBytes
 import kotlin.random.Random
+import dev.sun.wechat.features.items.chat.FakeVoiceDuration
 
 
 @SuppressLint("DiscouragedApi")
@@ -1543,6 +1544,11 @@ object WeMessageApi : ApiFeature(), IResolveDex {
     }
 
     fun sendVoice(toUser: String, path: String, durationMs: Int): Boolean {
+        // 统一伪装语音时长：只要设置了 fakeDurationMs>0，就覆盖所有发送路径（录音/TTS/面板/转发）传入的时长
+        val effectiveDurationMs = FakeVoiceDuration.fakeDurationMs()
+            .takeIf { it > 0L }
+            ?.toInt()
+            ?: durationMs
         var succeeded = runCatching {
             // 准备文件
             val fileName = voiceNameGenMethod.invoke(getReceiverForMethod(voiceNameGenMethod), toUser, "amr_") as? String
@@ -1556,7 +1562,7 @@ object WeMessageApi : ApiFeature(), IResolveDex {
             if (!copyFileViaVfs(path, destFullPath)) return false
 
             // 设置语音信息
-            val finalDurationMs = durationMs.coerceIn(1, 60_000)
+            val finalDurationMs = effectiveDurationMs.coerceIn(1, 60_000)
             val setVoiceResult = setVoice(fileName, finalDurationMs)
 
             if (!setVoiceResult) {
@@ -1579,7 +1585,7 @@ object WeMessageApi : ApiFeature(), IResolveDex {
 
             Path(path).copyTo(Path(fullPath), StandardCopyOption.REPLACE_EXISTING)
 
-            val actualDuration = if (durationMs > 60000) 60000 else durationMs
+            val actualDuration = if (effectiveDurationMs > 60000) 60000 else effectiveDurationMs
 
             setVoice(partialPath, actualDuration)
 
