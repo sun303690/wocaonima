@@ -163,10 +163,8 @@ object GroupEventCard {
         val title = if (ev.isJoin) "进群通知" else "退群通知"
         val who = if (ev.isJoin) "进群者" else "退群者"
         val des = buildString {
-            append("群名称：").append(ev.groupName)
-            append('\n').append(who).append("：").append(ev.weNick)
-            append("（").append(ev.wxid.ifBlank { "未知" }).append("）")
-            if (ev.isJoin && ev.inviter.isNotBlank()) append("  邀请人：").append(ev.inviter)
+            append(who).append("群内昵称：").append(ev.groupNick.ifBlank { ev.weNick })
+            append('\n').append(who).append("ID：").append(ev.wxid.ifBlank { "未知" })
             append('\n').append("实名：").append(ev.realNameTail.ifBlank { "-" })
         }
         val avatarUrl = runCatching { WeDatabaseApi.getAvatarUrl(ev.wxid) }.getOrNull().orEmpty()
