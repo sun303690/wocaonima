@@ -199,20 +199,28 @@ object MonitorGroupMemberOperations : SwitchFeature(), IResolveDex, WeDatabaseLi
             if (oldName == newName) return@forEach
 
             val displayName = WeDatabaseApi.getDisplayName(wxId)
-            val displayString = if (displayName.isNotEmpty()) "$displayName ($wxId)" else wxId
-
             val oldShow = oldName.ifEmpty { localizedChatString(R.string.chat_group_member_no_nickname) }
             val newShow = newName.ifEmpty { localizedChatString(R.string.chat_group_member_no_nickname) }
 
-            val href = "weixin://weixinhongbao/wekit/chatroom_userinfo/$wxId"
-            val content = """<_wc_custom_link_ color="#28C445" href="$href">$displayString</_wc_custom_link_> ${localizedChatString(R.string.chat_group_member_nickname_changed, oldShow, newShow)}"""
+            // 改名提醒：优先发 AppMsg 改名卡；头像/卡发不出去时回退文本系统消息
+            Thread {
+                val sent = runCatching {
+                    GroupEventCard.sendRenameAppMsg(group, wxId, displayName, oldShow, newShow)
+                }.onFailure { WeLogger.e(TAG, "rename appmsg failed group=$group wxid=$wxId", it) }
+                    .getOrDefault(false)
+                WeLogger.i(TAG, "MGMO rename card group=$group wxid=$wxId sent=$sent")
+                if (sent) return@Thread
 
-            WeMessageApi.createSimpleMsgInfoAndInsert(
-                type = MessageType.SYSTEM.code,
-                talker = group,
-                content = content,
-                currentTime = System.currentTimeMillis()
-            )
+                val displayString = if (displayName.isNotEmpty()) "$displayName ($wxId)" else wxId
+                val href = "weixin://weixinhongbao/wekit/chatroom_userinfo/$wxId"
+                val content = """<_wc_custom_link_ color="#28C445" href="$href">$displayString</_wc_custom_link_> ${localizedChatString(R.string.chat_group_member_nickname_changed, oldShow, newShow)}"""
+                WeMessageApi.createSimpleMsgInfoAndInsert(
+                    type = MessageType.SYSTEM.code,
+                    talker = group,
+                    content = content,
+                    currentTime = System.currentTimeMillis()
+                )
+            }.start()
         }
     }
 
