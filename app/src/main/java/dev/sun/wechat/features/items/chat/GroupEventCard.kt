@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
+import dev.sun.wechat.features.api.core.WeAppMsgApi
 import dev.sun.wechat.features.api.core.WeDatabaseApi
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.fs.KnownPaths
@@ -108,11 +109,9 @@ object GroupEventCard {
     }
 
     /**
-     * 便捷入口：给定群ID、成员wxid、微信昵称、是否进群，
-     * 内部解析群内昵称/邀请人/实名尾字/群名，渲染卡片返回临时文件。
-     * 调用方负责 [WeMessageApi.sendImage] 发出后删除文件。
+     * 组装进退群事件（解析群内昵称/邀请人/实名/群名），图片卡片与图文卡片共用。
      */
-    fun renderEvent(groupId: String, wxid: String, weNick: String, isJoin: Boolean): File? {
+    fun buildEvent(groupId: String, wxid: String, weNick: String, isJoin: Boolean): Event {
         val groupNick = runCatching { WeDatabaseApi.getGroupMemberDisplayName(groupId, wxid) }
             .getOrNull().orEmpty()
         val inviter = if (isJoin) {
@@ -121,10 +120,70 @@ object GroupEventCard {
             if (inviterWxid.isBlank() || inviterWxid == wxid) ""
             else runCatching { WeDatabaseApi.getDisplayName(inviterWxid) }.getOrNull().orEmpty()
         } else ""
-        val tail = realName(wxid)
         val groupName = runCatching { WeDatabaseApi.getGroup(groupId)?.nickname }
             .getOrNull()?.takeIf { it.isNotBlank() } ?: groupId
-        return render(Event(isJoin, wxid, weNick, groupNick, inviter, tail, groupName))
+        return Event(isJoin, wxid, weNick, groupNick, inviter, realName(wxid), groupName)
+    }
+
+    /**
+     * 图片卡片入口：组装事件后渲染为 PNG 临时文件。调用方用 [WeMessageApi.sendImage] 发出，
+     * 并在发出后延迟删除（见调用点的 CARD_FILE_KEEP_MS）。
+     */
+    fun renderEvent(groupId: String, wxid: String, weNick: String, isJoin: Boolean): File? =
+        render(buildEvent(groupId, wxid, weNick, isJoin))
+
+    /**
+     * 图文卡片入口：以微信 AppMsg（`type=5` 链接卡）发出进退群通知——标题+字段在左侧、
+     * 成员头像在右侧，点击卡片打开该成员头像 URL。返回 false 表示未发出，调用方回退到
+     * [renderEvent] 的图片卡片。
+     */
+    fun sendEventAppMsg(groupId: String, wxid: String, weNick: String, isJoin: Boolean): Boolean =
+        sendAppMsg(groupId, buildEvent(groupId, wxid, weNick, isJoin))
+
+    /** 见 [sendEventAppMsg]。头像 URL 取不到时直接返回 false，由调用方回退图片卡片。 */
+    fun sendAppMsg(toUser: String, ev: Event): Boolean {
+        val title = if (ev.isJoin) "进群通知" else "退群通知"
+        val who = if (ev.isJoin) "进群者" else "退群者"
+        val des = buildString {
+            append("时间：").append(SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date()))
+            append('\n').append("群名称：").append(ev.groupName)
+            append('\n').append(who).append("微信昵称：").append(ev.weNick)
+            append('\n').append(who).append("群内昵称：").append(ev.groupNick.ifBlank { ev.weNick })
+            append('\n').append(who).append("ID：").append(ev.wxid.ifBlank { "未知" })
+            if (ev.isJoin && ev.inviter.isNotBlank()) append('\n').append("邀请人：").append(ev.inviter)
+            append('\n').append("实名：").append(ev.realNameTail.ifBlank { "-" })
+        }
+        val avatarUrl = runCatching { WeDatabaseApi.getAvatarUrl(ev.wxid) }.getOrNull().orEmpty()
+        if (!avatarUrl.startsWith("http")) return false
+        val thumb = fetchBytes(avatarUrl) ?: return false
+        val xml = buildLinkCardXml(title, des, avatarUrl, avatarUrl)
+        return WeAppMsgApi.sendXmlAppMsg(toUser, title, "", avatarUrl, thumb, xml)
+    }
+
+    /** 微信链接卡（AppMsg type=5）：`url` 即点击后打开的地址（此处为该成员头像 URL）。 */
+    private fun buildLinkCardXml(title: String, des: String, url: String, thumbUrl: String): String =
+        buildString {
+            append("<msg><appmsg appid=\"\" sdkver=\"0\">")
+            append("<title>").append(xmlEscape(title)).append("</title>")
+            append("<des>").append(xmlEscape(des)).append("</des>")
+            append("<action>view</action><type>5</type><showtype>0</showtype>")
+            append("<url>").append(xmlEscape(url)).append("</url>")
+            append("<thumburl>").append(xmlEscape(thumbUrl)).append("</thumburl>")
+            append("</appmsg></msg>")
+        }
+
+    private fun xmlEscape(s: String): String =
+        s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    private fun fetchBytes(url: String): ByteArray? = try {
+        val conn = URL(url).openConnection() as HttpURLConnection
+        conn.connectTimeout = 4000
+        conn.readTimeout = 4000
+        conn.instanceFollowRedirects = true
+        if (conn.responseCode != 200) null else conn.inputStream.use { it.readBytes() }
+    } catch (t: Throwable) {
+        WeLogger.w(TAG, "avatar bytes fetch failed: ${t.message}")
+        null
     }
 
     /** 清理 24h 前残留的 gmev-*.png（进程被杀 / 延时删除没跑时的兜底）。 */

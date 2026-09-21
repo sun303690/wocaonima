@@ -466,24 +466,17 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
         dispatchedRecently[dkey] = now
         if (cardEnabled) {
             scope.launch {
+                val ev = GroupEventCard.buildEvent(groupId, wxid, nick, isJoin)
+                val sent = runCatching { GroupEventCard.sendAppMsg(groupId, ev) }
+                    .onFailure { WeLogger.e(TAG, "GM event appmsg failed group=$groupId wxid=$wxid", it) }
+                    .getOrDefault(false)
+                if (sent) {
+                    WeLogger.i(TAG, "GM event appmsg sent group=$groupId wxid=$wxid isJoin=$isJoin")
+                    return@launch
+                }
+                // 图文卡片发不出去时回退到图片卡片
                 runCatching {
-                    val groupNick = runCatching { WeDatabaseApi.getGroupMemberDisplayName(groupId, wxid) }
-                        .getOrNull().orEmpty()
-                    val inviterWxid = if (isJoin) runCatching { WeDatabaseApi.getGroupMemberInviter(groupId, wxid) }
-                        .getOrNull().orEmpty() else ""
-                    val inviter = if (inviterWxid.isBlank() || inviterWxid == wxid) ""
-                        else runCatching { WeDatabaseApi.getDisplayName(inviterWxid) }.getOrNull().orEmpty()
-                    val tail = GroupEventCard.realName(wxid)
-                    val card = GroupEventCard.Event(
-                        isJoin = isJoin,
-                        wxid = wxid,
-                        weNick = nick,
-                        groupNick = groupNick,
-                        inviter = inviter,
-                        realNameTail = tail,
-                        groupName = groupName(groupId),
-                    )
-                    val file = GroupEventCard.render(card) ?: error("card render failed")
+                    val file = GroupEventCard.render(ev) ?: error("card render failed")
                     val submitted = WeMessageApi.sendImage(groupId, file.absolutePath)
                     if (submitted) {
                         // 上传是异步的：给足时间让微信读走 PNG 再删，否则文件消失导致发送失败
@@ -496,7 +489,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                     }
                     WeLogger.i(
                         TAG,
-                        "GM event card submitted group=$groupId wxid=$wxid isJoin=$isJoin " +
+                        "GM event image fallback group=$groupId wxid=$wxid isJoin=$isJoin " +
                             "submitted=$submitted file=${file.name}",
                     )
                 }.onFailure { WeLogger.e(TAG, "GM event card failed group=$groupId wxid=$wxid", it) }

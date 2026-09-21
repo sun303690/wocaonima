@@ -136,21 +136,40 @@ object MonitorGroupMemberOperations : SwitchFeature(), IResolveDex, WeDatabaseLi
         }
     }
 
-    /** 渲染进退群卡片图片并发到群里；渲染失败回退原文本系统消息。 */
+    /**
+     * 发进退群通知：优先图文卡片（标题+字段+可点击成员头像），
+     * 其次图片卡片，最后回退原文本系统消息。
+     */
     private fun dispatchCard(group: String, wxId: String, displayName: String, isJoin: Boolean) {
         val name = displayName.ifBlank { wxId }
+        // 图文卡片要拉头像，放后台线程避免阻塞 DB 监听线程
+        Thread {
+            val sent = runCatching { GroupEventCard.sendEventAppMsg(group, wxId, name, isJoin) }
+                .onFailure { WeLogger.e(TAG, "card appmsg failed group=$group wxid=$wxId", it) }
+                .getOrDefault(false)
+            WeLogger.i(TAG, "MGMO card appmsg group=$group wxid=$wxId isJoin=$isJoin sent=$sent")
+            if (sent) return@Thread
+            dispatchImageCard(group, wxId, name, displayName, isJoin)
+        }.start()
+    }
+
+    /** 图片卡片回退；渲染失败再回退文本系统消息。 */
+    private fun dispatchImageCard(
+        group: String,
+        wxId: String,
+        name: String,
+        displayName: String,
+        isJoin: Boolean,
+    ) {
         val file = GroupEventCard.renderEvent(group, wxId, name, isJoin)
         if (file != null) {
-            // sendImage 只提交发送任务，放后台线程避免阻塞 DB 监听线程
-            Thread {
-                val submitted = runCatching { WeMessageApi.sendImage(group, file.absolutePath) }
-                    .onFailure { WeLogger.e(TAG, "send card image failed group=$group wxid=$wxId", it) }
-                    .getOrDefault(false)
-                WeLogger.i(TAG, "MGMO card submitted group=$group wxid=$wxId isJoin=$isJoin submitted=$submitted")
-                // 上传是异步的：等微信读走 PNG 再删，否则文件消失导致发送失败
-                if (submitted) Thread.sleep(5_000L)
-                runCatching { file.delete() }
-            }.start()
+            val submitted = runCatching { WeMessageApi.sendImage(group, file.absolutePath) }
+                .onFailure { WeLogger.e(TAG, "send card image failed group=$group wxid=$wxId", it) }
+                .getOrDefault(false)
+            WeLogger.i(TAG, "MGMO card image group=$group wxid=$wxId isJoin=$isJoin submitted=$submitted")
+            // 上传是异步的：等微信读走 PNG 再删，否则文件消失导致发送失败
+            if (submitted) Thread.sleep(5_000L)
+            runCatching { file.delete() }
             return
         }
         // 卡片渲染失败，回退文本系统消息
