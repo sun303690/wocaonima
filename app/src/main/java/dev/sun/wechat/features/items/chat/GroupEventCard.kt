@@ -153,17 +153,20 @@ object GroupEventCard {
     fun sendEventAppMsg(groupId: String, wxid: String, weNick: String, isJoin: Boolean): Boolean =
         sendAppMsg(groupId, buildEvent(groupId, wxid, weNick, isJoin))
 
-    /** 见 [sendEventAppMsg]。头像 URL 取不到时直接返回 false，由调用方回退图片卡片。 */
+    /**
+     * 见 [sendEventAppMsg]。头像 URL 取不到时直接返回 false，由调用方回退图片卡片。
+     *
+     * 字段区只放 3 行：微信链接卡只渲染卡片高度能容纳的行数，超出部分（含最后一行）会被
+     * 截掉，所以字段必须压缩，且把 `实名` 放在第 3 行保证可见。
+     */
     fun sendAppMsg(toUser: String, ev: Event): Boolean {
         val title = if (ev.isJoin) "进群通知" else "退群通知"
         val who = if (ev.isJoin) "进群者" else "退群者"
         val des = buildString {
-            append("时间：").append(SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date()))
-            append('\n').append("群名称：").append(ev.groupName)
-            append('\n').append(who).append("微信昵称：").append(ev.weNick)
-            append('\n').append(who).append("群内昵称：").append(ev.groupNick.ifBlank { ev.weNick })
-            append('\n').append(who).append("ID：").append(ev.wxid.ifBlank { "未知" })
-            if (ev.isJoin && ev.inviter.isNotBlank()) append('\n').append("邀请人：").append(ev.inviter)
+            append("群名称：").append(ev.groupName)
+            append('\n').append(who).append("：").append(ev.weNick)
+            append("（").append(ev.wxid.ifBlank { "未知" }).append("）")
+            if (ev.isJoin && ev.inviter.isNotBlank()) append("  邀请人：").append(ev.inviter)
             append('\n').append("实名：").append(ev.realNameTail.ifBlank { "-" })
         }
         val avatarUrl = runCatching { WeDatabaseApi.getAvatarUrl(ev.wxid) }.getOrNull().orEmpty()
