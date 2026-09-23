@@ -282,12 +282,12 @@ object ParseVideo : ClickableFeature() {
     }
 
     private fun parseVideo(link: String): Result<VideoParseResult> = runCatching {
-        // kit9 聚合解析优先（实测稳定可用）；失败再回退 dy.51web.eu.org（多清晰度，但域名常不稳定/易死）
-        parseByBackup(link).getOrElse { backupError ->
-            WeLogger.w(TAG, "backup parse failed, fallback to primary: ${backupError.message}")
-            parseByPrimary(link).getOrElse { primaryError ->
-                WeLogger.e(TAG, "primary parse also failed", primaryError)
-                throw primaryError
+        // dy.51web.eu.org 优先（用户指定抖音解析接口，多清晰度无水印）；失败再回退 kit9 聚合解析
+        parseByPrimary(link).getOrElse { primaryError ->
+            WeLogger.w(TAG, "primary(dy.51web) parse failed, fallback to kit9: ${primaryError.message}")
+            parseByBackup(link).getOrElse { backupError ->
+                WeLogger.e(TAG, "backup(kit9) parse also failed", backupError)
+                throw backupError
             }
         }
     }
