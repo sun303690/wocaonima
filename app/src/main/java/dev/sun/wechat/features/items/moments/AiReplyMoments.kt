@@ -239,13 +239,12 @@ object AiReplyMoments : ClickableFeature(),
         // 串行化：拿到锁前先粗筛，拿到锁后二次确认（别的协程可能刚评完）。
         processMutex.withLock {
             if (snsTableId in handledSnsIds) return@withLock
-            // 先标记已处理：无论后续生成/发送成功失败，每条朋友圈只尝试一次，
-            // 不再跨天重复评论（持久化到 KEY_COMMENTED，重启也不重试）。
-            handledSnsIds.add(snsTableId)
-            persistCommented()
 
             val text = runCatching { generateComment(content) }.getOrNull()?.trim().orEmpty()
-            if (text.isBlank()) return@withLock
+            if (text.isBlank()) {
+                WeLogger.w(TAG, "generate comment empty/failed (will retry later) owner=$owner sns=$snsTableId")
+                return@withLock
+            }
 
             val result = synchronized(actionLock) {
                 if (replyIntervalMs > 0L) {
@@ -257,9 +256,13 @@ object AiReplyMoments : ClickableFeature(),
                 r
             }
             if (result.success) {
+                // 评论成功才标记已处理并持久化：每条朋友圈只评论一次，跨重启也不重复
+                handledSnsIds.add(snsTableId)
+                persistCommented()
                 WeLogger.i(TAG, "AI commented moments owner=$owner sns=$snsTableId")
             } else {
-                WeLogger.w(TAG, "AI comment failed (won't retry, marked done) owner=$owner sns=$snsTableId msg=${result.message}")
+                // 失败不标记 → 下次扫描可重试（受 canAttempt 30s 窗口限制），避免永久漏回新朋友圈
+                WeLogger.w(TAG, "AI comment failed (will retry) owner=$owner sns=$snsTableId msg=${result.message}")
             }
         }
     }
