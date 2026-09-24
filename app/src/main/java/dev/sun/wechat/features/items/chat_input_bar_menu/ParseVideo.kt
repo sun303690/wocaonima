@@ -432,9 +432,6 @@ object ParseVideo : ClickableFeature() {
     /** 真正执行解析 + 下载 + 发送。所有流程在地线程执行, 调用方已持锁。 */
     private suspend fun doAutoReply(talker: String, link: String) {
         val context = HostInfo.application
-        // 1. 先回复「解析中...」
-        runCatching { WeMessageApi.sendText(talker, "解析中...") }
-            .onFailure { WeLogger.w(TAG, "send parsing hint failed", it) }
         val result = runCatching {
             withContext(Dispatchers.IO) {
                 val parsed = parseVideo(link).getOrElse { throw it }
