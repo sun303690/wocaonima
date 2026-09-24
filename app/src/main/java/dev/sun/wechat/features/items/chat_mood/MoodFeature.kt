@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -61,6 +62,12 @@ object MoodFeature : ClickableFeature() {
             var modelId by remember { mutableStateOf(MoodTransport.modelId) }
             var showBadge by remember { mutableStateOf(MoodAnalyzer.showBadge) }
             var models by remember { mutableStateOf(listOf<ModelEntity>()) }
+            // Jev 渠道配置
+            var jevOn by remember { mutableStateOf(MoodTransport.jevEnabled) }
+            var jevProvider by remember { mutableStateOf(MoodTransport.jevProviderId) }
+            var jevKey by remember { mutableStateOf(MoodTransport.jevKey) }
+            var jevEndpoint by remember { mutableStateOf(MoodTransport.jevEndpoint) }
+            var jevModel by remember { mutableStateOf(MoodTransport.jevModel) }
             LaunchedEffect(Unit) { runCatching { models = WeAgentRepository.observeModels().first() } }
 
             AlertDialogContent(
@@ -86,6 +93,35 @@ object MoodFeature : ClickableFeature() {
 
                         HorizontalDivider()
 
+                        // Jev/TypeSafe 渠道（言外模型）
+                        Row2("使用 Jev/TypeSafe 模型", jevOn) { jevOn = it }
+                        if (jevOn) {
+                            val jevOpts = JevProvider.entries.map { DropdownOption(it.id, it.label) }
+                            DropDownMenuWidget(
+                                title = "Jev 渠道",
+                                description = JevProvider.entries.firstOrNull { it.id == jevProvider }?.label ?: jevProvider,
+                                value = jevProvider,
+                                options = jevOpts,
+                                enabled = true,
+                                onValueChange = { jevProvider = it },
+                            )
+                            OutlinedTextField(
+                                value = jevKey,
+                                onValueChange = { jevKey = it },
+                                label = { Text("Jev API Key") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                            )
+                            if (jevProvider == "custom") {
+                                OutlinedTextField(value = jevEndpoint, onValueChange = { jevEndpoint = it },
+                                    label = { Text("接口地址") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                                OutlinedTextField(value = jevModel, onValueChange = { jevModel = it },
+                                    label = { Text("模型名") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                            }
+                        }
+
+                        HorizontalDivider()
+
                         // 气泡下显示情绪卡
                         Column {
                             Row2("显示情绪卡", showBadge) { showBadge = it }
@@ -95,6 +131,11 @@ object MoodFeature : ClickableFeature() {
                 confirmButton = {
                     TextButton(onClick = {
                         MoodTransport.modelId = modelId
+                        MoodTransport.jevEnabled = jevOn
+                        MoodTransport.jevProviderId = jevProvider
+                        MoodTransport.jevKey = jevKey.trim()
+                        MoodTransport.jevEndpoint = jevEndpoint.trim()
+                        MoodTransport.jevModel = jevModel.trim()
                         MoodAnalyzer.showBadge = showBadge
                         onDismiss()
                     }) { Text(stringResource(R.string.dialog_confirm)) }
