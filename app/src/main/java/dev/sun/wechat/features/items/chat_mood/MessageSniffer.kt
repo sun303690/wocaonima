@@ -22,10 +22,9 @@ object MessageSniffer {
         override fun onMessageViewAttached(view: View, message: MessageInfo) {
             try {
                 if (!MoodAnalyzer.enabled) return
-                if (message.type?.isText != true) return
+                if (message.type?.isText != true) return  // 非纯文字(图片/语音/文件/视频/链接/引用)不参与
                 val talker = message.talker
-                val text = message.humanReadableRepr.trim()
-                if (text.isEmpty()) return
+                val text = MessagePolicy.textOrNull(message.humanReadableRepr) ?: return  // 空/超长不算正确文字
                 val speaker = if (message.isSend != 0) "我" else "对方"
                 val deque = recentByTalker.getOrPut(talker) { ArrayDeque() }
                 deque.addLast(speaker to text)
