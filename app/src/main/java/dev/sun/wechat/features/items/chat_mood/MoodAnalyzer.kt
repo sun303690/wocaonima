@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * 分析调度器（对应 Yanwai SignalAnalyzer）：
@@ -22,8 +23,15 @@ object MoodAnalyzer {
     private val slots = Semaphore(2)
     private val failures = ConcurrentHashMap<String, Long>()
     private val failureMessages = ConcurrentHashMap<String, String>()
+    private val refreshListeners = CopyOnWriteArrayList<() -> Unit>()
 
     var enabled by WePrefs.prefOption("mood_enabled", false)
+    var showBadge by WePrefs.prefOption("mood_show_badge", true)
+    val header = "言外 · 情绪分析"
+
+    /** 界面层注册：某条消息分析完成/失败时触发重绘。 */
+    fun onRefresh(l: () -> Unit) { refreshListeners.add(l) }
+    fun refresh() { refreshListeners.forEach { runCatching { it.invoke() } } }
 
     fun failure(key: String): String? = failureMessages[key]
     fun retryFailure(key: String) {
@@ -48,6 +56,7 @@ object MoodAnalyzer {
                     val mood = MoodTransport.analyze(input) { visible() }
                     MoodStore.complete(key, mood)
                     failures.remove(key); failureMessages.remove(key)
+                    refresh()
                 }
             } catch (e: CancellationException) {
                 MoodStore.release(key)
@@ -55,6 +64,7 @@ object MoodAnalyzer {
                 failures[key] = System.currentTimeMillis()
                 failureMessages[key] = e.message ?: "分析失败，请稍后重试"
                 MoodStore.release(key)
+                refresh()
                 WeLogger.e(TAG, "分析失败 key=$key: ${e.message}")
             }
         }
