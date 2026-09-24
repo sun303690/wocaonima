@@ -20,7 +20,8 @@ import java.util.concurrent.CopyOnWriteArrayList
 object MoodAnalyzer {
     private val TAG = "MoodAnalyzer"
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val slots = Semaphore(2)
+    // Semaphore(1) 串行化：低 RPM 的 API 并发分析(每次2轮调用)也易打爆，先全串行
+    private val slots = Semaphore(1)
     private val failures = ConcurrentHashMap<String, Long>()
     private val failureMessages = ConcurrentHashMap<String, String>()
     private val refreshListeners = CopyOnWriteArrayList<() -> Unit>()

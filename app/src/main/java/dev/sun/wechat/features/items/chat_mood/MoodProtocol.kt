@@ -168,9 +168,12 @@ object MoodProtocol {
     }
 
     fun extractJson(body: String): String {
-        val start = body.indexOf('{')
-        val end = body.lastIndexOf('}')
-        require(start >= 0 && end > start) { "模型未返回 JSON" }
-        return body.substring(start, end + 1)
+        var b = body.trim()
+        // 剥 markdown 代码块围栏：```json ... ``` 或 ``` ... ```
+        b = b.replace(Regex("^```(?:json)?\\s*|```\\s*$"), "").trim()
+        val start = b.indexOf('{')
+        val end = b.lastIndexOf('}')
+        require(start >= 0 && end > start) { "模型未返回 JSON: ${body.take(200)}" }
+        return b.substring(start, end + 1)
     }
 }
