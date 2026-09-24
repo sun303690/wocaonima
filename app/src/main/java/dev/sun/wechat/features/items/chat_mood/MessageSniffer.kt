@@ -1,5 +1,7 @@
 package dev.sun.wechat.features.items.chat_mood
 
+import android.app.Activity
+import android.content.ContextWrapper
 import android.view.View
 import dev.sun.wechat.features.api.core.models.MessageInfo
 import dev.sun.wechat.features.api.ui.WeChatMessageViewApi
@@ -41,6 +43,8 @@ object MessageSniffer {
                 )
                 MoodAnalyzer.submit(input) { view.isShown }
                 BubbleDecorator.show(view, input)
+                // 确保聊天页右上角「绘制」开关已注入
+                viewActivity(view)?.let { ChatMoodHostUi.show(it, MoodAnalyzer.header) }
             } catch (t: Throwable) {
                 WeLogger.e(TAG, "onMessageViewAttached failed", t)
             }
@@ -48,6 +52,19 @@ object MessageSniffer {
 
         override fun onMessageViewDetached(view: View, message: MessageInfo) = BubbleDecorator.clear(view)
         override fun onMessageViewRecycled(view: View, message: MessageInfo) = BubbleDecorator.clear(view)
+    }
+
+    /** 右上角开关切换后触发：卡片在后续消息绑定/滚动时按 showBadge 重新绘制。 */
+    fun refresh() {}
+
+    /** 从 View 的 context 链里解析宿主 Activity。 */
+    private fun viewActivity(v: View): Activity? {
+        var ctx = v.context
+        while (ctx is ContextWrapper) {
+            if (ctx is Activity) return ctx
+            ctx = ctx.baseContext
+        }
+        return ctx as? Activity
     }
 
     /** 幂等订阅一次；由 MoodFeature 在启用时调用。 */
