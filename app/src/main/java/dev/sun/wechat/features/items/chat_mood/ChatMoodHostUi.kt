@@ -1,7 +1,6 @@
 package dev.sun.wechat.features.items.chat_mood
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.os.Handler
 import android.os.Looper
 import android.text.TextUtils
@@ -96,6 +95,8 @@ object ChatMoodHostUi {
                 MoodFeature.onClick(comp)
             }.onFailure { WeLogger.e(TAG, "open settings failed", it) }
         }
+
+        private fun dp(n: Int) = (n * activity.resources.displayMetrics.density).toInt()
     }
 
     /** 由 MessageSniffer 在每条消息视图绑定后调用，确保右上角开关已注入。 */
@@ -110,7 +111,7 @@ object ChatMoodHostUi {
         }
     }
 
-    private fun descendants(root: ViewGroup): List<View> {
+    private fun descendants(root: View): List<View> {
         val out = ArrayList<View>()
         fun walk(v: View, depth: Int) {
             if (depth > 14 || out.size > 500) return
@@ -120,6 +121,4 @@ object ChatMoodHostUi {
         walk(root, 0)
         return out
     }
-
-    private fun dp(view: View, n: Int) = (n * view.resources.displayMetrics.density).toInt()
 }
