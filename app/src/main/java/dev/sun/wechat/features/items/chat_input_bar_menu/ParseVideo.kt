@@ -60,9 +60,6 @@ import dev.sun.wechat.ui.content.m3.SwitchWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.AndroidAudioDecoder
 import dev.sun.wechat.utils.AudioUtils
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import dev.sun.wechat.utils.HostInfo
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.copyToClipboard
@@ -462,32 +459,10 @@ object ParseVideo : ClickableFeature() {
                     delay(200_000L)
                     runCatching { out.delete() }
                 }
-                // 2. 视频发完后补发视频信息（发布地址/发布时间/视频时长/作者）
-                val info = buildVideoInfo(link, data, out)
-                if (info.isNotBlank()) WeMessageApi.sendText(talker, info)
             }
         }
         if (result.isFailure) {
             WeLogger.e(TAG, "auto reply failed", result.exceptionOrNull() ?: error("auto reply failed"))
-        }
-    }
-
-    /** 组装视频信息文本：发布地址/发布时间/视频时长/作者。 */
-    private fun buildVideoInfo(link: String, data: VideoData, videoFile: java.io.File): String {
-        val publishTime = if (data.video_time > 0) {
-            runCatching {
-                SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-                    .format(Date(data.video_time * 1000L))
-            }.getOrDefault("未知")
-        } else "未知"
-        val durationSec = runCatching { AudioUtils.getDurationMs(videoFile.absolutePath) / 1000L }
-            .getOrDefault(0L)
-        val author = data.author?.name?.takeIf { it.isNotBlank() } ?: ""
-        return buildString {
-            append("视频信息：")
-            append('\n').append("发布时间：").append(publishTime)
-            append('\n').append("视频时长：").append(if (durationSec > 0) "${durationSec}秒" else "未知")
-            if (author.isNotBlank()) append('\n').append("作者：").append(author)
         }
     }
 
