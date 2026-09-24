@@ -5,7 +5,7 @@ import dev.sun.wechat.agent.model.LlmClient
 import dev.sun.wechat.agent.model.LlmMessage
 import dev.sun.wechat.agent.model.LlmRequest
 import dev.sun.wechat.agent.model.LlmStreamEvent
-import dev.sun.wechat.agent.model.ModelEntity
+import dev.sun.wechat.agent.data.entity.ModelEntity
 import dev.sun.wechat.agent.model.ModelProviderManager
 import dev.sun.wechat.preferences.WePrefs
 import kotlinx.coroutines.Dispatchers
