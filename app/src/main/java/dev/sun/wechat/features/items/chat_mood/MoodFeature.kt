@@ -32,7 +32,7 @@ import dev.sun.wechat.utils.WeLogger
 import kotlinx.coroutines.flow.first
 
 /**
- * 言外·情绪分析：文字气泡下方显示情绪 / 潜台词 / 沟通建议。
+ * 情绪分析：文字气泡下方显示情绪 / 潜台词 / 沟通建议。
  * 对应 Yanwai 的 MessageSniffer + BubbleDecorator。走 KSP FeaturesScanner 自动注册。
  * 点击可配置情绪分析使用的 AI 模型（mood_model_id，空 = 用 WeAgent 默认）。
  */
