@@ -60,6 +60,9 @@ import dev.sun.wechat.ui.content.m3.SwitchWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.AndroidAudioDecoder
 import dev.sun.wechat.utils.AudioUtils
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import dev.sun.wechat.utils.HostInfo
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.copyToClipboard
@@ -72,6 +75,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -431,6 +435,9 @@ object ParseVideo : ClickableFeature() {
     /** 真正执行解析 + 下载 + 发送。所有流程在地线程执行, 调用方已持锁。 */
     private suspend fun doAutoReply(talker: String, link: String) {
         val context = HostInfo.application
+        // 1. 先回复「解析中...」
+        runCatching { WeMessageApi.sendText(talker, "解析中...") }
+            .onFailure { WeLogger.w(TAG, "send parsing hint failed", it) }
         val result = runCatching {
             withContext(Dispatchers.IO) {
                 val parsed = parseVideo(link).getOrElse { throw it }
@@ -450,10 +457,38 @@ object ParseVideo : ClickableFeature() {
                     out.delete()
                     error("sendVideo failed")
                 }
+                // 成功后延迟 200s 自动清理：等微信异步上传读走文件再删，避免 Download/ParseVideo 堆积
+                autoReplyScope.launch {
+                    delay(200_000L)
+                    runCatching { out.delete() }
+                }
+                // 2. 视频发完后补发视频信息（发布地址/发布时间/视频时长/作者）
+                val info = buildVideoInfo(link, data, out)
+                if (info.isNotBlank()) WeMessageApi.sendText(talker, info)
             }
         }
         if (result.isFailure) {
             WeLogger.e(TAG, "auto reply failed", result.exceptionOrNull() ?: error("auto reply failed"))
+        }
+    }
+
+    /** 组装视频信息文本：发布地址/发布时间/视频时长/作者。 */
+    private fun buildVideoInfo(link: String, data: VideoData, videoFile: java.io.File): String {
+        val publishTime = if (data.video_time > 0) {
+            runCatching {
+                SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                    .format(Date(data.video_time * 1000L))
+            }.getOrDefault("未知")
+        } else "未知"
+        val durationSec = runCatching { AudioUtils.getDurationMs(videoFile.absolutePath) / 1000L }
+            .getOrDefault(0L)
+        val author = data.author?.name?.takeIf { it.isNotBlank() } ?: ""
+        return buildString {
+            append("视频信息：")
+            append('\n').append("发布地址：").append(link)
+            append('\n').append("发布时间：").append(publishTime)
+            append('\n').append("视频时长：").append(if (durationSec > 0) "${durationSec}秒" else "未知")
+            if (author.isNotBlank()) append('\n').append("作者：").append(author)
         }
     }
 
