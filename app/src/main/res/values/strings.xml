@@ -4228,4 +4228,6 @@
     <string name="glg_newbie_minutes">Probation (minutes)</string>
     <string name="mood_feature_name">Mood Analysis</string>
     <string name="mood_feature_description">Show emotion, subtext and suggestion under each text bubble</string>
+    <string name="mood_model">Model used for mood analysis</string>
+    <string name="mood_use_default_model">Use default model</string>
 </resources>

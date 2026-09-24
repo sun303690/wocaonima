@@ -4238,4 +4238,6 @@
     <string name="glg_newbie_minutes">冷靜期（分鐘）</string>
     <string name="mood_feature_name">情緒分析</string>
     <string name="mood_feature_description">在文字氣泡下方顯示情緒、潛台詞和溝通建議</string>
+    <string name="mood_model">情緒分析所用的 AI 模型</string>
+    <string name="mood_use_default_model">使用預設模型</string>
 </resources>

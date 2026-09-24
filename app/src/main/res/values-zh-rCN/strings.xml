@@ -4256,4 +4256,6 @@
     <string name="glg_newbie_minutes">冷静期（分钟）</string>
     <string name="mood_feature_name">情绪分析</string>
     <string name="mood_feature_description">在文字气泡下方显示情绪、潜台词和沟通建议</string>
+    <string name="mood_model">情绪分析所用的AI模型</string>
+    <string name="mood_use_default_model">使用默认模型</string>
 </resources>
