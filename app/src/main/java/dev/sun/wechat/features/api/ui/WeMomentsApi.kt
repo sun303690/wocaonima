@@ -1095,6 +1095,30 @@ object WeMomentsApi : ApiFeature(), IResolveDex {
         }
     }
 
+    /** 微信 SnsService.refreshTimeLine —— 触发朋友圈刷新拉新帖。原始方法名留在 SnsMethodCalculate 字符串里。 */
+    private val methodRefreshTimeline by dexMethod(allowMultiple = true, allowFailure = true, resultIndex = 0) {
+        matcher {
+            declaredClass(classSnsService.data.name)
+            modifiers = Modifier.STATIC
+            usingStrings("refreshTimeLine")
+        }
+    }
+
+    /**
+     * 触发微信朋友圈刷新（把服务器新帖拉进 SnsInfo 缓存），供扫描前调用。
+     * 签名因版本而异：尝试无参 / 单布尔参；找不到或签名不符时静默返回 false，不崩溃。
+     */
+    fun refreshTimeline(): Boolean = runCatching {
+        if (methodRefreshTimeline.isPlaceholder) return@runCatching false
+        val m = methodRefreshTimeline.method
+        when (m.parameterTypes.size) {
+            0 -> m.invoke(null)
+            1 -> m.invoke(null, java.lang.Boolean.TRUE)
+            else -> return@runCatching false
+        }
+        true
+    }.getOrDefault(false)
+
 //    val classMediaObj: Class<*> by lazy {
 //        classUploadPackHelper.clazz.declaredMethods.first {
 //            it.parameterTypes.size == 3 &&

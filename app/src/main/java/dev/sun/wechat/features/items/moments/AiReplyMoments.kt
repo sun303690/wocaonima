@@ -167,6 +167,8 @@ object AiReplyMoments : ClickableFeature(),
     private fun scanCachedMoments() {
         scope.launch {
             runCatching {
+                // 先触发微信刷新朋友圈，把服务器新帖拉进 SnsInfo 缓存，再扫描
+                WeMomentsApi.refreshTimeline()
                 WeMomentsApi.rawQuerySnsInfo(
                     """
                     SELECT snsId FROM SnsInfo
