@@ -4254,4 +4254,6 @@
     <string name="glg_newbie_title">新人冷静期</string>
     <string name="glg_newbie_desc">新人进群后 X 分钟内发任何消息即移出</string>
     <string name="glg_newbie_minutes">冷静期（分钟）</string>
+    <string name="mood_feature_name">情绪分析</string>
+    <string name="mood_feature_description">在文字气泡下方显示情绪、潜台词和沟通建议</string>
 </resources>

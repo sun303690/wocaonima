@@ -7,6 +7,7 @@ import dev.sun.wechat.agent.model.LlmRequest
 import dev.sun.wechat.agent.model.LlmStreamEvent
 import dev.sun.wechat.agent.model.ModelEntity
 import dev.sun.wechat.agent.model.ModelProviderManager
+import dev.sun.wechat.preferences.WePrefs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -16,9 +17,14 @@ import kotlinx.coroutines.withContext
  */
 object MoodTransport {
 
+    /** 用户为情绪分析单独选的模型 id；空 = 用 WeAgent 默认模型。 */
+    var modelId by WePrefs.prefOption("mood_model_id", "")
+
     suspend fun analyze(input: AnalysisInput, shouldContinue: suspend () -> Boolean = { true }): Mood {
-        val modelId = WeAgentRepository.firstModelId() ?: error("未配置 AI 模型，请先在 WeAgent 设置")
-        val model = WeAgentRepository.getModel(modelId) ?: error("模型不可用")
+        val id = modelId.ifBlank {
+            WeAgentRepository.firstModelId() ?: error("未配置 AI 模型，请先在 WeAgent 设置添加模型")
+        }
+        val model = WeAgentRepository.getModel(id) ?: error("模型不可用或已删除")
         val provider = WeAgentRepository.getModelProvider(model.providerId) ?: error("模型渠道不可用")
         val client = ModelProviderManager.clientFor(provider)
 

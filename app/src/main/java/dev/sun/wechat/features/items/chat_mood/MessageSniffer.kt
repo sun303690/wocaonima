@@ -1,0 +1,57 @@
+package dev.sun.wechat.features.items.chat_mood
+
+import android.view.View
+import dev.sun.wechat.features.api.core.models.MessageInfo
+import dev.sun.wechat.features.api.ui.WeChatMessageViewApi
+import dev.sun.wechat.utils.WeLogger
+import java.util.ArrayDeque
+import java.util.concurrent.atomic.AtomicBoolean
+
+/**
+ * 消息挂钩（对应 Yanwai MessageSniffer，改用 WeKit 的 WeChatMessageViewApi）：
+ * 监听聊天消息行 View 绑定，逐条提交情绪分析并装饰卡片；按会话维护最近文字消息做上下文。
+ */
+object MessageSniffer {
+    private val TAG = "MessageSniffer"
+    private val subscribed = AtomicBoolean(false)
+    private val recentByTalker = HashMap<String, ArrayDeque<Pair<String, String>>>()
+
+    private val lifecycle = object : WeChatMessageViewApi.IMessageViewLifecycleListener {
+        override fun onMessageViewAttached(view: View, message: MessageInfo) {
+            try {
+                if (!MoodAnalyzer.enabled) return
+                if (message.type?.isText != true) return
+                val talker = message.talker
+                val text = message.humanReadableRepr.trim()
+                if (text.isEmpty()) return
+                val speaker = if (message.isSend != 0) "我" else "对方"
+                val deque = recentByTalker.getOrPut(talker) { ArrayDeque() }
+                deque.addLast(speaker to text)
+                while (deque.size > 24) deque.removeFirst()
+                val context = deque.dropLast(1).takeLast(MessagePolicy.MAX_CONTEXT_MESSAGES)
+                    .map { ContextMessage(it.first, it.second) }
+                val input = AnalysisInput(
+                    text = text,
+                    talker = talker,
+                    context = context,
+                    messageId = message.createTime,
+                    speaker = speaker,
+                )
+                MoodAnalyzer.submit(input) { view.isShown }
+                BubbleDecorator.show(view, input)
+            } catch (t: Throwable) {
+                WeLogger.e(TAG, "onMessageViewAttached failed", t)
+            }
+        }
+
+        override fun onMessageViewDetached(view: View, message: MessageInfo) = BubbleDecorator.clear(view)
+        override fun onMessageViewRecycled(view: View, message: MessageInfo) = BubbleDecorator.clear(view)
+    }
+
+    /** 幂等订阅一次；由 MoodFeature 在启用时调用。 */
+    fun ensureSubscribed() {
+        if (subscribed.compareAndSet(false, true)) {
+            WeChatMessageViewApi.addLifecycleListener(lifecycle)
+        }
+    }
+}
