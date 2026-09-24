@@ -1003,9 +1003,10 @@ object WeMomentsApi : ApiFeature(), IResolveDex {
         if (withFlag == null && plain == null) {
             return ActionResult(success = false, sent = false, message = "sendComment not resolved by DexKit")
         }
+        var submitted = false
         return runCatching {
             when {
-                withFlag != null && readSnsFlag(normalized, "isExtFlag") ->
+                withFlag != null && readSnsFlag(normalized, "isExtFlag") -> {
                     withFlag.invoke(
                         null,
                         normalized,
@@ -1016,14 +1017,20 @@ object WeMomentsApi : ApiFeature(), IResolveDex {
                         sourceScene,
                         sourceScene,
                     )
+                    submitted = true
+                }
 
-                else ->
+                else -> {
                     plain!!.invoke(null, normalized, COMMENT_TYPE, text, 0L, "", false, sourceScene)
+                    submitted = true
+                }
             }
             ActionResult(success = true, sent = true, message = "comment request sent")
         }.getOrElse { error ->
             WeLogger.e(TAG, "failed to send Moments comment", error)
-            ActionResult(success = false, sent = false, message = error.message ?: "failed to send comment", error = error)
+            // invoke 已提交评论任务后可能抛异常；已提交则视为成功，避免重复评论
+            if (submitted) ActionResult(success = true, sent = true, message = "comment submitted (post-invoke exception: ${error.message})")
+            else ActionResult(success = false, sent = false, message = error.message ?: "failed to send comment", error = error)
         }
     }
 
