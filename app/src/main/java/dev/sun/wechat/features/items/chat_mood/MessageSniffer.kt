@@ -28,6 +28,8 @@ object MessageSniffer {
                 val deque = recentByTalker.getOrPut(talker) { ArrayDeque() }
                 deque.addLast(speaker to text)
                 while (deque.size > 24) deque.removeFirst()
+                // 言外只分析/装饰对方的消息；自己发的消息仅进上下文，不出卡、不分析
+                if (message.isSend != 0) return
                 val context = deque.dropLast(1).takeLast(MessagePolicy.MAX_CONTEXT_MESSAGES)
                     .map { ContextMessage(it.first, it.second) }
                 val input = AnalysisInput(
