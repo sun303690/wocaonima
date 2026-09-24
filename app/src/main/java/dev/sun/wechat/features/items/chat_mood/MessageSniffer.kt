@@ -4,8 +4,8 @@ import android.view.View
 import dev.sun.wechat.features.api.core.models.MessageInfo
 import dev.sun.wechat.features.api.ui.WeChatMessageViewApi
 import dev.sun.wechat.utils.WeLogger
-import java.util.ArrayDeque
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.collections.ArrayDeque
 
 /**
  * 消息挂钩（对应 Yanwai MessageSniffer，改用 WeKit 的 WeChatMessageViewApi）：

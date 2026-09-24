@@ -96,10 +96,10 @@ object MoodFeature : ClickableFeature() {
                     TextButton(onClick = {
                         MoodTransport.modelId = modelId
                         MoodAnalyzer.showBadge = showBadge
-                        dismiss()
+                        onDismiss()
                     }) { Text(stringResource(R.string.dialog_confirm)) }
                 },
-                dismissButton = { TextButton(onClick = { dismiss() }) { Text(stringResource(R.string.dialog_cancel)) } },
+                dismissButton = { TextButton(onClick = { onDismiss() }) { Text(stringResource(R.string.dialog_cancel)) } },
             )
         }
     }

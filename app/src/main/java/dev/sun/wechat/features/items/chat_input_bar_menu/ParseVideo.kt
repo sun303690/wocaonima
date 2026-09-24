@@ -485,7 +485,6 @@ object ParseVideo : ClickableFeature() {
         val author = data.author?.name?.takeIf { it.isNotBlank() } ?: ""
         return buildString {
             append("视频信息：")
-            append('\n').append("发布地址：").append(link)
             append('\n').append("发布时间：").append(publishTime)
             append('\n').append("视频时长：").append(if (durationSec > 0) "${durationSec}秒" else "未知")
             if (author.isNotBlank()) append('\n').append("作者：").append(author)
