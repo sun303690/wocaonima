@@ -4,6 +4,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.material3.AlertDialogContent
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.res.stringResource
 import dev.sun.wechat.R
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
