@@ -78,8 +78,10 @@ object ModulePrefs {
     val canAnalyze: Boolean get() = prefs()?.getBoolean(KEY_CAN_ANALYZE, true) ?: true
     private const val KEY_CAN_ANALYZE = "can_analyze"
 
-    fun replySettings(): dev.sun.wechat.features.items.yanwai.reply.ReplySettings =
-        dev.sun.wechat.features.items.yanwai.reply.ReplySettings.load { read(it) }
+    fun replySettings(): dev.sun.wechat.features.items.yanwai.reply.ReplySettings {
+        val rs = dev.sun.wechat.features.items.yanwai.reply.ReplySettings
+        return rs.fromInput(read(rs.KEY_ENDPOINT, ""), read(rs.KEY_API_KEY, ""), read(rs.KEY_MODEL, ""))
+    }
 
     val replyConsent: Boolean get() = read(dev.sun.wechat.features.items.yanwai.reply.ReplySettings.KEY_CONSENT, "false") == "true"
     val bridgeAvailable: Boolean get() = true
@@ -94,10 +96,9 @@ object ModulePrefs {
         val api = apiSettings()
         val intent = IntentSettings(
             route = IntentRoute.resolve(read(IntentSettings.KEY_ROUTE)),
-            llm = dev.sun.wechat.features.items.yanwai.reply.ReplySettings.load { read(it) }.let {
-                if (it.endpoint.isBlank() && it.apiKey.isBlank()) dev.sun.wechat.features.items.yanwai.reply.ReplySettings.fromInput(api.endpoint, api.apiKey, api.model)
-                else it
-            },
+            llm = dev.sun.wechat.features.items.yanwai.reply.ReplySettings.fromInput(
+                read("reply_endpoint", ""), read("reply_api_key", ""), read("reply_model", ""),
+            ),
         )
         return RuntimeSettings(0L, exploreMode, api, "wechat-local", intent = intent)
     }
