@@ -4379,4 +4379,6 @@
     <string name="system_qr_code_record_clear_description">确定清空所有扫描记录吗？此操作无法撤销。</string>
     <string name="nav_use_wechat_icons">使用微信原生图标</string>
     <string name="qr_code_record_home_menu_title">扫描记录</string>
+    <string name="yanwai_feature_name">言外 - 情绪分析</string>
+    <string name="yanwai_feature_description">JEV/意图对话情绪分析 + AI 帮我回</string>
 </resources>

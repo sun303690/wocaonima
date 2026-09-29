@@ -4351,4 +4351,6 @@
     <string name="system_qr_code_record_clear_description">Clear all scan records? This cannot be undone.</string>
     <string name="nav_use_wechat_icons">Use WeChat native icons</string>
     <string name="qr_code_record_home_menu_title">Scan records</string>
+    <string name="yanwai_feature_name">Yan wai - Mood Analysis</string>
+    <string name="yanwai_feature_description">JEV/Priority conversation mood analysis with AI reply</string>
 </resources>
