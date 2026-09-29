@@ -32,9 +32,8 @@ class YanwaiFeature : ClickableFeature() {
     }
 
     override fun onDisable() {
-        runCatching {
-            MessageSniffer.pause(HostInfo.application ?: return@runCatching)
-        }.onFailure { WeLogger.e(tag, "yanwai disable failed", it) }
+        // pause/resume 绑定 Activity 生命周期，不由功能开关直接调用
+        WeLogger.i(tag, "yanwai analysis disabled")
     }
 
     override fun onClick(context: ComponentActivity) {
