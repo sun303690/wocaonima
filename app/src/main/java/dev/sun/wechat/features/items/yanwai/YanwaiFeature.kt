@@ -14,8 +14,8 @@ import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.HostInfo
 import dev.sun.wechat.utils.WeLogger
 
-class YanwaiFeature : ClickableFeature() {
-    private val tag = "YanwaiFeature"
+object YanwaiFeature : ClickableFeature() {
+    private const val TAG = "YanwaiFeature"
 
     override val technicalId = "yanwai"
     override val nameRes = R.string.yanwai_feature_name
@@ -27,13 +27,13 @@ class YanwaiFeature : ClickableFeature() {
             val ctx = HostInfo.application
             ModulePrefs.init(ctx)
             MessageSniffer.install(ctx)
-            WeLogger.i(tag, "yanwai analysis enabled")
-        }.onFailure { WeLogger.e(tag, "yanwai enable failed", it) }
+            WeLogger.i(TAG, "yanwai analysis enabled")
+        }.onFailure { WeLogger.e(TAG, "yanwai enable failed", it) }
     }
 
     override fun onDisable() {
         // pause/resume 绑定 Activity 生命周期，不由功能开关直接调用
-        WeLogger.i(tag, "yanwai analysis disabled")
+        WeLogger.i(TAG, "yanwai analysis disabled")
     }
 
     override fun onClick(context: ComponentActivity) {
