@@ -1,15 +1,15 @@
 package dev.sun.wechat.features.items.yanwai
 
 import androidx.activity.ComponentActivity
-import androidx.compose.material3.AlertDialogContent
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.ui.res.stringResource
 import dev.sun.wechat.R
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.items.yanwai.core.ModulePrefs
 import dev.sun.wechat.features.items.yanwai.hook.MessageSniffer
+import dev.sun.wechat.ui.content.AlertDialogContent
+import dev.sun.wechat.ui.content.TextButton
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.HostInfo
 import dev.sun.wechat.utils.WeLogger
@@ -41,8 +41,12 @@ class YanwaiFeature : ClickableFeature() {
             AlertDialogContent(
                 title = { Text(stringResource(R.string.yanwai_feature_name)) },
                 text = { Text(stringResource(R.string.yanwai_feature_description)) },
-                confirmButton = { TextButton(onClick = { onDismiss() }) { Text(stringResource(R.string.dialog_confirm)) } },
-                dismissButton = { TextButton(onClick = { onDismiss() }) { Text(stringResource(R.string.dialog_cancel)) } },
+                confirmButton = {
+                    TextButton(onClick = { onDismiss() }) { Text(stringResource(R.string.dialog_confirm)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { onDismiss() }) { Text(stringResource(R.string.dialog_cancel)) }
+                },
             )
         }
     }

@@ -2989,16 +2989,10 @@ private fun VoicePreviewOverlay(
             overflow = TextOverflow.Ellipsis,
         )
         val valueRange = 0f..durationMs.coerceAtLeast(1L).toFloat()
-        val sliderState = remember(valueRange) {
-            SliderState(
-                value = positionMs.coerceIn(0L, durationMs.coerceAtLeast(0L)).toFloat(),
-                trackRange = valueRange,
-            )
-        }
-        sliderState.value = positionMs.coerceIn(0L, durationMs.coerceAtLeast(0L)).toFloat()
         Slider(
-            state = sliderState,
+            value = positionMs.coerceIn(0L, durationMs.coerceAtLeast(0L)).toFloat(),
             onValueChange = { onSeek(it.toLong()) },
+            valueRange = valueRange,
             modifier = Modifier.fillMaxWidth(),
         )
         Row(
