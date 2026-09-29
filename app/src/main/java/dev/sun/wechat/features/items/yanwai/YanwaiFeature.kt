@@ -54,63 +54,50 @@ object YanwaiFeature : ClickableFeature() {
 
     override fun onClick(context: ComponentActivity) {
         val ctx = context.applicationContext ?: context
-        val p = prefs(ctx)
-        var provider by remember { mutableStateOf(p.getString("reply_provider", ReplyProvider.DEEPSEEK.id) ?: ReplyProvider.DEEPSEEK.id) }
-        var endpoint by remember { mutableStateOf(p.getString("reply_endpoint", "") ?: "") }
-        var apiKey by remember { mutableStateOf(p.getString("reply_api_key", "") ?: "") }
-        var model by remember { mutableStateOf(p.getString("reply_model", "") ?: "") }
-        var consent by remember { mutableStateOf(p.getString("reply_consent", "false") == "true") }
-        var route by remember { mutableStateOf(p.getString("intent_route", "jev") ?: "jev") }
-        var jevProvider by remember { mutableStateOf(p.getString("api_provider", JevProvider.TYPESAFE.id) ?: JevProvider.TYPESAFE.id) }
-        var jevEndpoint by remember { mutableStateOf(p.getString("api_base", "") ?: "") }
-        var jevKey by remember { mutableStateOf(p.getString("api_key", "") ?: "") }
-        var jevModel by remember { mutableStateOf(p.getString("api_model", "") ?: "") }
-
+        val p = ctx.getSharedPreferences(ModulePrefs.FILE_NAME, Context.MODE_PRIVATE)
         showComposeDialog(context, directlyDismissable = false) {
+            var provider by remember { mutableStateOf(p.getString("reply_provider", ReplyProvider.DEEPSEEK.id) ?: ReplyProvider.DEEPSEEK.id) }
+            var endpoint by remember { mutableStateOf(p.getString("reply_endpoint", "") ?: "") }
+            var apiKey by remember { mutableStateOf(p.getString("reply_api_key", "") ?: "") }
+            var model by remember { mutableStateOf(p.getString("reply_model", "") ?: "") }
+            var consent by remember { mutableStateOf(p.getString("reply_consent", "false") == "true") }
+            var route by remember { mutableStateOf(p.getString("intent_route", "jev") ?: "jev") }
+            var jevProvider by remember { mutableStateOf(p.getString("api_provider", JevProvider.TYPESAFE.id) ?: JevProvider.TYPESAFE.id) }
+            var jevEndpoint by remember { mutableStateOf(p.getString("api_base", "") ?: "") }
+            var jevKey by remember { mutableStateOf(p.getString("api_key", "") ?: "") }
+            var jevModel by remember { mutableStateOf(p.getString("api_model", "") ?: "") }
+
             AlertDialogContent(
                 title = { Text("言外 - 情绪分析设置") },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("模型渠道")
+                        Text("LLM 模型（意图解读 + 帮我回）")
                         val providerNames = ReplyProvider.entries.map { "${it.label} (${it.id})" }
-                        OutlinedTextField(
-                            value = providerNames.getOrElse(ReplyProvider.entries.indexOfFirst { it.id == provider }) { 0 },
-                            onValueChange = { sel ->
-                                val idx = providerNames.indexOfFirst { it == sel }
-                                if (idx >= 0) { provider = ReplyProvider.entries[idx].id; endpoint = ReplyProvider.entries[idx].endpoint }
-                            },
-                            label = { Text("渠道") }, modifier = Modifier.fillMaxWidth(), singleLine = true,
-                        )
-                        OutlinedTextField(value = endpoint, onValueChange = { endpoint = it },
-                            label = { Text("API 地址") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        OutlinedTextField(value = apiKey, onValueChange = { apiKey = it },
-                            label = { Text("API Key") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        OutlinedTextField(value = model, onValueChange = { model = it },
-                            label = { Text("模型 ID") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        val selName = providerNames.getOrElse(ReplyProvider.entries.indexOfFirst { it.id == provider }) { providerNames.first() }
+                        OutlinedTextField(value = selName, onValueChange = { sel ->
+                            val idx = providerNames.indexOfFirst { it == sel }
+                            if (idx >= 0) { provider = ReplyProvider.entries[idx].id; endpoint = ReplyProvider.entries[idx].endpoint }
+                        }, label = { Text("渠道") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(value = endpoint, onValueChange = { endpoint = it }, label = { Text("API 地址") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(value = apiKey, onValueChange = { apiKey = it }, label = { Text("API Key") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(value = model, onValueChange = { model = it }, label = { Text("模型 ID") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         HorizontalDivider()
                         Text("JEV 模型（情绪概率）")
                         val jevNames = JevProvider.entries.map { "${it.label} (${it.id})" }
-                        OutlinedTextField(
-                            value = jevNames.getOrElse(JevProvider.entries.indexOfFirst { it.id == jevProvider }) { 0 },
-                            onValueChange = { sel ->
-                                val idx = jevNames.indexOfFirst { it == sel }
-                                if (idx >= 0) { jevProvider = JevProvider.entries[idx].id; jevEndpoint = JevProvider.entries[idx].endpoint }
-                            },
-                            label = { Text("JEV 渠道") }, modifier = Modifier.fillMaxWidth(), singleLine = true,
-                        )
-                        OutlinedTextField(value = jevEndpoint, onValueChange = { jevEndpoint = it },
-                            label = { Text("JEV API 地址") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        OutlinedTextField(value = jevKey, onValueChange = { jevKey = it },
-                            label = { Text("JEV API Key") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        OutlinedTextField(value = jevModel, onValueChange = { jevModel = it },
-                            label = { Text("JEV 模型 ID") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        val jselName = jevNames.getOrElse(JevProvider.entries.indexOfFirst { it.id == jevProvider }) { jevNames.first() }
+                        OutlinedTextField(value = jselName, onValueChange = { sel ->
+                            val idx = jevNames.indexOfFirst { it == sel }
+                            if (idx >= 0) { jevProvider = JevProvider.entries[idx].id; jevEndpoint = JevProvider.entries[idx].endpoint }
+                        }, label = { Text("JEV 渠道") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(value = jevEndpoint, onValueChange = { jevEndpoint = it }, label = { Text("JEV API 地址") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(value = jevKey, onValueChange = { jevKey = it }, label = { Text("JEV API Key") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(value = jevModel, onValueChange = { jevModel = it }, label = { Text("JEV 模型 ID") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         HorizontalDivider()
                         Text("意图解读路由")
                         OutlinedTextField(value = if (route == "llm") "通用大模型 LLM" else "JEV 决策模型",
                             onValueChange = { route = if (it.contains("LLM")) "llm" else "jev" },
                             label = { Text("意图解读") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        androidx.compose.foundation.layout.Row(modifier = Modifier.padding(top = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween) {
+                        androidx.compose.foundation.layout.Row(modifier = Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("允许手动生成回复")
                             Switch(checked = consent, onCheckedChange = { consent = it })
                         }
@@ -121,8 +108,7 @@ object YanwaiFeature : ClickableFeature() {
                         runCatching {
                             p.edit().putString("reply_provider", provider).putString("reply_endpoint", endpoint)
                                 .putString("reply_api_key", apiKey).putString("reply_model", model)
-                                .putString("reply_consent", consent.toString())
-                                .putString("intent_route", route)
+                                .putString("reply_consent", consent.toString()).putString("intent_route", route)
                                 .putString("api_provider", jevProvider).putString("api_base", jevEndpoint)
                                 .putString("api_key", jevKey).putString("api_model", jevModel).commit()
                             ModulePrefs.init(ctx)
