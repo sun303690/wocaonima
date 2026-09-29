@@ -1,0 +1,9 @@
+<resources>
+    <style name="Yanwai.Body" parent="">
+    <style name="Yanwai.Section" parent="Yanwai.Body">
+    <style name="Yanwai.Caption" parent="Yanwai.Body">
+    <style name="Yanwai.Badge" parent="Yanwai.Caption">
+    <style name="Yanwai.Button" parent="Widget.Material3.Button">
+    <style name="Yanwai.Button.Text" parent="Widget.Material3.Button.TextButton">
+    <style name="Yanwai.Button.Outline" parent="Widget.Material3.Button.OutlinedButton">
+</resources>
