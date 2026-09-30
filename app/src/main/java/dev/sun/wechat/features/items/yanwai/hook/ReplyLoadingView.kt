@@ -1,4 +1,4 @@
-package dev.sun.wechat.features.items.yanwai.hook
+package dev.sun.wechat.features.items.yanwai
 
 import android.animation.ValueAnimator
 import android.content.Context

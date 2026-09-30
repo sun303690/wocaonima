@@ -1,7 +1,7 @@
-package dev.sun.wechat.features.items.yanwai.analysis
+package dev.sun.wechat.features.items.yanwai
 
-import dev.sun.wechat.features.items.yanwai.core.AnalysisInput
-import dev.sun.wechat.features.items.yanwai.core.Mood
+import dev.sun.wechat.features.items.yanwai.AnalysisInput
+import dev.sun.wechat.features.items.yanwai.Mood
 import org.json.JSONObject
 import java.util.concurrent.CancellationException
 

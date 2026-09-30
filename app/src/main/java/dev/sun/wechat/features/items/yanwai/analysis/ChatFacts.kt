@@ -1,4 +1,4 @@
-package dev.sun.wechat.features.items.yanwai.analysis
+package dev.sun.wechat.features.items.yanwai
 
 /** Independent observations, not assumed causes or relationship scores. */
 object ChatFacts {

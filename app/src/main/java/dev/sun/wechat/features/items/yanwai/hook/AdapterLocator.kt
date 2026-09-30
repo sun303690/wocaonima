@@ -1,7 +1,7 @@
-package dev.sun.wechat.features.items.yanwai.hook
+package dev.sun.wechat.features.items.yanwai
 
 import android.content.Context
-import dev.sun.wechat.features.items.yanwai.core.MoodLog
+import dev.sun.wechat.features.items.yanwai.MoodLog
 import org.luckypray.dexkit.DexKitBridge
 import java.lang.reflect.Modifier
 

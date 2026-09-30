@@ -1,4 +1,4 @@
-package dev.sun.wechat.features.items.yanwai.core
+package dev.sun.wechat.features.items.yanwai
 
 object DiagnosticText {
     fun sanitize(text: String, secrets: Collection<String> = emptyList()): String {

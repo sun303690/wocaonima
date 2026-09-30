@@ -168,6 +168,7 @@ android {
 
     buildFeatures {
         resValues = false
+        viewBinding = true
         compose = true
         buildConfig = true
     }

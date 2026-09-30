@@ -1,4 +1,4 @@
-package dev.sun.wechat.features.items.yanwai.hook
+package dev.sun.wechat.features.items.yanwai
 
 import android.graphics.Canvas
 import android.graphics.ColorFilter
@@ -12,9 +12,9 @@ import android.view.View
 import android.widget.Toast
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
-import dev.sun.wechat.features.items.yanwai.core.AnalysisInput
-import dev.sun.wechat.features.items.yanwai.core.ManualAnalysis
-import dev.sun.wechat.features.items.yanwai.core.MoodLog
+import dev.sun.wechat.features.items.yanwai.AnalysisInput
+import dev.sun.wechat.features.items.yanwai.ManualAnalysis
+import dev.sun.wechat.features.items.yanwai.MoodLog
 import org.luckypray.dexkit.DexKitBridge
 import java.lang.ref.WeakReference
 import java.lang.reflect.Field

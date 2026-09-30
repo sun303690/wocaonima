@@ -9,8 +9,8 @@ object ReplyKnowledge {
     private val cached = mutableMapOf<ReplyRelationship, String>()
     @Synchronized fun load(context: Context, relationship: ReplyRelationship = ReplyRelationship.UNSPECIFIED): String {
         cached[relationship]?.let { return it }
-        val module = if (context.packageName == "dev.sun.wechat.features.items.yanwai") context else
-            context.createPackageContext("dev.sun.wechat.features.items.yanwai", Context.CONTEXT_IGNORE_SECURITY)
+        val module = if (context.packageName == "import dev.sun.wechat.features.items.yanwai") context else
+            context.createPackageContext("import dev.sun.wechat.features.items.yanwai", Context.CONTEXT_IGNORE_SECURITY)
         val assets = module.assets
         val paths = ReplyKnowledgeCatalog.paths(relationship)
         return paths.joinToString("\n\n") { path ->

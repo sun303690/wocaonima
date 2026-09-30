@@ -1,8 +1,8 @@
-package dev.sun.wechat.features.items.yanwai.hook
+package dev.sun.wechat.features.items.yanwai
 
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
-import dev.sun.wechat.features.items.yanwai.core.MoodLog
+import dev.sun.wechat.features.items.yanwai.MoodLog
 import dev.sun.wechat.features.items.yanwai.voice.VoiceHostContract
 import dev.sun.wechat.features.items.yanwai.voice.VoiceSource
 import kotlinx.coroutines.*

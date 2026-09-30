@@ -1,10 +1,11 @@
-package dev.sun.wechat.features.items.yanwai.core
+package dev.sun.wechat.features.items.yanwai
 
 import dev.sun.wechat.features.items.yanwai.voice.VoiceSource
 import dev.sun.wechat.features.items.yanwai.voice.VoiceState
 
 data class ContextMessage(val speaker: String, val text: String, val createdAt: Long = 0, val messageId: Long = 0,
-    val voice: VoiceSource? = null, val voiceState: VoiceState = if (voice == null) VoiceState.NONE else VoiceState.WAITING)
+    val voice: VoiceSource? = null, val voiceState: VoiceState = if (voice == null) VoiceState.NONE else VoiceState.WAITING,
+    val quoted: QuotedMessage? = null)
 
 data class ContextCoverage(
     val source: String = "provided",
@@ -28,9 +29,14 @@ data class AnalysisInput(
     val zoneId: String = java.util.TimeZone.getDefault().id,
     val voice: VoiceSource? = null,
     val voiceState: VoiceState = if (voice == null) VoiceState.NONE else VoiceState.WAITING,
+    val quoted: QuotedMessage? = null,
+    val accountScope: String = "",
+    val background: dev.sun.wechat.features.items.yanwai.reply.ContactBackground = dev.sun.wechat.features.items.yanwai.reply.ContactBackground(),
+    val backgroundReady: Boolean = true,
+    val settingsFingerprint: String = "",
 ) {
     val key: String get() = MoodStore.keyOf(text, talker, context, messageId, speaker, createdAt, coverage,
-        zoneId + (voice?.let { "|voice:${it.key}:$voiceState" } ?: ""))
+        zoneId + (voice?.let { "|voice:${it.key}:$voiceState" } ?: "") + "|background:${background.revision}:$backgroundReady|settings:$settingsFingerprint", quoted, accountScope)
 }
 
 object MessagePolicy {

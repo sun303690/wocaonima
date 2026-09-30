@@ -1,4 +1,4 @@
-package dev.sun.wechat.features.items.yanwai.hook
+package dev.sun.wechat.features.items.yanwai
 
 /**
  * 从一个 item view 里抠出消息文本的**纯逻辑部分**。

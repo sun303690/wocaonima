@@ -1,4 +1,4 @@
-package dev.sun.wechat.features.items.yanwai.analysis
+package dev.sun.wechat.features.items.yanwai
 
 data class ChatTemplate(
     val id: String,

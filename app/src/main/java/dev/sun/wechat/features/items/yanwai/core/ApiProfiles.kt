@@ -1,4 +1,4 @@
-package dev.sun.wechat.features.items.yanwai.core
+package dev.sun.wechat.features.items.yanwai
 
 /** Values are committed together by SharedPreferences; never log this map. */
 object ApiProfiles {

@@ -1,4 +1,4 @@
-package dev.sun.wechat.features.items.yanwai.hook
+package dev.sun.wechat.features.items.yanwai
 
 import android.app.Activity
 import android.content.Context
@@ -7,14 +7,15 @@ import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.widget.ListView
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
-import dev.sun.wechat.features.items.yanwai.analysis.SignalAnalyzer
-import dev.sun.wechat.features.items.yanwai.core.ModulePrefs
-import dev.sun.wechat.features.items.yanwai.core.MoodLog
-import dev.sun.wechat.features.items.yanwai.core.AnalysisInput
-import dev.sun.wechat.features.items.yanwai.core.ManualAnalysis
+import dev.sun.wechat.features.items.yanwai.SignalAnalyzer
+import dev.sun.wechat.features.items.yanwai.ModulePrefs
+import dev.sun.wechat.features.items.yanwai.MoodLog
+import dev.sun.wechat.features.items.yanwai.AnalysisInput
+import dev.sun.wechat.features.items.yanwai.ManualAnalysis
 import dev.sun.wechat.features.items.yanwai.reply.ReplyContext
 import org.luckypray.dexkit.DexKitBridge
 import java.lang.ref.WeakReference
@@ -34,6 +35,9 @@ object MessageSniffer {
     private var lastReport = ""
     @Volatile private var visibleKeys = emptySet<String>()
     private var ui: HostUi? = null
+    private var displayedTalker: String? = null
+    private data class PendingCard(val observer: ViewTreeObserver, val listener: ViewTreeObserver.OnPreDrawListener)
+    private val pendingCards = mutableMapOf<View, PendingCard>()
     private val tick = object : Runnable {
         override fun run() {
             val activity = active.get() ?: return
@@ -41,6 +45,7 @@ object MessageSniffer {
             runCatching { scan(activity) }.onFailure {
                 visibleKeys = emptySet()
                 SignalAnalyzer.cancelAll()
+                clearPendingCards()
                 BubbleDecorator.clearAll()
                 report("读取当前页面失败：${it.javaClass.simpleName}")
                 ui?.showStatus("Jev · 页面读取失败，点击查看", emptyList())
@@ -91,7 +96,7 @@ object MessageSniffer {
                             val holder = param.args.firstOrNull() ?: return
                             runCatching {
                                 val row = fields(holder.javaClass).firstOrNull { it.type == View::class.java }?.get(holder) as? View
-                                if (row != null) { BubbleDecorator.clear(row); bindings.remove(row) }
+                                if (row != null) { cancelPendingCard(row); BubbleDecorator.clear(row); bindings.remove(row) }
                             }
                         }
                         override fun afterHookedMethod(param: MethodHookParam) {
@@ -115,8 +120,10 @@ object MessageSniffer {
                                         }, WeakReference(adapter), position, current)
                                     }.getOrNull()
                                 }
-                                if (message != null) bindings[row] = message
-                                else if (ModulePrefs.exploreMode) MoodLog.w("消息对象未识别：${param.thisObject.javaClass.name}")
+                                if (message != null) {
+                                    bindings[row] = message
+                                    restoreBoundCard(row)
+                                } else if (ModulePrefs.exploreMode) MoodLog.w("消息对象未识别：${param.thisObject.javaClass.name}")
                             }.onFailure { MoodLog.w("消息类型读取失败：${it.javaClass.simpleName}") }
                         }
                     })
@@ -132,6 +139,54 @@ object MessageSniffer {
     }
 
     private val fieldCache = java.util.concurrent.ConcurrentHashMap<Class<*>, List<Field>>()
+
+    private fun cancelPendingCard(row: View) {
+        pendingCards.remove(row)?.let {
+            if (it.observer.isAlive) it.observer.removeOnPreDrawListener(it.listener)
+            // Attachment can merge a detached row's observer into its window's observer.
+            if (row.viewTreeObserver.isAlive) row.viewTreeObserver.removeOnPreDrawListener(it.listener)
+        }
+    }
+
+    private fun clearPendingCards() {
+        pendingCards.keys.toList().forEach(::cancelPendingCard)
+        displayedTalker = null
+    }
+
+    /** Restore during binding/attachment, before a short row can be painted by the host. */
+    fun restoreBoundCard(row: View) {
+        runCatching { restoreCard(row) }.onFailure {
+            cancelPendingCard(row)
+            BubbleDecorator.clear(row)
+            MoodLog.w("气泡恢复失败：${it.javaClass.simpleName}")
+        }
+    }
+
+    fun hasBoundMessage(row: View) = bindings.containsKey(row)
+
+    private fun restoreCard(row: View) {
+        val bound = bindings[row] ?: return
+        cancelPendingCard(row)
+        fun input() = bound.input?.takeIf {
+            active.get() != null && it.talker == displayedTalker
+        }?.let(ModulePrefs::analysisInput)?.takeIf(ModulePrefs::shouldDisplay)
+        val message = input()
+        if (BubbleDecorator.show(row, message) || message == null) return
+        val observer = row.viewTreeObserver
+        val listener = object : ViewTreeObserver.OnPreDrawListener {
+            override fun onPreDraw(): Boolean {
+                cancelPendingCard(row)
+                if (bindings[row] !== bound) return true
+                val current = input() ?: return true
+                // A newly created row has no width until layout; relayout once before drawing.
+                return !runCatching { BubbleDecorator.show(row, current) }.getOrDefault(false)
+            }
+        }
+        pendingCards[row] = PendingCard(observer, listener)
+        observer.addOnPreDrawListener(listener)
+        // Detached prefetched rows may never draw. Retain at most a small recycler-sized set.
+        pendingCards.keys.filter { !it.isAttachedToWindow }.drop(32).toList().forEach(::cancelPendingCard)
+    }
     private fun fields(type: Class<*>): List<Field> = fieldCache.getOrPut(type) {
         generateSequence(type) { it.superclass }.takeWhile { it != Any::class.java }
             .flatMap { it.declaredFields.asSequence() }
@@ -140,8 +195,10 @@ object MessageSniffer {
     }
 
     fun resume(activity: Activity) {
+        ReplyDatabaseHistory.resetAccountScope()
         main.removeCallbacks(tick)
         SignalAnalyzer.cancelAll()
+        clearPendingCards()
         BubbleDecorator.clearAll()
         ui?.dispose()
         ui = null
@@ -152,8 +209,10 @@ object MessageSniffer {
 
     fun pause(activity: Activity) {
         if (active.get() !== activity) return
+        ReplyDatabaseHistory.resetAccountScope()
         main.removeCallbacks(tick)
         SignalAnalyzer.cancelAll()
+        clearPendingCards()
         BubbleDecorator.clearAll()
         ui?.dispose()
         ui = null
@@ -351,6 +410,7 @@ object MessageSniffer {
         val chat = chatScope.isNotEmpty()
         if (!settings && !chat) {
             SignalAnalyzer.cancelAll()
+            clearPendingCards()
             BubbleDecorator.clearAll()
             ui?.hide()
             visibleKeys = emptySet()
@@ -359,6 +419,7 @@ object MessageSniffer {
         val panel = ui ?: HostUi(activity).also { ui = it }
         if (settings) {
             SignalAnalyzer.cancelAll()
+            clearPendingCards()
             BubbleDecorator.clearAll()
             visibleKeys = emptySet()
             panel.showSettings()
@@ -367,6 +428,12 @@ object MessageSniffer {
         }
         val records = records(chatScope)
         val talker = conversation(activity, chatScope, records)
+        if (displayedTalker != talker) {
+            ReplyDatabaseHistory.resetAccountScope()
+            clearPendingCards()
+            BubbleDecorator.clearAll()
+            displayedTalker = talker
+        }
         val enabled = ModulePrefs.isChatEnabled(talker)
         val messages = records.sortedBy { (view, _) ->
             IntArray(2).also { view.getLocationOnScreen(it) }[1]
@@ -374,7 +441,7 @@ object MessageSniffer {
             .map(ModulePrefs::analysisInput).distinctBy { it.key }
         val selected = messages.filter(ModulePrefs::shouldDisplay)
         visibleKeys = selected.map { it.key }.toSet()
-        SignalAnalyzer.reconcile(visibleKeys)
+        SignalAnalyzer.reconcile(visibleKeys, talker)
         for (message in selected) {
             val key = message.key
             SignalAnalyzer.submit(message) { key in visibleKeys }
@@ -394,11 +461,11 @@ object MessageSniffer {
             !enabled -> if (selected.isEmpty()) "自动分析已关闭，可长按文字或语音翻译意图"
                 else "自动分析已关闭 · 本屏 ${selected.size} 条手动分析"
             !ModulePrefs.bridgeAvailable -> "设置连接失败，点此打开助手后重试"
-            ModulePrefs.apiKey.isBlank() -> "请打开言外填写并保存 API Key"
+            ModulePrefs.analysisSettings()?.canAnalyze != true -> "请打开言外配置所选分析模型"
             records.isEmpty() -> "未识别到消息 · $adapterStatus"
             messages.isEmpty() -> "本屏无可分析的文字或语音，其他媒体及超过 1000 字符的文字已跳过"
             else -> {
-                val done = messages.count { dev.sun.wechat.features.items.yanwai.core.MoodStore.get(it.key) != null }
+                val done = messages.count { dev.sun.wechat.features.items.yanwai.MoodStore.get(it.key) != null }
                 val failed = messages.count { SignalAnalyzer.failure(it.key) != null }
                 when {
                     failed > 0 -> "本屏 ${messages.size} 条 · $failed 条失败，点击查看"

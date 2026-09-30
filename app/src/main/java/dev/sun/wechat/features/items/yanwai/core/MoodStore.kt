@@ -1,4 +1,4 @@
-package dev.sun.wechat.features.items.yanwai.core
+package dev.sun.wechat.features.items.yanwai
 
 import java.util.concurrent.ConcurrentHashMap
 
@@ -25,7 +25,7 @@ data class Mood(
  * 1. 同一条消息及上下文不能重复请求模型 —— 用会话、消息身份和完整输入做键。
  * 2. 界面线程要能**立刻**拿到结果，不能等网络 —— 所以是「先占位、后填充」，
  *    装饰器拿到 null 就先不画，异步补上再通知刷新。
- * 3. 微信进程可能被回收 —— 只放内存，不做持久化；丢了大不了重新分析。
+ * 3. 这里是界面使用的内存层；后台分析先从独立 SQLite 缓存恢复，再决定是否请求模型。
  */
 object MoodStore {
 
@@ -37,10 +37,19 @@ object MoodStore {
     /** Length-prefix every field so different contexts or message identities never share a result. */
     fun keyOf(text: String, talker: String?, context: List<ContextMessage> = emptyList(),
         messageId: Long = 0, speaker: String = "对方", createdAt: Long = 0,
-        coverage: ContextCoverage = ContextCoverage(), zoneId: String = java.util.TimeZone.getDefault().id): String {
+        coverage: ContextCoverage = ContextCoverage(), zoneId: String = java.util.TimeZone.getDefault().id,
+        quoted: QuotedMessage? = null, accountScope: String = ""): String {
         val source = buildString {
             fun field(value: String) { append(value.length).append(':').append(value) }
+            fun quote(value: QuotedMessage?) {
+                field(if (value == null) "no-quote" else "quoted-v1")
+                if (value != null) {
+                    field(value.text.orEmpty()); field(value.displayName.orEmpty()); field(value.type.toString())
+                    field(value.serverId.orEmpty()); field(value.unavailableReason.orEmpty())
+                }
+            }
             field(talker.orEmpty())
+            field(accountScope)
             field(messageId.toString())
             field(speaker)
             field(text)
@@ -48,9 +57,11 @@ object MoodStore {
             field(createdAt.toString())
             field(zoneId)
             field(coverage.toString())
+            quote(quoted)
             context.forEach {
                 field(it.speaker); field(it.text); field(it.createdAt.toString()); field(it.messageId.toString())
                 it.voice?.let { source -> field(source.key); field(it.voiceState.name) }
+                quote(it.quoted)
             }
         }
         return java.security.MessageDigest.getInstance("SHA-256")

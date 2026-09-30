@@ -1,8 +1,7 @@
-package dev.sun.wechat.features.items.yanwai.core
+package dev.sun.wechat.features.items.yanwai
 
 import android.content.Context
 import android.util.Log
-import dev.sun.wechat.BuildConfig
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -25,7 +24,7 @@ object MoodLog {
         journal = DiagnosticJournal(File(context.filesDir, "mood.log"))
         if (early.isNotBlank()) journal?.append(early)
         early = ""
-        i("PROCESS_START package=${context.packageName} uid=${android.os.Process.myUid()} pid=${android.os.Process.myPid()} module=${BuildConfig.VERSION_NAME} android=${android.os.Build.VERSION.RELEASE} sdk=${android.os.Build.VERSION.SDK_INT}")
+        i("PROCESS_START package=${context.packageName} uid=${android.os.Process.myUid()} pid=${android.os.Process.myPid()} module=${import dev.sun.wechat.BuildConfig.VERSION_NAME} android=${android.os.Build.VERSION.RELEASE} sdk=${android.os.Build.VERSION.SDK_INT}")
     }
 
     fun i(message: String) = write("I", message)

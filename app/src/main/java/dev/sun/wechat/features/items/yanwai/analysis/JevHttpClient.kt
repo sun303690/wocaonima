@@ -1,6 +1,6 @@
-package dev.sun.wechat.features.items.yanwai.analysis
+package dev.sun.wechat.features.items.yanwai
 
-import dev.sun.wechat.features.items.yanwai.core.ApiSettings
+import dev.sun.wechat.features.items.yanwai.ApiSettings
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request

@@ -1,4 +1,4 @@
-package dev.sun.wechat.features.items.yanwai.hook
+package dev.sun.wechat.features.items.yanwai
 
 import android.app.Activity
 import android.content.ComponentName
@@ -8,8 +8,8 @@ import android.content.res.Resources
 import android.view.View
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
-import dev.sun.wechat.features.items.yanwai.core.Diagnostics
-import dev.sun.wechat.features.items.yanwai.core.MoodLog
+import dev.sun.wechat.features.items.yanwai.Diagnostics
+import dev.sun.wechat.features.items.yanwai.MoodLog
 import org.luckypray.dexkit.DexKitBridge
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
@@ -146,7 +146,7 @@ internal object HostSettingsEntry {
 
     fun open(context: Context) {
         runCatching {
-            context.startActivity(Intent().setComponent(ComponentName("dev.sun.wechat.features.items.yanwai", "dev.sun.wechat.features.items.yanwai.MainActivity"))
+            context.startActivity(Intent().setComponent(ComponentName("import dev.sun.wechat.features.items.yanwai", "import dev.sun.wechat.features.items.yanwai.MainActivity"))
                 .apply { if (context !is Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
             MoodLog.i("SETTINGS_ACTIVITY_OPEN 请求已发送")
         }.onFailure {

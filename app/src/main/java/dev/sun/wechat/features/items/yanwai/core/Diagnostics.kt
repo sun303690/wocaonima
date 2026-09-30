@@ -1,4 +1,4 @@
-package dev.sun.wechat.features.items.yanwai.core
+package dev.sun.wechat.features.items.yanwai
 
 import android.app.Activity
 import android.app.AlertDialog
@@ -14,7 +14,7 @@ import android.provider.MediaStore
 import android.widget.TextView
 import android.widget.ScrollView
 import android.widget.Toast
-import dev.sun.wechat.BuildConfig
+import import dev.sun.wechat.BuildConfig
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -25,7 +25,7 @@ object Diagnostics {
         appendLine("module=${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
         appendLine("process=${context.packageName} uid=${Process.myUid()} user=${Process.myUserHandle()} pid=${Process.myPid()}")
         appendLine("device=${Build.MANUFACTURER} ${Build.MODEL} android=${Build.VERSION.RELEASE} sdk=${Build.VERSION.SDK_INT}")
-        for (pkg in listOf("com.tencent.mm", "dev.sun.wechat.features.items.yanwai")) {
+        for (pkg in listOf("com.tencent.mm", "import dev.sun.wechat.features.items.yanwai")) {
             val version = runCatching {
                 @Suppress("DEPRECATION")
                 context.packageManager.getPackageInfo(pkg, 0).let { "${it.versionName} (${it.longVersionCode})" }
@@ -38,13 +38,26 @@ object Diagnostics {
         appendLine("言外运行诊断 ${Date()}")
         appendLine(environment(context))
         appendLine("verifiedSettings=${ModulePrefs.bridgeAvailable} analysisControl=per_conversation_local")
-        appendLine("replyConfigured=${ModulePrefs.replySettings().isConfigured} replyConsent=${ModulePrefs.replyConsent}")
+        ModulePrefs.analysisSettings()?.let {
+            appendLine("emotionSource=${it.emotion.source.label} analysisConfigured=${it.canAnalyze}")
+            if (it.emotion.source == EmotionSource.LLM) {
+                appendLine("analysisModel=${it.emotionLlm.model} config=${if (it.emotion.reuseReply) "复用回复设置" else "分析设置"}")
+                appendLine(dev.sun.wechat.features.items.yanwai.AnalysisThinking.description(it.emotionLlm))
+            }
+        }
+        appendLine("replyConfigured=${ModulePrefs.replySettings().isConfigured} manualReplyReady=${ModulePrefs.canGenerateReply}")
         appendLine("bridgeError=${ModulePrefs.lastBridgeError ?: "无已记录错误"}")
         appendLine("--- 当前进程日志（有容量上限，包含重启前保留记录） ---")
         appendLine(MoodLog.read().ifBlank { "尚无记录" })
-        if (context.packageName == "com.tencent.mm") {
-            appendLine("--- 微信进程日志 ---")
-            appendLine(MoodLog.read().ifBlank { "尚无记录" })
+        if (context.packageName == "import dev.sun.wechat.features.items.yanwai") {
+            val prefs = context.getSharedPreferences(SettingsProvider.RUNTIME_FILE, 0)
+            val last = prefs.getLong("host_log_at", 0L)
+            appendLine("--- 微信最近上报日志（缓存，不代表当前连接正常） ---")
+            if (last == 0L) appendLine("未收到微信日志。请在微信内长按分析开关或言外设置入口，选择导出运行日志；也可导出 LSP 日志。")
+            else {
+                appendLine("上报时间=${Date(last)}")
+                appendLine(prefs.getString("host_log", ""))
+            }
         }
     })
 

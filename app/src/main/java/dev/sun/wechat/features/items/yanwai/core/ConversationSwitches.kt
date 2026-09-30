@@ -1,4 +1,4 @@
-package dev.sun.wechat.features.items.yanwai.core
+package dev.sun.wechat.features.items.yanwai
 
 import java.security.MessageDigest
 

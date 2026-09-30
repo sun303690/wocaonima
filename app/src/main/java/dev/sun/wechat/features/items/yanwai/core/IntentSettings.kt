@@ -1,9 +1,9 @@
-package dev.sun.wechat.features.items.yanwai.core
+package dev.sun.wechat.features.items.yanwai
 
 import dev.sun.wechat.features.items.yanwai.reply.ReplySettings
 
 enum class IntentRoute(val id: String, val label: String) {
-    JEV("jev", "JEV 决策模型"), LLM("llm", "通用大模型 LLM");
+    JEV("jev", "JEV 决策模型"), LLM("llm", "智能分析");
     companion object { fun resolve(id: String?) = entries.firstOrNull { it.id == id } ?: JEV }
 }
 

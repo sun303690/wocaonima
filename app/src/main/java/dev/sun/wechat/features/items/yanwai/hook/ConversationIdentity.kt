@@ -1,4 +1,4 @@
-package dev.sun.wechat.features.items.yanwai.hook
+package dev.sun.wechat.features.items.yanwai
 
 /** Never carry the previous chat's identity across empty or ambiguous pages. */
 object ConversationIdentity {

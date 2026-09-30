@@ -1,4 +1,4 @@
-package dev.sun.wechat.features.items.yanwai.hook
+package dev.sun.wechat.features.items.yanwai
 
 /** Position in the already ordered host list; never rewrite another plugin's class links. */
 internal object SettingsEntryPlacement {

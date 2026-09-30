@@ -1,4 +1,4 @@
-package dev.sun.wechat.features.items.yanwai.analysis
+package dev.sun.wechat.features.items.yanwai
 
 data class ChatAction(val id: String, val condition: String, val text: String)
 

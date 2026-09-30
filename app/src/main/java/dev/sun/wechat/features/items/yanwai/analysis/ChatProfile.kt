@@ -1,4 +1,4 @@
-package dev.sun.wechat.features.items.yanwai.analysis
+package dev.sun.wechat.features.items.yanwai
 
 data class ChatDecision(val choice: String, val probabilities: Map<String, Double>, val confidence: Double) {
     // Initial conservative UI thresholds; they are not a claim of calibrated relationship accuracy.

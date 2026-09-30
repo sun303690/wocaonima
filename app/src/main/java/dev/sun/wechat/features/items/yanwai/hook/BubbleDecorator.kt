@@ -1,16 +1,16 @@
-package dev.sun.wechat.features.items.yanwai.hook
+package dev.sun.wechat.features.items.yanwai
 
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.RelativeLayout
 import android.widget.TextView
-import dev.sun.wechat.features.items.yanwai.analysis.SignalAnalyzer
-import dev.sun.wechat.features.items.yanwai.analysis.JevProtocol
-import dev.sun.wechat.features.items.yanwai.core.ModulePrefs
-import dev.sun.wechat.features.items.yanwai.core.MoodLog
-import dev.sun.wechat.features.items.yanwai.core.MoodStore
-import dev.sun.wechat.features.items.yanwai.core.AnalysisInput
+import dev.sun.wechat.features.items.yanwai.SignalAnalyzer
+import dev.sun.wechat.features.items.yanwai.JevProtocol
+import dev.sun.wechat.features.items.yanwai.ModulePrefs
+import dev.sun.wechat.features.items.yanwai.MoodLog
+import dev.sun.wechat.features.items.yanwai.MoodStore
+import dev.sun.wechat.features.items.yanwai.AnalysisInput
 import java.util.IdentityHashMap
 
 /** Append a sibling below the real text bubble, without replacing a host row or ViewHolder. */
@@ -25,6 +25,12 @@ object BubbleDecorator {
     fun show(row: View, message: AnalysisInput?): Boolean {
         if (message == null || !ModulePrefs.shouldDisplay(message)) { clear(row); return false }
         val key = message.key
+        val mood = MoodStore.get(key) ?: SignalAnalyzer.partialMood(key)
+        val display = ModulePrefs.analysisSettings()?.cardDisplay ?: dev.sun.wechat.features.items.yanwai.CardDisplaySettings()
+        if (mood != null && AnalysisCardContent.lines(mood, display).isEmpty()) {
+            clear(row)
+            return true // intentionally hidden, not an unsupported host layout
+        }
         var state = cards[row]
         if (state != null && (state.key != key || state.view.parent !== state.parent)) {
             clear(row)
@@ -34,12 +40,14 @@ object BubbleDecorator {
             state = attach(row, key) ?: return false
             cards[row] = state
         }
-        val value = MoodStore.get(key)?.let {
-            AnalysisCardText.format(it, state.view.layoutParams.width - state.view.paddingLeft - state.view.paddingRight)
+        val value = mood?.let {
+            AnalysisCardText.format(it, row.resources.displayMetrics.density,
+                state.view.layoutParams.width - state.view.paddingLeft - state.view.paddingRight, state.view.paint, display)
         } ?: SignalAnalyzer.failure(key)?.let {
             "${JevProtocol.header}\n分析失败：$it\n点击此卡重试"
         } ?: "${JevProtocol.header}\n" + if (ModulePrefs.canAnalyze(message))
             SignalAnalyzer.progress(key) ?: if (message.voice != null || message.context.any { it.voice != null }) "正在准备语音…" else "正在分析…"
+            else if (!message.backgroundReady) "正在读取对方背景；读取失败时会重试"
             else "模型未配置或设置未连接"
         if (state.view.text.toString() != value.toString()) state.view.text = value
         return true
@@ -56,8 +64,8 @@ object BubbleDecorator {
         val card = FrostedAnalysisView(row.context).apply {
             id = View.generateViewId()
             textSize = 13f
-            setPadding(dp(row, 12), dp(row, 10), dp(row, 12), dp(row, 10))
-            setLineSpacing(dp(row, 3).toFloat(), 1f)
+            setPadding(dp(row, 12), dp(row, 7), dp(row, 12), dp(row, 7))
+            setLineSpacing(dp(row, 1).toFloat(), 1f)
             setTextColor(0xFFF0F1F5.toInt())
             minHeight = dp(row, 48)
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
@@ -114,8 +122,12 @@ object BubbleDecorator {
             return null
         }
         val detach = object : View.OnAttachStateChangeListener {
-            override fun onViewAttachedToWindow(v: View) {}
-            override fun onViewDetachedFromWindow(v: View) { clear(v) }
+            override fun onViewAttachedToWindow(v: View) { MessageSniffer.restoreBoundCard(v) }
+            // RecyclerView temporarily detaches rows while scrolling. Keep their measured content.
+            override fun onViewDetachedFromWindow(v: View) {
+                // Older ListView adapters have no verified bind hook to clear recycled content.
+                if (!MessageSniffer.hasBoundMessage(v)) clear(v)
+            }
         }
         row.addOnAttachStateChangeListener(detach)
         return Card(key, card, target, branch, assignedId, detach)
@@ -155,6 +167,9 @@ object BubbleDecorator {
         if (state.assignedId != null && state.anchor.id == state.assignedId) state.anchor.id = View.NO_ID
     }
     fun clearAll() { cards.keys.toList().forEach(::clear) }
-    fun prune() { cards.keys.filter { !it.isAttachedToWindow }.forEach(::clear) }
+    fun prune() {
+        // Bound retention for recycled rows; leaving the chat still clears every card.
+        cards.keys.filter { !it.isAttachedToWindow }.drop(32).forEach(::clear)
+    }
     private fun dp(view: View, n: Int) = (n * view.resources.displayMetrics.density).toInt()
 }

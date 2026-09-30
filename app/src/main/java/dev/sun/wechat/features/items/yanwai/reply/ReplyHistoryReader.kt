@@ -1,6 +1,6 @@
 package dev.sun.wechat.features.items.yanwai.reply
 
-import dev.sun.wechat.features.items.yanwai.hook.MessageMetadata
+import dev.sun.wechat.features.items.yanwai.MessageMetadata
 import java.util.concurrent.CancellationException
 
 fun interface ReplyHistoryQuery {
