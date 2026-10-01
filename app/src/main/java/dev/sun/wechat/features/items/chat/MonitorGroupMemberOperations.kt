@@ -11,8 +11,6 @@ import dev.sun.wechat.dexkit.dsl.dexMethod
 import dev.sun.wechat.features.api.core.WeApi
 import dev.sun.wechat.features.api.core.WeDatabaseApi
 import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
-import dev.sun.wechat.features.api.core.WeMessageApi
-import dev.sun.wechat.features.api.core.models.MessageType
 import dev.sun.wechat.features.api.net.models.protobuf.ChatRoomDataProto
 import dev.sun.wechat.features.core.ApiFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
@@ -165,8 +163,8 @@ object MonitorGroupMemberOperations : ApiFeature(), IResolveDex, WeDatabaseListe
     }
 
     /**
-     * 发进退群通知：优先图文卡片（标题+字段+可点击成员头像），
-     * 其次图片卡片，最后回退原文本系统消息。
+     * 发进退群通知：只发 AppMsg 图文卡片（标题+昵称/ID+可点击成员头像）。
+     * 发不出去就不发：头像拉不到或发送异常仅记日志，不回退图片卡/文本。
      */
     private fun dispatchCard(group: String, wxId: String, displayName: String, isJoin: Boolean) {
         val name = displayName.ifBlank { wxId }
@@ -176,44 +174,7 @@ object MonitorGroupMemberOperations : ApiFeature(), IResolveDex, WeDatabaseListe
                 .onFailure { WeLogger.e(TAG, "card appmsg failed group=$group wxid=$wxId", it) }
                 .getOrDefault(false)
             WeLogger.i(TAG, "MGMO card appmsg group=$group wxid=$wxId isJoin=$isJoin sent=$sent")
-            if (sent) return@Thread
-            dispatchImageCard(group, wxId, name, displayName, isJoin)
         }.start()
-    }
-
-    /** 图片卡片回退；渲染失败再回退文本系统消息。 */
-    private fun dispatchImageCard(
-        group: String,
-        wxId: String,
-        name: String,
-        displayName: String,
-        isJoin: Boolean,
-    ) {
-        val file = GroupEventCard.renderEvent(group, wxId, name, isJoin)
-        if (file != null) {
-            val submitted = runCatching { WeMessageApi.sendImage(group, file.absolutePath) }
-                .onFailure { WeLogger.e(TAG, "send card image failed group=$group wxid=$wxId", it) }
-                .getOrDefault(false)
-            WeLogger.i(TAG, "MGMO card image group=$group wxid=$wxId isJoin=$isJoin submitted=$submitted")
-            // 上传是异步的：等微信读走 PNG 再删，否则文件消失导致发送失败
-            if (submitted) Thread.sleep(5_000L)
-            runCatching { file.delete() }
-            return
-        }
-        // 卡片渲染失败，回退文本系统消息
-        val displayString = if (displayName.isNotEmpty()) "$displayName ($wxId)" else wxId
-        val href = "weixin://weixinhongbao/wekit/chatroom_userinfo/$wxId"
-        val content = if (isJoin) {
-            """<_wc_custom_link_ color="#28C445" href="$href">$displayString</_wc_custom_link_> ${localizedChatString(R.string.chat_group_member_joined)}"""
-        } else {
-            """<_wc_custom_link_ color="#28C445" href="$href">$displayString</_wc_custom_link_> ${localizedChatString(R.string.chat_group_member_left)}"""
-        }
-        WeMessageApi.createSimpleMsgInfoAndInsert(
-            type = MessageType.SYSTEM.code,
-            talker = group,
-            content = content,
-            currentTime = System.currentTimeMillis()
-        )
     }
 
     private fun handleDisplayNameChange(group: String, origDisplayNames: Map<String, String>, newRoomData: ByteArray?) {
@@ -230,24 +191,13 @@ object MonitorGroupMemberOperations : ApiFeature(), IResolveDex, WeDatabaseListe
             val oldShow = oldName.ifEmpty { localizedChatString(R.string.chat_group_member_no_nickname) }
             val newShow = newName.ifEmpty { localizedChatString(R.string.chat_group_member_no_nickname) }
 
-            // 改名提醒：优先发 AppMsg 改名卡；头像/卡发不出去时回退文本系统消息
+            // 改名提醒：只发 AppMsg 改名卡；发不出去就不发（仅记日志）
             Thread {
                 val sent = runCatching {
                     GroupEventCard.sendRenameAppMsg(group, wxId, displayName, oldShow, newShow)
                 }.onFailure { WeLogger.e(TAG, "rename appmsg failed group=$group wxid=$wxId", it) }
                     .getOrDefault(false)
                 WeLogger.i(TAG, "MGMO rename card group=$group wxid=$wxId sent=$sent")
-                if (sent) return@Thread
-
-                val displayString = if (displayName.isNotEmpty()) "$displayName ($wxId)" else wxId
-                val href = "weixin://weixinhongbao/wekit/chatroom_userinfo/$wxId"
-                val content = """<_wc_custom_link_ color="#28C445" href="$href">$displayString</_wc_custom_link_> ${localizedChatString(R.string.chat_group_member_nickname_changed, oldShow, newShow)}"""
-                WeMessageApi.createSimpleMsgInfoAndInsert(
-                    type = MessageType.SYSTEM.code,
-                    talker = group,
-                    content = content,
-                    currentTime = System.currentTimeMillis()
-                )
             }.start()
         }
     }

@@ -86,8 +86,6 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
     override val categoryIds = listOf(FeatureCategoryIds.CHAT)
 
     private const val TAG = "GroupManagement"
-    // sendImage 是异步提交任务：上传线程读走 PNG 之前不能删文件，否则发送失败
-    private const val CARD_FILE_KEEP_MS = 60_000L
 
     // 动作
     const val ACTION_KICK_AND_HINT = 0
@@ -120,8 +118,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
     var notifyEnabled by KvStore.prefOption("glg_notify_enabled", false)
     var welcomeText by KvStore.prefOption("glg_welcome_text", "欢迎新成员入群！")
     var leaveText by KvStore.prefOption("glg_leave_text", "")
-    // 卡片模式：进退群发图片卡片（头像+通知文本），关闭则用下方纯文本
-    var cardEnabled by KvStore.prefOption("glg_card_enabled", false)
+    // 进退群图文卡片由「群成员行为监控」子服务统一发，这里只有纯文本
     var newbieKickEnabled by KvStore.prefOption("glg_newbie_kick", false)
     var newbieMinutes by KvStore.prefOption("glg_newbie_minutes", 10)
     var floodEnabled by KvStore.prefOption("glg_flood_enabled", false)
@@ -459,8 +456,8 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
     }
 
     /**
-     * 进退群事件输出：卡片模式渲染图片卡片（头像+通知文本）经 [WeMessageApi.sendImage] 发出；
-     * 否则回退纯文本（welcomeText/leaveText，支持 %userName% %userWxid% %groupName% %time%）。
+     * 进退群事件输出：纯文本（welcomeText/leaveText，支持 %userName% %userWxid% %groupName% %time%）。
+     * 图文卡片一律由「群成员行为监控」子服务统一发送，这里不再重复发卡。
      */
     private fun dispatchEvent(groupId: String, wxid: String, nick: String, isJoin: Boolean) {
         // 踢人/sysmsg/diff 三路径去重：30s 内同一 (群,成员,事件类型) 只发一次
@@ -469,38 +466,6 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
         val last = dispatchedRecently[dkey] ?: 0L
         if (now - last < 30_000L) return
         dispatchedRecently[dkey] = now
-        if (cardEnabled) {
-            scope.launch {
-                val ev = GroupEventCard.buildEvent(groupId, wxid, nick, isJoin)
-                val sent = runCatching { GroupEventCard.sendAppMsg(groupId, ev) }
-                    .onFailure { WeLogger.e(TAG, "GM event appmsg failed group=$groupId wxid=$wxid", it) }
-                    .getOrDefault(false)
-                if (sent) {
-                    WeLogger.i(TAG, "GM event appmsg sent group=$groupId wxid=$wxid isJoin=$isJoin")
-                    return@launch
-                }
-                // 图文卡片发不出去时回退到图片卡片
-                runCatching {
-                    val file = GroupEventCard.render(ev) ?: error("card render failed")
-                    val submitted = WeMessageApi.sendImage(groupId, file.absolutePath)
-                    if (submitted) {
-                        // 上传是异步的：给足时间让微信读走 PNG 再删，否则文件消失导致发送失败
-                        scope.launch {
-                            delay(CARD_FILE_KEEP_MS)
-                            runCatching { file.delete() }
-                        }
-                    } else {
-                        file.delete()
-                    }
-                    WeLogger.i(
-                        TAG,
-                        "GM event image fallback group=$groupId wxid=$wxid isJoin=$isJoin " +
-                            "submitted=$submitted file=${file.name}",
-                    )
-                }.onFailure { WeLogger.e(TAG, "GM event card failed group=$groupId wxid=$wxid", it) }
-            }
-            return
-        }
         val text = (if (isJoin) welcomeText else leaveText).trim()
         if (text.isBlank()) return
         val replaced = text
@@ -602,7 +567,6 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
             var notify by remember { mutableStateOf(notifyEnabled) }
             var welcomeInput by remember { mutableStateOf(welcomeText) }
             var leaveInput by remember { mutableStateOf(leaveText) }
-            var card by remember { mutableStateOf(cardEnabled) }
             var newbie by remember { mutableStateOf(newbieKickEnabled) }
             var newbieMinutesInput by remember { mutableStateOf(newbieMinutes.toString()) }
             var flood by remember { mutableStateOf(floodEnabled) }
@@ -766,7 +730,6 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                                     singleLine = false,
                                 )
                             }
-                            item { SwitchRow(R.string.glg_card_switch, R.string.glg_card_switch_desc, card) { card = it } }
                             item { SwitchRow(R.string.glg_newbie_title, R.string.glg_newbie_desc, newbie) { newbie = it } }
                             item {
                                 FieldRow(
@@ -858,7 +821,6 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                         notifyEnabled = notify
                         welcomeText = welcomeInput
                         leaveText = leaveInput
-                        cardEnabled = card
                         newbieKickEnabled = newbie
                         newbieMinutes = (newbieMinutesInput.toIntOrNull() ?: newbieMinutes).coerceIn(1, 9999)
                         floodEnabled = flood
