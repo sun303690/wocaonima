@@ -11,6 +11,7 @@ import android.widget.FrameLayout
 import android.widget.Switch
 import android.widget.TextView
 import androidx.activity.ComponentActivity
+import dev.sun.wechat.features.api.ui.WeCurrentConversationApi
 import dev.sun.wechat.utils.WeLogger
 import java.util.WeakHashMap
 
@@ -31,8 +32,11 @@ object ChatMoodHostUi {
             syncing = true
             control?.apply {
                 visibility = View.VISIBLE
-                isChecked = MoodAnalyzer.showBadge
-                contentDescription = "绘制分析结果；$value；长按打开设置"
+                // 对照 Yanwai syncControl：开关绑定当前聊天会话
+                val talker = WeCurrentConversationApi.value
+                isChecked = ConversationSwitches.isEnabled(talker)
+                isEnabled = talker.isNotBlank()
+                contentDescription = "当前聊天分析开关，本地记住选择；$value；长按打开设置"
             }
             syncing = false
         }
@@ -55,10 +59,21 @@ object ChatMoodHostUi {
                 minHeight = dp(48)
                 setPadding(dp(4), 0, dp(4), 0)
                 setOnCheckedChangeListener { _, checked ->
-                    if (!syncing) {
-                        MoodAnalyzer.showBadge = checked
-                        if (!checked) BubbleDecorator.clearAll()
+                    if (syncing) return@setOnCheckedChangeListener
+                    // 对照 Yanwai createAnalysisControl：切换只影响当前聊天会话
+                    val talker = WeCurrentConversationApi.value
+                    if (talker.isBlank()) {
+                        // 会话未知时弹回，避免写入无效状态
+                        syncing = true
+                        isChecked = false
+                        syncing = false
+                        return@setOnCheckedChangeListener
+                    }
+                    ConversationSwitches.setEnabled(talker, checked)
+                    if (checked) {
                         MessageSniffer.refresh()
+                    } else {
+                        BubbleDecorator.clearAll()
                     }
                 }
                 setOnLongClickListener { openSettings(); true }
