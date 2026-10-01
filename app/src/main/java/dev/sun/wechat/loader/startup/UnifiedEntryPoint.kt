@@ -7,6 +7,7 @@ import dev.ujhhgtg.reflekt.reflekt
 import dev.ujhhgtg.reflekt.utils.toClass
 import dev.sun.wechat.loader.abc.IHookBridge
 import dev.sun.wechat.loader.abc.ILoaderService
+import dev.sun.wechat.loader.environment.EnvironmentHider
 import dev.sun.wechat.loader.utils.HybridClassLoader
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.hookAfterDirectly
@@ -42,7 +43,9 @@ object UnifiedEntryPoint {
             .firstMethod { name = "attachBaseContext" }
             .hookAfterDirectly {
                 WeLogger.d(TAG, "Application.attachBaseContext invoked, hooking Instrumentation.callApplicationOnCreate")
-                val currentClassLoader = (thisObject as Context).classLoader
+                val context = thisObject as Context
+                EnvironmentHider.install(context, modulePath)
+                val currentClassLoader = context.classLoader
                 "android.app.Instrumentation".toClass(currentClassLoader).reflekt()
                     .firstMethod("callApplicationOnCreate").hookAfterDirectly {
                         WeLogger.d(TAG, "Instrumentation.callApplicationOnCreate invoked, running StartupAgent")

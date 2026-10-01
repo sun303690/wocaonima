@@ -7,8 +7,7 @@ import dev.ujhhgtg.reflekt.utils.ReflectionClassLoader
 import dev.sun.wechat.R
 import dev.sun.wechat.loader.abc.IHookBridge
 import dev.sun.wechat.loader.abc.ILoaderService
-import dev.sun.wechat.loader.entry.zygisk.ArtHookBridge
-import dev.sun.wechat.loader.entry.zygisk.ZygiskLoaderService
+import dev.sun.wechat.loader.environment.EnvironmentHider
 import dev.sun.wechat.loader.utils.HybridClassLoader
 import dev.sun.wechat.loader.utils.NativeLoader
 import dev.sun.wechat.data.JsonDataMigration
@@ -19,7 +18,6 @@ import dev.sun.wechat.utils.TargetProcesses
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.fs.LegacyStorageMigration
 import org.lsposed.hiddenapibypass.HiddenApiBypass
-import java.io.File
 import java.lang.reflect.Field
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.deleteRecursively
@@ -57,9 +55,6 @@ object StartupAgent {
         StartupInfo.hookBridge = hookBridge
 
         ensureHiddenApiAccess()
-        if (loaderService !is ZygiskLoaderService) {
-            checkWxForModulePath(modulePath)
-        }
 
         HostInfo.init(application)
         NativeLoader.init(application)
@@ -71,9 +66,7 @@ object StartupAgent {
             LegacyDocumentMigration.run(application)
             JsonDataMigration.run()
         }
-        if (hookBridge is ArtHookBridge) {
-            hideModuleLibraries(hookBridge)
-        }
+        EnvironmentHider.afterNativeLoad(hookBridge)
         // 隔离进程没有功能模块，也不能碰共享的 Room 文件：
         // 否则主进程还在搬旧库时，FeaturesLoader 就可能抢先初始化 DexCache/Room。
         if (TargetProcesses.currentType != TargetProcess.ISOLATED) {
@@ -87,27 +80,6 @@ object StartupAgent {
         // Only commit after every required startup phase completes. The caller
         // already logs a thrown failure, and a later lifecycle callback can retry.
         initialized = true
-    }
-
-    private fun hideModuleLibraries(hookBridge: ArtHookBridge) {
-        runCatching { hookBridge.hideLoadedModuleLibraries() }
-            .onSuccess { hidden ->
-                WeLogger.i(
-                    TAG,
-                    "hid loaded module libraries"
-                )
-                if (!hidden) WeLogger.w(TAG, "module native-library hiding was incomplete")
-            }
-            .onFailure {
-                WeLogger.e(TAG, "failed to hide module libraries", it)
-            }
-    }
-
-    private fun checkWxForModulePath(modulePath: String) {
-        val moduleFile = File(modulePath)
-        if (moduleFile.canWrite()) {
-            WeLogger.w(TAG, "module path is writable: $modulePath\nthis may cause issues on Android 15+, please check your Xposed framework")
-        }
     }
 
     private fun ensureHiddenApiAccess() {
