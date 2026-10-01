@@ -86,8 +86,6 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
     override val categoryIds = listOf(FeatureCategoryIds.CHAT)
 
     private const val TAG = "GroupManagement"
-    // sendImage 是异步提交任务：上传线程读走 PNG 之前不能删文件，否则发送失败
-    private const val CARD_FILE_KEEP_MS = 60_000L
 
     // 动作
     const val ACTION_KICK_AND_HINT = 0
@@ -120,8 +118,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
     var notifyEnabled by KvStore.prefOption("glg_notify_enabled", false)
     var welcomeText by KvStore.prefOption("glg_welcome_text", "欢迎新成员入群！")
     var leaveText by KvStore.prefOption("glg_leave_text", "")
-    // 卡片模式：进退群发图片卡片（头像+通知文本），关闭则用下方纯文本
-    var cardEnabled by KvStore.prefOption("glg_card_enabled", false)
+    // 进退群图文卡片由「群成员行为监控」子服务统一发，这里只有纯文本
     var newbieKickEnabled by KvStore.prefOption("glg_newbie_kick", false)
     var newbieMinutes by KvStore.prefOption("glg_newbie_minutes", 10)
     var floodEnabled by KvStore.prefOption("glg_flood_enabled", false)
@@ -142,6 +139,9 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
 
     private val groupIds get() = loadSet(groups)
     private val exemptIds get() = loadSet(exempt)
+
+    /** 该群是否在群管理白名单内; 群成员行为监控等服务据此限定生效范围 */
+    fun isGroupWhitelisted(groupId: String): Boolean = groupId in groupIds
 
     /** 黑名单条目是 `群ID|成员ID`，这样"一键拉回"才知道该拉回哪个群。 */
     private data class BanKey(val groupId: String, val memberId: String)
@@ -240,7 +240,9 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
 
             // 刷屏统计对每条消息都累计，所以先算再判违规
             val flooded = floodEnabled && bumpFlood(talker, sender)
-            val atAll = atAllEnabled && content.contains("announcement@all")
+            // @所有人 标记在 msgsource 列的 atuserlist 里, 不在 content 里(旧检查只查 content, 永远 false)
+            val msgSource = values.getAsString("msgsource") ?: values.getAsString("msgSource")
+            val atAll = atAllEnabled && (msgSource?.contains("announcement@all") == true || content.contains("announcement@all"))
             val verdict = if (isNewbie(talker, sender)) Verdict(REASON_NEWBIE) else detect(type, body, flooded, atAll)
             WeLogger.i(TAG, "GM detect group=$talker sender=$sender -> ${verdict?.reason ?: "null"}")
             if (verdict == null) return
@@ -454,8 +456,8 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
     }
 
     /**
-     * 进退群事件输出：卡片模式渲染图片卡片（头像+通知文本）经 [WeMessageApi.sendImage] 发出；
-     * 否则回退纯文本（welcomeText/leaveText，支持 %userName% %userWxid% %groupName% %time%）。
+     * 进退群事件输出：纯文本（welcomeText/leaveText，支持 %userName% %userWxid% %groupName% %time%）。
+     * 图文卡片一律由「群成员行为监控」子服务统一发送，这里不再重复发卡。
      */
     private fun dispatchEvent(groupId: String, wxid: String, nick: String, isJoin: Boolean) {
         // 踢人/sysmsg/diff 三路径去重：30s 内同一 (群,成员,事件类型) 只发一次
@@ -464,38 +466,6 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
         val last = dispatchedRecently[dkey] ?: 0L
         if (now - last < 30_000L) return
         dispatchedRecently[dkey] = now
-        if (cardEnabled) {
-            scope.launch {
-                val ev = GroupEventCard.buildEvent(groupId, wxid, nick, isJoin)
-                val sent = runCatching { GroupEventCard.sendAppMsg(groupId, ev) }
-                    .onFailure { WeLogger.e(TAG, "GM event appmsg failed group=$groupId wxid=$wxid", it) }
-                    .getOrDefault(false)
-                if (sent) {
-                    WeLogger.i(TAG, "GM event appmsg sent group=$groupId wxid=$wxid isJoin=$isJoin")
-                    return@launch
-                }
-                // 图文卡片发不出去时回退到图片卡片
-                runCatching {
-                    val file = GroupEventCard.render(ev) ?: error("card render failed")
-                    val submitted = WeMessageApi.sendImage(groupId, file.absolutePath)
-                    if (submitted) {
-                        // 上传是异步的：给足时间让微信读走 PNG 再删，否则文件消失导致发送失败
-                        scope.launch {
-                            delay(CARD_FILE_KEEP_MS)
-                            runCatching { file.delete() }
-                        }
-                    } else {
-                        file.delete()
-                    }
-                    WeLogger.i(
-                        TAG,
-                        "GM event image fallback group=$groupId wxid=$wxid isJoin=$isJoin " +
-                            "submitted=$submitted file=${file.name}",
-                    )
-                }.onFailure { WeLogger.e(TAG, "GM event card failed group=$groupId wxid=$wxid", it) }
-            }
-            return
-        }
         val text = (if (isJoin) welcomeText else leaveText).trim()
         if (text.isBlank()) return
         val replaced = text
@@ -538,7 +508,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
             if (shouldKick) {
                 WeGroupApi.delMember(groupId, memberId)
                 if (shouldBan) banned = saveSet(loadSet(banned) + "$groupId|$memberId")
-                // 踢人卡片由「群成员行为监控」功能统一发（监听 chatroom 表更新），这里不重复发
+                // 踢人卡片由「群成员行为监控」子服务统一发（监听 chatroom 表更新），这里不重复发
             }
             if (shouldHint) {
                 val text = if (verdict.reason == REASON_NIGHT) nightHintText else hintText
@@ -597,7 +567,6 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
             var notify by remember { mutableStateOf(notifyEnabled) }
             var welcomeInput by remember { mutableStateOf(welcomeText) }
             var leaveInput by remember { mutableStateOf(leaveText) }
-            var card by remember { mutableStateOf(cardEnabled) }
             var newbie by remember { mutableStateOf(newbieKickEnabled) }
             var newbieMinutesInput by remember { mutableStateOf(newbieMinutes.toString()) }
             var flood by remember { mutableStateOf(floodEnabled) }
@@ -606,6 +575,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
             var atAll by remember { mutableStateOf(atAllEnabled) }
             var owner by remember { mutableStateOf(ownerExempt) }
             var ladder by remember { mutableStateOf(ladderEnabled) }
+            var monitor by remember { mutableStateOf(MonitorGroupMemberOperations.enabled) }
 
             fun openGroupPicker() {
                 showComposeDialog(context) {
@@ -760,7 +730,6 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                                     singleLine = false,
                                 )
                             }
-                            item { SwitchRow(R.string.glg_card_switch, R.string.glg_card_switch_desc, card) { card = it } }
                             item { SwitchRow(R.string.glg_newbie_title, R.string.glg_newbie_desc, newbie) { newbie = it } }
                             item {
                                 FieldRow(
@@ -768,6 +737,15 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                                     value = newbieMinutesInput,
                                     onValueChange = { v -> newbieMinutesInput = v.filter { c -> c.isDigit() }.take(4) },
                                 )
+                            }
+
+                            item { SectionLabel(stringResource(R.string.feature_monitor_group_member_operations_name)) }
+                            item {
+                                SwitchRow(
+                                    R.string.feature_monitor_group_member_operations_name,
+                                    R.string.feature_monitor_group_member_operations_description,
+                                    monitor,
+                                ) { monitor = it }
                             }
 
                             item { SectionLabel(stringResource(R.string.glg_section_misc)) }
@@ -843,7 +821,6 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                         notifyEnabled = notify
                         welcomeText = welcomeInput
                         leaveText = leaveInput
-                        cardEnabled = card
                         newbieKickEnabled = newbie
                         newbieMinutes = (newbieMinutesInput.toIntOrNull() ?: newbieMinutes).coerceIn(1, 9999)
                         floodEnabled = flood
@@ -852,6 +829,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                         atAllEnabled = atAll
                         ownerExempt = owner
                         ladderEnabled = ladder
+                        MonitorGroupMemberOperations.enabled = monitor
                         lastHandledAt.clear()
                         msgTimes.clear()
                         strikes.clear()

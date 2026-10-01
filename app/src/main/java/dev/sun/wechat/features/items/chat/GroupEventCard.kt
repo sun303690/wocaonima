@@ -147,26 +147,25 @@ object GroupEventCard {
 
     /**
      * 图文卡片入口：以微信 AppMsg（`type=5` 链接卡）发出进退群通知——标题+字段在左侧、
-     * 成员头像在右侧，点击卡片打开该成员头像 URL。返回 false 表示未发出，调用方回退到
-     * [renderEvent] 的图片卡片。
+     * 成员头像在右侧，点击卡片打开该成员头像 URL。头像拉不到时返回 false——
+     * 发不出去就不发，不再回退图片卡/文本。
      */
     fun sendEventAppMsg(groupId: String, wxid: String, weNick: String, isJoin: Boolean): Boolean =
         sendAppMsg(groupId, buildEvent(groupId, wxid, weNick, isJoin))
 
     /**
-     * 见 [sendEventAppMsg]。头像 URL 取不到时直接返回 false，由调用方回退图片卡片。
+     * 见 [sendEventAppMsg]。
      *
-     * 字段区只放 3 行：微信链接卡只渲染卡片高度能容纳的行数，超出部分（含最后一行）会被
-     * 截掉，所以字段必须压缩，且把 `实名` 放在第 3 行保证可见。
+     * 字段区只放 2 行（昵称 / ID）：微信链接卡只渲染卡片高度能容纳的行数，超出部分会被截掉。
      */
     fun sendAppMsg(toUser: String, ev: Event): Boolean {
         val title = if (ev.isJoin) "进群通知" else "退群通知"
-        val who = if (ev.isJoin) "进群者" else "退群者"
+        val who = if (ev.isJoin) "进群昵称" else "退群昵称"
         val des = buildString {
-            append(who).append("群内昵称：").append(ev.groupNick.ifBlank { ev.weNick })
-            append('\n').append(who).append("ID：").append(ev.wxid.ifBlank { "未知" })
-            append('\n').append("实名：").append(ev.realNameTail.ifBlank { "-" })
+            append(who).append("：").append(ev.groupNick.ifBlank { ev.weNick }.ifBlank { "-" })
+            append('\n').append("ID：").append(ev.wxid.ifBlank { "未知" })
         }
+        // 头像是卡片的必要组成：拉不到就不发（调用方不回退）
         val avatarUrl = runCatching { WeDatabaseApi.getAvatarUrl(ev.wxid) }.getOrNull().orEmpty()
         if (!avatarUrl.startsWith("http")) return false
         val thumb = fetchBytes(avatarUrl) ?: return false
@@ -176,7 +175,7 @@ object GroupEventCard {
 
     /**
      * 群内昵称变更提醒卡片（AppMsg 链接卡，头像可点击）。
-     * 头像 URL 取不到时返回 false，由调用方回退文本系统消息。
+     * 头像 URL 取不到时返回 false，调用方不回退。
      */
     fun sendRenameAppMsg(toUser: String, wxId: String, weNick: String, oldName: String, newName: String): Boolean {
         val who = weNick.ifBlank { wxId }
