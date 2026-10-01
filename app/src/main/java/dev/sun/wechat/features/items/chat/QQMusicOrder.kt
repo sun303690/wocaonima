@@ -3,6 +3,8 @@ package dev.sun.wechat.features.items.chat
 import android.content.ContentValues
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
@@ -11,7 +13,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import com.composables.icons.materialsymbols.MaterialSymbols
+import com.composables.icons.materialsymbols.outlined.Chevron_right
 import dev.sun.wechat.R
+import dev.sun.wechat.features.api.core.WeDatabaseApi
 import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
 import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.features.api.core.models.MessageType
@@ -22,8 +27,10 @@ import dev.sun.wechat.features.items.chat.musicorder.QQMusicSearchResult
 import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
+import dev.sun.wechat.ui.content.ContactsSelector
 import dev.sun.wechat.ui.content.DefaultColumn
 import dev.sun.wechat.ui.content.TextButton
+import dev.sun.wechat.ui.content.m3.BaseWidget
 import dev.sun.wechat.ui.content.m3.SwitchWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
@@ -51,6 +58,7 @@ object QQMusicOrder : ClickableFeature(), WeDatabaseListenerApi.IInsertListener 
     private var appId by prefOption("qq_music_order_app_id", DEFAULT_APP_ID)
     private var singerOverride by prefOption("qq_music_order_singer", "")
     private var onlyGroupChat by prefOption("qq_music_order_only_group", true)
+    private var groupWhitelist by prefOption("qq_music_order_group_whitelist", emptySet())
     private var replyOnFailure by prefOption("qq_music_order_reply_on_failure", true)
 
     private val client = QQMusicClient()
@@ -82,6 +90,8 @@ object QQMusicOrder : ClickableFeature(), WeDatabaseListenerApi.IInsertListener 
         val talker = values.getAsString("talker").orEmpty()
         if (talker.isBlank() || talker.startsWith("gh_")) return
         if (onlyGroupChat && !talker.isGroupChatWxId) return
+        val whitelist = groupWhitelist
+        if (talker.isGroupChatWxId && whitelist.isNotEmpty() && talker !in whitelist) return
 
         val keyword = parseKeyword(talker, values.getAsString("content").orEmpty()) ?: return
 
@@ -156,6 +166,7 @@ object QQMusicOrder : ClickableFeature(), WeDatabaseListenerApi.IInsertListener 
             var appIdText by remember { mutableStateOf(appId) }
             var groupOnly by remember { mutableStateOf(onlyGroupChat) }
             var replyFail by remember { mutableStateOf(replyOnFailure) }
+            var whitelist by remember { mutableStateOf(groupWhitelist) }
             AlertDialogContent(
                 title = { Text(stringResource(R.string.feature_qq_music_order_name)) },
                 text = {
@@ -186,6 +197,36 @@ object QQMusicOrder : ClickableFeature(), WeDatabaseListenerApi.IInsertListener 
                             checked = groupOnly,
                             onCheckedChange = { groupOnly = it },
                         )
+                        BaseWidget(
+                            iconPlaceholder = false,
+                            title = stringResource(R.string.qq_music_order_group_whitelist),
+                            description = if (whitelist.isEmpty()) {
+                                stringResource(R.string.qq_music_order_group_whitelist_empty)
+                            } else {
+                                stringResource(R.string.qq_music_order_group_whitelist_count, whitelist.size)
+                            },
+                            onClick = {
+                                val groups = WeDatabaseApi.getGroups()
+                                showComposeDialog(context) {
+                                    ContactsSelector(
+                                        title = stringResource(R.string.qq_music_order_group_whitelist),
+                                        contacts = groups,
+                                        initialSelectedWxIds = whitelist,
+                                        onDismiss = onDismiss,
+                                    ) { selectedIds ->
+                                        whitelist = selectedIds
+                                        onDismiss()
+                                    }
+                                }
+                            },
+                            trailingContent = {
+                                Icon(
+                                    MaterialSymbols.Outlined.Chevron_right,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
+                        )
                         SwitchWidget(
                             title = stringResource(R.string.qq_music_order_reply_on_failure),
                             checked = replyFail,
@@ -199,6 +240,7 @@ object QQMusicOrder : ClickableFeature(), WeDatabaseListenerApi.IInsertListener 
                         singerOverride = singerText.trim()
                         appId = appIdText.trim().ifBlank { DEFAULT_APP_ID }
                         onlyGroupChat = groupOnly
+                        groupWhitelist = whitelist
                         replyOnFailure = replyFail
                         onDismiss()
                     }) { Text(stringResource(R.string.dialog_confirm)) }
