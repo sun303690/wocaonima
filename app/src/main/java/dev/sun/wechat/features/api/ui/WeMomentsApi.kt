@@ -1678,7 +1678,7 @@ object WeMomentsApi : ApiFeature(), IResolveDex {
                 frame.compress(Bitmap.CompressFormat.JPEG, 90, out)
                 val outFile = KnownPaths.moduleCache / "wekit_sns_thumb_${System.currentTimeMillis()}.jpg"
                 outFile.deleteIfExists()
-                outFile.writeBytes(out.toByteArray())
+                outFile.outputStream().use { it.write(out.toByteArray()) }
                 outFile.absolutePathString()
             } finally {
                 retriever.release()

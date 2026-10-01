@@ -12,8 +12,7 @@ import dev.sun.wechat.features.api.ui.WeMomentsApi
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.ui.utils.CameraIcon
-import dev.sun.wechat.utils.android.ToastUtils.showToastSuspend
-import dev.sun.wechat.ui.utils.localizedMomentsString
+import dev.sun.wechat.utils.android.showToastSuspend
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
