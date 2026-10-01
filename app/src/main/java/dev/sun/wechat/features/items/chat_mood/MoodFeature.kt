@@ -28,6 +28,7 @@ import dev.sun.wechat.R
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.api.ui.WeChatInputBarMenuApi
+import dev.sun.wechat.features.api.ui.WeChatMessageContextMenuApi
 import dev.sun.wechat.features.api.ui.WeCurrentConversationApi
 import dev.sun.wechat.features.items.chat.AiSmartReply
 import dev.sun.wechat.ui.content.AlertDialogContent
@@ -51,12 +52,15 @@ object MoodFeature : ClickableFeature() {
     override fun onEnable() {
         MoodAnalyzer.enabled = true
         MessageSniffer.ensureSubscribed()
+        // 帮我回的长按消息菜单入口（非独立 feature，随情绪分析一起挂载）
+        WeChatMessageContextMenuApi.addProvider(AiSmartReply)
         WeLogger.i(TAG, "情绪分析已启用")
     }
 
     override fun onDisable() {
         MoodAnalyzer.enabled = false
         BubbleDecorator.clearAll()
+        WeChatMessageContextMenuApi.removeProvider(AiSmartReply)
         MoodStore.clear()
         WeLogger.i(TAG, "情绪分析已停用")
     }

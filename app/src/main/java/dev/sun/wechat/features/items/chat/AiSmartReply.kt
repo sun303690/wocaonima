@@ -31,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.composables.icons.materialsymbols.MaterialSymbols
+import com.composables.icons.materialsymbols.outlined.Auto_awesome
 import dev.sun.wechat.R
 import dev.sun.wechat.agent.data.WeAgentRepository
 import dev.sun.wechat.agent.model.LlmMessage
@@ -40,6 +41,7 @@ import dev.sun.wechat.agent.model.ModelProviderManager
 import dev.sun.wechat.features.api.core.WeDatabaseApi
 import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.features.api.core.models.MessageInfo
+import dev.sun.wechat.features.api.ui.WeChatMessageContextMenuApi
 import dev.sun.wechat.features.items.chat_mood.ReplyConfig
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.data.KvStore.prefOption
@@ -64,9 +66,11 @@ import kotlinx.coroutines.withContext
  *  - 参考上下文条数（默认10，取该会话最近N条）；生成备选数（默认20）
  *  AI 调用复用 WeAgent 模型库。不再作为独立开关，由情绪分析 UI 直接打开。
  */
-object AiSmartReply {
+object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
 
     private const val TAG = "AiSmartReply"
+
+    private const val MENU_ID = 777042
 
     private fun stylePromptKey(name: String) = "asr_style_prompt_$name"
 
@@ -163,6 +167,19 @@ object AiSmartReply {
             SmartReplyDialogContent(talker, "")
         }
     }
+
+    // ===== 长按消息菜单入口（WeChatMessageContextMenuApi）=====
+    override fun getMenuItems(): List<WeChatMessageContextMenuApi.MenuItem> = listOf(
+        WeChatMessageContextMenuApi.MenuItem(
+            id = MENU_ID,
+            text = "帮我回",
+            drawable = AiSmartReplyIcon,
+            imageVector = MaterialSymbols.Outlined.Auto_awesome,
+            isSupported = { msg -> msg.type?.isText == true },
+        ) { view, ctx, msgInfo ->
+            showSmartReplyDialog(ctx.activity, msgInfo)
+        },
+    )
 
     @Composable
     @OptIn(ExperimentalLayoutApi::class)
