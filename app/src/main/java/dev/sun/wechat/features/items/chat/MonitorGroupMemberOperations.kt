@@ -14,25 +14,41 @@ import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
 import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.features.api.core.models.MessageType
 import dev.sun.wechat.features.api.net.models.protobuf.ChatRoomDataProto
+import dev.sun.wechat.features.core.ApiFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
-import dev.sun.wechat.features.core.SwitchFeature
+import dev.sun.wechat.data.KvStore
+import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.reflection.BString
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
 
-object MonitorGroupMemberOperations : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.IUpdateListener {
+/**
+ * 群成员行为监控（进退群 / 改群昵称卡片）。
+ *
+ * 原先是「联系人与群组」分类下的独立功能, 现整体并入「群管理」:
+ * 开关在群管理设置对话框的「群成员行为监控」一节, 由 [enabled] 驱动。
+ * 本对象改为常驻 [ApiFeature]（对用户不可见）, 监听与 hook 常驻安装,
+ * 每次事件时读 [enabled] 决定是否生效。
+ */
+object MonitorGroupMemberOperations : ApiFeature(), IResolveDex, WeDatabaseListenerApi.IUpdateListener {
 
-    override val technicalId = "群成员行为监控"
+    override val technicalId = "群成员行为监控服务"
     override val nameRes = R.string.feature_monitor_group_member_operations_name
-    override val categoryIds = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
+    override val categoryIds = listOf(FeatureCategoryIds.API)
     override val descriptionRes = R.string.feature_monitor_group_member_operations_description
 
+    /** 由「群管理」设置界面驱动; 首次启动时从旧独立功能的开关迁移 */
+    var enabled by prefOption(KEY_ENABLED, false)
+
     override fun onEnable() {
+        migrateLegacySwitch()
+
         WeDatabaseListenerApi.addListener(this)
 
         methodHandleSpanClick.hookBefore {
+            if (!enabled) return@hookBefore
             val url = args[1]!!.reflekt().firstField {
                 type = BString
                 modifiers(Modifiers.FINAL)
@@ -50,6 +66,15 @@ object MonitorGroupMemberOperations : SwitchFeature(), IResolveDex, WeDatabaseLi
         WeDatabaseListenerApi.removeListener(this)
     }
 
+    /** 旧版本中这是独立 SwitchFeature, 开关存在旧键下; 迁移一次避免升级后丢失已启用状态 */
+    private fun migrateLegacySwitch() {
+        if (KvStore.getBoolOrDef(KEY_MIGRATED, false)) return
+        KvStore.putBool(KEY_MIGRATED, true)
+        if (KvStore.getBoolOrDef(LEGACY_SWITCH_KEY, false)) {
+            KvStore.putBool(KEY_ENABLED, true)
+        }
+    }
+
     private val methodHandleSpanClick by dexMethod {
         matcher {
             declaredClass = $$"com.tencent.mm.app.plugin.URISpanHandlerSet$LuckyMoneyUriSpanHandler"
@@ -59,6 +84,7 @@ object MonitorGroupMemberOperations : SwitchFeature(), IResolveDex, WeDatabaseLi
 
     @SuppressLint("Range")
     override fun onUpdate(table: String, values: ContentValues, whereClause: String?, whereArgs: Array<String>?, conflictAlgorithm: Int) {
+        if (!enabled) return
         if (table != "chatroom") return
 
         val group = values.getAsString("chatroomname") ?: return
@@ -234,4 +260,13 @@ object MonitorGroupMemberOperations : SwitchFeature(), IResolveDex, WeDatabaseLi
     }
 
     private const val TAG = "MonitorGroupMemberOperations"
+
+    /** 「群管理」设置界面里的开关键 */
+    private const val KEY_ENABLED = "glg_monitor_enabled"
+
+    /** 迁移只跑一次的标记 */
+    private const val KEY_MIGRATED = "glg_monitor_migrated"
+
+    /** 旧独立功能的开关键（SwitchFeature 以 technicalId 存状态） */
+    private const val LEGACY_SWITCH_KEY = "群成员行为监控"
 }

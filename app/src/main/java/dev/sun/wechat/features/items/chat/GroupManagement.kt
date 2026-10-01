@@ -538,7 +538,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
             if (shouldKick) {
                 WeGroupApi.delMember(groupId, memberId)
                 if (shouldBan) banned = saveSet(loadSet(banned) + "$groupId|$memberId")
-                // 踢人卡片由「群成员行为监控」功能统一发（监听 chatroom 表更新），这里不重复发
+                // 踢人卡片由「群成员行为监控」子服务统一发（监听 chatroom 表更新），这里不重复发
             }
             if (shouldHint) {
                 val text = if (verdict.reason == REASON_NIGHT) nightHintText else hintText
@@ -606,6 +606,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
             var atAll by remember { mutableStateOf(atAllEnabled) }
             var owner by remember { mutableStateOf(ownerExempt) }
             var ladder by remember { mutableStateOf(ladderEnabled) }
+            var monitor by remember { mutableStateOf(MonitorGroupMemberOperations.enabled) }
 
             fun openGroupPicker() {
                 showComposeDialog(context) {
@@ -770,6 +771,15 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                                 )
                             }
 
+                            item { SectionLabel(stringResource(R.string.feature_monitor_group_member_operations_name)) }
+                            item {
+                                SwitchRow(
+                                    R.string.feature_monitor_group_member_operations_name,
+                                    R.string.feature_monitor_group_member_operations_description,
+                                    monitor,
+                                ) { monitor = it }
+                            }
+
                             item { SectionLabel(stringResource(R.string.glg_section_misc)) }
                             item { SwitchRow(R.string.glg_flood_title, R.string.glg_flood_desc, flood) { flood = it } }
                             item {
@@ -852,6 +862,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                         atAllEnabled = atAll
                         ownerExempt = owner
                         ladderEnabled = ladder
+                        MonitorGroupMemberOperations.enabled = monitor
                         lastHandledAt.clear()
                         msgTimes.clear()
                         strikes.clear()
