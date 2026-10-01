@@ -243,7 +243,9 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
 
             // 刷屏统计对每条消息都累计，所以先算再判违规
             val flooded = floodEnabled && bumpFlood(talker, sender)
-            val atAll = atAllEnabled && content.contains("announcement@all")
+            // @所有人 标记在 msgsource 列的 atuserlist 里, 不在 content 里(旧检查只查 content, 永远 false)
+            val msgSource = values.getAsString("msgsource") ?: values.getAsString("msgSource")
+            val atAll = atAllEnabled && (msgSource?.contains("announcement@all") == true || content.contains("announcement@all"))
             val verdict = if (isNewbie(talker, sender)) Verdict(REASON_NEWBIE) else detect(type, body, flooded, atAll)
             WeLogger.i(TAG, "GM detect group=$talker sender=$sender -> ${verdict?.reason ?: "null"}")
             if (verdict == null) return
