@@ -765,6 +765,9 @@
     <string name="qq_music_order_singer_hint">Fixed singer (optional)</string>
     <string name="qq_music_order_appid_hint">Music card AppID</string>
     <string name="qq_music_order_group_only">Group chats only</string>
+    <string name="qq_music_order_group_whitelist">Group chat whitelist</string>
+    <string name="qq_music_order_group_whitelist_empty">Not set — song requests work in all group chats</string>
+    <string name="qq_music_order_group_whitelist_count">Selected groups: %1$d</string>
     <string name="qq_music_order_reply_on_failure">Reply when it fails</string>
     <string name="qq_music_order_not_found">No matching song found</string>
     <string name="qq_music_order_unavailable">Cannot fetch the song, likely due to copyright or a paid album</string>

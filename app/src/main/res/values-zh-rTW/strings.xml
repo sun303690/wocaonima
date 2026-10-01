@@ -726,6 +726,9 @@
     <string name="qq_music_order_singer_hint">指定歌手 (可選)</string>
     <string name="qq_music_order_appid_hint">音樂卡片 AppID</string>
     <string name="qq_music_order_group_only">僅羣聊生效</string>
+    <string name="qq_music_order_group_whitelist">羣聊白名單</string>
+    <string name="qq_music_order_group_whitelist_empty">未設置, 所有羣聊均可點歌</string>
+    <string name="qq_music_order_group_whitelist_count">已選 %1$d 個羣聊</string>
     <string name="qq_music_order_reply_on_failure">失敗時回覆提示</string>
     <string name="qq_music_order_not_found">未搜到相關歌曲</string>
     <string name="qq_music_order_unavailable">無法取得歌曲, 可能是版權限制或數位專輯</string>
