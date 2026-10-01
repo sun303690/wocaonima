@@ -88,6 +88,8 @@ object MonitorGroupMemberOperations : ApiFeature(), IResolveDex, WeDatabaseListe
         if (table != "chatroom") return
 
         val group = values.getAsString("chatroomname") ?: return
+        // 监控范围 = 群管理白名单(与群管理自身的处置范围一致): 名单外的群不监控
+        if (!GroupManagement.isGroupWhitelisted(group)) return
         val newMemberCount = values.getAsInteger("memberCount")
         val newRawMembers = values.getAsString("memberlist")
         val newRoomData = values.getAsByteArray("roomdata")

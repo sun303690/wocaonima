@@ -143,6 +143,9 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
     private val groupIds get() = loadSet(groups)
     private val exemptIds get() = loadSet(exempt)
 
+    /** 该群是否在群管理白名单内; 群成员行为监控等服务据此限定生效范围 */
+    fun isGroupWhitelisted(groupId: String): Boolean = groupId in groupIds
+
     /** 黑名单条目是 `群ID|成员ID`，这样"一键拉回"才知道该拉回哪个群。 */
     private data class BanKey(val groupId: String, val memberId: String)
 
