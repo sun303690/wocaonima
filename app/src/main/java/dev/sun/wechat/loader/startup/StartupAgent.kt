@@ -66,8 +66,7 @@ object StartupAgent {
             LegacyDocumentMigration.run(application)
             JsonDataMigration.run()
         }
-        EnvironmentHider.afterNativeLoad(hookBridge)
-        // 隔离进程没有功能模块，也不能碰共享的 Room 文件：
+        hookBridge?.let(EnvironmentHider::afterNativeLoad)        // 隔离进程没有功能模块，也不能碰共享的 Room 文件：
         // 否则主进程还在搬旧库时，FeaturesLoader 就可能抢先初始化 DexCache/Room。
         if (TargetProcesses.currentType != TargetProcess.ISOLATED) {
             WeLauncher.init(application)
