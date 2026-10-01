@@ -3,6 +3,7 @@ package dev.sun.wechat.features.items.moments
 import dev.sun.wechat.R
 import com.composables.icons.materialsymbols.MaterialSymbols
 import com.composables.icons.materialsymbols.outlined.Camera
+import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.features.api.core.WeServiceApi
 import dev.sun.wechat.features.api.core.models.MessageInfo
 import dev.sun.wechat.features.api.core.models.MessageType
@@ -11,6 +12,12 @@ import dev.sun.wechat.features.api.ui.WeMomentsApi
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.ui.utils.CameraIcon
+import dev.sun.wechat.utils.android.showToastSuspend
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Suppress("DEPRECATION")
 object ForwardMessagesToMoments : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItemsProvider {
@@ -65,25 +72,53 @@ object ForwardMessagesToMoments : SwitchFeature(), WeChatMessageContextMenuApi.I
             .joinToString("\n\n") { it.momentsText() }
             .takeIf { it.isNotBlank() }
 
-        val imageMd5s = msgInfos.filter { it.type == MessageType.IMAGE }
-            .map { WeServiceApi.getImageMd5FromMsgInfo(it) }
+        val images = msgInfos.filter { it.type == MessageType.IMAGE }
         val video = msgInfos.firstOrNull { it.type == MessageType.VIDEO }
 
         when {
-            video != null -> {
-                val mp4Path = WeServiceApi.getVideoMp4PathFromMsgInfo(video)
-                WeMomentsApi.postVideoInUi(activity, mp4Path, mp4Path, text)
-            }
-
-            imageMd5s.isNotEmpty() -> {
-                WeMomentsApi.postImagesInUi(activity, imageMd5s, text)
-            }
-
-            else -> {
-                WeMomentsApi.postTextInUi(activity, text ?: "")
-            }
+            video != null -> repostVideoToMoments(activity, video, text)
+            images.isNotEmpty() -> repostImagesToMoments(activity, images, text)
+            else -> WeMomentsApi.postTextInUi(activity, text ?: "")
         }
     }
+
+    /**
+     * 图片转发：先在后台等待每张图下载 + 解密 (微信聊天图是 .dat 加密存储, SnsUploadUI
+     * 只认解密后的真实文件路径, 且等待可能长达数秒), 全部就绪后再回主线程打开编辑器。
+     * 有图片拿不到 (未加载/解密失败) 则提示先在聊天里点开加载, 不打开编辑器。
+     */
+    private fun repostImagesToMoments(activity: android.app.Activity, images: List<MessageInfo>, text: String?) {
+        scope.launch {
+            val paths = images.mapNotNull { msg ->
+                runCatching { WeMessageApi.downloadImage(msg.serverId) }.getOrNull()
+            }
+            if (paths.size != images.size) {
+                showToastSuspend(activity, localizedMomentsString(R.string.moments_forward_media_not_ready))
+                return@launch
+            }
+            withContext(Dispatchers.Main) { WeMomentsApi.postImagesInUi(activity, paths, text) }
+        }
+    }
+
+    /**
+     * 视频转发：取本地 mp4 (用户已点开过才有本地文件), 走**相册流程**塞进 SnsUploadUI——
+     * 由微信自己的编辑器接管 (长视频 + 封面选择), 视觉上和"从相册选视频发朋友圈"一致。
+     * 不用 sight 流程 (Ksnsupload_type=14): 那是 30 秒小视频入口, 长视频进不去。
+     * mp4 拿不到则提示先在聊天里点开视频。
+     */
+    private fun repostVideoToMoments(activity: android.app.Activity, video: MessageInfo, text: String?) {
+        scope.launch {
+            val mp4 = runCatching { WeServiceApi.getVideoMp4PathFromMsgInfo(video) }.getOrNull()
+                ?.takeIf { java.io.File(it).exists() }
+            if (mp4 == null) {
+                showToastSuspend(activity, localizedMomentsString(R.string.moments_forward_media_not_ready))
+                return@launch
+            }
+            withContext(Dispatchers.Main) { WeMomentsApi.postImagesInUi(activity, listOf(mp4), text) }
+        }
+    }
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun getMenuItems(): List<WeChatMessageContextMenuApi.MenuItem> {
         return listOf(
@@ -112,12 +147,11 @@ object ForwardMessagesToMoments : SwitchFeature(), WeChatMessageContextMenuApi.I
                         }
 
                         MessageType.IMAGE -> {
-                            WeMomentsApi.postImagesInUi(activity, listOf(WeServiceApi.getImageMd5FromMsgInfo(msgInfo)))
+                            repostImagesToMoments(activity, listOf(msgInfo), null)
                         }
 
                         MessageType.VIDEO -> {
-                            val mp4Path = WeServiceApi.getVideoMp4PathFromMsgInfo(msgInfo)
-                            WeMomentsApi.postVideoInUi(activity, mp4Path, mp4Path)
+                            repostVideoToMoments(activity, msgInfo, null)
                         }
 
                         else -> {}

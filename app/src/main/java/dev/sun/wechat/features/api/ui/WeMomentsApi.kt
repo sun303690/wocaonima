@@ -1638,10 +1638,17 @@ object WeMomentsApi : ApiFeature(), IResolveDex {
         })
     }
 
-    fun postImagesInUi(context: Context, mediaMd5s: List<String>, text: String? = null) {
+    /**
+     * 打开原生朋友圈编辑器 (SnsUploadUI 相册流程) 并预填媒体文件绝对路径。
+     * [imagePaths] 传**解密后的图片文件绝对路径** (微信按键名当路径逐个复制进上传缓存,
+     * 传 md5 会导致编辑器里没有图片); 传**视频 mp4 路径**则按"从相册选视频"接管——
+     * 长视频 + 封面编辑, 比 sight 流程 ([postVideoInUi], 限 30 秒) 能发的视频长得多。
+     * `sns_kemdia_path_list` 的拼写是微信自己的历史笔误, 勿改。
+     */
+    fun postImagesInUi(context: Context, imagePaths: List<String>, text: String? = null) {
         context.startActivity(Intent {
             setClassName(PackageNames.WECHAT, MOMENTS_CLASS)
-            putStringArrayListExtra("sns_kemdia_path_list", mediaMd5s.toCollection(ArrayList()))
+            putStringArrayListExtra("sns_kemdia_path_list", imagePaths.toCollection(ArrayList()))
             putExtra("Kdescription", text ?: "")
         })
     }
@@ -1654,6 +1661,32 @@ object WeMomentsApi : ApiFeature(), IResolveDex {
             putExtra("KSightThumbPath", thumbPath)
             putExtra("Kdescription", text ?: "")
         })
+    }
+
+    /**
+     * 从本地视频抽取首帧生成 jpg 封面 (moduleCache 下临时文件)。
+     * [postVideoInUi] 的 KSightThumbPath 必须是图片文件——直接把视频路径当封面会导致
+     * SnsUploadUI 识别不了视频, 编辑器里发不出去。
+     */
+    fun makeVideoThumb(videoPath: String): String? {
+        return try {
+            val retriever = MediaMetadataRetriever()
+            try {
+                retriever.setDataSource(videoPath)
+                val frame = retriever.getFrameAtTime(0) ?: return null
+                val out = java.io.ByteArrayOutputStream()
+                frame.compress(Bitmap.CompressFormat.JPEG, 90, out)
+                val outFile = KnownPaths.moduleCache / "wekit_sns_thumb_${System.currentTimeMillis()}.jpg"
+                outFile.deleteIfExists()
+                outFile.outputStream().use { it.write(out.toByteArray()) }
+                outFile.absolutePathString()
+            } finally {
+                retriever.release()
+            }
+        } catch (e: Exception) {
+            WeLogger.e(TAG, "makeVideoThumb failed", e)
+            null
+        }
     }
 
     /**

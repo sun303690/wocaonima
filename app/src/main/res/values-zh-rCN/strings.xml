@@ -980,7 +980,7 @@
     <string name="feature_enhance_query_description">显示历史撤回以及缓存过的朋友圈内容</string>
     <string name="feature_fake_moments_likes_name">伪集赞</string>
     <string name="feature_fake_moments_likes_description">自定义朋友圈点赞用户列表</string>
-    <string name="feature_forward_messages_to_moments_name">消息转圈</string>
+    <string name="feature_forward_messages_to_moments_name">一键转发朋友圈</string>
     <string name="feature_forward_messages_to_moments_description">将一些简单的消息转发到朋友圈</string>
     <string name="feature_moments_editor_back_optimization_name">朋友圈编辑界面返回逻辑优化</string>
     <string name="feature_moments_editor_back_optimization_description">编辑朋友圈返回弹出「保留当前内容?」对话框后, 触发系统返回手势可直接关闭对话框并留在编辑页</string>
@@ -3213,7 +3213,8 @@
     <plurals name="moments_fake_likes_random_set_count">
         <item quantity="other">已随机设置 %1$d 个伪点赞</item>
     </plurals>
-    <string name="moments_forward_messages_menu">转圈</string>
+    <string name="moments_forward_messages_menu">一键转发朋友圈</string>
+    <string name="moments_forward_media_not_ready">图片/视频还没加载完成，先在聊天里点开加载后再转发</string>
     <string name="moments_repost_menu">转发</string>
     <string name="moments_quick_repost_menu">一键转发</string>
     <string name="moments_repost_parse_failed">朋友圈内容解析失败</string>

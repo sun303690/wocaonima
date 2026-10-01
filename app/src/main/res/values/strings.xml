@@ -3167,6 +3167,7 @@
     <string name="moments_fake_likes_invalid_count">Enter a valid count</string>
     <plurals name="moments_fake_likes_random_set_count"><item quantity="one">Randomly set %1$d fake like</item><item quantity="other">Randomly set %1$d fake likes</item></plurals>
     <string name="moments_forward_messages_menu">Forward to Moments</string>
+    <string name="moments_forward_media_not_ready">Media not fully loaded yet — open it in the chat first, then forward</string>
     <string name="moments_repost_menu">Repost</string>
     <string name="moments_quick_repost_menu">Quick repost</string>
     <string name="moments_repost_parse_failed">Failed to parse the Moments post</string>
