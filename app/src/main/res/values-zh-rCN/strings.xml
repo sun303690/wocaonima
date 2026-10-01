@@ -3214,6 +3214,7 @@
         <item quantity="other">已随机设置 %1$d 个伪点赞</item>
     </plurals>
     <string name="moments_forward_messages_menu">转圈</string>
+    <string name="moments_forward_media_not_ready">图片/视频还没加载完成，先在聊天里点开加载后再转发</string>
     <string name="moments_repost_menu">转发</string>
     <string name="moments_quick_repost_menu">一键转发</string>
     <string name="moments_repost_parse_failed">朋友圈内容解析失败</string>
