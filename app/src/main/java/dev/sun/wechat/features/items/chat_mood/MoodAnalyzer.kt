@@ -27,7 +27,6 @@ object MoodAnalyzer {
     private val refreshListeners = CopyOnWriteArrayList<() -> Unit>()
 
     var enabled by KvStore.prefOption("mood_enabled", false)
-    var showBadge by KvStore.prefOption("mood_show_badge", true)
     val header = "情绪分析"
 
     /** 界面层注册：某条消息分析完成/失败时触发重绘。 */

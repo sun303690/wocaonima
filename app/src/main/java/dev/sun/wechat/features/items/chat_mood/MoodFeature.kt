@@ -1,15 +1,12 @@
 package dev.sun.wechat.features.items.chat_mood
 
 import androidx.activity.ComponentActivity
-import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.collectAsState
@@ -17,12 +14,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.composables.icons.materialsymbols.MaterialSymbols
-import com.tencent.mm.pluginsdk.ui.chat.ChatFooter
 import dev.sun.wechat.agent.data.WeAgentRepository
 import dev.sun.wechat.R
 import dev.sun.wechat.features.core.ClickableFeature
@@ -52,7 +46,8 @@ object MoodFeature : ClickableFeature() {
     override fun onEnable() {
         MoodAnalyzer.enabled = true
         MessageSniffer.ensureSubscribed()
-        // 帮我回的长按消息菜单入口（非独立 feature，随情绪分析一起挂载）
+        // 情绪分析在＋面板的「分析」条目 + 帮我回长按消息菜单
+        WeChatInputBarMenuApi.addProvider(ChatMoodHostUi)
         WeChatMessageContextMenuApi.addProvider(AiSmartReply)
         WeLogger.i(TAG, "情绪分析已启用")
     }
@@ -60,6 +55,7 @@ object MoodFeature : ClickableFeature() {
     override fun onDisable() {
         MoodAnalyzer.enabled = false
         BubbleDecorator.clearAll()
+        WeChatInputBarMenuApi.removeProvider(ChatMoodHostUi)
         WeChatMessageContextMenuApi.removeProvider(AiSmartReply)
         MoodStore.clear()
         WeLogger.i(TAG, "情绪分析已停用")
@@ -67,7 +63,6 @@ object MoodFeature : ClickableFeature() {
 
     override fun onClick(context: ComponentActivity) {
         showComposeDialog(context, directlyDismissable = false) {
-            var showBadge by remember { mutableStateOf(MoodAnalyzer.showBadge) }
             var jevProvider by remember { mutableStateOf(MoodTransport.jevProviderId) }
             var jevKey by remember { mutableStateOf(MoodTransport.jevKey) }
             var jevEndpoint by remember { mutableStateOf(MoodTransport.jevEndpoint) }
@@ -127,8 +122,6 @@ object MoodFeature : ClickableFeature() {
                                 singleLine = true,
                             )
                         }
-                        Row2("显示情绪卡", showBadge) { showBadge = it }
-
                         HorizontalDivider()
 
                         // ===== 帮我回 · 找话题 =====
@@ -165,25 +158,12 @@ object MoodFeature : ClickableFeature() {
                         MoodTransport.jevKey = jevKey.trim()
                         MoodTransport.jevEndpoint = jevEndpoint.trim()
                         MoodTransport.jevModel = jevModel.trim()
-                        MoodAnalyzer.showBadge = showBadge
                         ReplyConfig.modelId = replyModelId
                         onDismiss()
                     }) { Text(stringResource(R.string.dialog_confirm)) }
                 },
                 dismissButton = { TextButton(onClick = { onDismiss() }) { Text(stringResource(R.string.dialog_cancel)) } },
             )
-        }
-    }
-
-    @androidx.compose.runtime.Composable
-    private fun Row2(title: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-        androidx.compose.foundation.layout.Row(
-            Modifier.fillMaxWidth().padding(vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(title)
-            Switch(checked = checked, onCheckedChange = onChange)
         }
     }
 

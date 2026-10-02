@@ -1,7 +1,5 @@
 package dev.sun.wechat.features.items.chat_mood
 
-import android.app.Activity
-import android.content.ContextWrapper
 import android.view.View
 import dev.sun.wechat.features.api.core.models.MessageInfo
 import dev.sun.wechat.features.api.ui.WeChatMessageViewApi
@@ -23,8 +21,6 @@ object MessageSniffer {
         override fun onMessageViewAttached(view: View, message: MessageInfo) {
             try {
                 if (!MoodAnalyzer.enabled) return
-                // 注入标题栏「绘制」开关（对照 Yanwai HostUi.show，幂等）
-                viewActivity(view)?.let { ChatMoodHostUi.show(it, "") }
                 if (message.type?.isText != true) return  // 非纯文字(图片/语音/文件/视频/链接/引用)不参与
                 val talker = message.talker
                 val text = MessagePolicy.textOrNull(message.humanReadableRepr) ?: return  // 空/超长不算正确文字
@@ -34,8 +30,8 @@ object MessageSniffer {
                 while (deque.size > 24) deque.removeFirst()
                 // 情绪分析只分析/装饰对方的消息；自己发的消息仅进上下文，不出卡、不分析
                 if (message.isSend != 0) return
-                // 按会话开关（移植自 Yanwai）：只绘制显式打开的聊天页，其余会话不自动分析
-                if (!MoodAnalyzer.showBadge || !ConversationSwitches.isEnabled(talker)) return
+                // 按会话开关（对应言外 isChatEnabled）：只处理显式打开过分析的聊天页，其余会话不自动分析
+                if (!ConversationSwitches.isEnabled(talker)) return
                 val context = deque.dropLast(1).takeLast(MessagePolicy.MAX_CONTEXT_MESSAGES)
                     .map { ContextMessage(it.first, it.second) }
                 val input = AnalysisInput(
@@ -63,7 +59,7 @@ object MessageSniffer {
     fun refresh() {
         val talker = WeCurrentConversationApi.value
         if (talker.isBlank()) return
-        if (!MoodAnalyzer.showBadge || !ConversationSwitches.isEnabled(talker)) return
+        if (!ConversationSwitches.isEnabled(talker)) return
         val deque = recentByTalker[talker] ?: return
         val last = deque.lastOrNull { it.first == "对方" } ?: return
         val context = deque.dropLast(1).takeLast(MessagePolicy.MAX_CONTEXT_MESSAGES)
@@ -76,16 +72,6 @@ object MessageSniffer {
             speaker = "对方",
         )
         MoodAnalyzer.submit(input) { true }
-    }
-
-    /** 从 View 的 context 链里解析宿主 Activity。 */
-    private fun viewActivity(v: View): Activity? {
-        var ctx = v.context
-        while (ctx is ContextWrapper) {
-            if (ctx is Activity) return ctx
-            ctx = ctx.baseContext
-        }
-        return ctx as? Activity
     }
 
     /** 幂等订阅一次；由 MoodFeature 在启用时调用。 */

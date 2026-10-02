@@ -26,7 +26,7 @@ object BubbleDecorator {
     private val refreshRegistered = java.util.concurrent.atomic.AtomicBoolean(false)
 
     fun show(row: View, message: AnalysisInput?): Boolean {
-        if (message == null || !MoodAnalyzer.enabled || !MoodAnalyzer.showBadge) { clear(row); return false }
+        if (message == null || !MoodAnalyzer.enabled) { clear(row); return false }
         // 首次绘制时挂上完成回调，之后结果落地就能直接改这张卡的文字。
         if (refreshRegistered.compareAndSet(false, true)) MoodAnalyzer.onRefresh(::refreshAll)
         val key = message.key
