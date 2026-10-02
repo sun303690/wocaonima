@@ -1,6 +1,7 @@
 package dev.sun.wechat.features.items.chat
 
 import android.app.Activity
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -155,8 +157,20 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
         )
     }
 
+    /**
+     * 帮我回对话框里有多行可编辑输入框（风格提示词 + 每条候选回复）。
+     * 共享的 showComposeDialog 默认带 SOFT_INPUT_STATE_ALWAYS_HIDDEN：每次输入框获得焦点都会
+     * 先强制收键盘、再重新弹出，配合第三方输入法就会出现「一打开就乱跳」。
+     * 这里只针对本对话框的窗口关掉 ALWAYS_HIDDEN，仅保留 ADJUST_RESIZE + 面板内 imePadding()
+     * 平滑跟随软键盘（不动共享 helper，避免影响其它对话框）。
+     */
+    private fun tuneImeForEditing(scope: ShowComposeDialogScope) {
+        scope.window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+    }
+
     private fun showSmartReplyDialog(activity: Activity, msgInfo: MessageInfo) {
         showComposeDialog(activity) {
+            tuneImeForEditing(this)
             SmartReplyDialogContent(msgInfo.talker, msgMessageText(msgInfo))
         }
     }
@@ -164,6 +178,7 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
     /** 从聊天输入栏（+ 面板）打开智能回复：针对当前会话生成，未选中具体消息。 */
     fun openSmartReply(activity: Activity, talker: String) {
         showComposeDialog(activity) {
+            tuneImeForEditing(this)
             SmartReplyDialogContent(talker, "")
         }
     }
@@ -210,7 +225,7 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
         AlertDialogContent(
             title = { Text(stringResource(R.string.feature_ai_smart_reply_name)) },
             text = {
-                Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+                Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).imePadding()) {
                     // 快捷选择语气预设
                     Text(stringResource(R.string.smart_reply_style), style = MaterialTheme.typography.titleSmall)
                     FlowRow(
