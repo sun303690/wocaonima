@@ -46,8 +46,7 @@ object MoodFeature : ClickableFeature() {
     override fun onEnable() {
         MoodAnalyzer.enabled = true
         MessageSniffer.ensureSubscribed()
-        // 情绪分析入口：＋面板顶部原生「分析」开关（主），＋/发送键长按菜单条目（备用）；
-        // 外加帮我回长按消息菜单
+        // 情绪分析入口：＋/发送键长按菜单条目 + 帮我回长按消息菜单
         WeChatInputBarMenuApi.addProvider(ChatMoodHostUi)
         WeChatMessageContextMenuApi.addProvider(AiSmartReply)
         WeLogger.i(TAG, "情绪分析已启用")
@@ -56,7 +55,6 @@ object MoodFeature : ClickableFeature() {
     override fun onDisable() {
         MoodAnalyzer.enabled = false
         BubbleDecorator.clearAll()
-        ChatMoodHostUi.detachAll()
         WeChatInputBarMenuApi.removeProvider(ChatMoodHostUi)
         WeChatMessageContextMenuApi.removeProvider(AiSmartReply)
         MoodStore.clear()

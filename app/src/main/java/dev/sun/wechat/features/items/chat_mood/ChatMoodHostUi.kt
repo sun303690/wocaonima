@@ -7,22 +7,20 @@ import com.composables.icons.materialsymbols.outlined.Auto_awesome
 import dev.sun.wechat.features.api.ui.WeChatInputBarMenuApi
 import dev.sun.wechat.features.api.ui.WeCurrentConversationApi
 import dev.sun.wechat.utils.WeLogger
-import java.util.WeakHashMap
 
 /**
- * 情绪分析在聊天页的入口（对照言外 HostUi / ReplyHostUi）：
+ * 情绪分析在聊天页的入口（对照言外 HostUi / ReplyHostUi）。
  *
- * 1. ＋面板顶部一行原生「分析」开关（[ChatMoodPlusRow]）——点击按会话切换情绪分析，
- *    长按打开设置。这是主入口，对应言外把 Switch 挂进 AppPanel 的做法。
- * 2. 长按 ＋ / 发送键弹出的操作菜单里也保留一个「情绪分析」条目（[WeChatInputBarMenuApi]），
- *    作为备用入口。
+ * 只用**长按 ＋ / 发送键**弹出的操作菜单条目（[WeChatInputBarMenuApi]）：
+ * 不往微信 ＋面板（AppPanel）里注入任何 View —— 那是固定高度的原生容器，
+ * 追加子 View 会把原生网格挤出可视区/透明，还会与 ChatToolbar 的结构读取冲突。
+ * （曾用注入 AppPanel 的方式加「分析」开关，真机出现「微信＋面板功能消失、开关透明」，已彻底删除。）
+ *
+ * 菜单条目：点击按会话切换情绪分析，长按打开设置。
  */
 object ChatMoodHostUi : WeChatInputBarMenuApi.IActionItemsProvider {
 
     private const val TAG = "ChatMoodHostUi"
-
-    /** 每个聊天 Activity 一份面板挂载器，弱引用避免泄漏。 */
-    private val rows = WeakHashMap<Activity, ChatMoodPlusRow>()
 
     override fun getActionItems(): List<WeChatInputBarMenuApi.ActionItem> = listOf(
         WeChatInputBarMenuApi.ActionItem(
@@ -34,27 +32,6 @@ object ChatMoodHostUi : WeChatInputBarMenuApi.IActionItemsProvider {
             onLongClick = { context, _ -> openSettings(context) },
         ),
     )
-
-    /**
-     * 消息绑定时驱动面板开关挂载与状态同步（由 [MessageSniffer] 调用）。
-     * 面板会被微信复用/重建，故每次都重定位当前 footer。
-     */
-    fun onMessageBound(view: android.view.View) {
-        if (!MoodAnalyzer.enabled) return
-        val activity = view.context as? Activity ?: return
-        if (activity.isFinishing) return
-        runCatching { rowFor(activity).update() }
-            .onFailure { WeLogger.e(TAG, "plus row update failed", it) }
-    }
-
-    private fun rowFor(activity: Activity): ChatMoodPlusRow = rows.getOrPut(activity) {
-        ChatMoodPlusRow(
-            activity = activity,
-            stateProvider = { currentTalker()?.let { ConversationSwitches.isEnabled(it) } },
-            onToggle = { checked -> applyToggle(activity, checked) },
-            onLongPress = { openSettings(activity) },
-        )
-    }
 
     private fun currentTalker(): String? = WeCurrentConversationApi.value.takeIf { it.isNotBlank() }
 
@@ -73,8 +50,6 @@ object ChatMoodHostUi : WeChatInputBarMenuApi.IActionItemsProvider {
         } else {
             BubbleDecorator.clearAll()
         }
-        // 立即同步面板开关状态（例如从长按菜单切换时）
-        (context as? Activity)?.let { rows[it]?.update() }
     }
 
     private fun toggleForCurrentChat(context: android.content.Context) {
@@ -96,13 +71,5 @@ object ChatMoodHostUi : WeChatInputBarMenuApi.IActionItemsProvider {
             val comp = context as? ComponentActivity ?: return
             MoodFeature.onClick(comp)
         }.onFailure { WeLogger.e(TAG, "open settings failed", it) }
-    }
-
-    /** 功能停用时拆掉所有面板挂载，恢复微信原生面板。 */
-    fun detachAll() {
-        synchronized(rows) {
-            rows.values.forEach { runCatching { it.detach() } }
-            rows.clear()
-        }
     }
 }

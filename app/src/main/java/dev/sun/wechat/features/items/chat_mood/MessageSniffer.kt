@@ -21,9 +21,6 @@ object MessageSniffer {
         override fun onMessageViewAttached(view: View, message: MessageInfo) {
             try {
                 if (!MoodAnalyzer.enabled) return
-                // ＋面板里的「分析」开关需要始终挂载并同步状态——哪怕本会话还没打开分析，
-                // 否则用户永远无法把它打开。放在所有会话级早退之前。
-                ChatMoodHostUi.onMessageBound(view)
                 if (message.type?.isText != true) return  // 非纯文字(图片/语音/文件/视频/链接/引用)不参与
                 val talker = message.talker
                 val text = MessagePolicy.textOrNull(message.humanReadableRepr) ?: return  // 空/超长不算正确文字
