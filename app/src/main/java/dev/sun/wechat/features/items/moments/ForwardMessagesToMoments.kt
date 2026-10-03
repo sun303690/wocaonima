@@ -60,6 +60,29 @@ object ForwardMessagesToMoments : SwitchFeature(), WeChatMessageContextMenuApi.I
         return true
     }
 
+    // 短视频(≤1分钟)走 KSightPath 通道(postVideoInUi)更快；长视频走相册通道，
+    // 微信朋友圈的 KSightPath(sight) 只认短视频，长视频必须经系统相册选择才能上传。
+    private fun postVideoToMoments(activity: android.app.Activity, video: MessageInfo, text: String? = null) {
+        val mp4Path = WeServiceApi.getVideoMp4PathFromMsgInfo(video)
+        if (mp4Path.isBlank()) {
+            dev.sun.wechat.utils.android.showToast(activity, "无法解析视频文件")
+            return
+        }
+        val durationMs = runCatching {
+            android.media.MediaMetadataRetriever().apply { setDataSource(mp4Path) }
+                .extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
+                ?.toLongOrNull() ?: 0L
+        }.getOrNull() ?: 0L
+
+        if (durationMs > 0 && durationMs > 60_000L) {
+            // 长视频：相册通道（微信认长视频）
+            WeMomentsApi.openMomentVideoEditorFromAlbumResult(activity, text ?: "", mp4Path)
+        } else {
+            // 短视频：sight 快速通道
+            WeMomentsApi.postVideoInUi(activity, mp4Path, mp4Path, text)
+        }
+    }
+
     private fun forwardSelectionToMoments(activity: android.app.Activity, msgInfos: List<MessageInfo>) {
         val text = msgInfos.filter { it.isTextLike() }
             .joinToString("\n\n") { it.momentsText() }
@@ -71,8 +94,7 @@ object ForwardMessagesToMoments : SwitchFeature(), WeChatMessageContextMenuApi.I
 
         when {
             video != null -> {
-                val mp4Path = WeServiceApi.getVideoMp4PathFromMsgInfo(video)
-                WeMomentsApi.postVideoInUi(activity, mp4Path, mp4Path, text)
+                postVideoToMoments(activity, video, text)
             }
 
             imageMd5s.isNotEmpty() -> {
@@ -116,8 +138,7 @@ object ForwardMessagesToMoments : SwitchFeature(), WeChatMessageContextMenuApi.I
                         }
 
                         MessageType.VIDEO -> {
-                            val mp4Path = WeServiceApi.getVideoMp4PathFromMsgInfo(msgInfo)
-                            WeMomentsApi.postVideoInUi(activity, mp4Path, mp4Path)
+                            postVideoToMoments(activity, msgInfo)
                         }
 
                         else -> {}
