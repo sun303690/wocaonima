@@ -1,7 +1,9 @@
 package dev.sun.wechat.features.items.chat
 
 import android.content.ContentValues
+import android.content.Context
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -13,28 +15,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import dev.sun.wechat.R
 import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
-import dev.sun.wechat.features.api.core.WeMessageApi
+import dev.sun.wechat.features.api.core.models.MessageInfo
 import dev.sun.wechat.features.api.core.models.MessageType
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
-import dev.sun.wechat.features.items.chat.musicorder.QQMusicClient
-import dev.sun.wechat.features.items.chat.musicorder.QQMusicSearchResult
-import dev.sun.wechat.data.KvStore.prefOption
+import dev.sun.wechat.features.items.chat.musicorder.QQMusicOrderRuntime
+import dev.sun.wechat.features.items.chat.musicorder.QQMusicOrderSettings
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.DefaultColumn
 import dev.sun.wechat.ui.content.TextButton
 import dev.sun.wechat.ui.content.m3.SwitchWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
+import dev.sun.wechat.utils.HostInfo
 import dev.sun.wechat.utils.WeLogger
-import dev.sun.wechat.utils.strings.isGroupChatWxId
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.launch
 
 object QQMusicOrder : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
 
@@ -44,29 +39,19 @@ object QQMusicOrder : ClickableFeature(), WeDatabaseListenerApi.IInsertListener 
     override val descriptionRes = R.string.feature_qq_music_order_description
 
     private const val TAG = "QQMusicOrder"
-    private const val DEFAULT_APP_ID = "wx485a97c844086dc9"
-    private const val DEFAULT_TRIGGER = "点歌"
 
-    private var triggers by prefOption("qq_music_order_triggers", DEFAULT_TRIGGER)
-    private var appId by prefOption("qq_music_order_app_id", DEFAULT_APP_ID)
-    private var singerOverride by prefOption("qq_music_order_singer", "")
-    private var onlyGroupChat by prefOption("qq_music_order_only_group", true)
-    private var replyOnFailure by prefOption("qq_music_order_reply_on_failure", true)
-
-    private val client = QQMusicClient()
+    private var runtime: QQMusicOrderRuntime? = null
     private val handled = ConcurrentHashMap<String, Boolean>()
-    private val scope = CoroutineScope(
-        SupervisorJob() + Executors.newSingleThreadExecutor { runnable ->
-            Thread(runnable, "QQMusicOrder").apply { isDaemon = true }
-        }.asCoroutineDispatcher()
-    )
 
     override fun onEnable() {
+        runtime = QQMusicOrderRuntime(HostInfo.application, { message, t -> WeLogger.e(TAG, message, t) })
         WeDatabaseListenerApi.addListener(this)
     }
 
     override fun onDisable() {
         WeDatabaseListenerApi.removeListener(this)
+        runtime?.shutdown()
+        runtime = null
         handled.clear()
     }
 
@@ -78,100 +63,62 @@ object QQMusicOrder : ClickableFeature(), WeDatabaseListenerApi.IInsertListener 
         if (table != "message") return
         val type = values.getAsInteger("type") ?: return
         if (MessageType.fromCode(type)?.isText != true) return
-        if ((values.getAsInteger("isSend") ?: return) != 0) return
         val talker = values.getAsString("talker").orEmpty()
         if (talker.isBlank() || talker.startsWith("gh_")) return
-        if (onlyGroupChat && !talker.isGroupChatWxId) return
 
-        val keyword = parseKeyword(talker, values.getAsString("content").orEmpty()) ?: return
+        val msgInfo = MessageInfo.fromContentValues(values)
+        val isOutgoing = values.getAsInteger("isSend") != 0
+        val isGroup = msgInfo.isInGroupChat
+        val sender = msgInfo.sender
+        val content = values.getAsString("content").orEmpty()
 
         val dedupeKey = values.getAsString("msgSvrId")?.takeIf { it.isNotBlank() && it != "0" }
             ?: values.getAsInteger("localId")?.toString()
         if (dedupeKey != null && handled.putIfAbsent(dedupeKey, true) != null) return
         if (handled.size > 500) handled.clear()
 
-        scope.launch { process(talker, keyword) }
-    }
+        val msgSvrId = values.getAsLong("msgSvrId") ?: 0L
+        val msgId = values.getAsInteger("localId")?.toLong() ?: 0L
 
-    private fun parseKeyword(talker: String, raw: String): String? {
-        if (raw.isBlank()) return null
-        val body = if (talker.isGroupChatWxId) {
-            val index = raw.indexOf(":\n")
-            if (index in 1..64) raw.substring(index + 2) else raw
-        } else raw
-        val text = body.trim()
-        val trigger = triggerWords().firstOrNull() ?: DEFAULT_TRIGGER
-        if (!text.startsWith(trigger)) return null
-        return text.removePrefix(trigger).trim().takeIf { it.isNotEmpty() }
-    }
-
-    private fun triggerWords(): List<String> =
-        triggers.split(',', '，', '\n').map { it.trim() }.filter { it.isNotEmpty() }
-
-    private suspend fun process(talker: String, keyword: String) {
-        val result = runCatching { client.search(keyword) }.getOrElse {
-            WeLogger.e(TAG, "search failed: $keyword", it)
-            QQMusicSearchResult.NotFound
-        }
-        val track = when (result) {
-            is QQMusicSearchResult.Success -> result.track
-            QQMusicSearchResult.NotFound -> {
-                reply(talker, R.string.qq_music_order_not_found)
-                return
+        // 自己发的点歌命令走拦截；别人的走数据库处理
+        if (isOutgoing) {
+            runtime?.handleOwnCommand(content)?.let { intercepted ->
+                if (intercepted) WeLogger.i(TAG, "intercepted own command: $content")
             }
-            QQMusicSearchResult.Unavailable -> {
-                reply(talker, R.string.qq_music_order_unavailable)
-                return
-            }
+            return
         }
-        val singer = singerOverride.trim().ifBlank { track.singer }
-        val thumb = client.download(track.coverUrl)
-        val sent = WeMessageApi.shareMusicVideo(
-            talker = talker,
-            title = track.title,
-            description = singer,
-            musicUrl = track.landingUrl,
-            musicDataUrl = track.playUrl,
-            singerName = singer,
-            duration = 0,
-            songLyric = track.lyric,
-            thumbData = thumb,
-            appId = appId.trim().ifBlank { DEFAULT_APP_ID },
-        )
-        if (!sent) {
-            WeLogger.e(TAG, "shareMusicVideo failed: talker=$talker keyword=$keyword")
-            reply(talker, R.string.qq_music_order_send_failed)
-        }
+        runtime?.onTextInserted(talker, content, msgSvrId, msgId, isOutgoing, isGroup, sender)
     }
 
-    private fun reply(talker: String, resId: Int) {
-        if (!replyOnFailure) return
-        WeMessageApi.sendText(talker, localizedChatString(resId))
-    }
+    private val appContext: Context
+        get() = HostInfo.application
 
     private fun showConfigDialog(context: ComponentActivity) {
         showComposeDialog(context) {
-            var triggerText by remember { mutableStateOf(triggers) }
-            var singerText by remember { mutableStateOf(singerOverride) }
-            var appIdText by remember { mutableStateOf(appId) }
-            var groupOnly by remember { mutableStateOf(onlyGroupChat) }
-            var replyFail by remember { mutableStateOf(replyOnFailure) }
+            var enabled by remember { mutableStateOf(QQMusicOrderSettings.isEnabled()) }
+            var triggerText by remember { mutableStateOf(QQMusicOrderSettings.triggers().joinToString(",")) }
+            var appIdText by remember { mutableStateOf(QQMusicOrderSettings.appId()) }
+            var sendCard by remember { mutableStateOf(QQMusicOrderSettings.sendAsCard()) }
+            var sendVoice by remember { mutableStateOf(QQMusicOrderSettings.sendAsVoice()) }
+            var customSinger by remember { mutableStateOf(QQMusicOrderSettings.customSingerEnabled()) }
+            var defaultSingerText by remember { mutableStateOf(QQMusicOrderSettings.defaultSinger()) }
+            var replaceSingerNick by remember { mutableStateOf(QQMusicOrderSettings.replaceSingerWithNickname()) }
+            var replaceCoverAvatar by remember { mutableStateOf(QQMusicOrderSettings.replaceCoverWithAvatar()) }
+            var interceptOwn by remember { mutableStateOf(QQMusicOrderSettings.interceptOwnCommand()) }
             AlertDialogContent(
                 title = { Text(stringResource(R.string.feature_qq_music_order_name)) },
                 text = {
                     DefaultColumn {
+                        SwitchWidget(
+                            title = stringResource(R.string.qq_music_order_enable),
+                            checked = enabled,
+                            onCheckedChange = { enabled = it },
+                        )
                         OutlinedTextField(
                             value = triggerText,
                             onValueChange = { triggerText = it },
                             modifier = Modifier.fillMaxWidth(),
                             label = { Text(stringResource(R.string.qq_music_order_trigger_hint)) },
-                            singleLine = true,
-                        )
-                        OutlinedTextField(
-                            value = singerText,
-                            onValueChange = { singerText = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text(stringResource(R.string.qq_music_order_singer_hint)) },
                             singleLine = true,
                         )
                         OutlinedTextField(
@@ -182,24 +129,57 @@ object QQMusicOrder : ClickableFeature(), WeDatabaseListenerApi.IInsertListener 
                             singleLine = true,
                         )
                         SwitchWidget(
-                            title = stringResource(R.string.qq_music_order_group_only),
-                            checked = groupOnly,
-                            onCheckedChange = { groupOnly = it },
+                            title = stringResource(R.string.qq_music_order_send_card),
+                            checked = sendCard,
+                            onCheckedChange = { sendCard = it },
                         )
                         SwitchWidget(
-                            title = stringResource(R.string.qq_music_order_reply_on_failure),
-                            checked = replyFail,
-                            onCheckedChange = { replyFail = it },
+                            title = stringResource(R.string.qq_music_order_send_voice),
+                            checked = sendVoice,
+                            onCheckedChange = { sendVoice = it },
                         )
+                        SwitchWidget(
+                            title = stringResource(R.string.qq_music_order_custom_singer),
+                            checked = customSinger,
+                            onCheckedChange = { customSinger = it },
+                        )
+                        OutlinedTextField(
+                            value = defaultSingerText,
+                            onValueChange = { defaultSingerText = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text(stringResource(R.string.qq_music_order_default_singer_hint)) },
+                            singleLine = true,
+                        )
+                        SwitchWidget(
+                            title = stringResource(R.string.qq_music_order_replace_singer_nickname),
+                            checked = replaceSingerNick,
+                            onCheckedChange = { replaceSingerNick = it },
+                        )
+                        SwitchWidget(
+                            title = stringResource(R.string.qq_music_order_replace_cover_avatar),
+                            checked = replaceCoverAvatar,
+                            onCheckedChange = { replaceCoverAvatar = it },
+                        )
+                        SwitchWidget(
+                            title = stringResource(R.string.qq_music_order_intercept_own_command),
+                            checked = interceptOwn,
+                            onCheckedChange = { interceptOwn = it },
+                        )
+                        Text(stringResource(R.string.qq_music_order_whitelist_hint))
                     }
                 },
                 confirmButton = {
                     Button(onClick = {
-                        triggers = triggerText.ifBlank { DEFAULT_TRIGGER }
-                        singerOverride = singerText.trim()
-                        appId = appIdText.trim().ifBlank { DEFAULT_APP_ID }
-                        onlyGroupChat = groupOnly
-                        replyOnFailure = replyFail
+                        QQMusicOrderSettings.setEnabled(enabled)
+                        QQMusicOrderSettings.setTriggers(triggerText)
+                        QQMusicOrderSettings.setAppId(appIdText)
+                        QQMusicOrderSettings.setSendAsCard(sendCard)
+                        QQMusicOrderSettings.setSendAsVoice(sendVoice)
+                        QQMusicOrderSettings.setCustomSingerEnabled(customSinger)
+                        QQMusicOrderSettings.setDefaultSinger(defaultSingerText)
+                        QQMusicOrderSettings.setReplaceSingerWithNickname(replaceSingerNick)
+                        QQMusicOrderSettings.setReplaceCoverWithAvatar(replaceCoverAvatar)
+                        QQMusicOrderSettings.setInterceptOwnCommand(interceptOwn)
                         onDismiss()
                     }) { Text(stringResource(R.string.dialog_confirm)) }
                 },

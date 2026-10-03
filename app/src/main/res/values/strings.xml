@@ -769,6 +769,15 @@
     <string name="qq_music_order_not_found">No matching song found</string>
     <string name="qq_music_order_unavailable">Cannot fetch the song, likely due to copyright or a paid album</string>
     <string name="qq_music_order_send_failed">Failed to send the music card</string>
+    <string name="qq_music_order_enable">Enable</string>
+    <string name="qq_music_order_send_card">Send as music card</string>
+    <string name="qq_music_order_send_voice">Send as voice message</string>
+    <string name="qq_music_order_custom_singer">Allow custom singer ("song&singer")</string>
+    <string name="qq_music_order_default_singer_hint">Default singer (optional)</string>
+    <string name="qq_music_order_replace_singer_nickname">Replace singer with requester nickname</string>
+    <string name="qq_music_order_replace_cover_avatar">Replace cover with requester avatar</string>
+    <string name="qq_music_order_intercept_own_command">Intercept own order commands</string>
+    <string name="qq_music_order_whitelist_hint">Send "开启点歌"/"关闭点歌" in a chat to allow/deny ordering there.</string>
     <string name="feature_scheduled_task_name">Scheduled tasks</string>
     <string name="feature_scheduled_task_description">Send chat messages or post Moments on a schedule</string>
     <string name="scheduled_task_section_tasks">Tasks</string>
