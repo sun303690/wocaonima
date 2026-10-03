@@ -6,6 +6,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.Switch
 import dev.sun.wechat.utils.WeLogger
@@ -13,9 +14,13 @@ import dev.sun.wechat.utils.WeLogger
 /**
  * 「分析」开关在聊天输入栏＋面板（com.tencent.mm.pluginsdk.ui.chat.AppPanel）里的原生挂载。
  *
- * 对照言外 ReplyPlusRow：把面板内容整体包进一层垂直容器，顶部插入一行原生 Switch；
- * 点击开关按会话切换情绪分析，长按打开设置。面板会被微信复用/重建，因此按「当前 footer」
- * 去重 + 全局布局监听重试，结构不符时安全跳过（绝不留下半改造的面板）。
+ * ⚠️ 不能改动 AppPanel 的既有子结构：WeKit 的 ChatToolbar.snapshotTools 硬编码读取
+ *    findViewByChildIndexes(0,0,0)（= 装有 GridView 的 MMFlipper）并 cast 成 ViewGroup，
+ *    任何包装/插队都会把它挤成非 ViewGroup → ClassCastException（真实崩溃，见 8.0.77）。
+ *
+ * 因此这里只在 AppPanel **末尾追加**一行原生 Switch，index 0 的容器原样保留；
+ * 点击开关按会话切换情绪分析、长按打开设置。按「当前 footer」去重 + 全局布局监听重试，
+ * 结构不符时安全跳过（绝不半改造面板）。
  */
 internal class ChatMoodPlusRow(
     private val activity: Activity,
@@ -27,13 +32,11 @@ internal class ChatMoodPlusRow(
     private val TAG = "ChatMoodPlusRow"
 
     private var panel: ViewGroup? = null
-    private var wrapper: LinearLayout? = null
-    private var original: View? = null
-    private var originalParams: ViewGroup.LayoutParams? = null
+    private var row: LinearLayout? = null
+    private var control: Switch? = null
 
     private var footer: View? = null
     private var observer: ViewTreeObserver? = null
-    private var control: Switch? = null
     private var blockedPanel: ViewGroup? = null
     private var refreshing = false
     private var syncing = false
@@ -44,11 +47,13 @@ internal class ChatMoodPlusRow(
         override fun onViewDetachedFromWindow(view: View) = detach()
     }
 
-    /** 每次消息绑定/布局变化调用：定位当前 footer，必要时重挂开关并同步状态。 */
+    /** 每次消息绑定/布局变化调用：定位当前 footer，必要时挂开关并同步状态。 */
     fun update() {
-        // 面板已挂好且 footer 仍然可见时，只需同步开关状态，避免每次绑定都全量扫描 decorView。
+        // 已挂好且 footer 仍可见时，只同步开关状态，避免每次绑定都全量扫描 decorView。
         val existing = footer
-        if (existing != null && existing.isAttachedToWindow && existing.isShown && panel != null) {
+        if (existing != null && existing.isAttachedToWindow && existing.isShown &&
+            panel != null && row?.parent === panel
+        ) {
             syncControl()
             return
         }
@@ -73,7 +78,7 @@ internal class ChatMoodPlusRow(
         footer = null
         panel = null
         blockedPanel = null
-        restoreContent()
+        removeRow()
         control = null
     }
 
@@ -84,7 +89,7 @@ internal class ChatMoodPlusRow(
             syncRow()
         } catch (error: Exception) {
             blockedPanel = panel
-            runCatching { restoreContent() }
+            runCatching { removeRow() }
             WeLogger.w(TAG, "REPLY_PLUS_ROW_FAILED " + error.javaClass.simpleName)
         } finally {
             refreshing = false
@@ -99,52 +104,48 @@ internal class ChatMoodPlusRow(
                 it.javaClass.name == "com.tencent.mm.pluginsdk.ui.chat.AppPanel" && it.isShown
             }
         if (found == null) {
-            restoreContent()
+            removeRow()
             blockedPanel = null
             return
         }
         if (found === blockedPanel) return
-        // 已挂载且结构仍是「host 顶行 + 原生内容」时只同步状态。
-        if (panel === found && wrapper?.parent === found &&
-            original?.parent === wrapper && found.childCount == 1
-        ) {
+        // 已挂载且行仍在面板里时只同步状态。
+        if (panel === found && row?.parent === found) {
             syncControl()
             return
         }
-        restoreContent()
-        // 不依赖混淆 id / 条目位置，只认宿主测量出来的结构：content 里存在 MMFlipper。
-        val content = found.getChildAt(0) as? LinearLayout
-        if (found.childCount != 1 || content == null ||
-            descendants(content).none { it.javaClass.name.endsWith(".MMFlipper") }
-        ) return
+        // 结构校验：index 0 必须是容器且含 MMFlipper——确保我们绝不破坏 (0,0,0)。
+        val container = found.getChildAt(0) as? ViewGroup ?: return
+        if (descendants(container).none { it.javaClass.name.endsWith(".MMFlipper") }) return
         if (found.height < (180 * activity.resources.displayMetrics.density).toInt()) return
 
+        removeRow()
+        val toggle = createControl()
         val row = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(8), 0, dp(8), 0)
         }
-        val toggle = createControl()
         row.addView(toggle, LinearLayout.LayoutParams(-2, -1))
-
-        val host = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
-        val params = content.layoutParams
         panel = found
-        original = content
-        originalParams = params
-        wrapper = host
+        this.row = row
         runCatching {
-            found.removeView(content)
-            host.addView(row, LinearLayout.LayoutParams(-1, dp(48)))
-            host.addView(View(activity).apply { setBackgroundColor(0x14000000) }, LinearLayout.LayoutParams(-1, 1))
-            host.addView(content, LinearLayout.LayoutParams(-1, 0, 1f))
-            // 旧根可能是 WRAP_CONTENT 高；带权重的子项需要面板完整高度。
-            found.addView(host, ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+            if (found is FrameLayout) {
+                found.addView(row, FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                ))
+            } else {
+                found.addView(row, ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ))
+            }
             syncControl()
         }.onFailure {
             blockedPanel = found
-            restoreContent()
+            removeRow()
             WeLogger.w(TAG, "REPLY_PLUS_ROW_FAILED " + it.javaClass.simpleName)
         }
     }
@@ -176,26 +177,12 @@ internal class ChatMoodPlusRow(
         syncing = false
     }
 
-    private fun restoreContent() {
+    private fun removeRow() {
         control?.setOnCheckedChangeListener(null)
         control?.setOnLongClickListener(null)
-        val target = panel
-        val host = wrapper
-        val content = original
-        if (target != null && host != null && content != null &&
-            (content.parent === host || content.parent == null) &&
-            ((host.parent === target && target.childCount == 1) || target.childCount == 0)
-        ) {
-            (content.parent as? ViewGroup)?.removeView(content)
-            if (host.parent === target) target.removeView(host)
-            target.addView(content, originalParams)
-        } else if (target != null && host?.parent === target) {
-            target.removeView(host)
-        }
+        (row?.parent as? ViewGroup)?.removeView(row)
+        row = null
         panel = null
-        wrapper = null
-        original = null
-        originalParams = null
     }
 
     /** 定位当前可见 footer（与 ChatFooterHooks 一致）。 */
