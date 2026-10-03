@@ -15,7 +15,7 @@ import dev.sun.wechat.ui.utils.CameraIcon
 @Suppress("DEPRECATION")
 object ForwardMessagesToMoments : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItemsProvider {
 
-    override val technicalId = "消息转圈"
+    override val technicalId = "转发到朋友圈"
     override val nameRes = R.string.feature_forward_messages_to_moments_name
     override val categoryIds = listOf(FeatureCategoryIds.MOMENTS)
     override val descriptionRes = R.string.feature_forward_messages_to_moments_description
