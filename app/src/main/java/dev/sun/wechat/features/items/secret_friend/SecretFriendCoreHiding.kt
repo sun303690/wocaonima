@@ -43,14 +43,14 @@ import java.lang.reflect.Modifier as JavaModifier
  */
 
 object HideConversations : SwitchFeature(), IResolveDex,
+    WeDatabaseListenerApi.IQueryListener,
+    WeDatabaseListenerApi.IInsertListener,
+    WeDatabaseListenerApi.IUpdateListener {
+
     override val technicalId = "主页会话隐藏"
     override val nameRes: Int = R.string.secret_friend_03_name
     override val categoryIds: List<String> = listOf("密友功能")
     override val descriptionRes: Int? = null
-
-    WeDatabaseListenerApi.IQueryListener,
-    WeDatabaseListenerApi.IInsertListener,
-    WeDatabaseListenerApi.IUpdateListener {
 
     private const val TAG = "HideConversations"
 

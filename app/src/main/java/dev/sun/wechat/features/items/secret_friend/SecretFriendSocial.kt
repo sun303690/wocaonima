@@ -47,12 +47,12 @@ import dev.sun.wechat.utils.android.showToast
  */
 
 object HideMyMoments : SwitchFeature(), WeMomentsContextMenuApi.IMenuItemsProvider,
+    WeDatabaseListenerApi.IQueryListener {
+
     override val technicalId = "隐藏我的朋友圈"
     override val nameRes: Int = R.string.secret_friend_19_name
     override val categoryIds: List<String> = listOf("密友功能")
     override val descriptionRes: Int? = null
-
-    WeDatabaseListenerApi.IQueryListener {
 
     private const val TAG = "HideMyMoments"
 
