@@ -72,7 +72,7 @@ internal class QQMusicOrderRuntime(
     private fun currentTalker(): String? = WeCurrentConversationApi.value.takeIf { it.isNotBlank() }
 
     private fun setCurrentChatAllowed(talker: String, allowed: Boolean) {
-        val next = settings.allowedTalkers().toMutableSet().apply {
+        val next = settings.allowedTalkers().toMutableSet<String>().apply {
             if (allowed) add(talker) else remove(talker)
         }
         settings.saveAllowedTalkers(next)
