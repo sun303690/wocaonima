@@ -805,7 +805,7 @@
     <string name="qq_music_order_enable">Enable</string>
     <string name="qq_music_order_send_card">Send as music card</string>
     <string name="qq_music_order_send_voice">Send as voice message</string>
-    <string name="qq_music_order_custom_singer">Allow custom singer ("song&singer")</string>
+    <string name="qq_music_order_custom_singer">Allow custom singer ("song&amp;singer")</string>
     <string name="qq_music_order_default_singer_hint">Default singer (optional)</string>
     <string name="qq_music_order_replace_singer_nickname">Replace singer with requester nickname</string>
     <string name="qq_music_order_replace_cover_avatar">Replace cover with requester avatar</string>
