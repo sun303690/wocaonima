@@ -51,7 +51,7 @@ override val nameRes: Int = R.string.secret_friend_19_name
 override val categoryIds: List<String> = listOf("密友功能")
 override val descriptionRes: Int? = null
 
-object HideMyMoments : SwitchFeature(), IResolveDex, WeMomentsContextMenuApi.IMenuItemsProvider,
+object HideMyMoments : SwitchFeature(), WeMomentsContextMenuApi.IMenuItemsProvider,
     WeDatabaseListenerApi.IQueryListener {
 
     private const val TAG = "HideMyMoments"
