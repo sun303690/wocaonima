@@ -47,7 +47,7 @@ import dev.sun.wechat.utils.android.showToast
  */
 
 object HideMyMoments : SwitchFeature(), WeMomentsContextMenuApi.IMenuItemsProvider,
-    override val technicalId: String = "隐藏我的朋友圈"
+    override val technicalId = "隐藏我的朋友圈"
     override val nameRes: Int = R.string.secret_friend_19_name
     override val categoryIds: List<String> = listOf("密友功能")
     override val descriptionRes: Int? = null
@@ -139,7 +139,7 @@ object HideMyMoments : SwitchFeature(), WeMomentsContextMenuApi.IMenuItemsProvid
 /** 管理已隐藏的朋友圈列表（浮云「管理已隐藏列表」入口）。 */
 
 object ManageHiddenMoments : ClickableFeature() {
-    override val technicalId: String = "已隐藏朋友圈管理"
+    override val technicalId = "已隐藏朋友圈管理"
     override val nameRes: Int = R.string.secret_friend_20_name
     override val categoryIds: List<String> = listOf("密友功能")
     override val descriptionRes: Int? = null
@@ -236,7 +236,7 @@ private fun hideRowsMatching(view: View, titles: Set<String>) {
  */
 
 object HideDiscoverMoments : SwitchFeature(), IResolveDex {
-    override val technicalId: String = "发现页朋友圈入口隐藏"
+    override val technicalId = "发现页朋友圈入口隐藏"
     override val nameRes: Int = R.string.secret_friend_21_name
     override val categoryIds: List<String> = listOf("密友功能")
     override val descriptionRes: Int? = null
@@ -282,7 +282,7 @@ object HideDiscoverMoments : SwitchFeature(), IResolveDex {
  */
 
 object HideDiscoverEntries : SwitchFeature(), IResolveDex {
-    override val technicalId: String = "发现页入口隐藏"
+    override val technicalId = "发现页入口隐藏"
     override val nameRes: Int = R.string.secret_friend_22_name
     override val categoryIds: List<String> = listOf("密友功能")
     override val descriptionRes: Int? = null

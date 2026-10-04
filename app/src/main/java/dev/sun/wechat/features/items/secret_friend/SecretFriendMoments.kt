@@ -28,7 +28,7 @@ import dev.sun.wechat.utils.reflection.BString
  */
 
 object HideMoments : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.IQueryListener {
-    override val technicalId: String = "朋友圈隐藏"
+    override val technicalId = "朋友圈隐藏"
     override val nameRes: Int = R.string.secret_friend_09_name
     override val categoryIds: List<String> = listOf("密友功能")
     override val descriptionRes: Int? = null
@@ -124,7 +124,7 @@ object HideMoments : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.IQueryL
  */
 
 object HideMomentsInteraction : SwitchFeature(), IResolveDex {
-    override val technicalId: String = "朋友圈互动隐藏"
+    override val technicalId = "朋友圈互动隐藏"
     override val nameRes: Int = R.string.secret_friend_10_name
     override val categoryIds: List<String> = listOf("密友功能")
     override val descriptionRes: Int? = null
@@ -156,7 +156,7 @@ object HideMomentsInteraction : SwitchFeature(), IResolveDex {
  */
 
 object HideMomentsGroupIcon : SwitchFeature(), IResolveDex {
-    override val technicalId: String = "分组图标隐藏"
+    override val technicalId = "分组图标隐藏"
     override val nameRes: Int = R.string.secret_friend_11_name
     override val categoryIds: List<String> = listOf("密友功能")
     override val descriptionRes: Int? = null

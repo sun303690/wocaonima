@@ -30,7 +30,7 @@ private const val TAG_ADD = "SecretFriend.Add"
  */
 
 object LongPressAddFromChat : SwitchFeature(), WeConversationContextMenuApi.IMenuItemsProvider {
-    override val technicalId: String = "会话列表长按添加"
+    override val technicalId = "会话列表长按添加"
     override val nameRes: Int = R.string.secret_friend_00_name
     override val categoryIds: List<String> = listOf("密友功能")
     override val descriptionRes: Int? = null
@@ -95,7 +95,7 @@ internal fun toggleSecret(activity: Activity, wxId: String) {
  */
 
 object LongPressAddFromContacts : SwitchFeature() {
-    override val technicalId: String = "通讯录长按添加"
+    override val technicalId = "通讯录长按添加"
     override val nameRes: Int = R.string.secret_friend_01_name
     override val categoryIds: List<String> = listOf("密友功能")
     override val descriptionRes: Int? = null

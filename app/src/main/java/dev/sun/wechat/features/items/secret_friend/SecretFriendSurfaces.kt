@@ -24,7 +24,7 @@ import dev.sun.wechat.utils.WeLogger
  */
 
 object HideRecentForward : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.IQueryListener {
-    override val technicalId: String = "隐藏最近转发"
+    override val technicalId = "隐藏最近转发"
     override val nameRes: Int = R.string.secret_friend_23_name
     override val categoryIds: List<String> = listOf("密友功能")
     override val descriptionRes: Int? = null
@@ -74,7 +74,7 @@ object HideRecentForward : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.I
  */
 
 object HideStatusPage : SwitchFeature(), IResolveDex {
-    override val technicalId: String = "状态页隐藏"
+    override val technicalId = "状态页隐藏"
     override val nameRes: Int = R.string.secret_friend_24_name
     override val categoryIds: List<String> = listOf("密友功能")
     override val descriptionRes: Int? = null
@@ -105,7 +105,7 @@ object HideStatusPage : SwitchFeature(), IResolveDex {
  */
 
 object HideStorageRecords : SwitchFeature(), IResolveDex {
-    override val technicalId: String = "存储空间聊天记录隐藏"
+    override val technicalId = "存储空间聊天记录隐藏"
     override val nameRes: Int = R.string.secret_friend_25_name
     override val categoryIds: List<String> = listOf("密友功能")
     override val descriptionRes: Int? = null
@@ -130,7 +130,7 @@ object HideStorageRecords : SwitchFeature(), IResolveDex {
 /** 存储空间缓存隐藏（同页缓存条目，实现与聊天记录同款）。 */
 
 object HideStorageCache : SwitchFeature(), IResolveDex {
-    override val technicalId: String = "存储空间缓存隐藏"
+    override val technicalId = "存储空间缓存隐藏"
     override val nameRes: Int = R.string.secret_friend_26_name
     override val categoryIds: List<String> = listOf("密友功能")
     override val descriptionRes: Int? = null

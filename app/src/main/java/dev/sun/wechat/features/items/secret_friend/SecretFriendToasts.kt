@@ -33,7 +33,7 @@ import dev.sun.wechat.ui.utils.showComposeDialog
  */
 
 object SecretFriendToastToggle : SwitchFeature() {
-    override val technicalId: String = "操作提示"
+    override val technicalId = "操作提示"
     override val nameRes: Int = R.string.secret_friend_27_name
     override val categoryIds: List<String> = listOf("密友功能")
     override val descriptionRes: Int? = null
@@ -105,7 +105,7 @@ object SecretFriendToastToggle : SwitchFeature() {
  */
 
 object SecretFriendMenuTextConfig : ClickableFeature() {
-    override val technicalId: String = "菜单显示文字"
+    override val technicalId = "菜单显示文字"
     override val nameRes: Int = R.string.secret_friend_28_name
     override val categoryIds: List<String> = listOf("密友功能")
     override val descriptionRes: Int? = null

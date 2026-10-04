@@ -21,7 +21,7 @@ import dev.sun.wechat.utils.android.showToast
  */
 
 object SecretFriendManager : ClickableFeature() {
-    override val technicalId: String = "密友名单管理"
+    override val technicalId = "密友名单管理"
     override val nameRes: Int = R.string.secret_friend_08_name
     override val categoryIds: List<String> = listOf("密友功能")
     override val descriptionRes: Int? = null

@@ -16,7 +16,7 @@ import dev.sun.wechat.utils.WeLogger
  */
 
 object MuteSecretFriend : SwitchFeature() {
-    override val technicalId: String = "密友消息通知隐藏"
+    override val technicalId = "密友消息通知隐藏"
     override val nameRes: Int = R.string.secret_friend_12_name
     override val categoryIds: List<String> = listOf("密友功能")
     override val descriptionRes: Int? = null
