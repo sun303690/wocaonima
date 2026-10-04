@@ -19,13 +19,13 @@ import dev.sun.wechat.utils.android.showToast
  * 名单数据读写走 [SecretFriendState]（getStoredWxIds/setWxIds 不受主控影响），
  * 各隐藏功能消费 [SecretFriendState.getWxIds]（主控关闭时返回空 → 整体放行）。
  */
-// @Feature(was name=密友名单管理)
-override val technicalId: String = "密友名单管理"
-override val nameRes: Int = R.string.secret_friend_08_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object SecretFriendManager : ClickableFeature() {
+    override val technicalId: String = "密友名单管理"
+    override val nameRes: Int = R.string.secret_friend_08_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "SecretFriendManager"
 

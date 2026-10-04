@@ -20,13 +20,13 @@ import java.lang.reflect.Field
  * - 搜索下拉/联系人列表等 wrapper 查询：[rewriteWrapperSql] 全套规则（密友名单）；
  * - 群成员搜索 / 共同群聊好友建议：两条 FTS task 的结构式过滤（SQL 之外的最后两个搜索面）。
  */
-// @Feature(was name=主页搜索隐藏)
-override val technicalId: String = "主页搜索隐藏"
-override val nameRes: Int = R.string.secret_friend_18_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object HideSearch : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.IQueryListener {
+    override val technicalId: String = "主页搜索隐藏"
+    override val nameRes: Int = R.string.secret_friend_18_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "HideSearch"
 

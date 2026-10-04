@@ -22,13 +22,13 @@ import dev.sun.wechat.utils.WeLogger
  * - SQL：`recentforward` 表的列表查询（确认 talker 列出现在查询文本中才注入）；
  * - 结构式兜底：转发选择器 ui.transmit 包内 List 入参的列表装配方法（allowFailure + 形状守卫）。
  */
-// @Feature(was name=隐藏最近转发)
-override val technicalId: String = "隐藏最近转发"
-override val nameRes: Int = R.string.secret_friend_23_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object HideRecentForward : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.IQueryListener {
+    override val technicalId: String = "隐藏最近转发"
+    override val nameRes: Int = R.string.secret_friend_23_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "HideRecentForward"
 
@@ -72,13 +72,13 @@ object HideRecentForward : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.I
  * 状态数据以网络下发为主、本地无稳定可重写 SQL → 结构式 adapter 过滤
  * （plugin.status 包内 List 入参方法，allowFailure + 形状守卫；包名漂移时整段跳过）。
  */
-// @Feature(was name=状态页隐藏)
-override val technicalId: String = "状态页隐藏"
-override val nameRes: Int = R.string.secret_friend_24_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object HideStatusPage : SwitchFeature(), IResolveDex {
+    override val technicalId: String = "状态页隐藏"
+    override val nameRes: Int = R.string.secret_friend_24_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "HideStatusPage"
 
@@ -103,13 +103,13 @@ object HideStatusPage : SwitchFeature(), IResolveDex {
  * 该页数据以本地统计缓存驱动，走 clean 包内 List 入参的列表装配方法结构式过滤
  * （allowFailure + 形状守卫；锚点缺失时整段跳过）。
  */
-// @Feature(was name=存储空间聊天记录隐藏)
-override val technicalId: String = "存储空间聊天记录隐藏"
-override val nameRes: Int = R.string.secret_friend_25_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object HideStorageRecords : SwitchFeature(), IResolveDex {
+    override val technicalId: String = "存储空间聊天记录隐藏"
+    override val nameRes: Int = R.string.secret_friend_25_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "HideStorageRecords"
 
@@ -128,13 +128,13 @@ object HideStorageRecords : SwitchFeature(), IResolveDex {
 }
 
 /** 存储空间缓存隐藏（同页缓存条目，实现与聊天记录同款）。 */
-// @Feature(was name=存储空间缓存隐藏)
-override val technicalId: String = "存储空间缓存隐藏"
-override val nameRes: Int = R.string.secret_friend_26_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object HideStorageCache : SwitchFeature(), IResolveDex {
+    override val technicalId: String = "存储空间缓存隐藏"
+    override val nameRes: Int = R.string.secret_friend_26_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "HideStorageCache"
 

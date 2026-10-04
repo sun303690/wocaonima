@@ -26,13 +26,13 @@ import dev.sun.wechat.utils.reflection.BString
  * - 发现 tab「N 位朋友的新动态」红点：NetSceneSnsSync.updateSyncDataCache 命中密友即取消；
  * - 密友的点赞/评论内联：见 [installSnsInlineSecretFilter]（SnsObject 克隆后过滤）。
  */
-// @Feature(was name=朋友圈隐藏)
-override val technicalId: String = "朋友圈隐藏"
-override val nameRes: Int = R.string.secret_friend_09_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object HideMoments : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.IQueryListener {
+    override val technicalId: String = "朋友圈隐藏"
+    override val nameRes: Int = R.string.secret_friend_09_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "HideMoments"
 
@@ -122,13 +122,13 @@ object HideMoments : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.IQueryL
  * 朋友圈互动隐藏（备份版内联过滤独立开关）：密友在别人帖子下的点赞/评论不再显示。
  * 与「朋友圈隐藏」同开时，后者已把条目滤掉，本开关的 hook 命中后幂等无副作用。
  */
-// @Feature(was name=朋友圈互动隐藏)
-override val technicalId: String = "朋友圈互动隐藏"
-override val nameRes: Int = R.string.secret_friend_10_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object HideMomentsInteraction : SwitchFeature(), IResolveDex {
+    override val technicalId: String = "朋友圈互动隐藏"
+    override val nameRes: Int = R.string.secret_friend_10_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "HideMomentsInteraction"
 
@@ -154,13 +154,13 @@ object HideMomentsInteraction : SwitchFeature(), IResolveDex {
  * 反射探测，String 置空、Int 置 0）；克隆理由同互动过滤——SnsInfoStorageLogic 缓存同一
  * 实例，原地改动会写回持久层。探测不到任何分组字段时该帖直接放行，整段行为退化为无操作。
  */
-// @Feature(was name=分组图标隐藏)
-override val technicalId: String = "分组图标隐藏"
-override val nameRes: Int = R.string.secret_friend_11_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object HideMomentsGroupIcon : SwitchFeature(), IResolveDex {
+    override val technicalId: String = "分组图标隐藏"
+    override val nameRes: Int = R.string.secret_friend_11_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "HideMomentsGroupIcon"
 

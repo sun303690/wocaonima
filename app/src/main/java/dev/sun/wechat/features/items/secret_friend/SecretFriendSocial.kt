@@ -45,13 +45,13 @@ import dev.sun.wechat.utils.android.showToast
  * snsId 过滤（独立存储键，与密友名单无关）。入口复用工程「朋友圈菜单增强扩展」——
  * TimelineOnCreateContextMenuListener 同时覆盖时间线与相册页列表。
  */
-// @Feature(was name=隐藏我的朋友圈)
-override val technicalId: String = "隐藏我的朋友圈"
-override val nameRes: Int = R.string.secret_friend_19_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object HideMyMoments : SwitchFeature(), WeMomentsContextMenuApi.IMenuItemsProvider,
+    override val technicalId: String = "隐藏我的朋友圈"
+    override val nameRes: Int = R.string.secret_friend_19_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
     WeDatabaseListenerApi.IQueryListener {
 
     private const val TAG = "HideMyMoments"
@@ -137,13 +137,13 @@ object HideMyMoments : SwitchFeature(), WeMomentsContextMenuApi.IMenuItemsProvid
 }
 
 /** 管理已隐藏的朋友圈列表（浮云「管理已隐藏列表」入口）。 */
-// @Feature(was name=已隐藏朋友圈管理)
-override val technicalId: String = "已隐藏朋友圈管理"
-override val nameRes: Int = R.string.secret_friend_20_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object ManageHiddenMoments : ClickableFeature() {
+    override val technicalId: String = "已隐藏朋友圈管理"
+    override val nameRes: Int = R.string.secret_friend_20_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "ManageHiddenMoments"
 
@@ -234,13 +234,13 @@ private fun hideRowsMatching(view: View, titles: Set<String>) {
  * 发现页朋友圈入口隐藏（浮云语义）：发现页列表中的「朋友圈」入口行隐藏。
  * DiscoverUI 类名漂移 → dexMethod allowFailure + isPlaceholder 守卫，解析失败整段跳过。
  */
-// @Feature(was name=发现页朋友圈入口隐藏)
-override val technicalId: String = "发现页朋友圈入口隐藏"
-override val nameRes: Int = R.string.secret_friend_21_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object HideDiscoverMoments : SwitchFeature(), IResolveDex {
+    override val technicalId: String = "发现页朋友圈入口隐藏"
+    override val nameRes: Int = R.string.secret_friend_21_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "HideDiscoverMoments"
 
@@ -280,13 +280,13 @@ object HideDiscoverMoments : SwitchFeature(), IResolveDex {
  * 发现页入口隐藏（浮云语义）：发现页列表中的视频号 / 看一看 / 小程序入口行隐藏。
  * 实现同 HideDiscoverMoments。
  */
-// @Feature(was name=发现页入口隐藏)
-override val technicalId: String = "发现页入口隐藏"
-override val nameRes: Int = R.string.secret_friend_22_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object HideDiscoverEntries : SwitchFeature(), IResolveDex {
+    override val technicalId: String = "发现页入口隐藏"
+    override val nameRes: Int = R.string.secret_friend_22_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "HideDiscoverEntries"
 

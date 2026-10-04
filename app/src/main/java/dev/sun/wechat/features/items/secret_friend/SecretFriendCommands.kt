@@ -30,13 +30,13 @@ private const val FTS_MAIN_SEARCH_UI = "com.tencent.mm.plugin.fts.ui.FTSBaseMain
  * （[SecretFriendState.tempShowForMinutes]，时长可在本行下方调整，到期自动恢复），
  * 并退出搜索页。
  */
-// @Feature(was name=临时解除指令)
-override val technicalId: String = "临时解除指令"
-override val nameRes: Int = R.string.secret_friend_02_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object SearchCommandTempUnhide : SwitchFeature() {
+    override val technicalId: String = "临时解除指令"
+    override val nameRes: Int = R.string.secret_friend_02_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = TAG_COMMANDS
 

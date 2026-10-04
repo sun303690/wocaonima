@@ -34,13 +34,13 @@ import dev.ujhhgtg.reflekt.utils.toClassOrNull
  * 点击本体发一次测试震动。主进程 DB hook：后台 :push 进程入库时本开关不感知
  * （与隐藏联系人通知链路同限制），微信回到前台主页时会话列表仍保持隐藏。
  */
-// @Feature(was name=密友消息震动)
-override val technicalId: String = "密友消息震动"
-override val nameRes: Int = R.string.secret_friend_13_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object VibrateOnSecretMsg : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
+    override val technicalId: String = "密友消息震动"
+    override val nameRes: Int = R.string.secret_friend_13_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "VibrateOnSecretMsg"
 
@@ -87,13 +87,13 @@ object VibrateOnSecretMsg : ClickableFeature(), WeDatabaseListenerApi.IInsertLis
  * 微信团队提醒（MaskWechat 提醒语义 / 浮云「微信团队提醒」）：密友来消息时以「微信团队」
  * 名义插入一条 SYSTEM 消息（type 10000），用户点进微信团队会话即可看到"谁发来了消息"。
  */
-// @Feature(was name=微信团队提醒)
-override val technicalId: String = "微信团队提醒"
-override val nameRes: Int = R.string.secret_friend_14_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object TeamNotify : SwitchFeature(), WeDatabaseListenerApi.IInsertListener {
+    override val technicalId: String = "微信团队提醒"
+    override val nameRes: Int = R.string.secret_friend_14_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "TeamNotify"
 
@@ -145,13 +145,13 @@ object TeamNotify : SwitchFeature(), WeDatabaseListenerApi.IInsertListener {
  * - LauncherUI onResume 清除加粗（回到微信即视为已读）；
  * - 密友消息入库时对「微信」tab 应用加粗。
  */
-// @Feature(was name=底栏字体加粗)
-override val technicalId: String = "底栏字体加粗"
-override val nameRes: Int = R.string.secret_friend_15_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object BottomBarBold : SwitchFeature() {
+    override val technicalId: String = "底栏字体加粗"
+    override val nameRes: Int = R.string.secret_friend_15_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "BottomBarBold"
 
@@ -230,13 +230,13 @@ object BottomBarBold : SwitchFeature() {
  * MainTabUI doOnCreate 后在 decorView 上叠一个红点 View，锚定「搜索」入口的位置
  * （OnLayoutChangeListener 跟随布局），密友消息 → 显示，LauncherUI resume → 隐藏。
  */
-// @Feature(was name=圆点提示)
-override val technicalId: String = "圆点提示"
-override val nameRes: Int = R.string.secret_friend_16_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object RedDotPrompt : SwitchFeature() {
+    override val technicalId: String = "圆点提示"
+    override val nameRes: Int = R.string.secret_friend_16_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "RedDotPrompt"
 
@@ -338,13 +338,13 @@ object RedDotPrompt : SwitchFeature() {
  * ExtDeviceWXLoginUI 是微信长期未混淆的稳定类名（webwx 包）；类缺失/方法漂移时
  * onEnable 安全跳过，仅日志提示。
  */
-// @Feature(was name=拦截扫码登录)
-override val technicalId: String = "拦截扫码登录"
-override val nameRes: Int = R.string.secret_friend_17_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object BlockScanLogin : SwitchFeature() {
+    override val technicalId: String = "拦截扫码登录"
+    override val nameRes: Int = R.string.secret_friend_17_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "BlockScanLogin"
 

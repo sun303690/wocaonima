@@ -36,13 +36,13 @@ import java.lang.ref.WeakReference
  * 多击标题解除（浮云「多击标题解除」语义）：连续点击主页标题 N 次（可调，默认 3），
  * 每次点击间隔不超过 M 毫秒（可调，默认 1000）→ 临时解除隐藏 30 分钟。
  */
-// @Feature(was name=多击标题解除)
-override val technicalId: String = "多击标题解除"
-override val nameRes: Int = R.string.secret_friend_29_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object MultiClickTitleUnlock : SwitchFeature() {
+    override val technicalId: String = "多击标题解除"
+    override val nameRes: Int = R.string.secret_friend_29_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "MultiClickTitleUnlock"
 
@@ -108,13 +108,13 @@ object MultiClickTitleUnlock : SwitchFeature() {
  * 用 setOnTouchListener 自计时（系统 OnLongClickListener 写死 ~500ms，无法自定义时长；
  * 且澎湃 OS 的 ACTION_CANCEL 会杀掉 View 内部的长按 postDelayed）。
  */
-// @Feature(was name=长按标题解除)
-override val technicalId: String = "长按标题解除"
-override val nameRes: Int = R.string.secret_friend_30_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object LongPressTitleUnlock : SwitchFeature() {
+    override val technicalId: String = "长按标题解除"
+    override val nameRes: Int = R.string.secret_friend_30_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "LongPressTitleUnlock"
 
@@ -222,13 +222,13 @@ private object ViewConfigurationCompat {
  * 若正处于密友对话内，同时关闭该对话窗口（finish ChattingUI）。
  * Receiver 动态注册于 onEnable，随 onDisable 注销。
  */
-// @Feature(was name=锁屏隐藏)
-override val technicalId: String = "锁屏隐藏"
-override val nameRes: Int = R.string.secret_friend_31_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object AutoRestoreLockScreen : SwitchFeature() {
+    override val technicalId: String = "锁屏隐藏"
+    override val nameRes: Int = R.string.secret_friend_31_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "AutoRestoreLockScreen"
 
@@ -295,13 +295,13 @@ object AutoRestoreLockScreen : SwitchFeature() {
  * - 微信失焦（LauncherUI.onWindowFocusChanged(false)，即按 HOME 切走）→ tempOff()。
  * 临时显示期间进入过的密友对话，返回主页时会话列表已恢复隐藏，无需额外 finish。
  */
-// @Feature(was name=离开对话/离开微信隐藏)
-override val technicalId: String = "离开对话/离开微信隐藏"
-override val nameRes: Int = R.string.secret_friend_32_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object AutoRestoreOnLeave : SwitchFeature(), IResolveDex {
+    override val technicalId: String = "离开对话/离开微信隐藏"
+    override val nameRes: Int = R.string.secret_friend_32_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "AutoRestoreOnLeave"
 

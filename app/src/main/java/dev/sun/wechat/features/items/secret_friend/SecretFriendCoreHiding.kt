@@ -41,13 +41,13 @@ import java.lang.reflect.Modifier as JavaModifier
  *   兜住绕过 wrapper 规则形状的查询。行删除走微信原生「不显示该聊天」语义（delChatContact），
  *   聊天记录不受影响。
  */
-// @Feature(was name=主页会话隐藏)
-override val technicalId: String = "主页会话隐藏"
-override val nameRes: Int = R.string.secret_friend_03_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object HideConversations : SwitchFeature(), IResolveDex,
+    override val technicalId: String = "主页会话隐藏"
+    override val nameRes: Int = R.string.secret_friend_03_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
     WeDatabaseListenerApi.IQueryListener,
     WeDatabaseListenerApi.IInsertListener,
     WeDatabaseListenerApi.IUpdateListener {
@@ -332,13 +332,13 @@ object HideConversations : SwitchFeature(), IResolveDex,
  * - AddressLiveList.e(List)：通讯录 MvvmList 的「快照预处理」，把密友条目从快照**替换**出去
  *   （替换而非 removeAll——该 list 是 MvvmList 自身持久 snapshot 字段）。
  */
-// @Feature(was name=通讯录隐藏)
-override val technicalId: String = "通讯录隐藏"
-override val nameRes: Int = R.string.secret_friend_04_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object HideSecretContacts : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.IQueryListener {
+    override val technicalId: String = "通讯录隐藏"
+    override val nameRes: Int = R.string.secret_friend_04_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "HideSecretContacts"
 
@@ -379,13 +379,13 @@ object HideSecretContacts : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.
  *   [rewriteWrapperSql] 的 contact-list 规则直接覆盖；
  * - 结构式兜底：ui.contact 包内 MvvmList 预处理（allowFailure + 形状守卫），类名漂移时整段跳过。
  */
-// @Feature(was name=标签内隐藏)
-override val technicalId: String = "标签内隐藏"
-override val nameRes: Int = R.string.secret_friend_05_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object HideTagMembers : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.IQueryListener {
+    override val technicalId: String = "标签内隐藏"
+    override val nameRes: Int = R.string.secret_friend_05_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "HideTagMembers"
 
@@ -426,13 +426,13 @@ object HideTagMembers : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.IQue
  * - WeStartActivityApi 兜底：启动指向聊天页且带密友目标的 intent 直接取消。
  * 临时显示态下放行（解除后可正常进入密友对话）。
  */
-// @Feature(was name=禁止进入聊天)
-override val technicalId: String = "禁止进入聊天"
-override val nameRes: Int = R.string.secret_friend_06_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object BlockChat : SwitchFeature() {
+    override val technicalId: String = "禁止进入聊天"
+    override val nameRes: Int = R.string.secret_friend_06_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "BlockChat"
 
@@ -472,13 +472,13 @@ object BlockChat : SwitchFeature() {
  * ContactInfoUI.onCreate 检查 intent 的 "Contact_User"，命中密友名单 → finish；
  * WeStartActivityApi 同款兜底。临时显示态下放行。
  */
-// @Feature(was name=禁止查看资料)
-override val technicalId: String = "禁止查看资料"
-override val nameRes: Int = R.string.secret_friend_07_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object BlockProfile : SwitchFeature() {
+    override val technicalId: String = "禁止查看资料"
+    override val nameRes: Int = R.string.secret_friend_07_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "BlockProfile"
 

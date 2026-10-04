@@ -14,13 +14,13 @@ import dev.sun.wechat.utils.WeLogger
  *
  * 关闭开关**不回滚**免打扰（与隐藏联系人一致：无法区分用户自设的免打扰，回滚会误恢复）。
  */
-// @Feature(was name=密友消息通知隐藏)
-override val technicalId: String = "密友消息通知隐藏"
-override val nameRes: Int = R.string.secret_friend_12_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object MuteSecretFriend : SwitchFeature() {
+    override val technicalId: String = "密友消息通知隐藏"
+    override val nameRes: Int = R.string.secret_friend_12_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "MuteSecretFriend"
 

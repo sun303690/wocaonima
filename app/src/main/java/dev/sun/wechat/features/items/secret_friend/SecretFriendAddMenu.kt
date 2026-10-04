@@ -28,13 +28,13 @@ private const val TAG_ADD = "SecretFriend.Add"
  * 实现走工程已验证的 [WeConversationContextMenuApi]（ConversationLongClickListener 锚点），
  * talker 直接来自菜单上下文，注入与点击都由该 API 完整托管。
  */
-// @Feature(was name=会话列表长按添加)
-override val technicalId: String = "会话列表长按添加"
-override val nameRes: Int = R.string.secret_friend_00_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object LongPressAddFromChat : SwitchFeature(), WeConversationContextMenuApi.IMenuItemsProvider {
+    override val technicalId: String = "会话列表长按添加"
+    override val nameRes: Int = R.string.secret_friend_00_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "LongPressAddFromChat"
 
@@ -93,13 +93,13 @@ internal fun toggleSecret(activity: Activity, wxId: String) {
  * - 会话行（持有 field_conversationTime）不劫持，仍走「会话列表长按添加」的原生菜单；
  * - 「原生长按菜单」选项回调微信原监听器，原生功能（备注/星标/删除）不受损。
  */
-// @Feature(was name=通讯录长按添加)
-override val technicalId: String = "通讯录长按添加"
-override val nameRes: Int = R.string.secret_friend_01_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object LongPressAddFromContacts : SwitchFeature() {
+    override val technicalId: String = "通讯录长按添加"
+    override val nameRes: Int = R.string.secret_friend_01_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     private const val TAG = "LongPressAddFromContacts"
 

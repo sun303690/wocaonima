@@ -31,13 +31,13 @@ import dev.sun.wechat.ui.utils.showComposeDialog
  * 添加/移除密友等显式菜单操作仍会直接 Toast 以提供反馈。
  * 下方编辑行可自定义各条提示文案。
  */
-// @Feature(was name=操作提示)
-override val technicalId: String = "操作提示"
-override val nameRes: Int = R.string.secret_friend_27_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object SecretFriendToastToggle : SwitchFeature() {
+    override val technicalId: String = "操作提示"
+    override val nameRes: Int = R.string.secret_friend_27_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     // 开关状态必须同步到 SecretFriendState.toastsEnabled（showToastIfEnabled 读的是它）：
     // 此前无任何代码写该 pref，开关永远不生效
@@ -103,13 +103,13 @@ object SecretFriendToastToggle : SwitchFeature() {
  * 菜单显示文字（可点击项）：自定义「会话列表长按添加 / 通讯录长按添加」注入菜单的
  * 显示文字（默认「加入密友」）。已加入密友的联系人菜单固定显示「取消密友」。
  */
-// @Feature(was name=菜单显示文字)
-override val technicalId: String = "菜单显示文字"
-override val nameRes: Int = R.string.secret_friend_28_name
-override val categoryIds: List<String> = listOf("密友功能")
-override val descriptionRes: Int? = null
 
 object SecretFriendMenuTextConfig : ClickableFeature() {
+    override val technicalId: String = "菜单显示文字"
+    override val nameRes: Int = R.string.secret_friend_28_name
+    override val categoryIds: List<String> = listOf("密友功能")
+    override val descriptionRes: Int? = null
+
 
     override val alwaysEnabled: Boolean = true
     override val noSwitchWidget: Boolean = true
