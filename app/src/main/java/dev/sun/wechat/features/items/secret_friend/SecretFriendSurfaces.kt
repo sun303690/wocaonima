@@ -1,5 +1,6 @@
 package dev.sun.wechat.features.items.secret_friend
 
+import dev.sun.wechat.R
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.dexMethod
 import dev.sun.wechat.features.api.core.WeDatabaseListenerApi

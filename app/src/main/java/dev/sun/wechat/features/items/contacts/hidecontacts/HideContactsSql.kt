@@ -1,6 +1,4 @@
-package dev.sun.wechat.features.items.contacts.hidecontacts
-
-import dev.sun.wechat.features.api.core.WeDatabaseApi
+﻿package dev.sun.wechat.features.items.contacts.hidecontacts
 
 import com.tencent.wcdb.database.SQLiteDatabase
 import dev.ujhhgtg.reflekt.reflekt
@@ -27,7 +25,7 @@ private const val TAG = "HideContacts.Sql"
  * Bind arguments are always passed separately from the SQL text, so injecting literal
  * `NOT IN ('...')` predicates is safe everywhere here.
  */
-fun HideContacts.installSqlHooks() {
+internal fun HideContacts.installSqlHooks() {
     installWrapperHook()
     installFtsHook()
 }
@@ -165,21 +163,20 @@ private fun looksLikeUnreadCountQuery(lower: String): Boolean {
 }
 
 private fun HideContacts.installWrapperHook() {
-    if (WeDatabaseApi.methodSqliteWrapperRawQuery.isPlaceholder) {
+    if (methodSqliteWrapperRawQuery.isPlaceholder) {
         WeLogger.w(TAG, "SQLite wrapper query method not resolved; query-time hiding disabled")
         return
     }
-    WeDatabaseApi.methodSqliteWrapperRawQuery.hookBefore {
+    methodSqliteWrapperRawQuery.hookBefore {
+        if (isTemporarilyShown) return@hookBefore
         val sql = args.firstOrNull() as? String ?: return@hookBefore
-        val rewritten = rewriteWrapperSql(sql) ?: return@hookBefore
+        val rewritten = rewriteWrapperSql(sql, HideContacts.hiddenContacts) ?: return@hookBefore
         args[0] = rewritten
     }
 }
 
 /** Returns the rewritten SQL, or null to leave the query untouched. */
-private fun rewriteWrapperSql(sql: String): String? {
-    if (HideContacts.isTemporarilyShown) return null
-    val hidden = HideContacts.hiddenContacts
+internal fun rewriteWrapperSql(sql: String, hidden: Set<String>): String? {
     if (hidden.isEmpty()) return null
 
     val lower = sql.lowercase()
@@ -233,7 +230,7 @@ private fun looksLikeContactSelectorQuery(lower: String): Boolean {
  * Callers must not use this on a query whose WHERE ends in a bare OR — see the 通讯录 contact-count
  * query, which ends in `or username = 'weixin'`.
  */
-fun injectCondition(sql: String, condition: String): String {
+internal fun injectCondition(sql: String, condition: String): String {
     val insertionPoint = listOf(" order by ", " group by ", " limit ")
         .map { sql.indexOf(it, ignoreCase = true) }
         .filter { it >= 0 }
@@ -245,7 +242,7 @@ fun injectCondition(sql: String, condition: String): String {
 }
 
 /** Renders a hidden-contact set as a single-quoted SQL value list with `''` escaping. */
-fun Set<String>.toSqlList(): String =
+internal fun Set<String>.toSqlList(): String =
     joinToString(",") { "'${it.replace("'", "''")}'" }
 
 // ── global search (FTS) ──────────────────────────────────────────────────────────────────────
@@ -329,7 +326,7 @@ private fun HideContacts.installFtsHook() {
 }
 
 /** Returns the rewritten FTS query, or null to leave it untouched. */
-private fun rewriteFtsSql(sql: String, hidden: Set<String>): String? {
+internal fun rewriteFtsSql(sql: String, hidden: Set<String>): String? {
     // Checked first: its SQL also carries `aux_index = 'notifymessage'`, which the pinned-aux_index
     // bail below would otherwise (wrongly) treat as a chat-scoped search.
     if (sql.startsWith(SQL_SELECT_SERVICE_NOTIFY)) return wrapWithNotIn(sql, "talker", hidden)
@@ -388,10 +385,7 @@ private const val FEED_MARKER_RAW = "(sourceType & 2 != 0 )"
 private const val FEED_MARKER_ENHANCED = "(1=1)"
 
 /** Called from `HideContacts.onQuery`; returns null to leave the query untouched. */
-fun rewriteMomentsFeedSql(sql: String): String? {
-    if (HideContacts.isTemporarilyShown) return null
-
-    val hidden = HideContacts.hiddenContacts
+internal fun rewriteMomentsFeedSql(sql: String, hidden: Set<String>): String? {
     if (hidden.isEmpty()) return null
 
     // 只处理主信息流查询: 排除个人主页 (userName=) 与已注入的查询

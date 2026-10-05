@@ -40,6 +40,10 @@ object WeDatabaseListenerApi : ApiFeature() {
     private val updateListeners = CopyOnWriteArrayList<IUpdateListener>()
     private val queryListeners = CopyOnWriteArrayList<IQueryListener>()
 
+    /** 最近一次 insertWithOnConflict 的 wcdb 实例（密友等需要直接操作 db 时复用）。 */
+    var lastInsertDb: SQLiteDatabase? = null
+        private set
+
     fun addListener(listener: Any) {
         if (listener is IInsertListener) {
             insertListeners.add(listener)
@@ -116,6 +120,7 @@ object WeDatabaseListenerApi : ApiFeature() {
             }?.run {
                 hookAfter {
                     try {
+                        lastInsertDb = thisObject as? SQLiteDatabase
                         if (insertListeners.isEmpty()) return@hookAfter
 
                         val table = args[0] as String

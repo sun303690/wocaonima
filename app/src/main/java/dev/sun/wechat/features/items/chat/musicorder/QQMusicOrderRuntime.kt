@@ -196,7 +196,7 @@ internal class QQMusicOrderRuntime(
     }
 
     private fun sendReply(talker: String, msgId: Long, content: String) {
-        if (msgId > 0L && WeMessageApi.sendQuoteTextByMsgSvrId(talker, msgId, content)) return
+        if (msgId > 0L && WeMessageApi.sendQuoteTextByMsgId(talker, msgId, content)) return
         WeMessageApi.sendText(talker, content)
     }
 

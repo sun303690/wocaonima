@@ -1,5 +1,6 @@
 package dev.sun.wechat.features.items.secret_friend
 
+import dev.sun.wechat.R
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer

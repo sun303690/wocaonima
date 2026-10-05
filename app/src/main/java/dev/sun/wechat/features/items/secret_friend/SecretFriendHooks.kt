@@ -1,5 +1,6 @@
 package dev.sun.wechat.features.items.secret_friend
 
+import dev.sun.wechat.R
 import android.content.ContentValues
 import dev.ujhhgtg.reflekt.reflekt
 import dev.ujhhgtg.reflekt.utils.makeAccessible

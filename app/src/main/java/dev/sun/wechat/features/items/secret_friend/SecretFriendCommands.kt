@@ -1,5 +1,6 @@
 package dev.sun.wechat.features.items.secret_friend
 
+import dev.sun.wechat.R
 import android.app.Activity
 import androidx.compose.runtime.Composable
 import dev.sun.wechat.features.core.SwitchFeature

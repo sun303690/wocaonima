@@ -1,5 +1,6 @@
 package dev.sun.wechat.features.items.secret_friend
 
+import dev.sun.wechat.R
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
