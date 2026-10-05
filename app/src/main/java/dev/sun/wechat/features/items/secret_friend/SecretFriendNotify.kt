@@ -172,7 +172,7 @@ object BottomBarBold : SwitchFeature() {
 
     override fun onEnable() {
         WeMainActivityBeautifyApi.methodDoOnCreate.hookAfter {
-            // doOnCreate 的 thisObject 是 MainTabUI 容器而非 Activity（同 HideContacts），
+            // doOnCreate 的 thisObject 是 MainTabUI 容器而非 Activity，
             // 需从其 Activity 类型字段解出主页 Activity
             val activity = thisObject?.reflekt()
                 ?.firstFieldOrNull { type { Activity::class.java.isAssignableFrom(it) } }
@@ -256,7 +256,7 @@ object RedDotPrompt : SwitchFeature() {
 
     override fun onEnable() {
         WeMainActivityBeautifyApi.methodDoOnCreate.hookAfter {
-            // doOnCreate 的 thisObject 是 MainTabUI 容器而非 Activity（同 HideContacts），
+            // doOnCreate 的 thisObject 是 MainTabUI 容器而非 Activity，
             // 需从其 Activity 类型字段解出主页 Activity
             val activity = thisObject?.reflekt()
                 ?.firstFieldOrNull { type { Activity::class.java.isAssignableFrom(it) } }

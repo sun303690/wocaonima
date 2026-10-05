@@ -6,8 +6,6 @@ import dev.sun.wechat.dexkit.dsl.dexMethod
 import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature
-import dev.sun.wechat.features.items.contacts.hidecontacts.injectCondition
-import dev.sun.wechat.features.items.contacts.hidecontacts.toSqlList
 import dev.sun.wechat.utils.WeLogger
 
 /**

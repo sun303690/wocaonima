@@ -83,9 +83,9 @@ object HideMoments : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.IQueryL
     }
 
     /**
-     * 时间线主信息流：与 rewriteMomentsFeedSql 同款注入（密友名单）。
-     * 与「隐藏联系人」同开时对方可能已注入自己的 NOT IN 子句——此时把密友名单**合并**进
-     * 已有子句（而非跳过），两份名单都会被过滤；个人主页 (userName=) 跳过。
+     * 时间线主信息流：注入 `SnsInfo.userName NOT IN (密友名单)` 子句。
+     * 若上游已注入同名子句，则把密友名单**合并**进已有子句（而非跳过），两份名单都会被
+     * 过滤；个人主页 (userName=) 跳过。
      */
     override fun onQuery(sql: String): String? {
         if (SecretFriendState.isTemporarilyShown()) return null

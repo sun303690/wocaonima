@@ -8,8 +8,6 @@ import dev.sun.wechat.dexkit.dsl.dexMethod
 import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature
-import dev.sun.wechat.features.items.contacts.hidecontacts.rewriteFtsSql
-import dev.sun.wechat.features.items.contacts.hidecontacts.rewriteWrapperSql
 import dev.sun.wechat.utils.WeLogger
 import java.lang.reflect.Field
 

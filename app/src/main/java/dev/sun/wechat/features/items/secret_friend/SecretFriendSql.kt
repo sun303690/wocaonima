@@ -1,34 +1,20 @@
-﻿package dev.sun.wechat.features.items.contacts.hidecontacts
-
-import com.tencent.wcdb.database.SQLiteDatabase
-import dev.ujhhgtg.reflekt.reflekt
-import dev.sun.wechat.features.items.contacts.HideContacts
-import dev.sun.wechat.utils.WeLogger
-import dev.sun.wechat.utils.reflection.BString
-
-private const val TAG = "HideContacts.Sql"
+package dev.sun.wechat.features.items.secret_friend
 
 /**
- * Query-time hiding.
+ * 密友查询期 SQL 改写器（原 HideContacts Sql 规则集，密友接管后归并至此）。
  *
- * Almost everything WeChat displays comes out of SQLite, and almost every read funnels through one
- * wrapper — `ka5.b0.g(String sql, String[] args, int) -> Cursor` (`ka5/b0.java:1009`; `b0.B(sql,
- * args)` is just `g(sql, args, 0)`). Every `com.tencent.mm.storage.*` storage class goes through it,
- * so hiding a contact from a new surface is usually a matter of recognising one more query shape
- * rather than finding a new hook. That is what [WRAPPER_RULES] is for.
+ * 几乎所有微信展示面都出自 SQLite，而绝大多数读都汇拢到一个 wrapper——
+ * `ka5.b0.g(String sql, String[] args, int) -> Cursor`（`ka5/b0.java:1009`；`b0.B(sql, args)`
+ * 即 `g(sql, args, 0)`）。每个 `com.tencent.mm.storage.*` storage 都经它，所以把一个联系人从
+ * 新界面藏起来通常只是再认一种查询形状，而非另找 hook 点——这正是 [WRAPPER_RULES] 的用途。
  *
- * Two paths bypass the wrapper and are handled separately:
- * - FTS (global search) issues its reads via `com.tencent.wcdb.database.SQLiteDatabase
- *   .rawQueryWithFactory` — see [installFtsHook].
- * - The Moments feed goes through `WeDatabaseListenerApi`, which calls [rewriteMomentsFeedSql].
+ * 两条绕过 wrapper 的路径单独处理：
+ * - FTS（全局搜索）经 `com.tencent.wcdb.database.SQLiteDatabase.rawQueryWithFactory` 发读——
+ *   见 [rewriteFtsSql]。
+ * - 朋友圈信息流走 `WeDatabaseListenerApi`，由密友自己的 [SecretFriendMoments] 处理。
  *
- * Bind arguments are always passed separately from the SQL text, so injecting literal
- * `NOT IN ('...')` predicates is safe everywhere here.
+ * 绑定参数总是与 SQL 文本分开传，故此处注入字面 `NOT IN ('...')` 谓词是安全的。
  */
-internal fun HideContacts.installSqlHooks() {
-    installWrapperHook()
-    installFtsHook()
-}
 
 // ── the wrapper chokepoint ───────────────────────────────────────────────────────────────────
 
@@ -162,21 +148,8 @@ private fun looksLikeUnreadCountQuery(lower: String): Boolean {
     return lower.contains("unreadcount > 0")
 }
 
-private fun HideContacts.installWrapperHook() {
-    if (methodSqliteWrapperRawQuery.isPlaceholder) {
-        WeLogger.w(TAG, "SQLite wrapper query method not resolved; query-time hiding disabled")
-        return
-    }
-    methodSqliteWrapperRawQuery.hookBefore {
-        if (isTemporarilyShown) return@hookBefore
-        val sql = args.firstOrNull() as? String ?: return@hookBefore
-        val rewritten = rewriteWrapperSql(sql, HideContacts.hiddenContacts) ?: return@hookBefore
-        args[0] = rewritten
-    }
-}
-
 /** Returns the rewritten SQL, or null to leave the query untouched. */
-internal fun rewriteWrapperSql(sql: String, hidden: Set<String>): String? {
+fun rewriteWrapperSql(sql: String, hidden: Set<String>): String? {
     if (hidden.isEmpty()) return null
 
     val lower = sql.lowercase()
@@ -230,7 +203,7 @@ private fun looksLikeContactSelectorQuery(lower: String): Boolean {
  * Callers must not use this on a query whose WHERE ends in a bare OR — see the 通讯录 contact-count
  * query, which ends in `or username = 'weixin'`.
  */
-internal fun injectCondition(sql: String, condition: String): String {
+fun injectCondition(sql: String, condition: String): String {
     val insertionPoint = listOf(" order by ", " group by ", " limit ")
         .map { sql.indexOf(it, ignoreCase = true) }
         .filter { it >= 0 }
@@ -242,7 +215,7 @@ internal fun injectCondition(sql: String, condition: String): String {
 }
 
 /** Renders a hidden-contact set as a single-quoted SQL value list with `''` escaping. */
-internal fun Set<String>.toSqlList(): String =
+fun Set<String>.toSqlList(): String =
     joinToString(",") { "'${it.replace("'", "''")}'" }
 
 // ── global search (FTS) ──────────────────────────────────────────────────────────────────────
@@ -308,25 +281,8 @@ private val AUX_INDEX_PINNED_REGEX = Regex("aux_index\\s*=\\s*[?']", RegexOption
 private const val CHATROOM_MEMBERS_JOIN = "FTS5ChatRoomMembers ON (aux_index = chatroom)"
 private const val CHATROOM_MEMBERS_CROSS_JOIN = "FROM FTS5ChatRoomMembers, "
 
-private fun HideContacts.installFtsHook() {
-    SQLiteDatabase::class.reflekt().firstMethod {
-        name = "rawQueryWithFactory"
-        parameters(SQLiteDatabase.CursorFactory::class, BString, Array<Any>::class, BString)
-    }.hookBefore {
-        if (isTemporarilyShown) return@hookBefore
-
-        // An empty set would render `aux_index NOT IN ()` — a SQLite syntax error that breaks ALL
-        // global search while the feature is enabled but nothing is hidden yet.
-        val hidden = hiddenContacts
-        if (hidden.isEmpty()) return@hookBefore
-
-        val sql = args[1] as? String ?: return@hookBefore
-        args[1] = rewriteFtsSql(sql, hidden) ?: return@hookBefore
-    }
-}
-
 /** Returns the rewritten FTS query, or null to leave it untouched. */
-internal fun rewriteFtsSql(sql: String, hidden: Set<String>): String? {
+fun rewriteFtsSql(sql: String, hidden: Set<String>): String? {
     // Checked first: its SQL also carries `aux_index = 'notifymessage'`, which the pinned-aux_index
     // bail below would otherwise (wrongly) treat as a chat-scoped search.
     if (sql.startsWith(SQL_SELECT_SERVICE_NOTIFY)) return wrapWithNotIn(sql, "talker", hidden)
@@ -377,35 +333,3 @@ private fun rewriteChatroomMembersSql(sql: String, hidden: Set<String>): String?
 /** Wraps a finished FTS query in a filtering outer SELECT on one of its projected columns. */
 private fun wrapWithNotIn(sql: String, column: String, hidden: Set<String>): String =
     "SELECT * FROM (${sql.removeSuffix(";")}) AS a WHERE $column NOT IN (${hidden.toSqlList()});"
-
-// ── moments feed ─────────────────────────────────────────────────────────────────────────────
-
-// 在朋友圈信息流中隐藏被隐藏联系人发布的朋友圈; EnhanceQuery 会把信息流标记替换为 (1=1)
-private const val FEED_MARKER_RAW = "(sourceType & 2 != 0 )"
-private const val FEED_MARKER_ENHANCED = "(1=1)"
-
-/** Called from `HideContacts.onQuery`; returns null to leave the query untouched. */
-internal fun rewriteMomentsFeedSql(sql: String, hidden: Set<String>): String? {
-    if (hidden.isEmpty()) return null
-
-    // 只处理主信息流查询: 排除个人主页 (userName=) 与已注入的查询
-    if (!sql.contains("from SnsInfo", false)) return null
-    if (sql.contains("SnsInfo.userName=", false)) return null
-    if (sql.contains("SnsInfo.userName not in", true)) return null
-
-    val filter = " AND SnsInfo.userName NOT IN (${hidden.toSqlList()}) "
-
-    val rewritten = when {
-        sql.contains(FEED_MARKER_RAW) ->
-            sql.replaceFirst(FEED_MARKER_RAW, FEED_MARKER_RAW + filter)
-
-        // EnhanceQuery 先执行时, 信息流标记已变为 (1=1); 个人主页不会出现该精确形式
-        sql.contains(FEED_MARKER_ENHANCED) ->
-            sql.replaceFirst(FEED_MARKER_ENHANCED, FEED_MARKER_ENHANCED + filter)
-
-        else -> return null
-    }
-
-    WeLogger.i(TAG, "hid ${hidden.size} contacts from moments feed")
-    return rewritten
-}

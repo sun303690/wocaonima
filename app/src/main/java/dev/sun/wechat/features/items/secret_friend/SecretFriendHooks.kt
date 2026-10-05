@@ -29,7 +29,8 @@ private const val TAG = "SecretFriendHooks"
  * 字段，原地删除会让临时显示无法恢复条目。
  *
  * 条目类是混淆类，但只持有一个 `com.tencent.mm.storage` 类型字段（Contact），按声明
- * 类型选取可跨字段重命名存活（与 HideContactsLists 同一形状判定）。
+ * 类型选取可跨字段重命名存活（按声明类型匹配，混淆类只持有一个
+ * `com.tencent.mm.storage` 类型字段 Contact）。
  */
 internal fun BaseFeature.hookSecretMvvmListFilter(target: DexMethodDelegate, label: String) {
     if (target.isPlaceholder) {

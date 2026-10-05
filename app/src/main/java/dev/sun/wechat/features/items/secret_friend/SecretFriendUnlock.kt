@@ -59,9 +59,7 @@ object MultiClickTitleUnlock : SwitchFeature() {
     private var warnedTitleMissing = false
 
     override fun onEnable() {
-        // LauncherUI.onResume 后标题布局已就绪; 与 HideContacts 的三击标题互不干扰
-        // (本开关挂 setOnClickListener, HideContacts 亦挂同名监听, 后启用的替换前者——
-        //  两个功能都开时以最后启用者为准, 界面上有各自开关说明)
+        // LauncherUI.onResume 后标题布局已就绪，decorView.post 定位标题 View 并挂点击监听。
         val resumeHook = runCatching {
             LauncherUI::class.reflekt()
                 .firstMethod {

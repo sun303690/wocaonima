@@ -270,7 +270,7 @@ object SecretFriendState {
 
     /**
      * 主页标题 TextView 查找（浮云 HideMainUIList 的多策略定位 + 旧版 SecretFriendTempShow 逻辑）：
-     * - 先试 HideContacts 已验证的 `android.R.id.text1`；
+     * - 先试已验证的 `android.R.id.text1`；
      * - 否则深度 ≤ [TITLE_SEARCH_MAX_DEPTH] 找**屏幕顶部 25% 区域**内、当前文本恰为
      *   「微信」的 TextView（必须排除底部导航栏同文本的 Tab，否则会挂到屏幕底部——
      *   浮云实测该误挂是多击/长按不生效的根因）。

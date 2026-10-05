@@ -13,9 +13,6 @@ import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
 import dev.sun.wechat.features.api.ui.WeStartActivityApi
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature
-import dev.sun.wechat.features.items.contacts.hidecontacts.injectCondition
-import dev.sun.wechat.features.items.contacts.hidecontacts.rewriteWrapperSql
-import dev.sun.wechat.features.items.contacts.hidecontacts.toSqlList
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.runOnUiThread
@@ -57,9 +54,9 @@ object HideConversations : SwitchFeature(), IResolveDex,
     private const val TAG = "HideConversations"
 
     /**
-     * 主页会话列表游标由微信自己的 SQLite wrapper 构建（HideContacts.methodSqliteWrapperRawQuery
-     * 同一 chokepoint），**不走** wcdb rawQuery（WeDatabaseListenerApi 挂不到）——
-     * 只依赖 IQueryListener 时本功能完全无效，必须直接挂 wrapper。
+     * 主页会话列表游标由微信自己的 SQLite wrapper 构建（`ka5.b0.g` 同一 chokepoint），
+     * **不走** wcdb rawQuery（WeDatabaseListenerApi 挂不到）——只依赖 IQueryListener 时本功能
+     * 完全无效，必须直接挂 wrapper。
      */
     private val methodSqliteWrapperRawQuery by dexMethod(allowFailure = true) {
         matcher {
@@ -346,7 +343,7 @@ object HideSecretContacts : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.
 
     /**
      * `AddressLiveList.e(List snapshotList)` — 通讯录 MvvmList 预处理器。
-     * 与 HideContactsLists 同一 matcher：`"snapshotList"` 是 e() 内 o.g 空检查字面量。
+     * matcher：`"snapshotList"` 是 e() 内 o.g 空检查字面量。
      */
     private val methodAddressMvvmListPreprocessList by dexMethod(allowFailure = true) {
         matcher {
