@@ -1,5 +1,7 @@
 package dev.sun.wechat.features.items.contacts
 
+import dev.sun.wechat.R
+
 import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -19,18 +21,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.composables.icons.materialsymbols.MaterialSymbols
 import com.composables.icons.materialsymbols.outlined.Chevron_right
-import dev.sun.wechat.R
+
 import com.tencent.mm.pluginsdk.ui.chat.ChatFooter
 import com.tencent.mm.ui.LauncherUI
 import com.tencent.mm.ui.chatting.ChattingUI
 import dev.ujhhgtg.reflekt.reflekt
 import dev.ujhhgtg.reflekt.utils.isSubclassOf
 import dev.sun.wechat.dexkit.abc.IResolveDex
-import dev.sun.wechat.dexkit.dsl.data
 import dev.sun.wechat.dexkit.dsl.dexMethod
 import dev.sun.wechat.features.api.core.WeConversationApi
 import dev.sun.wechat.features.api.core.WeDatabaseApi
@@ -38,7 +38,7 @@ import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
 import dev.sun.wechat.features.api.ui.WeChatInputBarApi
 import dev.sun.wechat.features.api.ui.WeMainActivityBeautifyApi
 import dev.sun.wechat.features.core.ClickableFeature
-import dev.sun.wechat.features.core.FeatureCategoryIds
+
 import dev.sun.wechat.features.items.contacts.hidecontacts.installListHooks
 import dev.sun.wechat.features.items.contacts.hidecontacts.installMomentsHooks
 import dev.sun.wechat.features.items.contacts.hidecontacts.installSchedules
@@ -68,6 +68,7 @@ import java.lang.ref.WeakReference
 import kotlin.math.sqrt
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
+import java.lang.reflect.Modifier as JavaModifier
 
 
 object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputBarListener,
@@ -76,7 +77,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
     override val technicalId = "隐藏联系人"
     override val nameRes = R.string.feature_hide_contacts_name
     override val categoryIds = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
-    override val descriptionRes = R.string.feature_hide_contacts_description
+    override val descriptionRes: Int? = null
 
     private const val TAG = "HideContacts"
 
@@ -338,13 +339,13 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
      * Toggles the temporary-show state. Mirrors the `#show` / `#hide` input-bar commands for
      * use by gesture-based triggers (e.g. triple-clicking the main-screen title).
      */
-    fun toggleTemporarilyShown(context: Context) {
+    internal fun toggleTemporarilyShown(context: Context) {
         if (temporarilyShown) {
             temporarilyShown = false
-            showToast(context, context.localizedContactsString(R.string.contacts_hide_restored))
+            showToast(context, ("已恢复隐藏联系人"))
         } else {
             temporarilyShown = true
-            showToast(context, context.localizedContactsString(R.string.contacts_hide_temporarily_shown))
+            showToast(context, ("已临时显示所有隐藏的联系人"))
         }
         WeConversationApi.reloadConversations()
     }
@@ -360,7 +361,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
      * re-query. It does **not** lock the flag — a manual toggle afterwards wins until the next
      * scheduled fire time.
      */
-    fun setTemporarilyShown(shown: Boolean) {
+    internal fun setTemporarilyShown(shown: Boolean) {
         if (temporarilyShown == shown) return
         temporarilyShown = shown
         WeConversationApi.reloadConversations()
@@ -373,14 +374,14 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
                 if (temporarilyShown) {
                     showToast(
                         chatFooter.context,
-                        chatFooter.context.localizedContactsString(R.string.contacts_hide_already_shown),
+                        ("已经是临时显示状态"),
                     )
                     return
                 }
                 temporarilyShown = true
                 showToast(
                     chatFooter.context,
-                    chatFooter.context.localizedContactsString(R.string.contacts_hide_shown_command_hint),
+                    ("已临时显示所有隐藏的联系人，输入 #hide 恢复隐藏"),
                 )
                 WeConversationApi.reloadConversations()
             }
@@ -390,21 +391,24 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
                 if (!temporarilyShown) {
                     showToast(
                         chatFooter.context,
-                        chatFooter.context.localizedContactsString(R.string.contacts_hide_nothing_to_restore),
+                        ("没有需要恢复的隐藏联系人"),
                     )
                     return
                 }
                 temporarilyShown = false
                 showToast(
                     chatFooter.context,
-                    chatFooter.context.localizedContactsString(R.string.contacts_hide_restored),
+                    ("已恢复隐藏联系人"),
                 )
                 WeConversationApi.reloadConversations()
             }
         }
     }
 
-    override fun onQuery(sql: String): String? = rewriteMomentsFeedSql(sql)
+    override fun onQuery(sql: String): String? {
+        if (isTemporarilyShown) return null
+        return rewriteMomentsFeedSql(sql, hiddenContacts)
+    }
 
     // The parentRef marker older versions wrote via WeConversationApi.setConversationsVisibility to
     // hide a chat. WeChat's native list filter (m4.O) hides rows whose parentRef isn't null/empty.
@@ -447,12 +451,12 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
      * The predicate every hook should use: a contact counts as hidden only while the temporary-show
      * escape hatch (`#show` / triple-tap title) is off.
      */
-    fun isHiddenNow(wxId: String): Boolean = !temporarilyShown && wxId in hiddenContacts
+    internal fun isHiddenNow(wxId: String): Boolean = !temporarilyShown && wxId in hiddenContacts
 
     /** For SQL rewriters, which bail wholesale rather than testing individual wxids. */
-    val isTemporarilyShown: Boolean get() = temporarilyShown
+    internal val isTemporarilyShown: Boolean get() = temporarilyShown
 
-    val autoRejectVoipEnabled: Boolean get() = autoRejectVoip
+    internal val autoRejectVoipEnabled: Boolean get() = autoRejectVoip
 
     private var autoRejectVoip by prefOption("hide_auto_reject", false)
     private var tripleClickTitle by prefOption("hide_triple_click_title", false)
@@ -541,7 +545,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
      * is never written in the first place, so neither 临时显示 nor removing the contact from the
      * hidden list can recover it. It also means whether a given pat survives depends on the
      * [temporarilyShown] state *at the instant the message arrived*, not at the instant it is read.
-     * Documented in the feature description; changing it would require buffering the pats instead.
+     * Documented in the `@Feature` blurb; changing it would require buffering the pats instead.
      */
     private fun hookPatMessage() {
         if (methodPatMsgInsert.isPlaceholder) {
@@ -563,7 +567,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
 
         showComposeDialog(context) {
             AlertDialogContent(
-                title = { Text(stringResource(R.string.feature_hide_contacts_name)) },
+                title = { Text("隐藏联系人") },
                 text = {
                     var autoRejectVoipInput by remember { mutableStateOf(autoRejectVoip) }
                     var tripleClickTitleInput by remember { mutableStateOf(tripleClickTitle) }
@@ -572,12 +576,12 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
                         item {
                             BaseWidget(
                                 iconPlaceholder = false,
-                                title = stringResource(R.string.contacts_hide_configure),
-                                description = stringResource(R.string.contacts_hide_configure_description),
+                                title = "配置隐藏列表",
+                                description = "点击配置联系人隐藏列表",
                                 onClick = {
                                 showComposeDialog(context) {
                                     ContactsSelector(
-                                        title = context.localizedContactsString(R.string.contacts_hide_select),
+                                        title = ("选择要隐藏的联系人"),
                                         contacts = regularContacts,
                                         initialSelectedWxIds = hiddenContacts,
                                         onDismiss = onDismiss
@@ -606,8 +610,8 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
                         item {
                             SwitchWidget(
                                 iconPlaceholder = false,
-                                title = stringResource(R.string.contacts_hide_auto_reject),
-                                description = stringResource(R.string.contacts_hide_auto_reject_description),
+                                title = "自动拒绝音视频通话",
+                                description = "关闭时仅隐藏来电，对方会一直响到超时；开启后立即向对方发送拒接",
                                 checked = autoRejectVoipInput,
                                 onCheckedChange = {
                                     autoRejectVoipInput = it
@@ -618,8 +622,8 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
                         item {
                             BaseWidget(
                                 iconPlaceholder = false,
-                                title = stringResource(R.string.contacts_hide_schedule),
-                                description = stringResource(R.string.contacts_hide_schedule_description),
+                                title = "定时显示/隐藏",
+                                description = "到点自动临时显示或恢复隐藏，不会改动隐藏列表",
                                 onClick = { showSchedulesDialog(context) },
                                 trailingContent = {
                                     Icon(
@@ -633,8 +637,8 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
                         item {
                             SwitchWidget(
                                 iconPlaceholder = false,
-                                title = stringResource(R.string.contacts_hide_triple_click),
-                                description = stringResource(R.string.contacts_hide_triple_click_description),
+                                title = "三击标题切换显隐",
+                                description = "连续三击主页顶部标题栏，可临时显示或恢复隐藏联系人",
                                 checked = tripleClickTitleInput,
                                 onCheckedChange = {
                                     tripleClickTitleInput = it
@@ -645,23 +649,29 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
                     }
                 },
                 dismissButton = {
-                    TextButton(onDismiss) { Text(stringResource(R.string.dialog_close)) }
+                    TextButton(onDismiss) { Text("关闭") }
                 },
             )
         }
     }
 
-    //    private val methodMainAdapterPerformSearch by dexMethod()
-
     // WeChat's SQLite wrapper query: d95.b0.f(String sql, String[] args, int) -> Cursor. The
     // homepage conversation-list cursor (com.tencent.mm.storage.m4.A/B) is built through this
     // wrapper, NOT the standard SQLiteDatabase.rawQuery path WeDatabaseListenerApi hooks, so we
     // intercept it directly — the same chokepoint ConversationGrouping/AggregateChats use.
+    internal val methodSqliteWrapperRawQuery by dexMethod(allowFailure = true) {
+        matcher {
+            modifiers = JavaModifier.PUBLIC
+            usingEqStrings("sql is null ", "DB IS CLOSED ! {%s}")
+            paramTypes("java.lang.String", "java.lang.String[]", "int")
+            returnType("android.database.Cursor")
+        }
+    }
     /**
      * `AddressLiveList.e(List snapshotList)` — the 通讯录 MvvmList preprocessor.
      * See hidecontacts/HideContactsLists.kt for why this is the right cut point.
      */
-    val methodAddressMvvmListPreprocessList by dexMethod {
+    internal val methodAddressMvvmListPreprocessList by dexMethod {
         matcher {
             declaredClass = "com.tencent.mm.ui.contact.address.AddressLiveList"
             usingEqStrings("snapshotList")
@@ -680,7 +690,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
      * in 8.0.65–8.0.76 we want the @成员 list to stay unfiltered, not to fail dex resolution for the
      * whole feature and take every other hidden-contact surface down with it.
      */
-    val methodAtSomeoneMvvmListPreprocessList by dexMethod(allowFailure = true) {
+    internal val methodAtSomeoneMvvmListPreprocessList by dexMethod(allowFailure = true) {
         matcher {
             declaredClass = "com.tencent.mm.ui.chatting.atsomeone.AtSomeoneLiveList"
             usingEqStrings("snapshotList")
@@ -694,7 +704,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
      * adapter and three listeners) exactly one declares a `void (List)` method: the adapter, at
      * `chatroom/ui/cc.java:96` on 8.0.76 and `chatroom/ui/tc.java:95` on 8.0.69.
      */
-    val methodSeeRoomMemberSetMemberList by dexMethod(allowFailure = true) {
+    internal val methodSeeRoomMemberSetMemberList by dexMethod(allowFailure = true) {
         matcher {
             declaredClass {
                 usingEqStrings("MicroMsg.SeeRoomMemberUI")
@@ -712,7 +722,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
      * trees (`chatroom/ui/SelectMemberUI.java:115` on 8.0.76, `:178` on 8.0.69), so class + arity +
      * return type is unambiguous without needing the obfuscated method name.
      */
-    val methodSelectMemberUiGetMemberList by dexMethod(allowFailure = true) {
+    internal val methodSelectMemberUiGetMemberList by dexMethod(allowFailure = true) {
         matcher {
             declaredClass = "com.tencent.mm.chatroom.ui.SelectMemberUI"
             paramCount = 0
@@ -729,7 +739,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
      * `c.java:1054` on 8.0.76 / `c.java:1051` on 8.0.69), so the tag + shape pair resolves to `r`
      * alone. `d(List)` uses no string constants at all.
      */
-    val methodFavoriteAdapterSetDataList by dexMethod(allowFailure = true) {
+    internal val methodFavoriteAdapterSetDataList by dexMethod(allowFailure = true) {
         matcher {
             usingEqStrings("MicroMsg.FavoriteAdapter")
             paramTypes("java.util.List")
@@ -749,7 +759,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
      * each tree. Strings are preferred over a structural discriminator here because `allowFailure`
      * only guards the 0-hit case — a multi-hit would `error(...)` and take the whole feature down.
      */
-    val methodFinderLikeDrawerRefresh by dexMethod(allowFailure = true) {
+    internal val methodFinderLikeDrawerRefresh by dexMethod(allowFailure = true) {
         matcher {
             usingEqStrings(
                 "Finder.DrawerPresenter",
@@ -770,7 +780,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
      * `FinderItem.getUnsignedId()` to stamp each entry with its feed id, the other never does.
      * `FinderItem` is an unobfuscated (kept) class, so that method name is stable across versions.
      */
-    val methodFinderLikeDrawerLoadMore by dexMethod(allowFailure = true) {
+    internal val methodFinderLikeDrawerLoadMore by dexMethod(allowFailure = true) {
         matcher {
             usingEqStrings("Finder.DrawerPresenter", "[loadMoreData] empty!")
             invokeMethods {
@@ -788,7 +798,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
      * class declares only `<init>(l, FTSRequest)`, `getName()` and `p(FTSResult)`, so class anchor +
      * one parameter + `void` resolves to `p` alone. See hidecontacts/HideContactsSearch.kt.
      */
-    val methodFtsSearchChatroomMemberTask by dexMethod(allowFailure = true) {
+    internal val methodFtsSearchChatroomMemberTask by dexMethod(allowFailure = true) {
         matcher {
             declaredClass {
                 usingEqStrings("SearchChatroomMemberTask")
@@ -807,7 +817,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
      * `getName()` and `p(FTSResult)`. NB: the neighbouring tasks `g` and `s0` both report
      * `"SearchCommonChatroomTask"` — the `User` suffix is what makes this one unambiguous.
      */
-    val methodFtsSearchCommonChatroomUserTask by dexMethod(allowFailure = true) {
+    internal val methodFtsSearchCommonChatroomUserTask by dexMethod(allowFailure = true) {
         matcher {
             declaredClass {
                 usingEqStrings("SearchCommonChatroomUserTask")
@@ -827,7 +837,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
      * (`j4.java:487` / `l3.java:461`), so an appended `AND ...` would bind to that OR's right
      * operand and silently do nothing. See hidecontacts/HideContactsLists.kt.
      */
-    val methodNormalContactCount by dexMethod(allowFailure = true) {
+    internal val methodNormalContactCount by dexMethod(allowFailure = true) {
         matcher {
             usingEqStrings(
                 "MicroMsg.ContactStorage",
@@ -844,7 +854,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
      * `"insert pat msg %d %s %s"` appears in exactly one method per tree (`nq3/l.java:620`,
      * `ti3/l.java:320`); pairing it with the class tag keeps the match method-local.
      */
-    val methodPatMsgInsert by dexMethod(allowFailure = true) {
+    internal val methodPatMsgInsert by dexMethod(allowFailure = true) {
         matcher {
             usingEqStrings("MicroMsg.PatMsgExtension", "insert pat msg %d %s %s")
         }
@@ -856,7 +866,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
      * struct for every Moments renderer. See hidecontacts/HideContactsMoments.kt for why this is
      * the right chokepoint for a hidden contact's inline likes/comments on someone else's post.
      */
-    val methodSnsInfoToSnsStruct by dexMethod {
+    internal val methodSnsInfoToSnsStruct by dexMethod {
         matcher {
             usingEqStrings("snsInfoToSnsStruct", "com.tencent.mm.plugin.sns.data.SnsUtil", "mSnsInfo is null, why?")
         }
@@ -881,7 +891,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
      * method shape — `static void (c3, SnsObject)` — is identical on both trees, so the hook body
      * needs no per-version branching.
      */
-    val methodSnsSyncUpdateRedDotCache by dexMethod {
+    internal val methodSnsSyncUpdateRedDotCache by dexMethod {
         matcher {
             usingEqStrings("updateSyncDataCache", "com.tencent.mm.plugin.sns.model.NetSceneSnsSync")
         }
@@ -891,7 +901,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
     // See hidecontacts/HideContactsVoip.kt for how these fit together.
 
     /** `ZIDL_ibmKH7hbMB.ZIDL_FBV(long, int, int, long, long, byte[] username, byte[][], boolean)` */
-    val methodVoipMpLaunchIncomingCard by dexMethod {
+    internal val methodVoipMpLaunchIncomingCard by dexMethod {
         matcher {
             // 8.0.76 changed from "launchInComingCardAsync: " to "[volume report] launchInComingCardAsync: "
             usingStrings("MicroMsg.VoIPMP.CoreV2", "launchInComingCardAsync: ")
@@ -903,7 +913,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
      * banner/notification/ringtone dispatcher. q2 declares exactly one 8-parameter method, so the
      * class anchor plus the parameter count is unambiguous.
      */
-    val methodVoipMpLaunchBanner by dexMethod {
+    internal val methodVoipMpLaunchBanner by dexMethod {
         matcher {
             declaredClass {
                 usingEqStrings("MicroMsg.VoIPMP.Launcher", "closeReceiverBanner")
@@ -914,7 +924,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
     }
 
     /** `mp5.q2.Qa()` — "rejectByShortCut", the entry WeChat's own quick-reject uses. */
-    val methodVoipMpReject by dexMethod(allowFailure = true) {
+    internal val methodVoipMpReject by dexMethod(allowFailure = true) {
         matcher {
             usingEqStrings("MicroMsg.VoIPMP.CoreV2", "rejectByShortCut")
             paramCount = 0
@@ -927,21 +937,21 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
      * ringtone. NB: this is NOT the old `MicroMsg.RingPlayer` / "playSound, type: ..." match, which
      * resolved to the call-ENDED tone and therefore never silenced anything.
      */
-    val methodVoipMpStartRing by dexMethod {
+    internal val methodVoipMpStartRing by dexMethod {
         matcher {
             usingEqStrings("MicroMsg.VoIPMPRingtoneController", "startRing() called with: username = ")
         }
     }
 
     /** `xp5.b.d(String username, boolean, boolean, boolean)` — starts the VoIP foreground service. */
-    val methodVoipMpStartFgs by dexMethod {
+    internal val methodVoipMpStartFgs by dexMethod {
         matcher {
             usingEqStrings("MicroMsg.VoIPMPVoIPNotificationHelper", "startFGS isBindVoIPForegroundService ")
         }
     }
 
     /** `mp5.q2.Ii(String toUser, ...)` — VoIPMP call-record insertion (未接听 / 已取消 / duration). */
-    val methodVoipMpInsertMsg by dexMethod {
+    internal val methodVoipMpInsertMsg by dexMethod {
         matcher {
             paramTypes(
                 "java.lang.String",
@@ -972,9 +982,8 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
     // ── multitalk (群通话), used when the VoIPMP multitalk experiment is off ───────────────────
 
     /** `v0.G(MultiTalkGroup)` — MultiTalkManager.onInviteMultiTalk. */
-    val methodMultiTalkOnInvite by dexMethod(allowFailure = true) {
+    internal val methodMultiTalkOnInvite by dexMethod(allowFailure = true) {
         matcher {
-            declaredClass(SplitGroupCall.methodExitMultiTalk.data.declaredClassName)
             usingEqStrings(
                 "MicroMsg.MT.MultiTalkManager",
                 "onInviteMultiTalk All Var Value:\n isMute: %b isHandsFree: %b isCameraFace: %b multiTalkStatus: %s groupIsNull: %b",
@@ -988,10 +997,18 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
      * so the invite hook's `thisObject` is the receiver to invoke this on — no separate singleton
      * lookup needed.
      */
+    internal val methodExitMultiTalk by dexMethod(allowFailure = true) {
+        matcher {
+            usingStrings(
+                "exitCurrentMultiTalk: isReject %b isMissCall %b isPhoneCall %b isNetworkError %b",
+            )
+        }
+    }
+
     // ── legacy v2protocal stack (only reached when the peer downgrades) ───────────────────────
 
     /** `nr4.y.x(...)` — the incoming float card. Shared by both stacks, so live on 8.0.76 as well. */
-    val methodVoipShowFloatingCard by dexMethod {
+    internal val methodVoipShowFloatingCard by dexMethod {
         matcher {
             usingEqStrings(".ui.voip.VoipFloatView")
             paramCount = 8
@@ -1007,37 +1024,37 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
      * The bare "showFinishCard" string constant occurs only in this method (the lambda classes
      * carry longer `...$showFinishCard$3$2$...` constants, which `usingEqStrings` will not match).
      */
-    val methodVoipShowFinishCard by dexMethod(allowFailure = true) {
+    internal val methodVoipShowFinishCard by dexMethod(allowFailure = true) {
         matcher {
             usingEqStrings("showFinishCard", "(Landroid/content/Context;Ljava/lang/String;)V")
             paramCount = 2
         }
     }
-    val methodVoipAcceptIncomingCall by dexMethod {
+    internal val methodVoipAcceptIncomingCall by dexMethod {
         searchPackages("com.tencent.mm.plugin.voip")
         matcher {
             usingEqStrings("MicroMsg.VoipIncomingCallManager", "acceptIncomingCal, roomInfo:")
         }
     }
-    val methodVoipStartAcceptVoip by dexMethod {
+    internal val methodVoipStartAcceptVoip by dexMethod {
         searchPackages("com.tencent.mm.plugin.voip")
         matcher {
             usingEqStrings("MicroMsg.VoipIncomingCallManager", "startAcceptVoIP, roomInfo:")
         }
     }
-    val methodVoipServiceExSetInviteContent by dexMethod {
+    internal val methodVoipServiceExSetInviteContent by dexMethod {
         matcher {
             usingEqStrings("MicroMsg.Voip.VoipServiceEx", "Failed to setInviteContent during calling, status =")
         }
     }
-    val methodVoipServiceExReject by dexMethod {
+    internal val methodVoipServiceExReject by dexMethod {
         matcher {
             usingEqStrings("MicroMsg.Voip.VoipServiceEx", "Failed to reject with calling, status =")
         }
     }
 
     /** `j0.j(String content, a65.j4 addMsg)` — server-pushed `<voipmsg>` bubble (msg type 50). */
-    val methodVoipBubbleHandle by dexMethod {
+    internal val methodVoipBubbleHandle by dexMethod {
         matcher {
             usingEqStrings("MicroMsg.VoIPBubbleHelper", "handlerBubbleMsg: parse bubble info error")
         }
@@ -1052,7 +1069,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
      * `args[0]` throw on every legacy call record. The callagain URL is unique to b2 itself, and
      * `d` is the only 8-parameter method it declares.
      */
-    val methodVoipLegacyInsertMsg by dexMethod(allowFailure = true) {
+    internal val methodVoipLegacyInsertMsg by dexMethod(allowFailure = true) {
         matcher {
             declaredClass {
                 usingEqStrings("MicroMsg.VoipPluginManager", "weixin://voip/callagain/?username=")
@@ -1062,12 +1079,4 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
         }
     }
 
-//    private val classVoipService by dexClass()
-//    private val classVoipManager by dexClass()
-//    private val classIncomingVoipInvite by dexClass()
-//    private val classIncomingVoipILinkInvite by dexClass()
-//    private val classMultiTalkInvite by dexClass()
-//    private val classVoipFloatCard by dexClass()
-//    private val classRecentForwardInfoHelperV3 by dexClass()
-//    private val classContactRecommendHelperV3 by dexClass()
 }

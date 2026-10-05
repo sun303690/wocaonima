@@ -5,8 +5,6 @@ import android.content.Intent
 import com.tencent.mm.plugin.voip.widget.VoipForegroundService
 import dev.ujhhgtg.reflekt.reflekt
 import dev.sun.wechat.features.items.contacts.HideContacts
-import dev.sun.wechat.features.items.contacts.SplitGroupCall
-import dev.sun.wechat.utils.HookParam
 import dev.sun.wechat.utils.RuntimeConfig
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.reflection.BString
@@ -60,7 +58,7 @@ private const val TAG = "HideContacts.Voip"
  * `ZIDL_FBV` run to completion, and only then — from its `hookAfter` — invoke `q2.Qa()`, the same
  * "rejectByShortCut" entry WeChat's own Bluetooth quick-reject uses.
  */
-fun HideContacts.installVoipHooks() {
+internal fun HideContacts.installVoipHooks() {
     installVoipMpHooks()
     installMultiTalkHooks()
     installVoipRecordHooks()
@@ -197,13 +195,13 @@ private fun readMultiTalkInvite(group: Any): Pair<String?, String?>? = runCatchi
 /** `v0.g(isReject, isMissCall, isPhoneCall, isNetworkError, boolean, boolean)`. */
 private fun rejectMultiTalk(manager: Any?, target: String) {
     if (manager == null) return
-    if (SplitGroupCall.methodExitMultiTalk.isPlaceholder) {
+    if (HideContacts.methodExitMultiTalk.isPlaceholder) {
         WeLogger.w(TAG, "exitCurrentMultiTalk wasn't resolved; cannot auto-reject group call")
         return
     }
     WeLogger.i(TAG, "auto-rejecting multitalk invite from $target")
     runCatching {
-        SplitGroupCall.methodExitMultiTalk.method.invoke(manager, true, false, false, false, true, false)
+        HideContacts.methodExitMultiTalk.method.invoke(manager, true, false, false, false, true, false)
     }.onFailure { WeLogger.w(TAG, "exitCurrentMultiTalk failed for $target", it) }
 }
 
@@ -322,5 +320,5 @@ private fun HideContacts.installLegacyVoipHooks() {
  * Reads the caller wxid out of an `a65.b57` RoomInfo, which declares exactly one String field
  * (`f3634i` = callerUserName).
  */
-private fun HookParam.legacyCallerWxId(): String? =
+private fun de.robv.android.xposed.XC_MethodHook.MethodHookParam.legacyCallerWxId(): String? =
     runCatching { args[0]!!.reflekt().firstField { type = BString }.get() as? String }.getOrNull()

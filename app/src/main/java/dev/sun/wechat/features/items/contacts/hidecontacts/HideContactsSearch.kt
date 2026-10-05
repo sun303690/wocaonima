@@ -2,7 +2,6 @@ package dev.sun.wechat.features.items.contacts.hidecontacts
 
 import dev.ujhhgtg.reflekt.reflekt
 import dev.ujhhgtg.reflekt.utils.makeAccessible
-import dev.sun.wechat.dexkit.dsl.DexMethodDelegate
 import dev.sun.wechat.features.items.contacts.HideContacts
 import dev.sun.wechat.utils.WeLogger
 import java.lang.reflect.Field
@@ -29,7 +28,7 @@ private const val TAG = "HideContacts.Search"
  * `q0` in particular indexes into the sorted `memberlist` array while it builds its entries, so
  * filtering the input would silently shift every member's data onto the wrong person.
  */
-fun HideContacts.installSearchHooks() {
+internal fun HideContacts.installSearchHooks() {
     installChatroomMemberSearchHook()
     installCommonChatroomUserSearchHook()
 }

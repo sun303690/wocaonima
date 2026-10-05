@@ -22,7 +22,7 @@ import java.util.Calendar
 private const val TAG = "HideContacts.Schedule"
 
 /** `Calendar.SUNDAY..Calendar.SATURDAY` — the default (and maximal) [HideSchedule.daysOfWeek]. */
-val ALL_DAYS_OF_WEEK: Set<Int> = (Calendar.SUNDAY..Calendar.SATURDAY).toSet()
+internal val ALL_DAYS_OF_WEEK: Set<Int> = (Calendar.SUNDAY..Calendar.SATURDAY).toSet()
 
 /**
  * One user-defined "alarm" that flips 隐藏联系人's temporary-show state at a chosen time.
@@ -32,7 +32,7 @@ val ALL_DAYS_OF_WEEK: Set<Int> = (Calendar.SUNDAY..Calendar.SATURDAY).toSet()
  * the user's configuration.
  */
 @Serializable
-data class HideSchedule(
+internal data class HideSchedule(
     /** Stable identity: the `AlarmManager` request code and the list key. See [newHideScheduleId]. */
     val id: String,
     val enabled: Boolean = true,
@@ -47,18 +47,18 @@ data class HideSchedule(
 )
 
 @Serializable
-enum class HideScheduleAction { HIDE, SHOW }
+internal enum class HideScheduleAction { HIDE, SHOW }
 
 @Serializable
-enum class HideScheduleKind { REPEATING, ONCE }
+internal enum class HideScheduleKind { REPEATING, ONCE }
 
 /** Mirrors `ConversationGrouping`'s id scheme: monotonic and unique enough for a hand-edited list. */
-fun newHideScheduleId(): String = "hsched_${System.currentTimeMillis()}"
+internal fun newHideScheduleId(): String = "hsched_${System.currentTimeMillis()}"
 
 // The install/uninstall pair, named like the other hook installers in this package.
-fun HideContacts.installSchedules() = HideContactsSchedule.install()
+internal fun HideContacts.installSchedules() = HideContactsSchedule.install()
 
-fun HideContacts.uninstallSchedules() = HideContactsSchedule.uninstall()
+internal fun HideContacts.uninstallSchedules() = HideContactsSchedule.uninstall()
 
 /**
  * The 定时显示/隐藏 scheduler.
@@ -97,7 +97,7 @@ fun HideContacts.uninstallSchedules() = HideContactsSchedule.uninstall()
  * 显示/隐藏 flip after a flight or a DST switch was judged not worth a broadcast receiver whose only
  * job is to call [resync].
  */
-object HideContactsSchedule {
+internal object HideContactsSchedule {
 
     private const val KEY_SCHEDULES = "hide_contacts_schedules"
 
@@ -134,7 +134,7 @@ object HideContactsSchedule {
     // ── persistence ──────────────────────────────────────────────────────────────────────────────
 
     /**
-     * The schedule list, sanitized. Reads parse from [KvStore] every time (the list is tiny and only
+     * The schedule list, sanitized. Reads parse from [WePrefs] every time (the list is tiny and only
      * touched on alarm fire / edit), so a write from the settings UI is visible to the receiver
      * immediately.
      *
