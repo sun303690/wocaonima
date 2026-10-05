@@ -123,12 +123,6 @@ object HideContactsNotifications : ApiFeature(), IResolveDex {
     }
 
     /** `CoreService` — and therefore both notification paths — lives in `:push`, not in main. */
-    override fun startup() {
-        if (!TargetProcesses.isInMain && TargetProcesses.currentType != TargetProcess.PUSH)
-            return
-        enable()
-    }
-
     /**
      * Whether a notification for [wxId] must be swallowed.
      *
