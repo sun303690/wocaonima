@@ -26,7 +26,7 @@ import java.lang.reflect.Field
 object HideSearch : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.IQueryListener {
     override val technicalId = "主页搜索隐藏"
     override val nameRes: Int = R.string.secret_friend_18_name
-    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.SECRET_FRIEND)
     override val descriptionRes: Int? = null
 
 

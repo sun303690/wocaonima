@@ -3,6 +3,7 @@ package dev.sun.wechat.features.core
 object FeatureCategoryIds {
     const val CHAT = "chat"
     const val CONTACTS_GROUPS = "contacts_groups"
+    const val SECRET_FRIEND = "secret_friend"
     const val PAYMENT = "payment"
     const val MOMENTS = "moments"
     const val SYSTEM_PRIVACY = "system_privacy"
@@ -25,6 +26,7 @@ object FeatureCategoryIds {
     val ALL: Set<String> = setOf(
         CHAT,
         CONTACTS_GROUPS,
+        SECRET_FRIEND,
         PAYMENT,
         MOMENTS,
         SYSTEM_PRIVACY,

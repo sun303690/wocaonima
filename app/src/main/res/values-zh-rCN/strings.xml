@@ -462,6 +462,7 @@
     <!-- Feature categories -->
     <string name="feature_category_chat_title">聊天</string>
     <string name="feature_category_contacts_groups_title">联系人与群组</string>
+    <string name="feature_category_secret_friend_title">密友</string>
     <string name="feature_category_payment_title">红包与支付</string>
     <string name="feature_category_moments_title">朋友圈</string>
     <string name="feature_category_system_privacy_title">系统与隐私</string>

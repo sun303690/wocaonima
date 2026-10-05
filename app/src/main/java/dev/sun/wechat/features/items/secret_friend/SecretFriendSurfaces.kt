@@ -28,7 +28,7 @@ import dev.sun.wechat.utils.WeLogger
 object HideRecentForward : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.IQueryListener {
     override val technicalId = "隐藏最近转发"
     override val nameRes: Int = R.string.secret_friend_23_name
-    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.SECRET_FRIEND)
     override val descriptionRes: Int? = null
 
 
@@ -78,7 +78,7 @@ object HideRecentForward : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.I
 object HideStatusPage : SwitchFeature(), IResolveDex {
     override val technicalId = "状态页隐藏"
     override val nameRes: Int = R.string.secret_friend_24_name
-    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.SECRET_FRIEND)
     override val descriptionRes: Int? = null
 
 
@@ -109,7 +109,7 @@ object HideStatusPage : SwitchFeature(), IResolveDex {
 object HideStorageRecords : SwitchFeature(), IResolveDex {
     override val technicalId = "存储空间聊天记录隐藏"
     override val nameRes: Int = R.string.secret_friend_25_name
-    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.SECRET_FRIEND)
     override val descriptionRes: Int? = null
 
 
@@ -134,7 +134,7 @@ object HideStorageRecords : SwitchFeature(), IResolveDex {
 object HideStorageCache : SwitchFeature(), IResolveDex {
     override val technicalId = "存储空间缓存隐藏"
     override val nameRes: Int = R.string.secret_friend_26_name
-    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.SECRET_FRIEND)
     override val descriptionRes: Int? = null
 
 

@@ -498,6 +498,7 @@
     <!-- Feature categories -->
     <string name="feature_category_chat_title">Chat</string>
     <string name="feature_category_contacts_groups_title">Contacts and groups</string>
+    <string name="feature_category_secret_friend_title">Secret friends</string>
     <string name="feature_category_payment_title">Payments</string>
     <string name="feature_category_moments_title">Moments</string>
     <string name="feature_category_system_privacy_title">System and privacy</string>

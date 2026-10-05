@@ -36,7 +36,7 @@ private const val FTS_MAIN_SEARCH_UI = "com.tencent.mm.plugin.fts.ui.FTSBaseMain
 object SearchCommandTempUnhide : SwitchFeature() {
     override val technicalId = "临时解除指令"
     override val nameRes: Int = R.string.secret_friend_02_name
-    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.SECRET_FRIEND)
     override val descriptionRes: Int? = null
 
 

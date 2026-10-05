@@ -461,6 +461,7 @@
     <string name="licenses_license_names">許可：%1$s</string>
     <string name="feature_category_chat_title">聊天</string>
     <string name="feature_category_contacts_groups_title">聯繫人與羣組</string>
+    <string name="feature_category_secret_friend_title">密友</string>
     <string name="feature_category_payment_title">紅包與支付</string>
     <string name="feature_category_moments_title">朋友圈</string>
     <string name="feature_category_system_privacy_title">系統與隱私</string>

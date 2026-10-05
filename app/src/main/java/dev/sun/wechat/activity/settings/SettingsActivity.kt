@@ -66,6 +66,7 @@ import com.composables.icons.materialsymbols.outlined.Payments
 import com.composables.icons.materialsymbols.outlined.Settings
 import com.composables.icons.materialsymbols.outlined.Terminal
 import com.composables.icons.materialsymbols.outlined.Tune
+import com.composables.icons.materialsymbols.outlined.Visibility_off
 import com.composables.icons.materialsymbols.outlined.Wand_stars
 import com.composables.icons.materialsymbols.outlinedfilled.Article
 import com.composables.icons.materialsymbols.outlinedfilled.Home
@@ -145,6 +146,7 @@ data class FeatureCategory(
 val FEATURE_CATEGORIES = listOf(
     FeatureCategory(FeatureCategoryIds.CHAT, R.string.feature_category_chat_title, MaterialSymbols.Outlined.Chat),
     FeatureCategory(FeatureCategoryIds.CONTACTS_GROUPS, R.string.feature_category_contacts_groups_title, MaterialSymbols.Outlined.Contacts),
+    FeatureCategory(FeatureCategoryIds.SECRET_FRIEND, R.string.feature_category_secret_friend_title, MaterialSymbols.Outlined.Visibility_off),
     FeatureCategory(FeatureCategoryIds.PAYMENT, R.string.feature_category_payment_title, MaterialSymbols.Outlined.Payments),
     FeatureCategory(FeatureCategoryIds.MOMENTS, R.string.feature_category_moments_title, MaterialSymbols.Outlined.Camera),
     FeatureCategory(FeatureCategoryIds.SYSTEM_PRIVACY, R.string.feature_category_system_privacy_title, MaterialSymbols.Outlined.Wand_stars),
