@@ -733,6 +733,15 @@
     <string name="qq_music_order_not_found">未搜到相关歌曲</string>
     <string name="qq_music_order_unavailable">无法获取歌曲, 可能是版权限制或数字专辑</string>
     <string name="qq_music_order_send_failed">音乐卡片发送失败</string>
+    <string name="qq_music_order_enable">启用</string>
+    <string name="qq_music_order_send_card">作为音乐卡片发送</string>
+    <string name="qq_music_order_send_voice">作为语音消息发送</string>
+    <string name="qq_music_order_custom_singer">允许自定义歌手（"歌曲&amp;歌手"）</string>
+    <string name="qq_music_order_default_singer_hint">默认歌手（可选）</string>
+    <string name="qq_music_order_replace_singer_nickname">用点歌者昵称替换歌手</string>
+    <string name="qq_music_order_replace_cover_avatar">用点歌者头像替换封面</string>
+    <string name="qq_music_order_intercept_own_command">拦截自己的点歌指令</string>
+    <string name="qq_music_order_whitelist_hint">在聊天中发送"开启点歌"/"关闭点歌"来允许/禁止该聊天点歌。</string>
     <string name="feature_scheduled_task_name">定时任务</string>
     <string name="feature_scheduled_task_description">按计划时间向群聊/好友发送消息, 或发布朋友圈</string>
     <string name="scheduled_task_section_tasks">任务列表</string>
