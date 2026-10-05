@@ -11,6 +11,7 @@ import dev.sun.wechat.dexkit.dsl.dexMethod
 import dev.sun.wechat.features.api.core.WeConversationApi
 import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
 import dev.sun.wechat.features.api.ui.WeStartActivityApi
+import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.features.items.contacts.hidecontacts.injectCondition
 import dev.sun.wechat.features.items.contacts.hidecontacts.rewriteWrapperSql
@@ -50,7 +51,7 @@ object HideConversations : SwitchFeature(), IResolveDex,
 
     override val technicalId = "主页会话隐藏"
     override val nameRes: Int = R.string.secret_friend_03_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
     private const val TAG = "HideConversations"
@@ -337,7 +338,7 @@ object HideConversations : SwitchFeature(), IResolveDex,
 object HideSecretContacts : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.IQueryListener {
     override val technicalId = "通讯录隐藏"
     override val nameRes: Int = R.string.secret_friend_04_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
 
@@ -384,7 +385,7 @@ object HideSecretContacts : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.
 object HideTagMembers : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.IQueryListener {
     override val technicalId = "标签内隐藏"
     override val nameRes: Int = R.string.secret_friend_05_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
 
@@ -431,7 +432,7 @@ object HideTagMembers : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.IQue
 object BlockChat : SwitchFeature() {
     override val technicalId = "禁止进入聊天"
     override val nameRes: Int = R.string.secret_friend_06_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
 
@@ -477,7 +478,7 @@ object BlockChat : SwitchFeature() {
 object BlockProfile : SwitchFeature() {
     override val technicalId = "禁止查看资料"
     override val nameRes: Int = R.string.secret_friend_07_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
 

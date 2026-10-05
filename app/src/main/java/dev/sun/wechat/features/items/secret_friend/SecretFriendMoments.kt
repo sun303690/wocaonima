@@ -7,6 +7,7 @@ import dev.ujhhgtg.reflekt.utils.makeAccessible
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.dexMethod
 import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
+import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.reflection.BString
@@ -31,7 +32,7 @@ import dev.sun.wechat.utils.reflection.BString
 object HideMoments : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.IQueryListener {
     override val technicalId = "朋友圈隐藏"
     override val nameRes: Int = R.string.secret_friend_09_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
 
@@ -127,7 +128,7 @@ object HideMoments : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.IQueryL
 object HideMomentsInteraction : SwitchFeature(), IResolveDex {
     override val technicalId = "朋友圈互动隐藏"
     override val nameRes: Int = R.string.secret_friend_10_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
 
@@ -159,7 +160,7 @@ object HideMomentsInteraction : SwitchFeature(), IResolveDex {
 object HideMomentsGroupIcon : SwitchFeature(), IResolveDex {
     override val technicalId = "分组图标隐藏"
     override val nameRes: Int = R.string.secret_friend_11_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
 

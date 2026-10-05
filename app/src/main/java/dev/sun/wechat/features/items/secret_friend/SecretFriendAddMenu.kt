@@ -7,6 +7,7 @@ import android.widget.AdapterView
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Text
 import dev.sun.wechat.features.api.ui.WeConversationContextMenuApi
+import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.TextButton
@@ -33,7 +34,7 @@ private const val TAG_ADD = "SecretFriend.Add"
 object LongPressAddFromChat : SwitchFeature(), WeConversationContextMenuApi.IMenuItemsProvider {
     override val technicalId = "会话列表长按添加"
     override val nameRes: Int = R.string.secret_friend_00_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
 
@@ -98,7 +99,7 @@ internal fun toggleSecret(activity: Activity, wxId: String) {
 object LongPressAddFromContacts : SwitchFeature() {
     override val technicalId = "通讯录长按添加"
     override val nameRes: Int = R.string.secret_friend_01_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
 

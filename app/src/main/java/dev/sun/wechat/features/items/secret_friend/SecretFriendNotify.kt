@@ -12,6 +12,7 @@ import android.widget.TextView
 import dev.sun.wechat.features.api.core.WeDatabaseApi
 import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
 import dev.sun.wechat.features.api.ui.WeMainActivityBeautifyApi
+import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.data.KvStore.prefOption
@@ -39,7 +40,7 @@ import dev.ujhhgtg.reflekt.utils.toClassOrNull
 object VibrateOnSecretMsg : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     override val technicalId = "密友消息震动"
     override val nameRes: Int = R.string.secret_friend_13_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
 
@@ -92,7 +93,7 @@ object VibrateOnSecretMsg : ClickableFeature(), WeDatabaseListenerApi.IInsertLis
 object TeamNotify : SwitchFeature(), WeDatabaseListenerApi.IInsertListener {
     override val technicalId = "微信团队提醒"
     override val nameRes: Int = R.string.secret_friend_14_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
 
@@ -150,7 +151,7 @@ object TeamNotify : SwitchFeature(), WeDatabaseListenerApi.IInsertListener {
 object BottomBarBold : SwitchFeature() {
     override val technicalId = "底栏字体加粗"
     override val nameRes: Int = R.string.secret_friend_15_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
 
@@ -235,7 +236,7 @@ object BottomBarBold : SwitchFeature() {
 object RedDotPrompt : SwitchFeature() {
     override val technicalId = "圆点提示"
     override val nameRes: Int = R.string.secret_friend_16_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
 
@@ -343,7 +344,7 @@ object RedDotPrompt : SwitchFeature() {
 object BlockScanLogin : SwitchFeature() {
     override val technicalId = "拦截扫码登录"
     override val nameRes: Int = R.string.secret_friend_17_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
 

@@ -3,6 +3,7 @@ package dev.sun.wechat.features.items.secret_friend
 import dev.sun.wechat.R
 import android.app.Activity
 import androidx.compose.runtime.Composable
+import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.m3.TextFieldDialogWidget
@@ -35,7 +36,7 @@ private const val FTS_MAIN_SEARCH_UI = "com.tencent.mm.plugin.fts.ui.FTSBaseMain
 object SearchCommandTempUnhide : SwitchFeature() {
     override val technicalId = "临时解除指令"
     override val nameRes: Int = R.string.secret_friend_02_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
 

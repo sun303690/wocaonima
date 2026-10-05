@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import dev.sun.wechat.ui.content.m3.TextFieldDialogWidget
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.dexMethod
+import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.utils.HostInfo
@@ -41,7 +42,7 @@ import java.lang.ref.WeakReference
 object MultiClickTitleUnlock : SwitchFeature() {
     override val technicalId = "多击标题解除"
     override val nameRes: Int = R.string.secret_friend_29_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
 
@@ -113,7 +114,7 @@ object MultiClickTitleUnlock : SwitchFeature() {
 object LongPressTitleUnlock : SwitchFeature() {
     override val technicalId = "长按标题解除"
     override val nameRes: Int = R.string.secret_friend_30_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
 
@@ -215,7 +216,7 @@ private object ViewConfigurationCompat {
 object AutoRestoreLockScreen : SwitchFeature() {
     override val technicalId = "锁屏隐藏"
     override val nameRes: Int = R.string.secret_friend_31_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
 
@@ -288,7 +289,7 @@ object AutoRestoreLockScreen : SwitchFeature() {
 object AutoRestoreOnLeave : SwitchFeature(), IResolveDex {
     override val technicalId = "离开对话/离开微信隐藏"
     override val nameRes: Int = R.string.secret_friend_32_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
 

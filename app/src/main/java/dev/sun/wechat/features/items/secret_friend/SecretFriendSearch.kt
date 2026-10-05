@@ -6,6 +6,7 @@ import dev.ujhhgtg.reflekt.utils.makeAccessible
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.dexMethod
 import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
+import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.features.items.contacts.hidecontacts.rewriteFtsSql
 import dev.sun.wechat.features.items.contacts.hidecontacts.rewriteWrapperSql
@@ -25,7 +26,7 @@ import java.lang.reflect.Field
 object HideSearch : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.IQueryListener {
     override val technicalId = "主页搜索隐藏"
     override val nameRes: Int = R.string.secret_friend_18_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
 

@@ -25,6 +25,7 @@ import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.dexMethod
 import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
 import dev.sun.wechat.features.api.ui.WeMomentsContextMenuApi
+import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.data.KvStore
@@ -52,7 +53,7 @@ object HideMyMoments : SwitchFeature(), WeMomentsContextMenuApi.IMenuItemsProvid
 
     override val technicalId = "隐藏我的朋友圈"
     override val nameRes: Int = R.string.secret_friend_19_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
     private const val TAG = "HideMyMoments"
@@ -142,7 +143,7 @@ object HideMyMoments : SwitchFeature(), WeMomentsContextMenuApi.IMenuItemsProvid
 object ManageHiddenMoments : ClickableFeature() {
     override val technicalId = "已隐藏朋友圈管理"
     override val nameRes: Int = R.string.secret_friend_20_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
 
@@ -239,7 +240,7 @@ private fun hideRowsMatching(view: View, titles: Set<String>) {
 object HideDiscoverMoments : SwitchFeature(), IResolveDex {
     override val technicalId = "发现页朋友圈入口隐藏"
     override val nameRes: Int = R.string.secret_friend_21_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
 
@@ -285,7 +286,7 @@ object HideDiscoverMoments : SwitchFeature(), IResolveDex {
 object HideDiscoverEntries : SwitchFeature(), IResolveDex {
     override val technicalId = "发现页入口隐藏"
     override val nameRes: Int = R.string.secret_friend_22_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
 

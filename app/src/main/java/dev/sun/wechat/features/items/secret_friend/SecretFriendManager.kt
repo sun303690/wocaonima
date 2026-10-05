@@ -4,6 +4,7 @@ import dev.sun.wechat.R
 import androidx.activity.ComponentActivity
 import dev.sun.wechat.features.api.core.WeConversationApi
 import dev.sun.wechat.features.api.core.WeDatabaseApi
+import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.ui.content.ContactsSelector
 import dev.sun.wechat.ui.utils.showComposeDialog
@@ -24,7 +25,7 @@ import dev.sun.wechat.utils.android.showToast
 object SecretFriendManager : ClickableFeature() {
     override val technicalId = "密友名单管理"
     override val nameRes: Int = R.string.secret_friend_08_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
 

@@ -2,6 +2,7 @@ package dev.sun.wechat.features.items.secret_friend
 
 import dev.sun.wechat.R
 import dev.sun.wechat.features.api.core.WeConversationApi
+import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.utils.WeLogger
 
@@ -19,7 +20,7 @@ import dev.sun.wechat.utils.WeLogger
 object MuteSecretFriend : SwitchFeature() {
     override val technicalId = "密友消息通知隐藏"
     override val nameRes: Int = R.string.secret_friend_12_name
-    override val categoryIds: List<String> = listOf("密友功能")
+    override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS)
     override val descriptionRes: Int? = null
 
 
