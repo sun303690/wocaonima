@@ -33,40 +33,40 @@ object QQMusicOrderSettings {
     private val KEY_REPLACE_SINGER_WITH_NICKNAME = "qq_music_order_replace_singer_with_nickname"
     private val KEY_ALLOWED_TALKERS = "qq_music_order_allowed_talkers"
 
-    private var enable by prefOption(KEY_ENABLE, DEFAULT_ENABLE)
-    private var interceptOwnCommand by prefOption(KEY_INTERCEPT_OWN_COMMAND, DEFAULT_INTERCEPT_OWN_COMMAND)
-    private var sendAsCard by prefOption(KEY_SEND_AS_CARD, DEFAULT_SEND_AS_CARD)
-    private var sendAsVoice by prefOption(KEY_SEND_AS_VOICE, DEFAULT_SEND_AS_VOICE)
-    private var customSingerEnabled by prefOption(KEY_CUSTOM_SINGER, DEFAULT_CUSTOM_SINGER)
-    private var defaultSinger by prefOption(KEY_DEFAULT_SINGER, DEFAULT_SINGER)
-    private var appId by prefOption(KEY_APP_ID, DEFAULT_APP_ID)
-    private var triggers by prefOption(KEY_TRIGGERS, DEFAULT_TRIGGERS)
-    private var replaceCoverWithAvatar by prefOption(KEY_REPLACE_COVER_WITH_AVATAR, DEFAULT_REPLACE_COVER_WITH_AVATAR)
-    private var replaceSingerWithNickname by prefOption(KEY_REPLACE_SINGER_WITH_NICKNAME, DEFAULT_REPLACE_SINGER_WITH_NICKNAME)
+    private var _enable by prefOption(KEY_ENABLE, DEFAULT_ENABLE)
+    private var _interceptOwnCommand by prefOption(KEY_INTERCEPT_OWN_COMMAND, DEFAULT_INTERCEPT_OWN_COMMAND)
+    private var _sendAsCard by prefOption(KEY_SEND_AS_CARD, DEFAULT_SEND_AS_CARD)
+    private var _sendAsVoice by prefOption(KEY_SEND_AS_VOICE, DEFAULT_SEND_AS_VOICE)
+    private var _customSingerEnabled by prefOption(KEY_CUSTOM_SINGER, DEFAULT_CUSTOM_SINGER)
+    private var _defaultSinger by prefOption(KEY_DEFAULT_SINGER, DEFAULT_SINGER)
+    private var _appId by prefOption(KEY_APP_ID, DEFAULT_APP_ID)
+    private var _triggers by prefOption(KEY_TRIGGERS, DEFAULT_TRIGGERS)
+    private var _replaceCoverWithAvatar by prefOption(KEY_REPLACE_COVER_WITH_AVATAR, DEFAULT_REPLACE_COVER_WITH_AVATAR)
+    private var _replaceSingerWithNickname by prefOption(KEY_REPLACE_SINGER_WITH_NICKNAME, DEFAULT_REPLACE_SINGER_WITH_NICKNAME)
 
-    fun isEnabled(): Boolean = enable
-    fun interceptOwnCommand(): Boolean = interceptOwnCommand
-    fun sendAsCard(): Boolean = sendAsCard
-    fun sendAsVoice(): Boolean = sendAsVoice
-    fun customSingerEnabled(): Boolean = customSingerEnabled
-    fun defaultSinger(): String = defaultSinger.trim()
-    fun appId(): String = appId.trim().ifBlank { DEFAULT_APP_ID }
-    fun replaceCoverWithAvatar(): Boolean = replaceCoverWithAvatar
-    fun replaceSingerWithNickname(): Boolean = replaceSingerWithNickname
+    fun isEnabled(): Boolean = _enable
+    fun interceptOwnCommand(): Boolean = _interceptOwnCommand
+    fun sendAsCard(): Boolean = _sendAsCard
+    fun sendAsVoice(): Boolean = _sendAsVoice
+    fun customSingerEnabled(): Boolean = _customSingerEnabled
+    fun defaultSinger(): String = _defaultSinger.trim()
+    fun appId(): String = _appId.trim().ifBlank { DEFAULT_APP_ID }
+    fun replaceCoverWithAvatar(): Boolean = _replaceCoverWithAvatar
+    fun replaceSingerWithNickname(): Boolean = _replaceSingerWithNickname
 
-    fun setEnabled(v: Boolean) { enable = v }
-    fun setInterceptOwnCommand(v: Boolean) { interceptOwnCommand = v }
-    fun setSendAsCard(v: Boolean) { sendAsCard = v }
-    fun setSendAsVoice(v: Boolean) { sendAsVoice = v }
-    fun setCustomSingerEnabled(v: Boolean) { customSingerEnabled = v }
-    fun setDefaultSinger(v: String) { defaultSinger = v }
-    fun setAppId(v: String) { appId = v }
-    fun setReplaceCoverWithAvatar(v: Boolean) { replaceCoverWithAvatar = v }
-    fun setReplaceSingerWithNickname(v: Boolean) { replaceSingerWithNickname = v }
+    fun setEnabled(v: Boolean) { _enable = v }
+    fun setInterceptOwnCommand(v: Boolean) { _interceptOwnCommand = v }
+    fun setSendAsCard(v: Boolean) { _sendAsCard = v }
+    fun setSendAsVoice(v: Boolean) { _sendAsVoice = v }
+    fun setCustomSingerEnabled(v: Boolean) { _customSingerEnabled = v }
+    fun setDefaultSinger(v: String) { _defaultSinger = v }
+    fun setAppId(v: String) { _appId = v }
+    fun setReplaceCoverWithAvatar(v: Boolean) { _replaceCoverWithAvatar = v }
+    fun setReplaceSingerWithNickname(v: Boolean) { _replaceSingerWithNickname = v }
 
-    fun setTriggers(v: String) { triggers = v }
+    fun setTriggers(v: String) { _triggers = v }
 
-    fun triggers(): List<String> = triggers.split(',', '，', '\n')
+    fun triggers(): List<String> = _triggers.split(',', '，', '\n')
         .map { it.trim() }
         .filter { it.isNotEmpty() }
         .distinct()
