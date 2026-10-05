@@ -77,5 +77,27 @@ object SearchCommandTempUnhide : SwitchFeature() {
         WeLogger.i(TAG, "temp-unhide command hooks installed on ${methods.size} void(String) methods")
     }
 
-    
+    @Composable
+    override fun Ui() {
+        TextFieldDialogWidget(
+            title = "临时解除指令",
+            value = tempUnhideCommand,
+            onValueChange = { tempUnhideCommand = it },
+            dialogTitle = "临时解除指令文字",
+            confirmLabel = "确定",
+            dismissLabel = "取消",
+        )
+        TextFieldDialogWidget(
+            title = "临时显示时长(分钟)",
+            value = SecretFriendState.tempShowMinutes.toString(),
+            onValueChange = { raw ->
+                raw.filter { it.isDigit() }.take(4).toIntOrNull()?.let {
+                    SecretFriendState.tempShowMinutes = it
+                }
+            },
+            dialogTitle = "临时显示时长（分钟，1–1440）",
+            confirmLabel = "确定",
+            dismissLabel = "取消",
+        )
+    }
 }

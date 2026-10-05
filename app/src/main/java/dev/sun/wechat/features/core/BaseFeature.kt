@@ -4,6 +4,7 @@ package dev.sun.wechat.features.core
 
 import android.content.Context
 import androidx.annotation.StringRes
+import androidx.compose.runtime.Composable
 import dev.ujhhgtg.reflekt.reflected.BaseReflectedMethod
 import dev.ujhhgtg.reflekt.reflected.ReflectedConstructor
 import dev.ujhhgtg.reflekt.reflekt
@@ -83,6 +84,11 @@ abstract class BaseFeature {
     open fun onEnable() {}
 
     open fun onDisable() {}
+
+    /** Optional per-feature settings UI, rendered below the feature's toggle row. */
+    @Composable
+    open fun Ui() {
+    }
 
     private val _dexDelegates = mutableListOf<BaseDexDelegate>()
     val dexDelegates: List<BaseDexDelegate> get() = _dexDelegates

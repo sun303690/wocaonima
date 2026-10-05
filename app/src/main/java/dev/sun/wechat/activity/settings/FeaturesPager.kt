@@ -37,6 +37,7 @@ import dev.sun.wechat.features.core.featureCategoryComparator
 import dev.sun.wechat.i18n.LocalWeKitLocalizedContext
 import dev.sun.wechat.i18n.WeKitLocaleController
 import dev.sun.wechat.data.KvStore
+import dev.sun.wechat.ui.content.m3.BaseItemContainer
 import dev.sun.wechat.ui.content.m3.BaseWidget
 import dev.sun.wechat.ui.content.m3.ExpressiveBackButton
 import dev.sun.wechat.ui.content.m3.SegmentedColumn
@@ -54,6 +55,21 @@ private fun featureChecked(item: BaseFeature): Boolean {
     val revision = FeatureCategoryState.revision
     return remember(item.technicalId, revision) {
         KvStore.getBoolOrDef(item.technicalId, (item as? SwitchFeature)?.defaultEnabled == true)
+    }
+}
+
+/** A feature row plus its optional per-feature settings UI, unified into one segmented card. */
+@Composable
+private fun FeatureItem(feature: BaseFeature) {
+    Column(Modifier.padding(horizontal = 16.dp)) {
+        BaseItemContainer {
+            FeatureRow(
+                item = feature,
+                checked = featureChecked(feature),
+                onCheckedChange = {},
+            )
+            feature.Ui()
+        }
     }
 }
 
@@ -141,13 +157,7 @@ fun FeaturesPager(onOpenCategory: (String) -> Unit) {
             } else {
                 item { Spacer(Modifier.height(12.dp)) }
                 lazySegmentedItems(filteredItems, key = { it.technicalId }) { feature ->
-                    Column(Modifier.padding(horizontal = 16.dp)) {
-                        FeatureRow(
-                            item = feature,
-                            checked = featureChecked(feature),
-                            onCheckedChange = {},
-                        )
-                    }
+                    FeatureItem(feature)
                 }
             }
         } else {
@@ -271,13 +281,7 @@ fun CategoryDetailScreen(categoryId: String, onBack: () -> Unit) {
         } else {
             item { Spacer(Modifier.height(12.dp)) }
             lazySegmentedItems(items, key = { it.technicalId }) { feature ->
-                Column(Modifier.padding(horizontal = 16.dp)) {
-                    FeatureRow(
-                        item = feature,
-                        checked = featureChecked(feature),
-                        onCheckedChange = {},
-                    )
-                }
+                FeatureItem(feature)
             }
         }
 
