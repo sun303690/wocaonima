@@ -50,52 +50,7 @@ object SecretFriendToastToggle : SwitchFeature() {
         SecretFriendState.toastsEnabled = false
     }
 
-    @Composable
-    override fun Ui() {
-        Column {
-            Spacer(Modifier.height(4.dp))
-            TextFieldDialogWidget(
-                title = "临时解除提示",
-                value = SecretFriendState.toastTempShown,
-                onValueChange = { SecretFriendState.toastTempShown = it },
-                dialogTitle = "临时解除提示文案",
-                confirmLabel = "确定",
-                dismissLabel = "取消",
-            )
-            TextFieldDialogWidget(
-                title = "恢复隐藏提示",
-                value = SecretFriendState.toastTempOff,
-                onValueChange = { SecretFriendState.toastTempOff = it },
-                dialogTitle = "恢复隐藏提示文案",
-                confirmLabel = "确定",
-                dismissLabel = "取消",
-            )
-            TextFieldDialogWidget(
-                title = "加入密友提示",
-                value = SecretFriendState.toastAdded,
-                onValueChange = { SecretFriendState.toastAdded = it },
-                dialogTitle = "加入密友提示文案",
-                confirmLabel = "确定",
-                dismissLabel = "取消",
-            )
-            TextFieldDialogWidget(
-                title = "取消密友提示",
-                value = SecretFriendState.toastRemoved,
-                onValueChange = { SecretFriendState.toastRemoved = it },
-                dialogTitle = "取消密友提示文案",
-                confirmLabel = "确定",
-                dismissLabel = "取消",
-            )
-            TextFieldDialogWidget(
-                title = "朋友圈隐藏提示",
-                value = SecretFriendState.toastMomentHidden,
-                onValueChange = { SecretFriendState.toastMomentHidden = it },
-                dialogTitle = "朋友圈动态隐藏提示文案",
-                confirmLabel = "确定",
-                dismissLabel = "取消",
-            )
-        }
-    }
+    
 }
 
 // ─────────────────────── 16. 菜单显示文字 ───────────────────────

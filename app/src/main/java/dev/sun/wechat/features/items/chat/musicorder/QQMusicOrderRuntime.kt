@@ -287,8 +287,9 @@ internal class QQMusicOrderRuntime(
         val retriever = MediaMetadataRetriever()
         return try {
             retriever.setDataSource(file.absolutePath)
-            (retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
-                ?.toLongOrNull() ?: 0L) / 1000L
+            val durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                ?.toLongOrNull() ?: 0L
+            (durationMs / 1000L).toInt()
         } catch (_: Throwable) {
             0
         } finally {

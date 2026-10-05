@@ -3,10 +3,12 @@ package dev.sun.wechat.features.items.contacts.hidecontacts
 import dev.sun.wechat.R
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.dexMethod
+import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.ApiFeature
 
 import dev.sun.wechat.features.items.contacts.HideContacts
 import dev.sun.wechat.data.KvStore
+import dev.sun.wechat.utils.TargetProcess
 import dev.sun.wechat.utils.TargetProcesses
 import dev.sun.wechat.utils.WeLogger
 
@@ -122,7 +124,7 @@ object HideContactsNotifications : ApiFeature(), IResolveDex {
 
     /** `CoreService` — and therefore both notification paths — lives in `:push`, not in main. */
     override fun startup() {
-        if (!TargetProcesses.isInMain && TargetProcesses.currentType != TargetProcesses.PROC_PUSH)
+        if (!TargetProcesses.isInMain && TargetProcesses.currentType != TargetProcess.PUSH)
             return
         enable()
     }

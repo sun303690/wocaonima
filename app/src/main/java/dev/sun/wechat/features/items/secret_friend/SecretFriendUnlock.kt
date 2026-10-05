@@ -194,19 +194,7 @@ object LongPressTitleUnlock : SwitchFeature() {
             }
     }
 
-    @Composable
-    override fun Ui() {
-        TextFieldDialogWidget(
-            title = "长按触发时长(毫秒)",
-            value = longPressMs.toString(),
-            onValueChange = { raw ->
-                raw.filter { it.isDigit() }.take(5).toIntOrNull()?.let { longPressMs = it }
-            },
-            dialogTitle = "长按触发时长（毫秒，300–5000）",
-            confirmLabel = "确定",
-            dismissLabel = "取消",
-        )
-    }
+    
 }
 
 /** ViewConfiguration 取值的小包装（避免直接依赖平台类名）。 */

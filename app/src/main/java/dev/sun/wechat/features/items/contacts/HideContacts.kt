@@ -37,6 +37,7 @@ import dev.sun.wechat.features.api.core.WeDatabaseApi
 import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
 import dev.sun.wechat.features.api.ui.WeChatInputBarApi
 import dev.sun.wechat.features.api.ui.WeMainActivityBeautifyApi
+import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.ClickableFeature
 
 import dev.sun.wechat.features.items.contacts.hidecontacts.installListHooks

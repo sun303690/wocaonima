@@ -5,6 +5,7 @@ import android.content.Intent
 import com.tencent.mm.plugin.voip.widget.VoipForegroundService
 import dev.ujhhgtg.reflekt.reflekt
 import dev.sun.wechat.features.items.contacts.HideContacts
+import dev.sun.wechat.utils.HookParam
 import dev.sun.wechat.utils.RuntimeConfig
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.reflection.BString
@@ -320,5 +321,5 @@ private fun HideContacts.installLegacyVoipHooks() {
  * Reads the caller wxid out of an `a65.b57` RoomInfo, which declares exactly one String field
  * (`f3634i` = callerUserName).
  */
-private fun de.robv.android.xposed.XC_MethodHook.MethodHookParam.legacyCallerWxId(): String? =
+private fun HookParam.legacyCallerWxId(): String? =
     runCatching { args[0]!!.reflekt().firstField { type = BString }.get() as? String }.getOrNull()
