@@ -27,6 +27,28 @@ class DexResolverSourceScannerTest {
     }
 
     @Test
+    fun extractsEveryResolverDeclarationInFile() {
+        val sources = scanDexResolverSources(
+            "Sample.kt",
+            """
+                package sample
+                object First : IResolveDex {
+                    override val technicalId = "first"
+                    private val a by dexClass { matcher { name = "A" } }
+                }
+                object Second : IResolveDex {
+                    override val technicalId = "second"
+                    private val b by dexMethod { matcher { name = "b" } }
+                }
+            """.trimIndent(),
+        )
+
+        assertEquals(listOf("first", "second"), sources.map { it.technicalId })
+        assertEquals(listOf(ResolveBlockKind.INLINE_CLASS), sources[0].blocks.map { it.kind })
+        assertEquals(listOf(ResolveBlockKind.INLINE_METHOD), sources[1].blocks.map { it.kind })
+    }
+
+    @Test
     fun flagsHostReflectionOnlyInsideResolutionBlocks() {
         val source = scanDexResolverSource("Sample.kt", sampleSource)!!
 

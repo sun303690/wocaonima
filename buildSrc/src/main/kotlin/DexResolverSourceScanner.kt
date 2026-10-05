@@ -30,35 +30,58 @@ internal data class DesktopResolverViolation(
 }
 
 internal fun scanDexResolverSource(file: File): DexResolverSource? =
-    scanDexResolverSource(file.readText(), file)
+    scanDexResolverSources(file).firstOrNull()
 
 internal fun scanDexResolverSource(path: String, sourceText: String): DexResolverSource? =
-    scanDexResolverSource(sourceText, File(path))
+    scanDexResolverSources(path, sourceText).firstOrNull()
 
-private fun scanDexResolverSource(sourceText: String, file: File): DexResolverSource? {
+/**
+ * 扫描单个源文件中**全部** `IResolveDex` 实现声明。
+ *
+ * 一个文件可以声明多个 resolver（例如密友功能），每个都必须在
+ * `GeneratedMethodHashes` 中有独立条目，否则运行期 `DexCacheManager.methodHash` 会抛错。
+ */
+internal fun scanDexResolverSources(file: File): List<DexResolverSource> =
+    scanDexResolverSources(file.readText(), file)
+
+internal fun scanDexResolverSources(path: String, sourceText: String): List<DexResolverSource> =
+    scanDexResolverSources(sourceText, File(path))
+
+private fun scanDexResolverSources(sourceText: String, file: File): List<DexResolverSource> {
     val clean = stripCommentsPreservingStrings(sourceText)
     val packageName = clean.findCode(Regex("""package\s+([\w.]+)"""))?.groupValues?.get(1)
     val classRegex = Regex("""\b(?:class|object)\s+(\w+)\b""")
     val declarations = clean.findAllCode(classRegex)
-    val resolveDexDeclaration = declarations.withIndex().firstNotNullOfOrNull { (index, match) ->
-        val braceIndex = clean.indexOfCode('{', match.range.first)
-        val closingBraceIndex = clean.indexOfCode('}', match.range.first)
-        val nextDeclarationIndex = declarations.getOrNull(index + 1)?.range?.first ?: clean.length
-        if (
-            braceIndex == -1 ||
-            braceIndex >= nextDeclarationIndex ||
-            (closingBraceIndex != -1 && braceIndex >= closingBraceIndex)
-        ) {
-            return@firstNotNullOfOrNull null
-        }
+    return declarations.withIndex().mapNotNull { (index, match) ->
+        scanResolverDeclaration(clean, packageName, declarations, index, match, file)
+    }
+}
 
-        val signature = clean.substring(match.range.first, braceIndex)
-        if (signature.contains(":") && Regex("""\bIResolveDex\b""").containsMatchIn(signature)) match else null
-    } ?: return null
+private fun scanResolverDeclaration(
+    clean: ScannedSource,
+    packageName: String?,
+    declarations: List<MatchResult>,
+    index: Int,
+    declaration: MatchResult,
+    file: File,
+): DexResolverSource? {
+    val braceIndex = clean.indexOfCode('{', declaration.range.first)
+    val closingBraceIndex = clean.indexOfCode('}', declaration.range.first)
+    val nextDeclarationIndex = declarations.getOrNull(index + 1)?.range?.first ?: clean.length
+    if (
+        braceIndex == -1 ||
+        braceIndex >= nextDeclarationIndex ||
+        (closingBraceIndex != -1 && braceIndex >= closingBraceIndex)
+    ) {
+        return null
+    }
 
-    val className = resolveDexDeclaration.groupValues[1]
+    val signature = clean.substring(declaration.range.first, braceIndex)
+    if (!signature.contains(":") || !Regex("""\bIResolveDex\b""").containsMatchIn(signature)) return null
+
+    val className = declaration.groupValues[1]
     val fullClassName = if (packageName != null) "$packageName.$className" else className
-    val classBodyStart = clean.indexOfCode('{', resolveDexDeclaration.range.last)
+    val classBodyStart = clean.indexOfCode('{', declaration.range.last)
     val classBodyEnd = if (classBodyStart == -1) -1 else clean.findBlockEnd(classBodyStart)
     val classBodyDepth = if (classBodyStart == -1) -1 else clean.braceDepthAt(classBodyStart + 1)
     fun isDirectMember(match: MatchResult): Boolean =

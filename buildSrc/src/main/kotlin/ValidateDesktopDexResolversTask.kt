@@ -21,7 +21,7 @@ abstract class ValidateDesktopDexResolversTask : DefaultTask() {
             .files
             .sortedBy { it.path }
             .filter { paths.isEmpty() || paths.any(it.path::endsWith) }
-            .mapNotNull(::scanDexResolverSource)
+            .flatMap { scanDexResolverSources(it) }
             .flatMap(::findDesktopIncompatibleAccesses)
         if (violations.isNotEmpty()) error(violations.joinToString("\n") { it.render() })
     }

@@ -25,7 +25,7 @@ abstract class GenerateMethodHashesTask : DefaultTask() {
 
         val sources = srcDir.walkTopDown()
             .filter { it.isFile && it.extension == "kt" }
-            .mapNotNull(::scanDexResolverSource)
+            .flatMap { scanDexResolverSources(it).asSequence() }
             .toList()
 
         val missingTechnicalId = sources.filter { it.technicalId == null }
