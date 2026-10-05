@@ -44,7 +44,9 @@ object QQMusicOrder : ClickableFeature(), WeDatabaseListenerApi.IInsertListener 
     private val handled = ConcurrentHashMap<String, Boolean>()
 
     override fun onEnable() {
-        runtime = QQMusicOrderRuntime(HostInfo.application, { message, t -> WeLogger.e(TAG, message, t) })
+        runtime = QQMusicOrderRuntime(HostInfo.application, { message, t ->
+            if (t != null) WeLogger.e(TAG, message, t) else WeLogger.e(TAG, message)
+        })
         WeDatabaseListenerApi.addListener(this)
     }
 

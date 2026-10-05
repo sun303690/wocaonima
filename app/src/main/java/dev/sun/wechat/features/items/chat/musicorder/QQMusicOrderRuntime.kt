@@ -31,7 +31,7 @@ internal class QQMusicOrderRuntime(
     private val logError: (String, Throwable?) -> Unit,
 ) {
     private val hostContext = context.applicationContext ?: context
-    private val settings = QQMusicOrderSettings(context)
+    private val settings = QQMusicOrderSettings
     private val client = QQMusicClient()
     private val executor = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "QQMusicOrder").apply { isDaemon = true }
