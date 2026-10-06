@@ -59,7 +59,10 @@ object MultiClickTitleUnlock : SwitchFeature() {
     private var warnedTitleMissing = false
 
     override fun onEnable() {
-        // LauncherUI.onResume 后标题布局已就绪，decorView.post 定位标题 View 并挂点击监听。
+        // 不依赖精确 View 定位（text1/深度搜索在 8.0.74 都可能选错 View → 多击不触发）。
+        // 改为在主页 decorView 上拦截触摸：点中屏幕**顶部区域**（标题栏所在）即计一次点击，
+        // 连续点击 [clickCount] 次触发临时显示。顶部阈值取状态栏下沿 ~90dp，足够宽以命中标题，
+        // 又不至于覆盖整个页面。
         val resumeHook = runCatching {
             LauncherUI::class.reflekt()
                 .firstMethod {
@@ -74,26 +77,27 @@ object MultiClickTitleUnlock : SwitchFeature() {
                 val activity = thisObject as? android.app.Activity ?: return@hookAfter
                 val root = activity.window?.decorView ?: return@hookAfter
                 root.post {
-                    val title = SecretFriendState.findHomeTitleTextView(root)
-                    if (title == null) {
-                        if (!warnedTitleMissing) {
-                            warnedTitleMissing = true
-                            WeLogger.w(TAG, "home title view not found; multi-click unlock not attached")
-                        }
-                        return@post
-                    }
-                    WeLogger.i(TAG, "multi-click unlock attached to ${title.javaClass.name}")
-                    title.setOnClickListener { view ->
-                        if (SecretFriendState.isEmpty()) return@setOnClickListener
+                    val density = runCatching { activity.resources.displayMetrics.density }.getOrDefault(2.0f)
+                    val topBandPx = (90 * density).toInt()
+                    WeLogger.i(TAG, "multi-click top-band unlock armed (band=${topBandPx}px, times=$clickCount)")
+                    root.setOnTouchListener { _, event ->
+                        if (SecretFriendState.isEmpty()) return@setOnTouchListener false
+                        if (event.action != android.view.MotionEvent.ACTION_UP) return@setOnTouchListener false
+                        val screenW = runCatching { activity.resources.displayMetrics.widthPixels }.getOrDefault(0)
+                        val inTopBand = event.rawY <= topBandPx &&
+                            event.rawX >= 0 && event.rawX <= screenW
+                        if (!inTopBand) return@setOnTouchListener false
                         val now = System.currentTimeMillis()
                         if (now - lastClickAt > clickWindowMs.coerceAtLeast(200)) clickCounter = 1
                         else clickCounter++
                         lastClickAt = now
+                        WeLogger.i(TAG, "title top-band tap #$clickCounter/$clickCount at y=${event.rawY.toInt()}")
                         if (clickCounter >= clickCount.coerceAtLeast(2)) {
                             clickCounter = 0
                             WeLogger.i(TAG, "title multi-click unlock triggered")
-                            SecretFriendState.tempShowForMinutes(view.context)
+                            SecretFriendState.tempShowForMinutes(activity)
                         }
+                        true
                     }
                 }
             }
@@ -152,67 +156,38 @@ object LongPressTitleUnlock : SwitchFeature() {
                 val activity = thisObject as? android.app.Activity ?: return@hookAfter
                 val root = activity.window?.decorView ?: return@hookAfter
                 root.post {
-                    val title = SecretFriendState.findHomeTitleTextView(root)
-                    if (title == null) {
-                        if (!warnedTitleMissing) {
-                            warnedTitleMissing = true
-                            WeLogger.w(TAG, "home title view not found; long-press unlock not attached")
-                        }
-                        return@post
-                    }
-                    // TextView 不可点击时触摸流（MOVE/UP）会被父级接管，自计时无法正常工作，
-                    // 必须显式置为可点击/可长按（重复 onResume 挂监听是替换语义，不叠加）
-                    title.isClickable = true
-                    title.isLongClickable = true
-                    val touchSlop = ViewConfigurationCompat.scaledTouchSlop(title)
-                    title.setOnTouchListener { view, event ->
+                    // 顶部区域长按手势：在 decorView 拦截触摸，长按屏幕顶部标题区 [longPressMs] 毫秒触发。
+                    // 不依赖精确 View 定位（text1/深度搜索在 8.0.78 都可能选错 View）。
+                    val density = runCatching { activity.resources.displayMetrics.density }.getOrDefault(2.0f)
+                    val topBandPx = (90 * density).toInt()
+                    val screenW = runCatching { activity.resources.displayMetrics.widthPixels }.getOrDefault(0)
+                    WeLogger.i(TAG, "long-press top-band unlock armed (band=${topBandPx}px, ${longPressMs}ms)")
+                    root.setOnTouchListener { _, event ->
+                        if (SecretFriendState.isEmpty()) return@setOnTouchListener false
+                        val inTopBand = event.rawY <= topBandPx &&
+                            event.rawX >= 0 && event.rawX <= screenW
                         when (event.actionMasked) {
                             MotionEvent.ACTION_DOWN -> {
+                                if (!inTopBand) return@setOnTouchListener false
                                 pending = true
                                 handler.postDelayed(triggerRunnable, longPressMs.coerceIn(300, 5000).toLong())
                             }
-
                             MotionEvent.ACTION_MOVE -> {
-                                // 手指滑出标题区域即取消（自计时版本需要自己判越界）
-                                if (event.x < -touchSlop || event.y < -touchSlop ||
-                                    event.x > view.width + touchSlop || event.y > view.height + touchSlop
-                                ) {
+                                if (pending && !inTopBand) {
                                     pending = false
                                     handler.removeCallbacks(triggerRunnable)
                                 }
                             }
-
                             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                                 pending = false
                                 handler.removeCallbacks(triggerRunnable)
                             }
                         }
-                        false // 不消费: 正常点击派发不受影响, 与「多击标题解除」可同时启用
+                        false
                     }
                 }
             }
     }
-
-    @Composable
-    override fun Ui() {
-        TextFieldDialogWidget(
-            title = "长按触发时长(毫秒)",
-            value = longPressMs.toString(),
-            onValueChange = { raw ->
-                raw.filter { it.isDigit() }.take(5).toIntOrNull()?.let { longPressMs = it }
-            },
-            dialogTitle = "长按触发时长（毫秒，300–5000）",
-            confirmLabel = "确定",
-            dismissLabel = "取消",
-        )
-    }
-}
-
-/** ViewConfiguration 取值的小包装（避免直接依赖平台类名）。 */
-private object ViewConfigurationCompat {
-    fun scaledTouchSlop(view: View): Int = runCatching {
-        android.view.ViewConfiguration.get(view.context).scaledTouchSlop
-    }.getOrDefault(24)
 }
 
 // ─────────────────────────── 26. 锁屏隐藏 ───────────────────────────
