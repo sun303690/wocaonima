@@ -126,16 +126,16 @@ object SecretFriendState {
     /** 主控开关的 pref 键（与「密友名单管理」功能开关一致）。 */
     private const val MASTER_ENABLED_PREF = "密友名单管理"
 
-    /** 生效密友 wxid 集合：主控关闭时视为空——所有隐藏/拦截功能整体失效。 */
+    /** 生效密友 wxid 集合：主控关闭**或临时显示中**时视为空——所有隐藏/拦截功能整体失效。 */
     fun getWxIds(): Set<String> =
-        if (isSecretFriendMasterOn()) getStoredWxIds() else emptySet()
+        if (isSecretFriendMasterOn() && !isTemporarilyShown()) getStoredWxIds() else emptySet()
 
-    /** 判断某 wxid 是否在生效名单内。null/空一律 false，天然放行。 */
+    /** 判断某 wxid 是否在生效名单内。null/空一律 false，天然放行；临时显示中放行所有。 */
     fun isSecret(wxId: String?): Boolean =
-        isSecretFriendMasterOn() && isStoredSecret(wxId)
+        isSecretFriendMasterOn() && !isTemporarilyShown() && isStoredSecret(wxId)
 
     /** 名单是否为空（隐藏类开关据此跳过全部逻辑，零开销）。 */
-    fun isEmpty(): Boolean = !isSecretFriendMasterOn() || getMaskItems().isEmpty()
+    fun isEmpty(): Boolean = !isSecretFriendMasterOn() || isTemporarilyShown() || getMaskItems().isEmpty()
 
     fun findMaskItem(wxId: String?): MaskItem? =
         if (wxId.isNullOrEmpty()) null else getMaskItems().firstOrNull { it.maskId == wxId }
