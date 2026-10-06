@@ -277,6 +277,12 @@ object SecretFriendState {
      * 找不到返回 null（调用方下次时机重试）。
      */
     fun findHomeTitleTextView(root: View): TextView? {
+        // 优先用旧版隐藏联系人已验证的定位：decorView 直接 findViewById(android.R.id.text1)。
+        // 旧版靠它在微信主页稳定命中标题；wcx 的深度文本搜索在 8.0.74 定位不到(标题非"微信"TextView 形态)。
+        if (root !is TextView) {
+            val byId = root.findViewById<TextView>(android.R.id.text1)
+            if (byId != null) return byId
+        }
         if (root is TextView && root.id == android.R.id.text1) return root
 
         val screenH = runCatching { root.resources.displayMetrics.heightPixels }.getOrDefault(0)
