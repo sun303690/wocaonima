@@ -2,7 +2,6 @@ package dev.sun.wechat.features.items.secret_friend
 
 import dev.sun.wechat.R
 import android.view.MotionEvent
-import android.view.View
 import android.os.Handler
 import android.os.Looper
 import android.content.BroadcastReceiver
@@ -27,10 +26,9 @@ import java.lang.ref.WeakReference
  * 临时解除与恢复组 24–27：多击标题解除、长按标题解除、锁屏隐藏、离开对话/离开微信隐藏。
  *
  * 解除统一走 [SecretFriendState.tempShowForMinutes]（默认 30 分钟，到期自动恢复）；
- * 恢复统一走 [SecretFriendState.tempOff]。标题定位采用浮云实测方案（见
- * [SecretFriendState.findHomeTitleTextView]）：LauncherUI onResume 后 decorView.post 定位
- * 顶部 25% 区域内文本恰为「微信」的 TextView，直接挂 listener（View 自身接收触摸，
- * 规避澎湃 OS 全面屏手势吞事件；重复 set 是替换语义，不叠加）。
+ * 恢复统一走 [SecretFriendState.tempOff]。多击/长按识别在 LauncherUI.dispatchTouchEvent 上
+ * 观察触摸，命中屏幕顶部标题区（约 90dp 内）即计数，不依赖精确 View 定位，也不与其它功能
+ * 争抢 decorView 唯一的 OnTouchListener 槽位。
  */
 // ─────────────────────────── 24. 多击标题解除 ───────────────────────────
 
@@ -56,51 +54,40 @@ object MultiClickTitleUnlock : SwitchFeature() {
 
     private var clickCounter = 0
     private var lastClickAt = 0L
-    private var warnedTitleMissing = false
 
     override fun onEnable() {
-        // 不依赖精确 View 定位（text1/深度搜索在 8.0.74 都可能选错 View → 多击不触发）。
-        // 改为在主页 decorView 上拦截触摸：点中屏幕**顶部区域**（标题栏所在）即计一次点击，
-        // 连续点击 [clickCount] 次触发临时显示。顶部阈值取状态栏下沿 ~90dp，足够宽以命中标题，
-        // 又不至于覆盖整个页面。
-        val resumeHook = runCatching {
+        // 不依赖精确 View 定位（text1/深度搜索在 8.0.74/8.0.78 都可能选错 View）。
+        // 在 LauncherUI.dispatchTouchEvent 上观察触摸：它先于任何子 View 收到全部事件。
+        // decorView.setOnTouchListener 不可用——它只在没有子 View 消费 DOWN 时才回调，
+        // 且返回 false 收不到后续 UP（多击永远计不到），并与长按功能争抢同一 listener 槽位。
+        val dispatch = runCatching {
             LauncherUI::class.reflekt()
                 .firstMethod {
-                    name = "onResume"
+                    name = "dispatchTouchEvent"
+                    parameters(MotionEvent::class)
                     superclass()
                 }
         }.getOrElse {
-            WeLogger.e(TAG, "hook LauncherUI.onResume failed; multi-click unlock unavailable", it)
+            WeLogger.e(TAG, "hook LauncherUI.dispatchTouchEvent failed; multi-click unlock unavailable", it)
             return
         }
-        resumeHook.hookAfter {
-                val activity = thisObject as? android.app.Activity ?: return@hookAfter
-                val root = activity.window?.decorView ?: return@hookAfter
-                root.post {
-                    val density = runCatching { activity.resources.displayMetrics.density }.getOrDefault(2.0f)
-                    val topBandPx = (90 * density).toInt()
-                    WeLogger.i(TAG, "multi-click top-band unlock armed (band=${topBandPx}px, times=$clickCount)")
-                    root.setOnTouchListener { _, event ->
-                        if (SecretFriendState.isEmpty()) return@setOnTouchListener false
-                        if (event.action != android.view.MotionEvent.ACTION_UP) return@setOnTouchListener false
-                        val screenW = runCatching { activity.resources.displayMetrics.widthPixels }.getOrDefault(0)
-                        val inTopBand = event.rawY <= topBandPx &&
-                            event.rawX >= 0 && event.rawX <= screenW
-                        if (!inTopBand) return@setOnTouchListener false
-                        val now = System.currentTimeMillis()
-                        if (now - lastClickAt > clickWindowMs.coerceAtLeast(200)) clickCounter = 1
-                        else clickCounter++
-                        lastClickAt = now
-                        WeLogger.i(TAG, "title top-band tap #$clickCounter/$clickCount at y=${event.rawY.toInt()}")
-                        if (clickCounter >= clickCount.coerceAtLeast(2)) {
-                            clickCounter = 0
-                            WeLogger.i(TAG, "title multi-click unlock triggered")
-                            SecretFriendState.tempShowForMinutes(activity)
-                        }
-                        true
-                    }
-                }
+        dispatch.hookBefore {
+            val activity = thisObject as? LauncherUI ?: return@hookBefore
+            if (SecretFriendState.isEmpty()) return@hookBefore
+            val event = args[0] as MotionEvent
+            if (event.actionMasked != MotionEvent.ACTION_UP) return@hookBefore
+            if (!isInHomeTitleBand(activity, event)) return@hookBefore
+            val now = System.currentTimeMillis()
+            if (now - lastClickAt > clickWindowMs.coerceAtLeast(200)) clickCounter = 1
+            else clickCounter++
+            lastClickAt = now
+            WeLogger.i(TAG, "title top-band tap #$clickCounter/$clickCount at y=${event.rawY.toInt()}")
+            if (clickCounter >= clickCount.coerceAtLeast(2)) {
+                clickCounter = 0
+                WeLogger.i(TAG, "title multi-click unlock triggered")
+                SecretFriendState.tempShowForMinutes(activity)
             }
+        }
     }
 }
 
@@ -109,8 +96,8 @@ object MultiClickTitleUnlock : SwitchFeature() {
 /**
  * 长按标题解除（旧版 SecretFriendTempShow 逻辑 / 浮云「长按标题解除」语义）：
  * 长按主页标题 [longPressMs] 毫秒（默认 800）→ 切换临时显示。
- * 用 setOnTouchListener 自计时（系统 OnLongClickListener 写死 ~500ms，无法自定义时长；
- * 且澎湃 OS 的 ACTION_CANCEL 会杀掉 View 内部的长按 postDelayed）。
+ * 在 LauncherUI.dispatchTouchEvent 上自计时（系统 OnLongClickListener 写死 ~500ms，无法
+ * 自定义时长；decorView.setOnTouchListener 又会因未消费 DOWN 收不到后续事件）。
  */
 
 object LongPressTitleUnlock : SwitchFeature() {
@@ -127,7 +114,6 @@ object LongPressTitleUnlock : SwitchFeature() {
 
     private val handler = Handler(Looper.getMainLooper())
     private var pending = false
-    private var warnedTitleMissing = false
 
     private val triggerRunnable = Runnable {
         if (!pending) return@Runnable
@@ -142,51 +128,40 @@ object LongPressTitleUnlock : SwitchFeature() {
     }
 
     override fun onEnable() {
-        val resumeHook = runCatching {
+        val dispatch = runCatching {
             LauncherUI::class.reflekt()
                 .firstMethod {
-                    name = "onResume"
+                    name = "dispatchTouchEvent"
+                    parameters(MotionEvent::class)
                     superclass()
                 }
         }.getOrElse {
-            WeLogger.e(TAG, "hook LauncherUI.onResume failed; long-press unlock unavailable", it)
+            WeLogger.e(TAG, "hook LauncherUI.dispatchTouchEvent failed; long-press unlock unavailable", it)
             return
         }
-        resumeHook.hookAfter {
-                val activity = thisObject as? android.app.Activity ?: return@hookAfter
-                val root = activity.window?.decorView ?: return@hookAfter
-                root.post {
-                    // 顶部区域长按手势：在 decorView 拦截触摸，长按屏幕顶部标题区 [longPressMs] 毫秒触发。
-                    // 不依赖精确 View 定位（text1/深度搜索在 8.0.78 都可能选错 View）。
-                    val density = runCatching { activity.resources.displayMetrics.density }.getOrDefault(2.0f)
-                    val topBandPx = (90 * density).toInt()
-                    val screenW = runCatching { activity.resources.displayMetrics.widthPixels }.getOrDefault(0)
-                    WeLogger.i(TAG, "long-press top-band unlock armed (band=${topBandPx}px, ${longPressMs}ms)")
-                    root.setOnTouchListener { _, event ->
-                        if (SecretFriendState.isEmpty()) return@setOnTouchListener false
-                        val inTopBand = event.rawY <= topBandPx &&
-                            event.rawX >= 0 && event.rawX <= screenW
-                        when (event.actionMasked) {
-                            MotionEvent.ACTION_DOWN -> {
-                                if (!inTopBand) return@setOnTouchListener false
-                                pending = true
-                                handler.postDelayed(triggerRunnable, longPressMs.coerceIn(300, 5000).toLong())
-                            }
-                            MotionEvent.ACTION_MOVE -> {
-                                if (pending && !inTopBand) {
-                                    pending = false
-                                    handler.removeCallbacks(triggerRunnable)
-                                }
-                            }
-                            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                                pending = false
-                                handler.removeCallbacks(triggerRunnable)
-                            }
-                        }
-                        false
+        dispatch.hookBefore {
+            val activity = thisObject as? LauncherUI ?: return@hookBefore
+            if (SecretFriendState.isEmpty()) return@hookBefore
+            val event = args[0] as MotionEvent
+            val inTopBand = isInHomeTitleBand(activity, event)
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    if (!inTopBand) return@hookBefore
+                    pending = true
+                    handler.postDelayed(triggerRunnable, longPressMs.coerceIn(300, 5000).toLong())
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    if (pending && !inTopBand) {
+                        pending = false
+                        handler.removeCallbacks(triggerRunnable)
                     }
                 }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    pending = false
+                    handler.removeCallbacks(triggerRunnable)
+                }
             }
+        }
     }
 }
 
@@ -322,4 +297,16 @@ object AutoRestoreOnLeave : SwitchFeature(), IResolveDex {
             }
         }
     }
+}
+
+// ─────────────────── 主页标题区触摸判定（多击/长按共用） ───────────────────
+
+/** 主页顶部标题区高度（dp，约状态栏下沿到标题栏底部）。 */
+private const val TITLE_BAND_DP = 90
+
+/** 触摸点是否落在主页顶部标题区（宽覆盖整个屏幕宽度）。 */
+private fun isInHomeTitleBand(activity: LauncherUI, event: MotionEvent): Boolean {
+    val dm = activity.resources.displayMetrics
+    val topBandPx = (TITLE_BAND_DP * dm.density).toInt()
+    return event.rawY <= topBandPx && event.rawX >= 0 && event.rawX <= dm.widthPixels
 }
