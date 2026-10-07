@@ -263,7 +263,13 @@ object HideConversations : SwitchFeature(), IResolveDex,
                 insert.invoke(db, "rconversation", null, values, 5)
                 restored++
                 WeLogger.d(TAG, "restored conversation row: $username")
-            }.onFailure { WeLogger.w(TAG, "restore conversation row failed: $username", it) }
+            }.onFailure { e ->
+                WeLogger.w(
+                    TAG,
+                    "restore conversation row failed: $username cause=${e.cause?.message ?: e.message}",
+                    e,
+                )
+            }
         }
         if (restored > 0) WeLogger.i(TAG, "restoreHiddenRows: $restored restored")
         return restored
