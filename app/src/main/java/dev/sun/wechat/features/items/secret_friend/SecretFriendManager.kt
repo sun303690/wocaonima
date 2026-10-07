@@ -57,19 +57,15 @@ object SecretFriendManager : ClickableFeature() {
     }
 
     override fun onEnable() {
-        // 主控重新开启：主页会话隐藏开着时，把关闭期间恢复显示的密友会话行重新隐藏
-        if (HideConversations.isEnabled) {
-            HideConversations.removeSecretRows()
-        }
+        // 方案1：主控重新开启，隐藏靠 SQL 过滤(getWxIds)即可生效，无需删行恢复
         WeConversationApi.reloadConversations()
         WeLogger.i(TAG, "master enabled")
     }
 
     override fun onDisable() {
-        // 主控关闭：不动名单存储，仅恢复被删除的会话行并放行所有过滤
-        // （此时 getWxIds 已因主控关闭返回空，reconcile 内 removeSecretRows 为空操作）
+        // 主控关闭：getWxIds 返回空 → 查询全部放行 → 密友会话行自然显示
         HideConversations.reconcileOnListChange()
-        WeLogger.i(TAG, "master disabled: hiding disabled, rows restored, list kept")
+        WeLogger.i(TAG, "master disabled: hiding disabled, list kept")
         showToast("密友功能已关闭，密友已恢复显示；名单已保留")
     }
 }

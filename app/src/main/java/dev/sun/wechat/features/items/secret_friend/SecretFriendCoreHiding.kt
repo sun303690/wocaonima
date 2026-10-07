@@ -86,18 +86,16 @@ object HideConversations : SwitchFeature(), IResolveDex,
             }
         }
 
-        // 再次开启时把已恢复显示的会话行重新隐藏（删行=已验证的隐藏机制）：
-        // 关闭→开启期间 DB 无变化，适配器不会因开关翻转自己重建，必须主动删行+刷新。
-        // 启动早期 storage 未就绪时失败无碍——首屏列表查询本身已被过滤。
-        removeSecretRows()
+        // 方案1：不删行，仅靠 SQL 过滤隐藏。开启后首屏列表查询即被 rewriteConversationSql 过滤，
+        // 无需主动删行；临时显示只需放行 getWxIds + reload 即可显示（避免 8.0.78 insert 恢复失败）。
         WeConversationApi.reloadConversations()
     }
 
     override fun onDisable() {
         runCatching { WeDatabaseListenerApi.removeListener(this) }
             .onFailure { WeLogger.e(TAG, "removeListener failed", it) }
-        // 关闭后立即恢复：重建此前为隐藏而删除的会话行并刷新列表
-        restoreHiddenRows()
+        // 方案1：隐藏靠 SQL 过滤，不删行不恢复行；关闭后刷新列表触发重新查询（getWxIds 空→放行全部）
+        WeConversationApi.reloadConversations()
         WeConversationApi.reloadConversations()
     }
 
@@ -126,14 +124,13 @@ object HideConversations : SwitchFeature(), IResolveDex,
 
     /** 密友会话行写入处置：原生删除会话行（delChatContact 语义，不删聊天记录）并刷新列表。 */
     private fun onConversationRowWrite(username: String) {
+        // 方案1：不删行，仅靠 SQL 过滤隐藏（主页会话列表由 rewriteWrapperSql/rewriteConversationSql
+        // 在查询时排除密友）。这样临时显示只需放行 getWxIds + reload 即可显示，无需 insert 恢复
+        // （8.0.78 的 insert 恢复会上抛 InvocationTargetException，导致临显后行回不来）。
+        // 不做 hideConversation 物理删行。
         if (SecretFriendState.isTemporarilyShown()) return
         if (!SecretFriendState.isSecret(username)) return
-
-        WeLogger.d(TAG, "secret conversation row written, removing: $username")
-        runOnUiThread {
-            WeConversationApi.hideConversation(username)
-            WeConversationApi.reloadConversations()
-        }
+        WeLogger.d(TAG, "secret conversation row written (filtered at query time): $username")
     }
 
     // ── 会话行快照与临时解除重建 ──
@@ -289,12 +286,10 @@ object HideConversations : SwitchFeature(), IResolveDex,
      * 再把仍在名单中的密友行重新隐藏（临时显示态除外），最后刷新列表。
      */
     fun reconcileOnListChange() {
-        val restored = restoreHiddenRows()
-        if (!SecretFriendState.isTemporarilyShown()) {
-            removeSecretRows()
-        }
+        // 方案1：不删行、不恢复行。隐藏与临显都靠 SQL 过滤的 getWxIds 动态决定，
+        // 名单变更后只需刷新列表触发重新查询即可（查询时按当前 getWxIds 过滤/放行）。
         WeConversationApi.reloadConversations()
-        WeLogger.i(TAG, "reconcileOnListChange: restored=$restored")
+        WeLogger.i(TAG, "reconcileOnListChange: reload requested")
     }
 
     /** 密友会话行新入库（新消息到达）即删 + 刷新，兜住 wrapper 规则之外的查询形状。 */

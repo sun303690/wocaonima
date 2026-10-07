@@ -210,8 +210,8 @@ object SecretFriendState {
         KvStore.putLong(KEY_TEMP_UNTIL, until)
         WeLogger.i(TAG, "temporarily showing secret friends for $minutes min")
         showToastIfEnabled(context, toastTempShown)
-        // 此前为隐藏而删除的会话行在此重建，否则临时解除后列表无行可显
-        HideConversations.restoreHiddenRows()
+        // 方案1：隐藏靠 SQL 过滤(getWxIds)，不删行；临显时 getWxIds 返回空 → 查询放行→显示。
+        // 无需 restoreHiddenRows(insert 在 8.0.78 会失败)。
         WeConversationApi.reloadConversations()
         scheduleTempExpiry(until)
     }
@@ -240,8 +240,8 @@ object SecretFriendState {
         KvStore.putLong(KEY_TEMP_UNTIL, 0L)
         WeLogger.i(TAG, "temporarily-show state cleared")
         showToastIfEnabled(context, toastTempOff)
-        // 临时展示期间新产生的会话行统一删除（reload 不会重建列表，必须删行才隐藏）
-        HideConversations.removeSecretRows()
+        // 方案1：临时显示结束，getWxIds 重新返回名单 → 查询再次过滤 → 隐藏好友自动消失。
+        // 无需 removeSecretRows 删行。
         WeConversationApi.reloadConversations()
     }
 
