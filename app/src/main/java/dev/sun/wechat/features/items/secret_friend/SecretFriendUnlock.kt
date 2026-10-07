@@ -50,7 +50,7 @@ object MultiClickTitleUnlock : SwitchFeature() {
     var clickCount by prefOption("secret_friend_unlock_click_count", 3)
 
     /** 计次窗口毫秒数（默认 1000）。 */
-    var clickWindowMs by prefOption("secret_friend_unlock_click_window_ms", 1000)
+    var clickWindowMs by prefOption("secret_friend_unlock_click_window_ms", 3000)
 
     private var clickCounter = 0
     private var lastClickAt = 0L
