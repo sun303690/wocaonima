@@ -49,8 +49,8 @@ object MultiClickTitleUnlock : SwitchFeature() {
     /** 触发所需连续点击次数（默认 3）。 */
     var clickCount by prefOption("secret_friend_unlock_click_count", 3)
 
-    /** 计次窗口毫秒数（默认 1000）。 */
-    var clickWindowMs by prefOption("secret_friend_unlock_click_window_ms", 3000)
+    /** 计次窗口毫秒数（默认 8000，8 秒内点 3 次即可，人手速从容）。 */
+    var clickWindowMs by prefOption("secret_friend_unlock_click_window_ms", 8000)
 
     private var clickCounter = 0
     private var lastClickAt = 0L
@@ -110,7 +110,7 @@ object LongPressTitleUnlock : SwitchFeature() {
     private const val TAG = "LongPressTitleUnlock"
 
     /** 长按触发时长毫秒（默认 800）。 */
-    var longPressMs by prefOption("secret_friend_long_press_ms", 800)
+    var longPressMs by prefOption("secret_friend_long_press_ms", 1000)
 
     private val handler = Handler(Looper.getMainLooper())
     private var pending = false
@@ -118,13 +118,11 @@ object LongPressTitleUnlock : SwitchFeature() {
     private val triggerRunnable = Runnable {
         if (!pending) return@Runnable
         pending = false
-        if (SecretFriendState.isTemporarilyShown()) {
-            WeLogger.i(TAG, "title long-press: restoring hidden state")
-            SecretFriendState.tempOff()
-        } else {
-            WeLogger.i(TAG, "title long-press unlock triggered")
-            SecretFriendState.tempShowForMinutes()
-        }
+        // 长按只负责"开启/续期临时显示"，不 toggle 关闭——否则与「多击标题」同区域抢触发时，
+        // 三击刚开出临显、长按又把它的临显关掉(日志: 三击触发0.26秒后被长按 tempOff 清空，
+        // 表现为"提示显示成功但好友不显示")。关闭交给 #hide/到期/锁屏/离开。
+        WeLogger.i(TAG, "title long-press unlock triggered")
+        SecretFriendState.tempShowForMinutes()
     }
 
     override fun onEnable() {
