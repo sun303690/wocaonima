@@ -47,7 +47,9 @@ import dev.sun.wechat.ui.content.TextButton
 import dev.sun.wechat.ui.content.m3.BaseWidget
 import dev.sun.wechat.ui.content.m3.DropDownMenuWidget
 import dev.sun.wechat.ui.content.m3.DropdownOption
+import dev.sun.wechat.ui.content.m3.IntNumberPickerWidget
 import dev.sun.wechat.ui.content.m3.SegmentedColumn
+import kotlin.math.roundToInt
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToast
 import java.util.concurrent.ConcurrentHashMap
@@ -288,10 +290,11 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     private fun showConfigDialog(context: ComponentActivity) {
         dev.sun.wechat.ui.utils.showComposeDialog(context, directlyDismissable = false) {
             val promptInput = remember { mutableStateOf(systemPrompt) }
-            val temperatureInput = remember { mutableStateOf(temperature.toString()) }
-            val tokensInput = remember { mutableStateOf(maxTokens.toString()) }
-            val roundsInput = remember { mutableStateOf(contextRounds.toString()) }
-            val delayInput = remember { mutableStateOf(replyDelayMs.toString()) }
+            val personaKeyInput = remember { mutableStateOf(personaKeyOf(systemPrompt)) }
+            val temperatureTenInput = remember { mutableStateOf((temperature * 10).roundToInt().coerceIn(0, 20)) }
+            val tokensInput = remember { mutableStateOf(maxTokens.coerceIn(1, MAX_OUTPUT_TOKENS)) }
+            val roundsInput = remember { mutableStateOf(contextRounds.coerceIn(0, MAX_CONTEXT_ROUNDS)) }
+            val delayInput = remember { mutableStateOf(replyDelayMs.coerceIn(0L, MAX_REPLY_DELAY_MS).toInt()) }
             val modeInput = remember { mutableStateOf(listMode) }
             val whitelistInput = remember { mutableStateOf(whitelist) }
             val blacklistInput = remember { mutableStateOf(blacklist) }
@@ -322,36 +325,74 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                 title = { Text(stringResource(R.string.ai_chat_config_title)) },
                 text = {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
+                        DropDownMenuWidget(
+                            iconPlaceholder = false,
+                            title = "人物设定",
+                            description = "选一个人物设定自动填入系统人设，之后可手动微调",
+                            value = personaKeyInput.value,
+                            options = listOf(DropdownOption(PERSONA_CUSTOM, "自定义")) +
+                                AI_PERSONAS.map { DropdownOption(it.key, it.name) },
+                            onValueChange = { key ->
+                                personaKeyInput.value = key
+                                if (key != PERSONA_CUSTOM) {
+                                    promptInput.value = AI_PERSONAS.first { it.key == key }.prompt
+                                }
+                            },
+                        )
                         FieldRow(
                             label = stringResource(R.string.ai_chat_system_prompt),
                             value = promptInput.value,
-                            onValueChange = { promptInput.value = it },
+                            onValueChange = {
+                                promptInput.value = it
+                                personaKeyInput.value = personaKeyOf(it)
+                            },
                             description = stringResource(R.string.ai_chat_system_prompt_description),
                             singleLine = false,
                         )
-                        FieldRow(
-                            label = stringResource(R.string.ai_chat_temperature),
-                            value = temperatureInput.value,
-                            onValueChange = { temperatureInput.value = it.filter { c -> c.isDigit() || c == '.' } },
-                            description = stringResource(R.string.ai_chat_temperature_description),
+                        Spacer(Modifier.height(8.dp))
+                        IntNumberPickerWidget(
+                            iconPlaceholder = false,
+                            title = stringResource(R.string.ai_chat_temperature),
+                            description = "0~20，数值 ÷10 即温度（0.0~2.0），越大越有创造性",
+                            value = temperatureTenInput.value,
+                            startInt = 0,
+                            endInt = 20,
+                            stepSize = 1,
+                            valueSuffix = "",
+                            onValueChange = { temperatureTenInput.value = it },
                         )
-                        FieldRow(
-                            label = stringResource(R.string.ai_chat_max_tokens),
-                            value = tokensInput.value,
-                            onValueChange = { tokensInput.value = it.filter(Char::isDigit) },
+                        IntNumberPickerWidget(
+                            iconPlaceholder = false,
+                            title = stringResource(R.string.ai_chat_max_tokens),
                             description = stringResource(R.string.ai_chat_max_tokens_description),
+                            value = tokensInput.value,
+                            startInt = 256,
+                            endInt = MAX_OUTPUT_TOKENS,
+                            stepSize = 256,
+                            valueSuffix = " tokens",
+                            onValueChange = { tokensInput.value = it },
                         )
-                        FieldRow(
-                            label = stringResource(R.string.ai_chat_context_rounds),
-                            value = roundsInput.value,
-                            onValueChange = { roundsInput.value = it.filter(Char::isDigit) },
+                        IntNumberPickerWidget(
+                            iconPlaceholder = false,
+                            title = stringResource(R.string.ai_chat_context_rounds),
                             description = stringResource(R.string.ai_chat_context_rounds_description),
+                            value = roundsInput.value,
+                            startInt = 0,
+                            endInt = MAX_CONTEXT_ROUNDS,
+                            stepSize = 1,
+                            valueSuffix = " 轮",
+                            onValueChange = { roundsInput.value = it },
                         )
-                        FieldRow(
-                            label = stringResource(R.string.ai_chat_reply_delay),
-                            value = delayInput.value,
-                            onValueChange = { delayInput.value = it.filter(Char::isDigit) },
+                        IntNumberPickerWidget(
+                            iconPlaceholder = false,
+                            title = stringResource(R.string.ai_chat_reply_delay),
                             description = stringResource(R.string.ai_chat_reply_delay_description),
+                            value = delayInput.value,
+                            startInt = 0,
+                            endInt = MAX_REPLY_DELAY_MS.toInt(),
+                            stepSize = 1000,
+                            valueSuffix = " ms",
+                            onValueChange = { delayInput.value = it },
                         )
                         Spacer(Modifier.height(8.dp))
                         DropDownMenuWidget(
@@ -393,10 +434,10 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                     Button(onClick = {
                         val previous = snapshot()
                         systemPrompt = promptInput.value.trim()
-                        temperature = temperatureInput.value.toFloatOrNull()?.coerceIn(0f, 2f) ?: temperature
-                        maxTokens = tokensInput.value.toIntOrNull()?.coerceIn(1, MAX_OUTPUT_TOKENS) ?: maxTokens
-                        contextRounds = roundsInput.value.toIntOrNull()?.coerceIn(0, MAX_CONTEXT_ROUNDS) ?: contextRounds
-                        replyDelayMs = delayInput.value.toLongOrNull()?.coerceIn(0L, MAX_REPLY_DELAY_MS) ?: replyDelayMs
+                        temperature = (temperatureTenInput.value / 10f).coerceIn(0f, 2f)
+                        maxTokens = tokensInput.value.coerceIn(1, MAX_OUTPUT_TOKENS)
+                        contextRounds = roundsInput.value.coerceIn(0, MAX_CONTEXT_ROUNDS)
+                        replyDelayMs = delayInput.value.toLong().coerceIn(0L, MAX_REPLY_DELAY_MS)
                         listMode = modeInput.value
                         whitelist = whitelistInput.value
                         blacklist = blacklistInput.value
