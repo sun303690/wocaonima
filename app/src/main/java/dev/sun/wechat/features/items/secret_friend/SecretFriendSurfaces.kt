@@ -211,8 +211,8 @@ object HideStorageCache : SwitchFeature(), IResolveDex {
     }
 
     // 兜底锚点：形参漂移（(List,int) void）时接管。allowMultiple：同页还有记录列表同款方法，
-    // 多命中时取 resultIndex 1（缓存列表通常是第二个装配方法）。
-    private val methodCleanCacheListInstallerAlt by dexMethod(resultIndex = 1, allowMultiple = true, allowFailure = true) {
+    // 多命中取首个，确定性降级（精确形状靠诊断日志下一轮对齐）。
+    private val methodCleanCacheListInstallerAlt by dexMethod(allowMultiple = true, allowFailure = true) {
         searchPackages("com.tencent.mm.plugin.clean")
         matcher {
             paramCount(2)
