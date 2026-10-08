@@ -267,19 +267,18 @@ object AutoRestoreOnLeave : SwitchFeature(), IResolveDex {
         ChattingUI::class.reflekt()
             .firstMethod { name = "onPause" }
             .hookAfter {
-                if (SecretFriendState.isTemporarilyShown()) return@hookAfter
+                // 离开对话即恢复隐藏（含临时显示：点三次显示后切后台立即隐藏，防盗看）
                 WeLogger.d(TAG, "leaving conversation, restoring hidden state")
                 SecretFriendState.tempOff()
             }
 
-        // 离开主页 / 微信失焦即恢复隐藏（临时显示期间不清除）
+        // 离开主页 / 微信失焦即恢复隐藏（含临时显示）
         LauncherUI::class.reflekt()
             .firstMethod {
                 name = "onPause"
                 superclass()
             }
             .hookAfter {
-                if (SecretFriendState.isTemporarilyShown()) return@hookAfter
                 WeLogger.d(TAG, "leaving home screen, restoring hidden state")
                 SecretFriendState.tempOff()
             }
@@ -287,7 +286,6 @@ object AutoRestoreOnLeave : SwitchFeature(), IResolveDex {
         if (!methodLauncherFocusChanged.isPlaceholder) {
             methodLauncherFocusChanged.hookAfter {
                 val hasFocus = args.getOrNull(0) as? Boolean ?: return@hookAfter
-                if (SecretFriendState.isTemporarilyShown()) return@hookAfter
                 if (!hasFocus) {
                     WeLogger.d(TAG, "WeChat lost window focus, restoring hidden state")
                     SecretFriendState.tempOff()
