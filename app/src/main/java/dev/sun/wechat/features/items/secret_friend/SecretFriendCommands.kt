@@ -116,7 +116,7 @@ object SearchCommandTempUnhide : SwitchFeature() {
 object InputBarTempShowCommand : SwitchFeature(), dev.sun.wechat.features.api.ui.WeChatInputBarApi.IInputBarListener {
 
     override val technicalId = "输入栏#show临时显示"
-    override val nameRes: Int = R.string.secret_friend_02_name
+    override val nameRes: Int = R.string.secret_friend_33_name
     override val categoryIds: List<String> = listOf(FeatureCategoryIds.SECRET_FRIEND)
     override val descriptionRes: Int? = null
 
