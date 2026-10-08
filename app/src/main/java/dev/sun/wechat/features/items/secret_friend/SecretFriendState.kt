@@ -56,6 +56,24 @@ object SecretFriendState {
     /** 临时解除时长（分钟），可在「临时解除指令」下方调整。 */
     var tempShowMinutes by prefOption("secret_friend_temp_minutes", DEFAULT_TEMP_SHOW_MINUTES)
 
+    /** 最近一次「多击标题解锁」触发时间（elapsedRealtime 毫秒）；供长按解锁去重。 */
+    @Volatile
+    private var lastMultiClickUnlockAt = 0L
+
+    /** 记录一次多击标题解锁触发（供长按解锁在短时间窗内去重）。 */
+    fun noteMultiClickUnlock() {
+        lastMultiClickUnlockAt = android.os.SystemClock.elapsedRealtime()
+    }
+
+    /**
+     * 是否刚触发过多击标题解锁（[windowMs] 内）。
+     * 三连击的末次触摸常残留一个长按计时器，~250ms 后误触发长按解锁（日志实证）：
+     * 幂等无实际危害，但会在「用户已离开屏幕、临显刚被清除」的窄窗口把临显复活，
+     * 故长按解锁在此时间窗内直接跳过。
+     */
+    fun isRecentMultiClickUnlock(windowMs: Long): Boolean =
+        android.os.SystemClock.elapsedRealtime() - lastMultiClickUnlockAt < windowMs
+
     /**
      * MaskWechat MaskItemBean 的 Kotlin 对应（五字段全保留）。
      * [tipMess] 即 MaskItemBean.TipData.mess；[mapId] 为伪装映射 id。

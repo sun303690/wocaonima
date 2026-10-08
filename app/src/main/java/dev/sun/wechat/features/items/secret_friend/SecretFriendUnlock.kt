@@ -85,6 +85,7 @@ object MultiClickTitleUnlock : SwitchFeature() {
             if (clickCounter >= clickCount.coerceAtLeast(2)) {
                 clickCounter = 0
                 WeLogger.i(TAG, "title multi-click unlock triggered")
+                SecretFriendState.noteMultiClickUnlock()
                 SecretFriendState.tempShowForMinutes(activity)
             }
         }
@@ -118,6 +119,12 @@ object LongPressTitleUnlock : SwitchFeature() {
     private val triggerRunnable = Runnable {
         if (!pending) return@Runnable
         pending = false
+        // 多击标题刚触发过（同一手势序列的残留长按计时器，日志实证 ~250ms 后误触发）：跳过，
+        // 避免在「用户已离开屏幕、临显刚被 AutoRestoreOnLeave 清除」的窄窗口把临显复活。
+        if (SecretFriendState.isRecentMultiClickUnlock(1500)) {
+            WeLogger.d(TAG, "long-press trigger suppressed (recent multi-click unlock)")
+            return@Runnable
+        }
         // 长按只负责"开启/续期临时显示"，不 toggle 关闭——否则与「多击标题」同区域抢触发时，
         // 三击刚开出临显、长按又把它的临显关掉(日志: 三击触发0.26秒后被长按 tempOff 清空，
         // 表现为"提示显示成功但好友不显示")。关闭交给 #hide/到期/锁屏/离开。
@@ -160,6 +167,20 @@ object LongPressTitleUnlock : SwitchFeature() {
                 }
             }
         }
+
+        // 离开主页（切聊天/切后台/退桌面）立即取消待触发的长按计时器：
+        // 否则用户点标题后立刻离开，计时器在屏幕外触发会把已被清除的临显"复活"。
+        runCatching {
+            LauncherUI::class.reflekt()
+                .firstMethod {
+                    name = "onPause"
+                    superclass()
+                }
+                .hookAfter {
+                    pending = false
+                    handler.removeCallbacks(triggerRunnable)
+                }
+        }.onFailure { WeLogger.w(TAG, "attach onPause cancel hook failed", it) }
     }
 }
 
