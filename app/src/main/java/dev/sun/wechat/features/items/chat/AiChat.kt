@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.dp
 import com.composables.icons.materialsymbols.MaterialSymbols
 import com.composables.icons.materialsymbols.outlined.Auto_awesome
 import com.composables.icons.materialsymbols.outlined.Chevron_right
+import com.composables.icons.materialsymbols.outlined.Delete
+import com.composables.icons.materialsymbols.outlined.Save
 import dev.sun.wechat.R
 import dev.sun.wechat.agent.data.WeAgentRepository
 import dev.sun.wechat.agent.data.WeAgentSettings

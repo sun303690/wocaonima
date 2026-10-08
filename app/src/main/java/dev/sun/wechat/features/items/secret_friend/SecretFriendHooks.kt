@@ -6,6 +6,7 @@ import dev.ujhhgtg.reflekt.reflekt
 import dev.ujhhgtg.reflekt.utils.makeAccessible
 import dev.sun.wechat.constants.PackageNames
 import dev.sun.wechat.dexkit.dsl.DexMethodDelegate
+import dev.sun.wechat.dexkit.dsl.findClassData
 import dev.sun.wechat.features.core.BaseFeature
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.reflection.BString
