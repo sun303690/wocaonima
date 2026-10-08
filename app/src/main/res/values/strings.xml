@@ -793,7 +793,6 @@
     <string name="secret_friend_30_name">长按标题解除</string>
     <string name="secret_friend_31_name">锁屏隐藏</string>
     <string name="secret_friend_32_name">离开对话/离开微信隐藏</string>
-    <string name="secret_friend_33_name">输入栏临时显示指令</string>
     <string name="feature_qq_music_order_name">QQ Music ordering</string>
     <string name="feature_qq_music_order_description">Send “点歌 &lt;song&gt;” in a chat to search QQ Music and send a music card</string>
     <string name="qq_music_order_trigger_hint">Trigger word</string>
