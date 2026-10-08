@@ -140,15 +140,20 @@ internal fun BaseFeature.dumpDiscoverCandidates(dexKit: DexKitBridge, tag: Strin
                 "com.tencent.mm.plugin.discover.ui.DiscoverUI",
             )
         ) {
-            val found = dexKit.findClass { searchClasses(name) }.isNotEmpty()
+            val found = dexKit.findClassData(name) != null
             WeLogger.w(tag, "discover probe: $name exists=$found")
         }
+        // 包内 UI 类枚举：走 searchPackages 的 FindClass（可用的公开 API）
         for (pkg in listOf("com.tencent.mm.ui.discover", "com.tencent.mm.plugin.discover.ui")) {
-            val uiClasses = dexKit.findClass { searchPackages(pkg) }
-                .map { it.name }
+            val uiClasses = runCatching {
+                dexKit.findClass {
+                    searchPackages(pkg)
+                }.map { it.name }
+            }.getOrDefault(emptyList())
+            val filtered = uiClasses
                 .filter { it.substringAfterLast('.').endsWith("UI") || it.contains("Discover") }
                 .take(40)
-            WeLogger.w(tag, "discover class candidates in $pkg: ${uiClasses.size}\n" + uiClasses.joinToString("\n"))
+            WeLogger.w(tag, "discover class candidates in $pkg: ${filtered.size}\n" + filtered.joinToString("\n"))
         }
     }.onFailure { WeLogger.w(tag, "discover diagnostics failed", it) }
 }

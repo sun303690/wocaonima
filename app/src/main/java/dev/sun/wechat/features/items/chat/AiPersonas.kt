@@ -7,6 +7,11 @@ package dev.sun.wechat.features.items.chat
  * 在 AI 聊天配置界面选一个人物设定，会把对应提示词填入「系统人设」，
  * 用户仍可在此基础上手动微调。key 唯一，用于在界面上反查当前选中项。
  */
+import dev.sun.wechat.data.KvStore
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
+
 internal data class AiPersona(val key: String, val name: String, val prompt: String)
 
 internal val AI_PERSONAS: List<AiPersona> = listOf(
@@ -80,6 +85,49 @@ internal val AI_PERSONAS: List<AiPersona> = listOf(
 /** 自定义人物设定的 key。 */
 internal const val PERSONA_CUSTOM = "custom"
 
-/** 根据系统提示词反查当前命中的模板 key；不匹配任何模板时返回 [PERSONA_CUSTOM]。 */
-internal fun personaKeyOf(systemPrompt: String): String =
-    AI_PERSONAS.firstOrNull { it.prompt == systemPrompt }?.key ?: PERSONA_CUSTOM
+/** 自定义人设条目在 KvStore 里的 key 前缀，用于在下拉里区分内置与用户自建。 */
+internal const val CUSTOM_PERSONA_PREFIX = "custom:"
+private const val CUSTOM_PERSONAS_PREF = "ai_chat_custom_personas"
+
+@Serializable
+internal data class CustomPersona(val name: String, val prompt: String)
+
+private val personaJson = Json {
+    ignoreUnknownKeys = true
+    encodeDefaults = true
+}
+
+private val customPersonaSerializer = ListSerializer(CustomPersona.serializer())
+
+/** 已保存的自定义人设（按名字去重，保持存入顺序）。 */
+internal fun loadCustomPersonas(): List<CustomPersona> =
+    runCatching {
+        personaJson.decodeFromString(
+            customPersonaSerializer,
+            KvStore.getStringOrDef(CUSTOM_PERSONAS_PREF, "[]"),
+        )
+    }.getOrDefault(emptyList())
+
+internal fun saveCustomPersona(name: String, prompt: String) {
+    val trimmed = name.trim()
+    if (trimmed.isEmpty()) return
+    val merged = loadCustomPersonas().filterNot { it.name == trimmed } + CustomPersona(trimmed, prompt)
+    KvStore.putString(CUSTOM_PERSONAS_PREF, personaJson.encodeToString(customPersonaSerializer, merged))
+}
+
+internal fun deleteCustomPersona(name: String) {
+    val remaining = loadCustomPersonas().filterNot { it.name == name.trim() }
+    KvStore.putString(CUSTOM_PERSONAS_PREF, personaJson.encodeToString(customPersonaSerializer, remaining))
+}
+
+/**
+ * 根据系统提示词反查当前命中的模板 key；不匹配任何模板时返回 [PERSONA_CUSTOM]。
+ * 自定义条目的 key 形如 `custom:我的分身`，便于在下拉里高亮。
+ */
+internal fun personaKeyOf(systemPrompt: String): String {
+    AI_PERSONAS.firstOrNull { it.prompt == systemPrompt }?.let { return it.key }
+    loadCustomPersonas().firstOrNull { it.prompt == systemPrompt }?.let {
+        return CUSTOM_PERSONA_PREFIX + it.name
+    }
+    return PERSONA_CUSTOM
+}

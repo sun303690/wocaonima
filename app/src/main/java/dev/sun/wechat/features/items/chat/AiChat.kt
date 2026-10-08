@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -298,6 +299,9 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
             val modeInput = remember { mutableStateOf(listMode) }
             val whitelistInput = remember { mutableStateOf(whitelist) }
             val blacklistInput = remember { mutableStateOf(blacklist) }
+            val customPersonasInput = remember { mutableStateOf(loadCustomPersonas()) }
+            val showSavePersonaDialog = remember { mutableStateOf(false) }
+            val personaNameInput = remember { mutableStateOf("") }
             val localizedContext by rememberUpdatedState(LocalWeKitLocalizedContext.current)
 
             fun openPicker() {
@@ -331,11 +335,23 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                             description = "选一个人物设定自动填入系统人设，之后可手动微调",
                             value = personaKeyInput.value,
                             options = listOf(DropdownOption(PERSONA_CUSTOM, "自定义")) +
-                                AI_PERSONAS.map { DropdownOption(it.key, it.name) },
+                                AI_PERSONAS.map { DropdownOption(it.key, it.name) } +
+                                customPersonasInput.value.map {
+                                    DropdownOption(CUSTOM_PERSONA_PREFIX + it.name, it.name)
+                                },
                             onValueChange = { key ->
                                 personaKeyInput.value = key
-                                if (key != PERSONA_CUSTOM) {
-                                    promptInput.value = AI_PERSONAS.first { it.key == key }.prompt
+                                when {
+                                    key == PERSONA_CUSTOM -> { /* 自定义：保持当前 prompt 不变 */ }
+                                    key.startsWith(CUSTOM_PERSONA_PREFIX) -> {
+                                        val name = key.removePrefix(CUSTOM_PERSONA_PREFIX)
+                                        customPersonasInput.value.firstOrNull { it.name == name }?.let {
+                                            promptInput.value = it.prompt
+                                        }
+                                    }
+                                    else -> AI_PERSONAS.firstOrNull { it.key == key }?.let {
+                                        promptInput.value = it.prompt
+                                    }
                                 }
                             },
                         )
@@ -349,6 +365,45 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                             description = stringResource(R.string.ai_chat_system_prompt_description),
                             singleLine = false,
                         )
+                        if (personaKeyInput.value == PERSONA_CUSTOM && promptInput.value.isNotBlank()) {
+                            BaseWidget(
+                                iconPlaceholder = false,
+                                title = "保存为我的设定",
+                                description = "把当前系统人设定个名字存起来，下次直接从下拉里选",
+                                onClick = {
+                                    personaNameInput.value = ""
+                                    showSavePersonaDialog.value = true
+                                },
+                                trailingContent = {
+                                    Icon(
+                                        MaterialSymbols.Outlined.Save,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                },
+                            )
+                        }
+                        if (personaKeyInput.value.startsWith(CUSTOM_PERSONA_PREFIX)) {
+                            BaseWidget(
+                                iconPlaceholder = false,
+                                title = "删除此设定",
+                                description = "从我的设定里移除「" +
+                                    personaKeyInput.value.removePrefix(CUSTOM_PERSONA_PREFIX) + "」",
+                                onClick = {
+                                    val name = personaKeyInput.value.removePrefix(CUSTOM_PERSONA_PREFIX)
+                                    deleteCustomPersona(name)
+                                    customPersonasInput.value = loadCustomPersonas()
+                                    personaKeyInput.value = PERSONA_CUSTOM
+                                },
+                                trailingContent = {
+                                    Icon(
+                                        MaterialSymbols.Outlined.Delete,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                },
+                            )
+                        }
                         Spacer(Modifier.height(8.dp))
                         IntNumberPickerWidget(
                             iconPlaceholder = false,
@@ -456,6 +511,38 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                 },
                 dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.dialog_cancel)) } },
             )
+            if (showSavePersonaDialog.value) {
+                AlertDialog(
+                    onDismissRequest = { showSavePersonaDialog.value = false },
+                    icon = { Icon(MaterialSymbols.Outlined.Save, contentDescription = null) },
+                    title = { Text("保存人物设定") },
+                    text = {
+                        OutlinedTextField(
+                            value = personaNameInput.value,
+                            onValueChange = { personaNameInput.value = it },
+                            label = { Text("设定名称（如：我的分身）") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    },
+                    confirmButton = {
+                        Button(onClick = {
+                            val name = personaNameInput.value.trim()
+                            if (name.isNotEmpty()) {
+                                saveCustomPersona(name, promptInput.value)
+                                customPersonasInput.value = loadCustomPersonas()
+                                personaKeyInput.value = CUSTOM_PERSONA_PREFIX + name
+                                showSavePersonaDialog.value = false
+                            }
+                        }) { Text(stringResource(R.string.action_save)) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showSavePersonaDialog.value = false }) {
+                            Text(stringResource(R.string.dialog_cancel))
+                        }
+                    },
+                )
+            }
         }
     }
 
