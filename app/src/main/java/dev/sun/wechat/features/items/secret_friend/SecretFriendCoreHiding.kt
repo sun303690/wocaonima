@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.ContentValues
 import android.util.Base64
 import com.tencent.mm.plugin.profile.ui.ContactInfoUI
+import com.tencent.mm.ui.LauncherUI
 import com.tencent.mm.ui.chatting.ChattingUI
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.dexMethod
@@ -89,6 +90,24 @@ object HideConversations : SwitchFeature(), IResolveDex,
         // 方案1：不删行，仅靠 SQL 过滤隐藏。开启后首屏列表查询即被 rewriteConversationSql 过滤，
         // 无需主动删行；临时显示只需放行 getWxIds + reload 即可显示（避免 8.0.78 insert 恢复失败）。
         WeConversationApi.reloadConversations()
+
+        // 前台恢复兜底：后台期间密友来消息会增量更新内存会话列表（绕过 SQL 过滤），onResume 时
+        // 强制按过滤后的 DB 重新查询，把混进内存的密友会话刷掉。这是「退后台再打开微信密友重新
+        // 出现」的确定性修法（后台增量更新与 onConversationRowWrite 的 reload 存在线程竞态，
+        // onResume 在主线程、晚于全部后台处理，可确定性地清掉）。临时显示/无密友时放行不刷。
+        runCatching {
+            LauncherUI::class.reflekt()
+                .firstMethod {
+                    name = "onResume"
+                    superclass()
+                }
+                .hookAfter {
+                    if (SecretFriendState.isTemporarilyShown()) return@hookAfter
+                    if (SecretFriendState.getWxIds().isEmpty()) return@hookAfter
+                    WeLogger.d(TAG, "foreground resumed, forcing filtered conversation reload")
+                    WeConversationApi.reloadConversations()
+                }
+        }.onFailure { WeLogger.w(TAG, "attach onResume reload hook failed", it) }
     }
 
     override fun onDisable() {
@@ -122,15 +141,21 @@ object HideConversations : SwitchFeature(), IResolveDex,
             ?: rewriteWrapperSql(sql, SecretFriendState.getWxIds())
     }
 
-    /** 密友会话行写入处置：原生删除会话行（delChatContact 语义，不删聊天记录）并刷新列表。 */
+    /** 密友会话行写入处置：新消息到达时强制会话列表按过滤后的 DB 重新查询。 */
     private fun onConversationRowWrite(username: String) {
         // 方案1：不删行，仅靠 SQL 过滤隐藏（主页会话列表由 rewriteWrapperSql/rewriteConversationSql
         // 在查询时排除密友）。这样临时显示只需放行 getWxIds + reload 即可显示，无需 insert 恢复
         // （8.0.78 的 insert 恢复会上抛 InvocationTargetException，导致临显后行回不来）。
         // 不做 hideConversation 物理删行。
+        //
+        // 关键：密友发新消息时微信走【增量更新内存会话列表】（不走 DB 查询），SQL 过滤被绕过，
+        // 密友会话会重新出现在主页且要重启微信才恢复。这里 reloadConversations() 强制列表
+        // 按当前 getWxIds 重新查询（查询走被 hook 的 rawQuery → 注入 NOT IN），把混进内存的
+        // 密友会话刷掉；DB 行保留，未读圆点/角标仍在（符合「隐藏但保留提示圆点」的诉求）。
         if (SecretFriendState.isTemporarilyShown()) return
         if (!SecretFriendState.isSecret(username)) return
-        WeLogger.d(TAG, "secret conversation row written (filtered at query time): $username")
+        WeLogger.d(TAG, "secret conversation row written, forcing filtered reload: $username")
+        WeConversationApi.reloadConversations()
     }
 
     // ── 会话行快照与临时解除重建 ──
