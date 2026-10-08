@@ -7,6 +7,7 @@ import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.utils.WeLogger
+import org.luckypray.dexkit.DexKitBridge
 
 /**
  * 外围界面组 7 / 10 / 12 / 13：最近转发、状态页、存储空间聊天记录、存储空间缓存。
@@ -41,9 +42,30 @@ object HideRecentForward : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.I
         }
     }
 
+    // 兜底锚点：版本漂移后装配方法追加第二参数（List,int）时主锚点会空手，用此形状接管。
+    // allowMultiple：包内可能有其他同款方法，多命中取首个，确定性降级。
+    private val methodTransmitListInstallerAlt by dexMethod(allowMultiple = true, allowFailure = true) {
+        searchPackages("com.tencent.mm.ui.transmit")
+        matcher {
+            paramCount(2)
+            paramTypes("java.util.List", "int")
+            returnType(Void.TYPE)
+        }
+    }
+
+    override fun resolveDex(dexKit: DexKitBridge) {
+        if (methodTransmitListInstaller.isPlaceholder && methodTransmitListInstallerAlt.isPlaceholder) {
+            dumpSurfaceCandidates(dexKit, "com.tencent.mm.ui.transmit", "RecentForwardList")
+        }
+    }
+
     override fun onEnable() {
         WeDatabaseListenerApi.addListener(this)
-        hookSecretStringArgListFilter(methodTransmitListInstaller, "RecentForwardList")
+        hookSecretStringArgListFilter(
+            if (!methodTransmitListInstaller.isPlaceholder) methodTransmitListInstaller
+            else methodTransmitListInstallerAlt,
+            "RecentForwardList",
+        )
     }
 
     override fun onDisable() {
@@ -91,8 +113,28 @@ object HideStatusPage : SwitchFeature(), IResolveDex {
         }
     }
 
+    // 兜底锚点：装配方法形参漂移（(List,int) void）时接管。allowMultiple 防多命中抛错。
+    private val methodStatusListInstallerAlt by dexMethod(allowMultiple = true, allowFailure = true) {
+        searchPackages("com.tencent.mm.plugin.status")
+        matcher {
+            paramCount(2)
+            paramTypes("java.util.List", "int")
+            returnType(Void.TYPE)
+        }
+    }
+
+    override fun resolveDex(dexKit: DexKitBridge) {
+        if (methodStatusListInstaller.isPlaceholder && methodStatusListInstallerAlt.isPlaceholder) {
+            dumpSurfaceCandidates(dexKit, "com.tencent.mm.plugin.status", "StatusList")
+        }
+    }
+
     override fun onEnable() {
-        hookSecretStringArgListFilter(methodStatusListInstaller, "StatusList")
+        hookSecretStringArgListFilter(
+            if (!methodStatusListInstaller.isPlaceholder) methodStatusListInstaller
+            else methodStatusListInstallerAlt,
+            "StatusList",
+        )
     }
 }
 
@@ -122,8 +164,29 @@ object HideStorageRecords : SwitchFeature(), IResolveDex {
         }
     }
 
+    // 兜底锚点：形参漂移（(List,int) void）时接管。allowMultiple：同页还有缓存列表同款
+    // 方法，多命中时取首个（确定性降级，诊断日志会给出精确形状供下一轮对齐）。
+    private val methodCleanRecordListInstallerAlt by dexMethod(allowMultiple = true, allowFailure = true) {
+        searchPackages("com.tencent.mm.plugin.clean")
+        matcher {
+            paramCount(2)
+            paramTypes("java.util.List", "int")
+            returnType(Void.TYPE)
+        }
+    }
+
+    override fun resolveDex(dexKit: DexKitBridge) {
+        if (methodCleanRecordListInstaller.isPlaceholder && methodCleanRecordListInstallerAlt.isPlaceholder) {
+            dumpSurfaceCandidates(dexKit, "com.tencent.mm.plugin.clean", "StorageRecordList")
+        }
+    }
+
     override fun onEnable() {
-        hookSecretStringArgListFilter(methodCleanRecordListInstaller, "StorageRecordList")
+        hookSecretStringArgListFilter(
+            if (!methodCleanRecordListInstaller.isPlaceholder) methodCleanRecordListInstaller
+            else methodCleanRecordListInstallerAlt,
+            "StorageRecordList",
+        )
     }
 }
 
@@ -147,7 +210,28 @@ object HideStorageCache : SwitchFeature(), IResolveDex {
         }
     }
 
+    // 兜底锚点：形参漂移（(List,int) void）时接管。allowMultiple：同页还有记录列表同款方法，
+    // 多命中时取 resultIndex 1（缓存列表通常是第二个装配方法）。
+    private val methodCleanCacheListInstallerAlt by dexMethod(resultIndex = 1, allowMultiple = true, allowFailure = true) {
+        searchPackages("com.tencent.mm.plugin.clean")
+        matcher {
+            paramCount(2)
+            paramTypes("java.util.List", "int")
+            returnType(Void.TYPE)
+        }
+    }
+
+    override fun resolveDex(dexKit: DexKitBridge) {
+        if (methodCleanCacheListInstaller.isPlaceholder && methodCleanCacheListInstallerAlt.isPlaceholder) {
+            dumpSurfaceCandidates(dexKit, "com.tencent.mm.plugin.clean", "StorageCacheList")
+        }
+    }
+
     override fun onEnable() {
-        hookSecretStringArgListFilter(methodCleanCacheListInstaller, "StorageCacheList")
+        hookSecretStringArgListFilter(
+            if (!methodCleanCacheListInstaller.isPlaceholder) methodCleanCacheListInstaller
+            else methodCleanCacheListInstallerAlt,
+            "StorageCacheList",
+        )
     }
 }

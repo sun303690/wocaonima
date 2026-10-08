@@ -9,6 +9,7 @@ import dev.sun.wechat.dexkit.dsl.DexMethodDelegate
 import dev.sun.wechat.features.core.BaseFeature
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.reflection.BString
+import org.luckypray.dexkit.DexKitBridge
 import java.util.LinkedList
 
 /**
@@ -73,8 +74,12 @@ internal fun BaseFeature.hookSecretMvvmListFilter(target: DexMethodDelegate, lab
  * 通用「List 参数按条目 String 字段命中密友」过滤（最近转发 / 状态页 / 存储空间等
  * 结构式兜底共用）。条目类每版重命名，按「任一 String 字段值恰为密友 wxid」判定命中，
  * 与备份版群成员搜索过滤同一判定方式。找不到字段时整段跳过。
+ *
+ * List 参数**位置无关**：微信版本漂移会改变装配方法的形参个数/顺序
+ * （(List) / (List,int) / (int,List) …），hook 内扫描 args 找第一个非空 List 参数，
+ * 过滤结果写回同一位置。
  */
-internal fun BaseFeature.hookSecretStringArgListFilter(target: DexMethodDelegate, label: String, argIndex: Int = 0) {
+internal fun BaseFeature.hookSecretStringArgListFilter(target: DexMethodDelegate, label: String) {
     if (target.isPlaceholder) {
         WeLogger.w(TAG, "$label target wasn't resolved; that surface stays unfiltered")
         return
@@ -83,15 +88,69 @@ internal fun BaseFeature.hookSecretStringArgListFilter(target: DexMethodDelegate
         if (SecretFriendState.isEmpty() || SecretFriendState.isTemporarilyShown()) return@hookBefore
         val secrets = SecretFriendState.getWxIds()
 
-        val items = args.getOrNull(argIndex) as? List<*> ?: return@hookBefore
-        if (items.isEmpty()) return@hookBefore
+        val idx = args.indices
+            .firstOrNull { args[it] is List<*> && (args[it] as List<*>).isNotEmpty() }
+            ?: return@hookBefore
+        val items = args[idx] as List<*>
 
         val filtered = items.filterNot { it != null && entryMentionsSecret(it, secrets) }
         if (filtered.size == items.size) return@hookBefore
 
         WeLogger.d(TAG, "filtered ${items.size - filtered.size} secret entry(ies) out of $label")
-        args[argIndex] = ArrayList(filtered)
+        args[idx] = ArrayList(filtered)
     }
+}
+
+/**
+ * 版本诊断：外围界面结构锚点未解析时，枚举目标包内 void 1~2 参的候选方法写日志。
+ * 仅 resolveDex 阶段可跑（DexKitBridge 此时存活）；结果只进日志，不写任何委托状态。
+ * 拿到日志后即可按对应微信版本精确对齐 matcher（类名::方法名 完整签名）。
+ */
+internal fun BaseFeature.dumpSurfaceCandidates(dexKit: DexKitBridge, pkg: String, label: String) {
+    runCatching {
+        val candidates = mutableListOf<String>()
+        for (count in intArrayOf(1, 2)) {
+            dexKit.findMethod {
+                searchPackages(pkg)
+                matcher {
+                    paramCount(count)
+                    returnType(Void.TYPE)
+                }
+            }.take(30).forEach { m ->
+                candidates += "${m.className}::${m.methodName} ${m.methodSign}"
+            }
+        }
+        WeLogger.w(
+            TAG,
+            "$label unresolved; void 1-2 arg candidates in $pkg: ${candidates.size}\n" +
+                candidates.joinToString("\n"),
+        )
+    }.onFailure { WeLogger.w(TAG, "$label diagnostics failed", it) }
+}
+
+/**
+ * 发现页诊断：DiscoverUI 候选类逐个探测 + 两个 discover 包内 UI 类枚举。
+ * 微信新版把发现页迁进了 discover 插件包（com.tencent.mm.plugin.discover.ui.*），
+ * 老锚点 com.tencent.mm.ui.discover.DiscoverUI 可能整类消失。
+ */
+internal fun BaseFeature.dumpDiscoverCandidates(dexKit: DexKitBridge, tag: String) {
+    runCatching {
+        for (name in listOf(
+                "com.tencent.mm.ui.discover.DiscoverUI",
+                "com.tencent.mm.plugin.discover.ui.DiscoverUI",
+            )
+        ) {
+            val found = dexKit.findClass { searchClasses(name) }.isNotEmpty()
+            WeLogger.w(tag, "discover probe: $name exists=$found")
+        }
+        for (pkg in listOf("com.tencent.mm.ui.discover", "com.tencent.mm.plugin.discover.ui")) {
+            val uiClasses = dexKit.findClass { searchPackages(pkg) }
+                .map { it.name }
+                .filter { it.substringAfterLast('.').endsWith("UI") || it.contains("Discover") }
+                .take(40)
+            WeLogger.w(tag, "discover class candidates in $pkg: ${uiClasses.size}\n" + uiClasses.joinToString("\n"))
+        }
+    }.onFailure { WeLogger.w(tag, "discover diagnostics failed", it) }
 }
 
 /** 条目的任一 String 字段（含父类）持有密友 wxid 即命中。 */

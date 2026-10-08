@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.ujhhgtg.reflekt.reflekt
 import dev.sun.wechat.dexkit.abc.IResolveDex
+import org.luckypray.dexkit.DexKitBridge
 import dev.sun.wechat.dexkit.dsl.dexMethod
 import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
 import dev.sun.wechat.features.api.ui.WeMomentsContextMenuApi
@@ -262,17 +263,47 @@ object HideDiscoverMoments : SwitchFeature(), IResolveDex {
         }
     }
 
-    override fun onEnable() {
-        if (methodDiscoverUiOnCreate.isPlaceholder) {
-            WeLogger.w(TAG, "DiscoverUI 未解析, 发现页入口不过滤")
-            return
+    // 兜底锚点：新版微信把发现页迁进 discover 插件包，老锚点整类可能消失。
+    private val methodDiscoverUiOnCreateAlt by dexMethod(allowFailure = true) {
+        matcher {
+            declaredClass = "com.tencent.mm.plugin.discover.ui.DiscoverUI"
+            name = "onCreate"
+            paramCount = 1
         }
+    }
+
+    private val methodDiscoverUiOnResumeAlt by dexMethod(allowFailure = true) {
+        matcher {
+            declaredClass = "com.tencent.mm.plugin.discover.ui.DiscoverUI"
+            name = "onResume"
+            paramCount = 0
+        }
+    }
+
+    override fun resolveDex(dexKit: DexKitBridge) {
+        if (methodDiscoverUiOnCreate.isPlaceholder && methodDiscoverUiOnCreateAlt.isPlaceholder) {
+            dumpDiscoverCandidates(dexKit, TAG)
+        }
+    }
+
+    override fun onEnable() {
+        val onCreate = when {
+            !methodDiscoverUiOnCreate.isPlaceholder -> methodDiscoverUiOnCreate
+            !methodDiscoverUiOnCreateAlt.isPlaceholder -> methodDiscoverUiOnCreateAlt
+            else -> {
+                WeLogger.w(TAG, "DiscoverUI 未解析, 发现页入口不过滤")
+                return
+            }
+        }
+        val onResume = if (onCreate === methodDiscoverUiOnCreate) methodDiscoverUiOnResume
+            else methodDiscoverUiOnResumeAlt
+
         val rowTitles = setOf("朋友圈")
-        methodDiscoverUiOnCreate.hookAfter {
+        onCreate.hookAfter {
             hideDiscoverRowsByTitle(thisObject as Activity, rowTitles)
         }
         // onResume 重走一遍：页面重建后行会重新绑定
-        methodDiscoverUiOnResume.hookAfter {
+        onResume.hookAfter {
             hideDiscoverRowsByTitle(thisObject as Activity, rowTitles)
         }
     }
@@ -308,16 +339,46 @@ object HideDiscoverEntries : SwitchFeature(), IResolveDex {
         }
     }
 
-    override fun onEnable() {
-        if (methodDiscoverUiOnCreate.isPlaceholder) {
-            WeLogger.w(TAG, "DiscoverUI 未解析, 发现页入口不过滤")
-            return
+    // 兜底锚点：新版微信把发现页迁进 discover 插件包，老锚点整类可能消失。
+    private val methodDiscoverUiOnCreateAlt by dexMethod(allowFailure = true) {
+        matcher {
+            declaredClass = "com.tencent.mm.plugin.discover.ui.DiscoverUI"
+            name = "onCreate"
+            paramCount = 1
         }
+    }
+
+    private val methodDiscoverUiOnResumeAlt by dexMethod(allowFailure = true) {
+        matcher {
+            declaredClass = "com.tencent.mm.plugin.discover.ui.DiscoverUI"
+            name = "onResume"
+            paramCount = 0
+        }
+    }
+
+    override fun resolveDex(dexKit: DexKitBridge) {
+        if (methodDiscoverUiOnCreate.isPlaceholder && methodDiscoverUiOnCreateAlt.isPlaceholder) {
+            dumpDiscoverCandidates(dexKit, TAG)
+        }
+    }
+
+    override fun onEnable() {
+        val onCreate = when {
+            !methodDiscoverUiOnCreate.isPlaceholder -> methodDiscoverUiOnCreate
+            !methodDiscoverUiOnCreateAlt.isPlaceholder -> methodDiscoverUiOnCreateAlt
+            else -> {
+                WeLogger.w(TAG, "DiscoverUI 未解析, 发现页入口不过滤")
+                return
+            }
+        }
+        val onResume = if (onCreate === methodDiscoverUiOnCreate) methodDiscoverUiOnResume
+            else methodDiscoverUiOnResumeAlt
+
         val rowTitles = setOf("视频号", "看一看", "小程序")
-        methodDiscoverUiOnCreate.hookAfter {
+        onCreate.hookAfter {
             hideDiscoverRowsByTitle(thisObject as Activity, rowTitles)
         }
-        methodDiscoverUiOnResume.hookAfter {
+        onResume.hookAfter {
             hideDiscoverRowsByTitle(thisObject as Activity, rowTitles)
         }
     }
