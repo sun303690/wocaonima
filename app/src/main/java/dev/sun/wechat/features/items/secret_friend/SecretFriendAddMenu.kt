@@ -4,12 +4,10 @@ import dev.sun.wechat.R
 import android.app.Activity
 import android.view.View
 import android.widget.AdapterView
-import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Text
 import dev.sun.wechat.features.api.ui.WeConversationContextMenuApi
 import dev.sun.wechat.features.core.FeatureCategoryIds
-import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.TextButton
@@ -98,11 +96,9 @@ internal fun toggleSecret(activity: Activity, wxId: String) {
  * - 「原生长按菜单」选项回调微信原监听器，原生功能（备注/星标/删除）不受损。
  */
 
-object LongPressAddFromContacts : ClickableFeature() {
+object LongPressAddFromContacts : SwitchFeature() {
     // 必须在通讯录列表初始化、安装原长按监听器之前启动；设置页内仍保留开关，
     // 包装器在长按时动态检查 _isEnabled。
-    override val alwaysEnabled = true
-    override val noSwitchWidget = false
     override val technicalId = "通讯录长按添加"
     override val nameRes: Int = R.string.secret_friend_01_name
     override val categoryIds: List<String> = listOf(FeatureCategoryIds.SECRET_FRIEND)
@@ -110,8 +106,6 @@ object LongPressAddFromContacts : ClickableFeature() {
 
 
     private const val TAG = "LongPressAddFromContacts"
-
-    override fun onClick(context: ComponentActivity) = Unit
 
     override fun onEnable() {
         AdapterView::class.reflekt()
