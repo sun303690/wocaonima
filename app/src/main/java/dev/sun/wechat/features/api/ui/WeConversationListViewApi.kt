@@ -596,11 +596,24 @@ object WeConversationListViewApi : ApiFeature(), IResolveDex {
             } else {
                 (currentRawPosition + 1).takeIf { it < itemCount }
             }
-            fun itemAt(position: Int): Any? = when (backend) {
-                Backend.LIST_VIEW -> (adapter as BaseAdapter).getItem(position)
-                Backend.RECYCLER_VIEW -> methodAdapterGetItem.method.invoke(adapter, position)
+            fun itemAt(position: Int): Any? {
+                if (position !in 0 until itemCount) return null
+                return runCatching {
+                    when (backend) {
+                        Backend.LIST_VIEW -> (adapter as BaseAdapter).getItem(position)
+                        Backend.RECYCLER_VIEW -> methodAdapterGetItem.method.invoke(adapter, position)
+                    }
+                }.onFailure {
+                    WeLogger.e(TAG, "failed to read item at position $position/$itemCount", it)
+                }.getOrNull()
             }
-            val conversation = itemAt(currentRawPosition)!!
+            // 微信会话列表包含 header、下拉入口等不对应会话对象的特殊行，
+            // 这些位置 getItem() 合法返回 null，不能作为普通会话分发给监听器。
+            val conversation = itemAt(currentRawPosition)
+            if (conversation == null) {
+                dividerCoordinator.apply(row, latestContainer?.get() as? ListView)
+                return
+            }
             val bindContext = BindContext(
                 position = snapshot?.visiblePosition ?: rawPosition,
                 itemCount = itemCount,
