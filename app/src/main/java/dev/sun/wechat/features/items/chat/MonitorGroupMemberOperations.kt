@@ -205,7 +205,7 @@ object MonitorGroupMemberOperations : SwitchFeature(), IResolveDex, WeDatabaseLi
             // 改名提醒：优先发 AppMsg 改名卡；头像/卡发不出去时回退文本系统消息
             Thread {
                 val sent = runCatching {
-                    GroupEventCard.sendRenameAppMsg(group, wxId, displayName, oldShow, newShow)
+                    GroupEventCard.sendRenameAppMsg(group, wxId, oldShow, newShow)
                 }.onFailure { WeLogger.e(TAG, "rename appmsg failed group=$group wxid=$wxId", it) }
                     .getOrDefault(false)
                 WeLogger.i(TAG, "MGMO rename card group=$group wxid=$wxId sent=$sent")

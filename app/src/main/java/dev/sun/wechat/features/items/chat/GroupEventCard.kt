@@ -178,13 +178,13 @@ object GroupEventCard {
      * 群内昵称变更提醒卡片（AppMsg 链接卡，头像可点击）。
      * 头像 URL 取不到时返回 false，由调用方回退文本系统消息。
      */
-    fun sendRenameAppMsg(toUser: String, wxId: String, weNick: String, oldName: String, newName: String): Boolean {
-        val who = weNick.ifBlank { wxId }
+    fun sendRenameAppMsg(toUser: String, wxId: String, oldName: String, newName: String): Boolean {
         val title = "改名提醒"
+        val time = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
         val des = buildString {
-            append(who).append(" (").append(wxId.ifBlank { "未知" }).append(')')
-            append('\n').append("原昵称：").append(oldName.ifBlank { "-" })
+            append("旧昵称：").append(oldName.ifBlank { "-" })
             append('\n').append("新昵称：").append(newName.ifBlank { "-" })
+            append('\n').append("时间：").append(time)
         }
         val avatarUrl = runCatching { WeDatabaseApi.getAvatarUrl(wxId) }.getOrNull().orEmpty()
         if (!avatarUrl.startsWith("http")) return false
