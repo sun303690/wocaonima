@@ -111,8 +111,11 @@ object LongPressAddFromContacts : SwitchFeature() {
                 name = "setOnItemLongClickListener"
                 parameterCount(1)
             }
-            .hookAfter {
-                val original = args.getOrNull(0) ?: return@hookAfter
+            .hookBefore {
+                // setOnItemLongClickListener 会把传入参数保存到 AdapterView；必须在原方法执行前
+                // 替换。hookAfter 修改 args 已经太晚，实际安装的始终是微信原监听器。
+                val original = args.getOrNull(0) ?: return@hookBefore
+                if (original is LongClickWrapper) return@hookBefore
                 args[0] = LongClickWrapper(original)
             }
     }
