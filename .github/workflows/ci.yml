@@ -655,7 +655,8 @@ jobs:
   release-ci:
     needs: build
     runs-on: ubuntu-latest
-    if: ${{ always() && needs.build.result == 'success' && github.repository == 'sun303690/wocaonima' && github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+    # CI 只负责编译并上传 Actions artifact，不创建或更新 GitHub Release。
+    if: ${{ false }}
     permissions:
       contents: write
 
