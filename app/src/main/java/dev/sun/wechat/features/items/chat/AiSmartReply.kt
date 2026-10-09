@@ -84,6 +84,7 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
         )
     var contextLimit by prefOption("ai_reply_context_limit", 10)
     var replyCount by prefOption("ai_reply_count", 20)
+    private var lastSelectedStyle by prefOption("ai_reply_last_selected_style", "智能全能")
 
     /** 语气预设 name -> prompt（与 FkWeChat 一致，含关系预设） */
     val STYLES = listOf(
@@ -201,7 +202,9 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
     private fun ShowComposeDialogScope.SmartReplyDialogContent(talker: String, text: String) {
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
-        var selectedStyle by remember { mutableStateOf("智能全能") }
+        var selectedStyle by remember {
+            mutableStateOf(lastSelectedStyle.takeIf { saved -> STYLES.any { it.first == saved } } ?: "智能全能")
+        }
         var stylePromptInput by remember(selectedStyle) { mutableStateOf(currentPromptFor(selectedStyle)) }
         var candidates by remember { mutableStateOf<List<String>>(emptyList()) }
         var loading by remember { mutableStateOf(false) }
@@ -234,7 +237,14 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         STYLES.forEach { (name, _) ->
-                            FilterChip(selected = selectedStyle == name, onClick = { selectedStyle = name }, label = { Text(name) })
+                            FilterChip(
+                                selected = selectedStyle == name,
+                                onClick = {
+                                    selectedStyle = name
+                                    lastSelectedStyle = name
+                                },
+                                label = { Text(name) },
+                            )
                         }
                     }
 

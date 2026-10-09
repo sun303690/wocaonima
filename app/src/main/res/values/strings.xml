@@ -4086,8 +4086,6 @@
     <string name="settings_page_transition_animation_title">Page transition animation</string>
     <string name="settings_page_transition_animation_aosp">AOSP</string>
     <string name="settings_page_transition_animation_miuix">Miuix</string>
-    <string name="feature_ai_reply_name">AI Chat Assistant</string>
-    <string name="feature_ai_reply_description">Add an AI Chat Assistant entry to the message long-press menu to generate candidate replies</string>
     <string name="feature_group_chat_summary_name">Group Chat Summary</string>
     <string name="feature_group_chat_summary_description">Add AI summary entry to group chat long-press menu</string>
     <string name="monet_options_title">Customize Monet module</string>
