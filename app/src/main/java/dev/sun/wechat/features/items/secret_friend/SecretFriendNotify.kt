@@ -167,6 +167,13 @@ object BottomBarBold : SwitchFeature() {
         val talker = secretIncomingTalker(table, values) ?: return@IInsertListener
         if (SecretFriendState.isTemporarilyShown()) return@IInsertListener
         WeLogger.d(TAG, "secret message from $talker, bolding bottom tab")
+        // 微信 8.0.77 收到密友消息走内存增量更新，不经过 rconversation 的 wcdb
+        // insert/update hook，HideConversations 的 onConversationRowWrite 不会被触发，
+        // 主页会话会重新冒出。这里在确凿的密友消息入口（message 表 insert）调用微信原生
+        // delChatContact（等价手动「不显示该聊天」）只移除这一个会话行——不整页刷新、
+        // 不影响其他会话、不删聊天记录。delChatContact 同步通知列表刷新，必须主线程执行，
+        // 故经 runOnUiThread（本监听在后台线程触发）。
+        runOnUiThread { WeConversationApi.hideConversation(talker) }
         runOnUiThread { setBold(true) }
     }
 
