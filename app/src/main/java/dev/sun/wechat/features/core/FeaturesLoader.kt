@@ -67,8 +67,13 @@ object FeaturesLoader {
                 val isBroken = feature is IResolveDex && allBrokenItems.contains(feature)
 
                 if (isBroken) {
-                    WeLogger.w(TAG, "skipping ${feature.technicalId} — incomplete cache, awaiting re-resolution")
-                    return@forEach
+                    // allowFailure 委托会安全退化为 placeholder；仍启动功能，让不依赖 Dex 的
+                    // SQL/数据库监听分支继续生效。具体 hook 自己用 isPlaceholder 跳过失效锚点。
+                    WeLogger.w(
+                        TAG,
+                        "starting ${feature.technicalId} with incomplete cache; " +
+                            "available hooks stay active while re-resolution runs",
+                    )
                 }
 
                 feature.startup()
