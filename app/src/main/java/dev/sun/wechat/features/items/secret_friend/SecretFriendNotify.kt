@@ -281,12 +281,15 @@ object RedDotPrompt : SwitchFeature() {
             .onFailure { WeLogger.e(TAG, "removeListener failed", it) }
     }
 
-    /** 找搜索入口 → 在 decorView 上叠红点（找不到锚点则整段跳过）。 */
+    /** 找底栏「微信」(主页) tab → 在 decorView 上叠红点到其右上角。 */
     private fun attachDot(activity: Activity) {
         if (dotView != null) return
         val root = activity.window?.decorView as? ViewGroup ?: return
 
-        val anchor = findViewByText(root, "搜索") ?: return
+        val anchor = findBottomHomeTab(root) ?: run {
+            WeLogger.w(TAG, "bottom home tab not found; red dot unavailable")
+            return
+        }
         anchorView = anchor
 
         val dot = View(activity)
@@ -306,15 +309,32 @@ object RedDotPrompt : SwitchFeature() {
             if (!anchorNow.isAttachedToWindow) return
             val anchorLoc = IntArray(2).also { anchorNow.getLocationOnScreen(it) }
             val rootLoc = IntArray(2).also { root.getLocationOnScreen(it) }
-            val x = anchorLoc[0] - rootLoc[0] + anchorNow.width - view.layoutParams.width
-            val y = anchorLoc[1] - rootLoc[1] - view.layoutParams.height / 2
+            // 红点放在「微信」tab 右上角（偏右 72% 宽、偏上 35% 高）。
+            val x = anchorLoc[0] - rootLoc[0] + (anchorNow.width * 0.72f).toInt() - view.layoutParams.width
+            val y = anchorLoc[1] - rootLoc[1] - (anchorNow.height * 0.35f).toInt()
             view.translationX = x.toFloat()
             view.translationY = y.toFloat()
         }
 
         anchor.viewTreeObserver.addOnGlobalLayoutListener { reposition() }
         reposition()
-        WeLogger.d(TAG, "red dot attached near search entry")
+        WeLogger.i(TAG, "red dot attached to bottom home tab")
+    }
+
+    /**
+     * 在底栏定位「微信」主页 tab。优先按「微信」文字精确匹配；命中后向上取一个
+     * 有宽高的可布局祖先作为锚点，确保红点能对齐到整个 tab（含图标）。
+     */
+    private fun findBottomHomeTab(root: View): View? {
+        val textMatch = findViewByText(root, "微信") ?: return null
+        var node: View = textMatch
+        var guard = 0
+        while (guard++ < 6) {
+            if (node.width > 0 && node.height > 0) return node
+            val parent = node.parent as? View ?: break
+            node = parent
+        }
+        return textMatch
     }
 
     private fun findViewByText(root: View, text: String): View? {

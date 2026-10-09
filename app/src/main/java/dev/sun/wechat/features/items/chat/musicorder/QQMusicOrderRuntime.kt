@@ -8,6 +8,7 @@ import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.features.api.ui.WeCurrentConversationApi
 import dev.sun.wechat.features.items.system.servers.WeChatService
 import dev.sun.wechat.features.items.chat.musicorder.QQMusicOrderSettings
+import dev.sun.wechat.utils.AudioUtils
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -45,7 +46,9 @@ internal class QQMusicOrderRuntime(
     fun onTextInserted(talker: String, content: String, msgSvrId: Long, msgId: Long, isOutgoing: Boolean, isGroup: Boolean, sender: String) {
         if (!settings.isEnabled()) return
         if (talker.isBlank()) return
-        if (!isOutgoing && !settings.allowedTalkers().contains(talker)) return
+        // 仅当配置了白名单时才按白名单过滤；白名单为空 = 不限聊天，任何会话可点歌。
+        val allowed = settings.allowedTalkers()
+        if (!isOutgoing && allowed.isNotEmpty() && !allowed.contains(talker)) return
         val normalized = normalizeContent(content, isGroup)
         val command = parseCommand(normalized) ?: return
         submit(talker, msgSvrId.takeIf { it > 0 } ?: msgId, sender, command)
@@ -62,11 +65,12 @@ internal class QQMusicOrderRuntime(
                 return true
             }
         }
-        if (!settings.interceptOwnCommand()) return false
         val command = parseCommand(clean) ?: return false
+        val talker = currentTalker() ?: return false
         val self = WeApi.selfWxId
-        submit(currentTalker().orEmpty(), 0L, self, command)
-        return true
+        // 自己发送的点歌命令始终执行；该设置只决定是否报告“已拦截”。
+        submit(talker, 0L, self, command)
+        return settings.interceptOwnCommand()
     }
 
     private fun currentTalker(): String? = WeCurrentConversationApi.value.takeIf { it.isNotBlank() }
@@ -156,16 +160,21 @@ internal class QQMusicOrderRuntime(
         }
         val target = File(cacheDir, "qq_music_${System.currentTimeMillis()}_${System.nanoTime()}${audioSuffix(track.playUrl)}")
         val part = File(target.absolutePath + ".part")
+        val silk = File(cacheDir, "qq_music_${System.nanoTime()}.silk")
         return try {
             if (!downloadAudio(track.playUrl, part, target)) return false
+            // 微信语音消息只接受 SILK/AMR。之前把 QQ 音乐的 MP3/M4A 原样复制成
+            // .amr 后发送，消息虽能出现但接收端无法解码播放。
             val durationMs = audioDurationMs(target)
-            WeMessageApi.sendVoice(talker, target.absolutePath, durationMs)
+            if (!AudioUtils.anyToSilk(target.absolutePath, silk.absolutePath)) return false
+            WeMessageApi.sendVoice(talker, silk.absolutePath, durationMs)
         } catch (t: Throwable) {
             logError("QQ点歌语音发送失败", t)
             false
         } finally {
             deleteFile(part)
             deleteFile(target)
+            deleteFile(silk)
         }
     }
 

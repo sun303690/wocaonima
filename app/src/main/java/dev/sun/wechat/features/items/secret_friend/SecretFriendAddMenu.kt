@@ -97,6 +97,9 @@ internal fun toggleSecret(activity: Activity, wxId: String) {
  */
 
 object LongPressAddFromContacts : SwitchFeature() {
+    // 必须在通讯录列表初始化、安装原长按监听器之前启动；设置页内仍保留开关，
+    // 包装器在长按时动态检查 _isEnabled。
+    override val alwaysEnabled = true
     override val technicalId = "通讯录长按添加"
     override val nameRes: Int = R.string.secret_friend_01_name
     override val categoryIds: List<String> = listOf(FeatureCategoryIds.SECRET_FRIEND)
@@ -136,6 +139,9 @@ object LongPressAddFromContacts : SwitchFeature() {
 
     private class LongClickWrapper(private val original: Any) : AdapterView.OnItemLongClickListener {
         override fun onItemLongClick(parent: AdapterView<*>, view: View, position: Int, id: Long): Boolean {
+            if (!LongPressAddFromContacts._isEnabled) {
+                return invokeOriginal(parent, view, position, id)
+            }
             val row = parent.getItemAtPosition(position) ?: run {
                 return invokeOriginal(parent, view, position, id)
             }
