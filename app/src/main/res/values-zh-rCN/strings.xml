@@ -882,8 +882,6 @@
     <string name="feature_detect_deleted_friends_description">批量扫描全部好友, 检测是否被对方单向删除</string>
     <string name="feature_display_group_member_messages_name">查看群成员消息历史</string>
     <string name="feature_display_group_member_messages_description">在联系人与群组详情页面添加入口, 可查看任意群成员的全部历史消息</string>
-    <string name="feature_display_hidden_contact_settings_name">显示隐藏朋友设置项</string>
-    <string name="feature_display_hidden_contact_settings_description">阻止微信隐藏朋友设置; 部分设置项可能显示异常, 但不影响功能</string>
     <string name="feature_hide_contacts_name">隐藏联系人</string>
     <string name="feature_hide_contacts_description">隐藏指定的联系人</string>
     <string name="feature_limit_group_member_nickname_length_name">限制群成员昵称长度</string>

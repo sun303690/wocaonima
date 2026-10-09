@@ -880,8 +880,6 @@
     <string name="feature_detect_deleted_friends_description">批量掃描全部好友, 檢測是否被對方單向刪除</string>
     <string name="feature_display_group_member_messages_name">查看羣成員消息歷史</string>
     <string name="feature_display_group_member_messages_description">在聯繫人與羣組詳情頁面添加入口, 可查看任意羣成員的全部歷史消息</string>
-    <string name="feature_display_hidden_contact_settings_name">顯示隱藏朋友設置項</string>
-    <string name="feature_display_hidden_contact_settings_description">阻止微信隱藏朋友設置; 部分設置項可能顯示異常, 但不影響功能</string>
     <string name="feature_hide_contacts_name">隱藏聯繫人</string>
     <string name="feature_hide_contacts_description">隱藏指定的聯繫人</string>
     <string name="feature_limit_group_member_nickname_length_name">限制羣成員暱稱長度</string>
