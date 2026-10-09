@@ -33,6 +33,8 @@ import java.util.concurrent.ConcurrentHashMap
 
 object QQMusicOrder : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
 
+    // 点歌有自己的内部“启用点歌”开关；外层功能必须常驻，才能监听消息和处理指令。
+    override val alwaysEnabled = true
     override val technicalId = "QQ音乐点歌"
     override val nameRes = R.string.feature_qq_music_order_name
     override val categoryIds = listOf(FeatureCategoryIds.CHAT)
