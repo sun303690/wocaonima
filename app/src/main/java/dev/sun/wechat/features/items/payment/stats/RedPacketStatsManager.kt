@@ -144,7 +144,7 @@ object RedPacketStatsManager {
                 }
             }
 
-            val targetDir = runCatching { KnownPaths.moduleData }
+            val targetDir = runCatching { KnownPaths.moduleRoot / "exports" }
                 .onFailure { WeLogger.e(TAG, "failed to resolve export directory", it) }
                 .getOrNull() ?: return@withContext ExportResult(false, "导出目录不可用")
 
