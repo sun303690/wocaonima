@@ -9,6 +9,7 @@ import android.os.Vibrator
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import dev.sun.wechat.features.api.core.WeConversationApi
 import dev.sun.wechat.features.api.core.WeDatabaseApi
 import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
 import dev.sun.wechat.features.api.ui.WeMainActivityBeautifyApi
