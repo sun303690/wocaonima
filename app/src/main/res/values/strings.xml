@@ -3123,6 +3123,7 @@
     <string name="beautify_global_background_status_bar">Transparent status bar background</string>
     <string name="beautify_global_background_status_bar_summary">Make the status bar background transparent</string>
     <string name="beautify_conversation_list_title">Beautify conversation list</string>
+    <string name="beautify_conversation_preset">Layout preset</string>
     <string name="beautify_conversation_highlight_unread">Highlight unread conversations</string>
     <string name="beautify_conversation_hide_dividers">Hide dividers</string>
     <string name="beautify_conversation_no_layout">Original</string>
