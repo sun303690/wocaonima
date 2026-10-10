@@ -3,11 +3,7 @@ package dev.sun.wechat.features.items.beautify
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
-import android.content.res.ColorStateList
 import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
-import android.graphics.drawable.InsetDrawable
-import android.graphics.drawable.RippleDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -18,6 +14,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -29,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.composables.icons.materialsymbols.MaterialSymbols
+import com.composables.icons.materialsymbols.outlined.Delete
 import com.composables.icons.materialsymbols.outlined.Opacity
 import androidx.core.view.isVisible
 import androidx.core.view.postDelayed
@@ -42,7 +41,6 @@ import dev.sun.wechat.activity.TransparentActivity
 import dev.sun.wechat.constants.PackageNames
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.dexMethod
-import dev.sun.wechat.features.api.ui.WeConversationListViewApi
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.data.KvStore.prefOption
@@ -50,15 +48,12 @@ import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.TextButton
 import dev.sun.wechat.ui.content.m3.BaseItemContainer
 import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.DropDownMenuWidget
-import dev.sun.wechat.ui.content.m3.DropdownOption
 import dev.sun.wechat.ui.content.m3.IntNumberPickerWidget
 import dev.sun.wechat.ui.content.m3.SegmentedColumn
 import dev.sun.wechat.ui.content.m3.SwitchWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.HostInfo
 import dev.sun.wechat.utils.WeLogger
-import dev.sun.wechat.utils.android.isDarkMode
 import dev.sun.wechat.utils.android.showToast
 import dev.sun.wechat.utils.fs.KnownPaths
 import dev.sun.wechat.utils.fs.asAndroidUri
@@ -93,14 +88,6 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     private var backgroundUri by prefOption("global_bg_uri", nul<String>())
     private var transparentStatusBar by prefOption("global_bg_transparent_status_bar", false)
     private var opacity by prefOption("global_bg_opacity", 0.10f)
-    private var backgroundWidth by prefOption("global_bg_width", 100)
-    private var scaleMode by prefOption("global_bg_scale_mode", "center_crop")
-    private var listCards by prefOption("global_bg_list_cards", false)
-    private var listRadius by prefOption("global_bg_list_radius", 12)
-    private var listHorizontalInset by prefOption("global_bg_list_horizontal_inset", 8)
-    private var listVerticalSpacing by prefOption("global_bg_list_vertical_spacing", 4)
-    private var listHeight by prefOption("global_bg_list_height", 0)
-    private var transparentTopBar by prefOption("global_bg_transparent_top_bar", true)
 
     private const val BACKGROUND_IMAGE_FILE = "global_background.png"
 
@@ -144,17 +131,8 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
         "${PackageNames.WECHAT}.plugin.voip.ui.VideoActivity"
     )
 
-    private val rowStates = WeakHashMap<View, RowState>()
-    private val observedLists = WeakHashMap<ViewGroup, View.OnLayoutChangeListener>()
-    private data class RowState(val background: android.graphics.drawable.Drawable?, val height: Int)
-
-    private val conversationBindListener = WeConversationListViewApi.IBindViewListener { _, view, _, _ ->
-        if (isEnabled && listCards) styleListRow(view) else restoreListRow(view)
-    }
-
     override fun onEnable() {
         migrateLegacyBackgroundUri()
-        WeConversationListViewApi.addListener(conversationBindListener)
 
         Activity::class.reflekt().apply {
             firstMethod {
@@ -276,14 +254,6 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                 )
             }
             var transparentStatusBarInput by remember { mutableStateOf(transparentStatusBar) }
-            var widthInput by remember { mutableIntStateOf(backgroundWidth) }
-            var scaleInput by remember { mutableStateOf(scaleMode) }
-            var cardsInput by remember { mutableStateOf(listCards) }
-            var radiusInput by remember { mutableIntStateOf(listRadius) }
-            var horizontalInput by remember { mutableIntStateOf(listHorizontalInset) }
-            var spacingInput by remember { mutableIntStateOf(listVerticalSpacing) }
-            var heightInput by remember { mutableIntStateOf(listHeight) }
-            var topBarInput by remember { mutableStateOf(transparentTopBar) }
             var restartRequired by remember { mutableStateOf(false) }
             val currentRestartRequired by rememberUpdatedState(restartRequired)
             val localizedContext by rememberUpdatedState(LocalWeKitLocalizedContext.current)
@@ -315,16 +285,22 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                                     selectBackgroundImage(context)
                                 },
                                 trailingContent = {
-                                    if (hasImage) {
-                                        TextButton(
-                                            onClick = {
-                                                backgroundUri = null
-                                                hasImage = false
-                                                runCatching { backgroundImageFile.deleteIfExists() }
-                                                    .onFailure { WeLogger.w(TAG, "failed to delete background image file", it) }
-                                                showToast(localizedContext.getString(R.string.beautify_global_background_cleared))
-                                            },
-                                        ) { Text("清除") }
+                                    IconButton(
+                                        enabled = hasImage,
+                                        onClick = {
+                                            backgroundUri = null
+                                            hasImage = false
+                                            runCatching { backgroundImageFile.deleteIfExists() }
+                                                .onFailure {
+                                                    WeLogger.w(TAG, "failed to delete background image file", it)
+                                                }
+                                            showToast(localizedContext.getString(R.string.beautify_global_background_cleared))
+                                        },
+                                    ) {
+                                        Icon(
+                                            MaterialSymbols.Outlined.Delete,
+                                            contentDescription = stringResource(R.string.action_clear_image),
+                                        )
                                     }
                                 },
                             )
@@ -350,13 +326,6 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                                 )
                             }
                         }
-                        item { BaseItemContainer { IntNumberPickerWidget(iconPlaceholder = false, title = "背景宽度", value = widthInput, startInt = 50, endInt = 100, stepSize = 1, valueSuffix = "%", onValueChange = { widthInput = it; backgroundWidth = it; restartRequired = true }) } }
-                        item { DropDownMenuWidget(iconPlaceholder = false, title = "背景缩放", description = "五种图片缩放方式", value = scaleInput, options = listOf(DropdownOption("center_crop", "居中裁剪"), DropdownOption("fit_center", "完整适应"), DropdownOption("center_inside", "居中包含"), DropdownOption("fit_xy", "拉伸铺满"), DropdownOption("center", "原始居中")), onValueChange = { scaleInput = it; scaleMode = it; restartRequired = true }) }
-                        item { SwitchWidget(iconPlaceholder = false, title = "列表卡片化", description = "启用圆角、内缩、间距和高度调节", checked = cardsInput, onCheckedChange = { cardsInput = it; listCards = it; restartRequired = true }) }
-                        item { BaseItemContainer { IntNumberPickerWidget(iconPlaceholder = false, title = "列表圆角", value = radiusInput, startInt = 0, endInt = 40, stepSize = 1, valueSuffix = "dp", onValueChange = { radiusInput = it; listRadius = it; restartRequired = true }) } }
-                        item { BaseItemContainer { IntNumberPickerWidget(iconPlaceholder = false, title = "左右内缩", value = horizontalInput, startInt = 0, endInt = 40, stepSize = 1, valueSuffix = "dp", onValueChange = { horizontalInput = it; listHorizontalInset = it; restartRequired = true }) } }
-                        item { BaseItemContainer { IntNumberPickerWidget(iconPlaceholder = false, title = "上下间隔", value = spacingInput, startInt = 0, endInt = 30, stepSize = 1, valueSuffix = "dp", onValueChange = { spacingInput = it; listVerticalSpacing = it; restartRequired = true }) } }
-                        item { BaseItemContainer { IntNumberPickerWidget(iconPlaceholder = false, title = "列表高度（0为原始）", value = heightInput, startInt = 0, endInt = 160, stepSize = 4, valueSuffix = "dp", onValueChange = { heightInput = it; listHeight = it; restartRequired = true }) } }
                         item {
                             SwitchWidget(
                                 iconPlaceholder = false,
@@ -366,11 +335,11 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                                 onCheckedChange = {
                                     transparentStatusBarInput = it
                                     transparentStatusBar = it
-                                    restartRequired = true
+                                    restartRequired =
+                                        opacity != originalOpacity || it != originalTransparentStatusBar
                                 },
                             )
                         }
-                        item { SwitchWidget(iconPlaceholder = false, title = "顶部栏紧随背景", description = "顶部栏透明并显示全屏背景", checked = topBarInput, onCheckedChange = { topBarInput = it; transparentTopBar = it; restartRequired = true }) }
                     }
                 },
                 dismissButton = {
@@ -441,10 +410,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
 
     private fun applyBackground(activity: Activity) {
         if (backgroundUri == null) return
-        val className = activity.javaClass.name
-        if (className in blacklistedActivities ||
-            className.endsWith(".chatting.ChattingUI") || className.contains("ChattingUI") ||
-            className.startsWith("dev.sun.wechat.")) return
+        if (activity.javaClass.name in blacklistedActivities) return
 
         val uri = backgroundUri ?: return
         val decor = activity.window?.decorView as? ViewGroup ?: return
@@ -452,22 +418,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
 
         overlay.visibility = View.VISIBLE
         overlay.alpha = opacity
-        overlay.scaleType = when (scaleMode) {
-            "fit_center" -> ImageView.ScaleType.FIT_CENTER
-            "center_inside" -> ImageView.ScaleType.CENTER_INSIDE
-            "fit_xy" -> ImageView.ScaleType.FIT_XY
-            "center" -> ImageView.ScaleType.CENTER
-            else -> ImageView.ScaleType.CENTER_CROP
-        }
-        val width = (decor.width * backgroundWidth.coerceIn(50, 100) / 100f).roundToInt()
-        overlay.layoutParams = android.widget.FrameLayout.LayoutParams(
-            if (width > 0) width else ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            android.view.Gravity.CENTER,
-        )
-        makeContentLayersTransparent(decor, overlay, 0)
-        if (transparentTopBar) makeTopBarsTransparent(decor, 0)
-        if (listCards) observeLists(decor, 0)
+        overlay.bringToFront()
 
         if (overlay.getTag(APPLIED_URI_TAG_KEY) != uri) {
             overlay.setTag(APPLIED_URI_TAG_KEY, uri)
@@ -475,84 +426,6 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                 crossfade(true)
             }
         }
-    }
-
-    private fun makeContentLayersTransparent(root: ViewGroup, overlay: View, depth: Int) {
-        if (depth > 3) return
-        for (index in 0 until root.childCount) {
-            val child = root.getChildAt(index)
-            if (child === overlay) continue
-            val name = child.resourceEntryName().orEmpty().lowercase()
-            val isTopBar = name.contains("actionbar") || name.contains("toolbar") || name.contains("titlebar")
-            if (!name.contains("navigationbar") && !name.contains("statusbar") &&
-                (transparentTopBar || !isTopBar)
-            ) {
-                child.makeTransparent()
-                if (child is ViewGroup) makeContentLayersTransparent(child, overlay, depth + 1)
-            }
-        }
-    }
-
-    private fun makeTopBarsTransparent(root: ViewGroup, depth: Int) {
-        if (depth > 8) return
-        for (index in 0 until root.childCount) {
-            val child = root.getChildAt(index)
-            val name = child.resourceEntryName().orEmpty().lowercase()
-            if (name.contains("actionbar") || name.contains("toolbar") || name.contains("titlebar")) {
-                child.makeTransparent()
-            } else if (child is ViewGroup) makeTopBarsTransparent(child, depth + 1)
-        }
-    }
-
-    private fun observeLists(root: ViewGroup, depth: Int) {
-        if (depth > 12) return
-        for (index in 0 until root.childCount) {
-            val child = root.getChildAt(index)
-            if (child !is ViewGroup) continue
-            val name = child.javaClass.name
-            if (child is android.widget.AbsListView || name.contains("RecyclerView") || name.contains("ListView")) {
-                styleVisibleListRows(child)
-                if (!observedLists.containsKey(child)) {
-                    val listener = View.OnLayoutChangeListener { view, _, _, _, _, _, _, _, _ ->
-                        if (isEnabled && listCards) styleVisibleListRows(view as ViewGroup)
-                    }
-                    observedLists[child] = listener
-                    child.addOnLayoutChangeListener(listener)
-                }
-            } else observeLists(child, depth + 1)
-        }
-    }
-
-    private fun styleVisibleListRows(container: ViewGroup) {
-        for (index in 0 until container.childCount) {
-            val row = container.getChildAt(index)
-            if (row.visibility == View.VISIBLE && row.height > 0) styleListRow(row)
-        }
-    }
-
-    private fun styleListRow(row: View) {
-        if (!rowStates.containsKey(row)) rowStates[row] = RowState(row.background, row.layoutParams?.height ?: 0)
-        val density = row.resources.displayMetrics.density
-        val radius = listRadius.coerceIn(0, 40) * density
-        val hInset = (listHorizontalInset.coerceIn(0, 40) * density).roundToInt()
-        val vInset = (listVerticalSpacing.coerceIn(0, 30) * density / 2f).roundToInt()
-        val alpha = 205
-        val color = if (row.context.isDarkMode) Color.argb(alpha, 42, 42, 45) else Color.argb(alpha, 255, 255, 255)
-        val shape = GradientDrawable().apply { cornerRadius = radius; setColor(color) }
-        val inset = InsetDrawable(shape, hInset, vInset, hInset, vInset)
-        row.background = RippleDrawable(
-            ColorStateList.valueOf(if (row.context.isDarkMode) 0x33FFFFFF else 0x22000000), inset, null
-        )
-        if (listHeight > 0) row.layoutParams?.let {
-            it.height = (listHeight.coerceIn(40, 160) * density).roundToInt()
-            row.layoutParams = it
-        }
-    }
-
-    private fun restoreListRow(row: View) {
-        val state = rowStates.remove(row) ?: return
-        row.background = state.background
-        row.layoutParams?.let { it.height = state.height; row.layoutParams = it }
     }
 
     private fun createOverlay(context: Context, decor: ViewGroup): ImageView {
@@ -567,8 +440,8 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            elevation = 0f
-            decor.addView(this, 0)
+            elevation = 100f
+            decor.addView(this)
         }
     }
 

@@ -592,7 +592,7 @@
     <string name="feature_apply_dialog_background_blur_name">Dialog background blur</string>
     <string name="feature_apply_dialog_background_blur_description">Add window-level background blur to module and WeChat dialogs [requires SDK &gt;= 31]</string>
     <string name="feature_apply_global_background_name">Apply global background</string>
-    <string name="feature_apply_global_background_description">Full-screen background with five scaling modes and adjustable list cards</string>
+    <string name="feature_apply_global_background_description">Globally replace the WeChat background with a picture</string>
     <string name="feature_beautify_activity_transition_animation_name">Customize activity transitions</string>
     <string name="feature_beautify_activity_transition_animation_description">Replace some active transition animations with default transitions or element-level shared animations (not finished yet)</string>
     <string name="feature_beautify_conversation_list_name">Customize conversation list</string>

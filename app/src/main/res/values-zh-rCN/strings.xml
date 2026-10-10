@@ -555,7 +555,7 @@
     <string name="feature_apply_dialog_background_blur_name">对话框窗口级背景模糊</string>
     <string name="feature_apply_dialog_background_blur_description">为模块与微信的对话框添加窗口级模糊处理 [需 SDK &gt;= 31]</string>
     <string name="feature_apply_global_background_name">应用全局背景</string>
-    <string name="feature_apply_global_background_description">全屏背景、五种缩放及列表圆角、内缩、间距和高度调节</string>
+    <string name="feature_apply_global_background_description">将微信背景全局替换为图片</string>
     <string name="feature_beautify_activity_transition_animation_name">美化活动过渡动画</string>
     <string name="feature_beautify_activity_transition_animation_description">将部分活动过渡动画替换为默认过渡或元素级共享动画 (没做完)</string>
     <string name="feature_beautify_conversation_list_name">美化对话列表</string>
