@@ -3136,6 +3136,8 @@
     <string name="beautify_conversation_list_title">美化对话列表</string>
     <string name="beautify_conversation_highlight_unread">突出未读会话</string>
     <string name="beautify_conversation_hide_dividers">隐藏分隔线</string>
+    <string name="beautify_conversation_no_layout">原始</string>
+    <string name="beautify_conversation_pinned_grouped">置顶分组卡片</string>
     <string name="beautify_global_list_cards_enabled">全局列表卡片</string>
     <string name="beautify_global_list_cards_summary">为所有列表（通讯录/发现/设置）应用半透明圆角卡片</string>
     <string name="beautify_global_list_cards_dark">深色卡片</string>
