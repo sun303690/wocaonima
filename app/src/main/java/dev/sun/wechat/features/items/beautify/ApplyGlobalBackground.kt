@@ -302,23 +302,30 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                     SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                         item {
                             BaseWidget(
-                                title = if (hasImage) "更换背景图片" else "选择背景图片",
-                                description = if (hasImage) "背景图片已设置，点击重新选择" else "点击从相册选择全屏背景",
+                                title = stringResource(R.string.action_select_image),
+                                description = stringResource(
+                                    if (hasImage) {
+                                        R.string.beautify_global_background_set
+                                    } else {
+                                        R.string.beautify_global_background_not_set
+                                    }
+                                ),
                                 onClick = {
                                     onDismiss()
                                     selectBackgroundImage(context)
                                 },
                                 trailingContent = {
-                                    TextButton(
-                                        enabled = hasImage,
-                                        onClick = {
-                                            backgroundUri = null
-                                            hasImage = false
-                                            runCatching { backgroundImageFile.deleteIfExists() }
-                                                .onFailure { WeLogger.w(TAG, "failed to delete background image file", it) }
-                                            showToast(localizedContext.getString(R.string.beautify_global_background_cleared))
-                                        },
-                                    ) { Text("清除") }
+                                    if (hasImage) {
+                                        TextButton(
+                                            onClick = {
+                                                backgroundUri = null
+                                                hasImage = false
+                                                runCatching { backgroundImageFile.deleteIfExists() }
+                                                    .onFailure { WeLogger.w(TAG, "failed to delete background image file", it) }
+                                                showToast(localizedContext.getString(R.string.beautify_global_background_cleared))
+                                            },
+                                        ) { Text("清除") }
+                                    }
                                 },
                             )
                         }
