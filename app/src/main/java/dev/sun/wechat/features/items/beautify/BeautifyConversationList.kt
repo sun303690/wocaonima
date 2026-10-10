@@ -190,6 +190,18 @@ object BeautifyConversationList : ClickableFeature() {
             var highlightUnread by remember { mutableStateOf(highlightUnreadEnabled) }
             var hideDividers by remember { mutableStateOf(hideDividersEnabled) }
 
+            var globalCardsEnabled by remember { mutableStateOf(this@BeautifyConversationList.globalCardsEnabled) }
+            var globalCardsDark by remember { mutableStateOf(this@BeautifyConversationList.globalCardsDark) }
+            var globalCardsAlpha by remember { mutableStateOf(this@BeautifyConversationList.globalCardsAlpha) }
+            var globalCardsRadius by remember { mutableStateOf(this@BeautifyConversationList.globalCardsRadius) }
+            var globalCardsInset by remember { mutableStateOf(this@BeautifyConversationList.globalCardsInset) }
+            var globalCardsGap by remember { mutableStateOf(this@BeautifyConversationList.globalCardsGap) }
+            var globalCardsHeight by remember { mutableStateOf(this@BeautifyConversationList.globalCardsHeight) }
+
+            fun applyGlobalCardsSettings() {
+                if (globalCardsEnabled) applyGlobalCardsNow() else restoreGlobalCards()
+            }
+
             fun applyChanges(highlight: Boolean, dividers: Boolean) {
                 highlightUnreadEnabled = highlight
                 hideDividersEnabled = dividers
@@ -262,13 +274,8 @@ object BeautifyConversationList : ClickableFeature() {
                                         checked = globalCardsEnabled,
                                         onCheckedChange = {
                                             globalCardsEnabled = it
-                                            if (it) {
-                                                updateDividerRequest()
-                                                applyGlobalCardsNow()
-                                            } else {
-                                                updateDividerRequest()
-                                                restoreGlobalCards()
-                                            }
+                                            this@BeautifyConversationList.globalCardsEnabled = it
+                                            applyGlobalCardsSettings()
                                         },
                                     )
                                 }
@@ -279,7 +286,8 @@ object BeautifyConversationList : ClickableFeature() {
                                         checked = globalCardsDark,
                                         onCheckedChange = {
                                             globalCardsDark = it
-                                            applyGlobalCardsNow()
+                                            this@BeautifyConversationList.globalCardsDark = it
+                                            applyGlobalCardsSettings()
                                         },
                                     )
                                 }
@@ -294,7 +302,8 @@ object BeautifyConversationList : ClickableFeature() {
                                         valueSuffix = "/255",
                                         onValueChange = {
                                             globalCardsAlpha = it
-                                            applyGlobalCardsNow()
+                                            this@BeautifyConversationList.globalCardsAlpha = it
+                                            applyGlobalCardsSettings()
                                         },
                                     )
                                 }
@@ -309,7 +318,8 @@ object BeautifyConversationList : ClickableFeature() {
                                         valueSuffix = "dp",
                                         onValueChange = {
                                             globalCardsRadius = it
-                                            applyGlobalCardsNow()
+                                            this@BeautifyConversationList.globalCardsRadius = it
+                                            applyGlobalCardsSettings()
                                         },
                                     )
                                 }
@@ -324,7 +334,8 @@ object BeautifyConversationList : ClickableFeature() {
                                         valueSuffix = "dp",
                                         onValueChange = {
                                             globalCardsInset = it
-                                            applyGlobalCardsNow()
+                                            this@BeautifyConversationList.globalCardsInset = it
+                                            applyGlobalCardsSettings()
                                         },
                                     )
                                 }
@@ -339,7 +350,8 @@ object BeautifyConversationList : ClickableFeature() {
                                         valueSuffix = "dp",
                                         onValueChange = {
                                             globalCardsGap = it
-                                            applyGlobalCardsNow()
+                                            this@BeautifyConversationList.globalCardsGap = it
+                                            applyGlobalCardsSettings()
                                         },
                                     )
                                 }
@@ -354,7 +366,8 @@ object BeautifyConversationList : ClickableFeature() {
                                         valueSuffix = "dp",
                                         onValueChange = {
                                             globalCardsHeight = it
-                                            applyGlobalCardsNow()
+                                            this@BeautifyConversationList.globalCardsHeight = it
+                                            applyGlobalCardsSettings()
                                         },
                                     )
                                 }
