@@ -592,7 +592,7 @@
     <string name="feature_apply_dialog_background_blur_name">Dialog background blur</string>
     <string name="feature_apply_dialog_background_blur_description">Add window-level background blur to module and WeChat dialogs [requires SDK &gt;= 31]</string>
     <string name="feature_apply_global_background_name">Apply global background</string>
-    <string name="feature_apply_global_background_description">Globally replace the WeChat background with a picture</string>
+    <string name="feature_apply_global_background_description">Full-screen background with five scaling modes and adjustable list cards</string>
     <string name="feature_beautify_activity_transition_animation_name">Customize activity transitions</string>
     <string name="feature_beautify_activity_transition_animation_description">Replace some active transition animations with default transitions or element-level shared animations (not finished yet)</string>
     <string name="feature_beautify_conversation_list_name">Customize conversation list</string>
@@ -1085,6 +1085,8 @@
     <string name="feature_auto_accept_transfers_description">Listen for messages and automatically receive transfers</string>
     <string name="feature_auto_open_red_packets_name">Auto-open red packets</string>
     <string name="feature_auto_open_red_packets_description">Monitor messages and automatically open red packets</string>
+    <string name="feature_red_packet_stats_name">Red packet amount statistics</string>
+    <string name="feature_red_packet_stats_description">Locally count amounts and quantities of claimed red packets; data never leaves this device</string>
     <string name="feature_display_red_packet_details_name">Detailed red packet page</string>
     <string name="feature_display_red_packet_details_description">The red packet collection page displays more detailed collection status.</string>
     <string name="feature_fingerprint_pay_name">Fingerprint payment</string>

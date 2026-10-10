@@ -25,6 +25,7 @@ import dev.sun.wechat.features.api.core.models.MessageInfo
 import dev.sun.wechat.features.api.core.models.MessageType
 import dev.sun.wechat.features.api.net.WeNetSceneApi
 import dev.sun.wechat.features.items.payment.RedPacketSettings.ReceiveMode
+import dev.sun.wechat.features.items.payment.stats.RedPacketStatsManager
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.ui.content.AlertDialogContent
@@ -384,6 +385,17 @@ object AutoOpenRedPackets : ClickableFeature(), WeDatabaseListenerApi.IInsertLis
         if (amount <= 0) return
 
         val displayAmount = amount / 100.0
+
+        // 统计失败不得影响抢红包主流程；数据仅写入模块本地数据库。
+        if (RedPacketStatsManager.isEnabled()) {
+            RedPacketStatsManager.addSuccessRecord(
+                senderName = info.nickName,
+                chatName = runCatching { WeDatabaseApi.getDisplayName(info.talker) }.getOrDefault(""),
+                money = displayAmount,
+                msgType = if (info.msgType == 1) "普通红包" else "红包",
+                timestamp = System.currentTimeMillis(),
+            )
+        }
 
         val reply = info.autoReply
         if (reply.isNotBlank()) {

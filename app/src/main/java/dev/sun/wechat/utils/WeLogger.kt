@@ -25,6 +25,7 @@ object WeLogger {
     private const val RESERVED_IMPORTANT_CAPACITY = 128
     private const val BATCH_SIZE = 64
     private const val FLUSH_TIMEOUT_MILLIS = 3000L
+    private const val MAX_LOG_AGE_DAYS = 3L
 
     private val timestampFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
     private val dateFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd")
@@ -83,7 +84,7 @@ object WeLogger {
 
     private fun deleteOldLogs(logsDir: java.nio.file.Path) {
         runCatching {
-            val thresholdDate = LocalDate.now().minusDays(3)
+            val thresholdDate = LocalDate.now().minusDays(MAX_LOG_AGE_DAYS)
             val logFileRegex = Regex("""wekit-(\d{4}-\d{2}-\d{2})\.log""")
 
             logsDir.toFile().listFiles()?.forEach { file ->
@@ -247,6 +248,7 @@ object WeLogger {
         get() {
             flush()
             val dir = logsDir ?: return emptyList()
+            deleteOldLogs(dir)
             val regex = Regex("""wekit-\d{4}-\d{2}-\d{2}\.log""")
             return runCatching {
                 dir.toFile().listFiles()

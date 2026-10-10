@@ -68,6 +68,11 @@
             android:exported="false" />
 
         <activity
+            android:name=".activity.RedPacketStatsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Material3.DynamicColors.DayNight.NoActionBar" />
+
+        <activity
             android:name=".activity.settings.SettingsActivity"
             android:exported="true"
             android:theme="@style/Theme.Material3.DynamicColors.DayNight.NoActionBar" />

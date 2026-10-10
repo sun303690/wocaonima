@@ -553,7 +553,7 @@
     <string name="feature_apply_dialog_background_blur_name">對話框窗口級背景模糊</string>
     <string name="feature_apply_dialog_background_blur_description">爲模塊與微信的對話框添加窗口級模糊處理 [需 SDK &gt;= 31]</string>
     <string name="feature_apply_global_background_name">應用全局背景</string>
-    <string name="feature_apply_global_background_description">將微信背景全局替換爲圖片</string>
+    <string name="feature_apply_global_background_description">全螢幕背景、五種縮放及列表圓角、內縮、間距和高度調整</string>
     <string name="feature_beautify_activity_transition_animation_name">美化活動過渡動畫</string>
     <string name="feature_beautify_activity_transition_animation_description">將部分活動過渡動畫替換爲默認過渡或元素級共享動畫 (沒做完)</string>
     <string name="feature_beautify_conversation_list_name">美化對話列表</string>
@@ -1015,6 +1015,8 @@
     <string name="feature_auto_accept_transfers_description">監聽消息並自動接收轉賬</string>
     <string name="feature_auto_open_red_packets_name">自動搶紅包</string>
     <string name="feature_auto_open_red_packets_description">監聽消息並自動拆開紅包</string>
+    <string name="feature_red_packet_stats_name">搶紅包金額統計</string>
+    <string name="feature_red_packet_stats_description">本機統計搶到的紅包金額與數量，資料僅保存在本機</string>
     <string name="feature_display_red_packet_details_name">紅包頁面詳情</string>
     <string name="feature_display_red_packet_details_description">紅包領取頁面顯示更加詳細的領取情況</string>
     <string name="feature_fingerprint_pay_name">指紋支付</string>

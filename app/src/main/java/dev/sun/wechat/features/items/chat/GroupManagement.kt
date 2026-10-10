@@ -1,6 +1,9 @@
 package dev.sun.wechat.features.items.chat
 
 import android.content.ContentValues
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,10 +22,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.sun.wechat.R
-import dev.sun.wechat.features.api.core.WeApi
+import dev.sun.wechat.HostInfo
 import dev.sun.wechat.features.api.core.WeDatabaseApi
 import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
 import dev.sun.wechat.features.api.core.WeGroupApi
@@ -44,10 +48,13 @@ import dev.sun.wechat.ui.content.m3.SwitchWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToast
+import dev.sun.wechat.utils.fs.KnownPaths
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.io.path.div
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -120,6 +127,10 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
     var notifyEnabled by KvStore.prefOption("glg_notify_enabled", false)
     var welcomeText by KvStore.prefOption("glg_welcome_text", "欢迎新成员入群！")
     var leaveText by KvStore.prefOption("glg_leave_text", "")
+    var joinMediaType by KvStore.prefOption("glg_join_media_type", MEDIA_NONE)
+    var joinMediaPath by KvStore.prefOption("glg_join_media_path", "")
+    var leaveMediaType by KvStore.prefOption("glg_leave_media_type", MEDIA_NONE)
+    var leaveMediaPath by KvStore.prefOption("glg_leave_media_path", "")
     // 卡片模式：进退群发图片卡片（头像+通知文本），关闭则用下方纯文本
     var cardEnabled by KvStore.prefOption("glg_card_enabled", false)
     var newbieKickEnabled by KvStore.prefOption("glg_newbie_kick", false)
@@ -131,6 +142,12 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
     var ownerExempt by KvStore.prefOption("glg_owner_exempt", true)
     var ladderEnabled by KvStore.prefOption("glg_ladder_enabled", false)
     var rules by KvStore.prefOption("glg_rules", "")
+
+    private const val MEDIA_NONE = 0
+    private const val MEDIA_IMAGE = 1
+    private const val MEDIA_VOICE = 2
+    private const val MEDIA_VIDEO = 3
+    private const val MEDIA_FILE = 4
 
     private const val DEFAULT_HINT = "群内禁止发送链接和小程序，已自动移出群聊。"
     private const val DEFAULT_NIGHT_HINT = "禁言时段内发言，已自动移出群聊。"
@@ -472,6 +489,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                     .getOrDefault(false)
                 if (sent) {
                     WeLogger.i(TAG, "GM event appmsg sent group=$groupId wxid=$wxid isJoin=$isJoin")
+                    sendEventMedia(groupId, isJoin)
                     return@launch
                 }
                 // 图文卡片发不出去时回退到图片卡片
@@ -493,17 +511,46 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                             "submitted=$submitted file=${file.name}",
                     )
                 }.onFailure { WeLogger.e(TAG, "GM event card failed group=$groupId wxid=$wxid", it) }
+                sendEventMedia(groupId, isJoin)
             }
             return
         }
         val text = (if (isJoin) welcomeText else leaveText).trim()
-        if (text.isBlank()) return
         val replaced = text
             .replace("%userName%", nick)
             .replace("%userWxid%", wxid)
             .replace("%groupName%", groupName(groupId))
             .replace("%time%", SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date()))
-        scope.launch { WeMessageApi.sendText(groupId, replaced) }
+        scope.launch {
+            if (replaced.isNotBlank()) WeMessageApi.sendText(groupId, replaced)
+            sendEventMedia(groupId, isJoin)
+        }
+    }
+
+    private fun sendEventMedia(groupId: String, isJoin: Boolean) {
+        val type = if (isJoin) joinMediaType else leaveMediaType
+        val path = if (isJoin) joinMediaPath else leaveMediaPath
+        val file = File(path)
+        if (type == MEDIA_NONE || !file.isFile) return
+        val sent = when (type) {
+            MEDIA_IMAGE -> WeMessageApi.sendImage(groupId, path)
+            MEDIA_VOICE -> WeMessageApi.sendVoice(groupId, path, mediaDurationMs(file))
+            MEDIA_VIDEO -> WeMessageApi.sendVideo(groupId, path)
+            MEDIA_FILE -> WeMessageApi.sendFile(groupId, path, file.name)
+            else -> false
+        }
+        if (!sent) WeLogger.w(TAG, "GM event media failed group=$groupId type=$type path=${file.name}")
+    }
+
+    private fun mediaDurationMs(file: File): Int {
+        val context = HostInfo.application
+        return runCatching {
+            android.media.MediaMetadataRetriever().use { retriever ->
+                retriever.setDataSource(context, Uri.fromFile(file))
+                retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
+                    ?.toLongOrNull()?.coerceIn(0L, Int.MAX_VALUE.toLong())?.toInt() ?: 0
+            }
+        }.getOrDefault(0)
     }
 
     private fun xmlTag(xml: String, tag: String): String {
@@ -576,6 +623,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
     private fun showSettings(context: ComponentActivity) {
         showComposeDialog(context) {
             val localizedContext by rememberUpdatedState(LocalWeKitLocalizedContext.current)
+            val androidContext = LocalContext.current
 
             var actionInput by remember { mutableStateOf(action) }
             var cooldown by remember { mutableStateOf(cooldownMs.toString()) }
@@ -597,6 +645,11 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
             var notify by remember { mutableStateOf(notifyEnabled) }
             var welcomeInput by remember { mutableStateOf(welcomeText) }
             var leaveInput by remember { mutableStateOf(leaveText) }
+            var joinMediaTypeInput by remember { mutableStateOf(joinMediaType) }
+            var joinMediaPathInput by remember { mutableStateOf(joinMediaPath) }
+            var leaveMediaTypeInput by remember { mutableStateOf(leaveMediaType) }
+            var leaveMediaPathInput by remember { mutableStateOf(leaveMediaPath) }
+            var pendingMediaTarget by remember { mutableStateOf(true) }
             var card by remember { mutableStateOf(cardEnabled) }
             var newbie by remember { mutableStateOf(newbieKickEnabled) }
             var newbieMinutesInput by remember { mutableStateOf(newbieMinutes.toString()) }
@@ -606,6 +659,31 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
             var atAll by remember { mutableStateOf(atAllEnabled) }
             var owner by remember { mutableStateOf(ownerExempt) }
             var ladder by remember { mutableStateOf(ladderEnabled) }
+
+            fun copyEventMedia(uri: Uri): String? {
+                val dir = (KnownPaths.moduleRoot / "group_management_media").toFile().apply { mkdirs() }
+                val name = uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
+                    ?: "media_${System.currentTimeMillis()}"
+                val target = File(dir, "${System.currentTimeMillis()}_$name")
+                androidContext.contentResolver.openInputStream(uri)?.use { input ->
+                    target.outputStream().use { output -> input.copyTo(output) }
+                } ?: return null
+                return target.absolutePath
+            }
+
+            val mediaPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+                if (uri == null) return@rememberLauncherForActivityResult
+                copyEventMedia(uri)?.let { path ->
+                    if (pendingMediaTarget) joinMediaPathInput = path else leaveMediaPathInput = path
+                }
+            }
+
+            fun mediaMime(type: Int): String = when (type) {
+                MEDIA_IMAGE -> "image/*"
+                MEDIA_VOICE -> "audio/*"
+                MEDIA_VIDEO -> "video/*"
+                else -> "*/*"
+            }
 
             fun openGroupPicker() {
                 showComposeDialog(context) {
@@ -760,6 +838,32 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                                     singleLine = false,
                                 )
                             }
+                            item {
+                                EventMediaRow(
+                                    title = "加入群自定义消息",
+                                    type = joinMediaTypeInput,
+                                    path = joinMediaPathInput,
+                                    onTypeChange = { joinMediaTypeInput = it },
+                                    onSelect = {
+                                        pendingMediaTarget = true
+                                        mediaPicker.launch(arrayOf(mediaMime(joinMediaTypeInput)))
+                                    },
+                                    onClear = { joinMediaPathInput = "" },
+                                )
+                            }
+                            item {
+                                EventMediaRow(
+                                    title = "退出群自定义消息",
+                                    type = leaveMediaTypeInput,
+                                    path = leaveMediaPathInput,
+                                    onTypeChange = { leaveMediaTypeInput = it },
+                                    onSelect = {
+                                        pendingMediaTarget = false
+                                        mediaPicker.launch(arrayOf(mediaMime(leaveMediaTypeInput)))
+                                    },
+                                    onClear = { leaveMediaPathInput = "" },
+                                )
+                            }
                             item { SwitchRow(R.string.glg_card_switch, R.string.glg_card_switch_desc, card) { card = it } }
                             item { SwitchRow(R.string.glg_newbie_title, R.string.glg_newbie_desc, newbie) { newbie = it } }
                             item {
@@ -843,6 +947,12 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                         notifyEnabled = notify
                         welcomeText = welcomeInput
                         leaveText = leaveInput
+                        if (joinMediaPath.isNotBlank() && joinMediaPath != joinMediaPathInput) runCatching { File(joinMediaPath).delete() }
+                        if (leaveMediaPath.isNotBlank() && leaveMediaPath != leaveMediaPathInput) runCatching { File(leaveMediaPath).delete() }
+                        joinMediaType = joinMediaTypeInput
+                        joinMediaPath = joinMediaPathInput
+                        leaveMediaType = leaveMediaTypeInput
+                        leaveMediaPath = leaveMediaPathInput
                         cardEnabled = card
                         newbieKickEnabled = newbie
                         newbieMinutes = (newbieMinutesInput.toIntOrNull() ?: newbieMinutes).coerceIn(1, 9999)
@@ -960,6 +1070,40 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
             checked = checked,
             onCheckedChange = onChange,
         )
+    }
+
+    @Composable
+    private fun EventMediaRow(
+        title: String,
+        type: Int,
+        path: String,
+        onTypeChange: (Int) -> Unit,
+        onSelect: () -> Unit,
+        onClear: () -> Unit,
+    ) {
+        Column(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+            DropDownMenuWidget(
+                iconPlaceholder = false,
+                title = title,
+                description = path.takeIf { it.isNotBlank() }?.let { File(it).name }
+                    ?: "可选文字、图片、语音、视频或文件",
+                value = type,
+                options = listOf(
+                    DropdownOption(MEDIA_NONE, "仅文字/不发送媒体"),
+                    DropdownOption(MEDIA_IMAGE, "图片"),
+                    DropdownOption(MEDIA_VOICE, "语音"),
+                    DropdownOption(MEDIA_VIDEO, "视频"),
+                    DropdownOption(MEDIA_FILE, "文件"),
+                ),
+                onValueChange = onTypeChange,
+            )
+            if (type != MEDIA_NONE) {
+                Row(Modifier.fillMaxWidth()) {
+                    TextButton(onSelect) { Text(if (path.isBlank()) "选择文件" else "重新选择") }
+                    if (path.isNotBlank()) TextButton(onClear) { Text("清除") }
+                }
+            }
+        }
     }
 
     @Composable
