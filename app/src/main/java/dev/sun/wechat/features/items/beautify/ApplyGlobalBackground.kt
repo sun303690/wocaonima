@@ -18,8 +18,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -31,7 +29,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.composables.icons.materialsymbols.MaterialSymbols
-import com.composables.icons.materialsymbols.outlined.Delete
 import com.composables.icons.materialsymbols.outlined.Opacity
 import androidx.core.view.isVisible
 import androidx.core.view.postDelayed
@@ -103,7 +100,6 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     private var listHorizontalInset by prefOption("global_bg_list_horizontal_inset", 8)
     private var listVerticalSpacing by prefOption("global_bg_list_vertical_spacing", 4)
     private var listHeight by prefOption("global_bg_list_height", 0)
-    private var keepSystemStatusBar by prefOption("global_bg_system_status_bar", true)
     private var transparentTopBar by prefOption("global_bg_transparent_top_bar", true)
 
     private const val BACKGROUND_IMAGE_FILE = "global_background.png"
@@ -287,7 +283,6 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
             var horizontalInput by remember { mutableIntStateOf(listHorizontalInset) }
             var spacingInput by remember { mutableIntStateOf(listVerticalSpacing) }
             var heightInput by remember { mutableIntStateOf(listHeight) }
-            var systemBarInput by remember { mutableStateOf(keepSystemStatusBar) }
             var topBarInput by remember { mutableStateOf(transparentTopBar) }
             var restartRequired by remember { mutableStateOf(false) }
             val currentRestartRequired by rememberUpdatedState(restartRequired)
@@ -307,36 +302,23 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                     SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                         item {
                             BaseWidget(
-                                title = stringResource(R.string.action_select_image),
-                                description = stringResource(
-                                    if (hasImage) {
-                                        R.string.beautify_global_background_set
-                                    } else {
-                                        R.string.beautify_global_background_not_set
-                                    }
-                                ),
+                                title = if (hasImage) "更换背景图片" else "选择背景图片",
+                                description = if (hasImage) "背景图片已设置，点击重新选择" else "点击从相册选择全屏背景",
                                 onClick = {
                                     onDismiss()
                                     selectBackgroundImage(context)
                                 },
                                 trailingContent = {
-                                    IconButton(
+                                    TextButton(
                                         enabled = hasImage,
                                         onClick = {
                                             backgroundUri = null
                                             hasImage = false
                                             runCatching { backgroundImageFile.deleteIfExists() }
-                                                .onFailure {
-                                                    WeLogger.w(TAG, "failed to delete background image file", it)
-                                                }
+                                                .onFailure { WeLogger.w(TAG, "failed to delete background image file", it) }
                                             showToast(localizedContext.getString(R.string.beautify_global_background_cleared))
                                         },
-                                    ) {
-                                        Icon(
-                                            MaterialSymbols.Outlined.Delete,
-                                            contentDescription = stringResource(R.string.action_clear_image),
-                                        )
-                                    }
+                                    ) { Text("清除") }
                                 },
                             )
                         }
@@ -368,7 +350,19 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                         item { BaseItemContainer { IntNumberPickerWidget(iconPlaceholder = false, title = "左右内缩", value = horizontalInput, startInt = 0, endInt = 40, stepSize = 1, valueSuffix = "dp", onValueChange = { horizontalInput = it; listHorizontalInset = it; restartRequired = true }) } }
                         item { BaseItemContainer { IntNumberPickerWidget(iconPlaceholder = false, title = "上下间隔", value = spacingInput, startInt = 0, endInt = 30, stepSize = 1, valueSuffix = "dp", onValueChange = { spacingInput = it; listVerticalSpacing = it; restartRequired = true }) } }
                         item { BaseItemContainer { IntNumberPickerWidget(iconPlaceholder = false, title = "列表高度（0为原始）", value = heightInput, startInt = 0, endInt = 160, stepSize = 4, valueSuffix = "dp", onValueChange = { heightInput = it; listHeight = it; restartRequired = true }) } }
-                        item { SwitchWidget(iconPlaceholder = false, title = "状态栏保持系统原色", description = "关闭后沿用旧版透明状态栏", checked = systemBarInput, onCheckedChange = { systemBarInput = it; keepSystemStatusBar = it; transparentStatusBarInput = !it; transparentStatusBar = !it; restartRequired = true }) }
+                        item {
+                            SwitchWidget(
+                                iconPlaceholder = false,
+                                title = stringResource(R.string.beautify_global_background_status_bar),
+                                description = stringResource(R.string.beautify_global_background_status_bar_summary),
+                                checked = transparentStatusBarInput,
+                                onCheckedChange = {
+                                    transparentStatusBarInput = it
+                                    transparentStatusBar = it
+                                    restartRequired = true
+                                },
+                            )
+                        }
                         item { SwitchWidget(iconPlaceholder = false, title = "顶部栏紧随背景", description = "顶部栏透明并显示全屏背景", checked = topBarInput, onCheckedChange = { topBarInput = it; transparentTopBar = it; restartRequired = true }) }
                     }
                 },
@@ -380,22 +374,8 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     }
 
     private fun applyTransparentStatusBarIfEnabled(activity: Activity) {
-        if (keepSystemStatusBar) restoreSystemStatusBar(activity)
-        else if (transparentStatusBar) applyTransparentStatusBar(activity)
-    }
-
-    private fun restoreSystemStatusBar(activity: Activity) {
-        val window = activity.window ?: return
-        val value = android.util.TypedValue()
-        val fallback = if (activity.isDarkMode) Color.BLACK else Color.WHITE
-        val color = if (activity.theme.resolveAttribute(android.R.attr.statusBarColor, value, true)) {
-            if (value.resourceId != 0) runCatching {
-                androidx.core.content.ContextCompat.getColor(activity, value.resourceId)
-            }.getOrDefault(value.data) else value.data
-        } else fallback
-        window.statusBarColor = color
-        androidx.core.view.WindowInsetsControllerCompat(window, window.decorView)
-            .isAppearanceLightStatusBars = !activity.isDarkMode
+        if (!transparentStatusBar) return
+        applyTransparentStatusBar(activity)
     }
 
     @Suppress("DEPRECATION")
