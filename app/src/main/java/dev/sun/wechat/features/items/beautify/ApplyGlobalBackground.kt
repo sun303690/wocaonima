@@ -112,7 +112,6 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     private const val APPLY_STATUS_BAR_DELAY_MS = 80L
 
     private val rowStates = WeakHashMap<View, RowState>()
-    private val observedLists = WeakHashMap<ViewGroup, View.OnLayoutChangeListener>()
     private data class RowState(val background: android.graphics.drawable.Drawable?, val height: Int)
 
     private val conversationBindListener = WeConversationListViewApi.IBindViewListener { _, view, _, _ ->
@@ -451,8 +450,6 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
         overlay.alpha = opacity
         overlay.bringToFront()
 
-        if (listCards) observeLists(decor, 0)
-
         if (overlay.getTag(APPLIED_URI_TAG_KEY) != uri) {
             overlay.setTag(APPLIED_URI_TAG_KEY, uri)
             overlay.load(uri) {
@@ -486,25 +483,6 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
             }
         }
         return null
-    }
-
-    private fun observeLists(root: ViewGroup, depth: Int) {
-        if (depth > 12) return
-        for (index in 0 until root.childCount) {
-            val child = root.getChildAt(index)
-            if (child !is ViewGroup) continue
-            val name = child.javaClass.name
-            if (child is android.widget.AbsListView || name.contains("RecyclerView") || name.contains("ListView")) {
-                styleVisibleListRows(child)
-                if (!observedLists.containsKey(child)) {
-                    val listener = View.OnLayoutChangeListener { view, _, _, _, _, _, _, _, _ ->
-                        if (isEnabled && listCards) styleVisibleListRows(view as ViewGroup)
-                    }
-                    observedLists[child] = listener
-                    child.addOnLayoutChangeListener(listener)
-                }
-            } else observeLists(child, depth + 1)
-        }
     }
 
     private fun styleVisibleListRows(container: ViewGroup) {
@@ -541,10 +519,6 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
 
     override fun onDisable() {
         WeConversationListViewApi.removeListener(conversationBindListener)
-        for ((list, listener) in observedLists) {
-            list.removeOnLayoutChangeListener(listener)
-        }
-        observedLists.clear()
         rowStates.clear()
     }
 
