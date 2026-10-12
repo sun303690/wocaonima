@@ -621,6 +621,8 @@
     <string name="feature_chat_toolbar_description">在输入框上方添加工具栏</string>
     <string name="feature_conversation_aggregation_name">对话归拢</string>
     <string name="feature_conversation_aggregation_description">将多个对话归拢在一个文件夹内\n设置对话头像需同时启用「自定义好友本地头像」</string>
+    <string name="feature_chatroom_helper_name">群聊消息助手</string>
+    <string name="feature_chatroom_helper_description">移植自 WechatChatRoomHelper：在会话列表顶部固定「群聊消息」「服务号消息」两个聚合入口\n需要「对话归拢」功能（会自动启用）；若只想要文件夹不想要这两个预置入口，请直接关闭对话归拢</string>
     <string name="feature_conversation_grouping_name">对话分组</string>
     <string name="feature_conversation_grouping_description">向主页顶部添加 Tab 栏, 将对话分组\n建议同时启用「界面美化/隐藏主页下滑「最近」页」</string>
     <string name="feature_custom_chat_input_bar_placeholder_text_name">自定义输入框占位符文本</string>

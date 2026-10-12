@@ -321,6 +321,18 @@ object ConversationAggregation : ClickableFeature(),
         loadFolders().map { FolderChoice(it.id, it.name, it.type != FolderType.MANUAL) }
 
     /**
+     * Public change-notification hook for features that add or remove preset folders through
+     * the DAO directly (bypassing this object's edit dialog and therefore its cache
+     * invalidation). Drops the folder/member caches and, when the host database is already
+     * up, re-runs the full reconcile immediately so materialized rows track the new config
+     * without waiting for the next MainUI.onResume.
+     */
+    fun notifyFoldersChanged() {
+        invalidateFolders()
+        if (WeDatabaseApi.isReady) syncFoldersToDatabase()
+    }
+
+    /**
      * Adds [talker] to the manual folder [folderId] and opens the existing edit dialog so the
      * user can review and save. Returns false without acting when the folder is missing or in an
      * auto mode (members are computed, not hand-picked); callers surface that to the user.
