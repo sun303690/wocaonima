@@ -19,6 +19,7 @@ import dev.sun.wechat.features.items.scripting_center.ScriptCenter
 import dev.sun.wechat.features.items.scripting_java.JavaScriptingHook
 import dev.sun.wechat.features.items.scripting_python.PythonScriptingFeature
 import dev.sun.wechat.utils.fs.KnownPaths
+import kotlin.io.path.div
 import dev.sun.wechat.utils.fs.createDirsSafe
 
 /**

@@ -8,12 +8,13 @@ import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.items.scripting_center.ScriptCenter
 import dev.sun.wechat.features.items.scripting_python.plugin.PythonPluginManager
+import dev.sun.wechat.utils.WeLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-
 object PythonScriptingFeature : ClickableFeature() {
+    private const val TAG = "PythonScriptingFeature"
     override val technicalId = "Python 插件引擎"
     override val nameRes = R.string.feature_python_scripting_name
     override val descriptionRes = R.string.feature_python_scripting_description

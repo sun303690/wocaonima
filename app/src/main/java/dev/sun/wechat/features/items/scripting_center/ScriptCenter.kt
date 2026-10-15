@@ -157,10 +157,8 @@ object ScriptCenter : ClickableFeature() {
         }
     }
 
-    companion object {
-        /** 总开关的存储键（与 [isScriptingAllowed] 配套；本功能开关自身走 technicalId 键）。 */
-        const val KEY_MASTER_ENABLED = "script_center_enabled"
-    }
+    /** 总开关的存储键（与 [isScriptingAllowed] 配套；本功能开关自身走 technicalId 键）。 */
+    const val KEY_MASTER_ENABLED = "script_center_enabled"
 }
 
 /** 在线市场的一个插件条目。 */
