@@ -103,6 +103,7 @@ import com.mikepenz.aboutlibraries.ui.compose.variant.LibraryDetailMode
 import com.mikepenz.aboutlibraries.ui.compose.variant.LibraryRow
 import dev.sun.wechat.BuildConfig
 import dev.sun.wechat.R
+import dev.sun.wechat.activity.self_check.SelfCheckSettingsActivity
 import dev.sun.wechat.constants.Preferences
 import dev.sun.wechat.features.api.core.WeApi
 import dev.sun.wechat.features.items.debug.ResetDexCache
@@ -301,6 +302,19 @@ fun SettingsPager(onOpenLicense: () -> Unit) {
                         onClick = {
                             actCtx.startActivity(
                                 Intent(context, ExtensionsSettingsActivity::class.java)
+                            )
+                        },
+                    )
+                }
+                item {
+                    val actCtx = LocalComponentActivity.current
+                    PrefArrow(
+                        title = stringResource(R.string.settings_self_check_title),
+                        summary = stringResource(R.string.settings_self_check_summary),
+                        icon = MaterialSymbols.Outlined.Build_circle,
+                        onClick = {
+                            actCtx.startActivity(
+                                Intent(context, SelfCheckSettingsActivity::class.java)
                             )
                         },
                     )
