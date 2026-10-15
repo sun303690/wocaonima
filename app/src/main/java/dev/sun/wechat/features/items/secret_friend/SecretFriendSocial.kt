@@ -56,6 +56,7 @@ object HideMyMoments : SwitchFeature(), WeMomentsContextMenuApi.IMenuItemsProvid
     override val nameRes: Int = R.string.secret_friend_19_name
     override val categoryIds: List<String> = listOf(FeatureCategoryIds.SECRET_FRIEND)
     override val descriptionRes: Int? = null
+    override val defaultEnabled: Boolean = true
 
     private const val TAG = "HideMyMoments"
 

@@ -29,6 +29,7 @@ object HideRecentForward : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.I
     override val nameRes: Int = R.string.secret_friend_23_name
     override val categoryIds: List<String> = listOf(FeatureCategoryIds.SECRET_FRIEND)
     override val descriptionRes: Int? = null
+    override val defaultEnabled: Boolean = true
 
 
     private const val TAG = "HideRecentForward"
@@ -100,6 +101,7 @@ object HideStatusPage : SwitchFeature(), IResolveDex {
     override val nameRes: Int = R.string.secret_friend_24_name
     override val categoryIds: List<String> = listOf(FeatureCategoryIds.SECRET_FRIEND)
     override val descriptionRes: Int? = null
+    override val defaultEnabled: Boolean = true
 
 
     private const val TAG = "HideStatusPage"
@@ -151,6 +153,7 @@ object HideStorageRecords : SwitchFeature(), IResolveDex {
     override val nameRes: Int = R.string.secret_friend_25_name
     override val categoryIds: List<String> = listOf(FeatureCategoryIds.SECRET_FRIEND)
     override val descriptionRes: Int? = null
+    override val defaultEnabled: Boolean = true
 
 
     private const val TAG = "HideStorageRecords"
@@ -197,6 +200,7 @@ object HideStorageCache : SwitchFeature(), IResolveDex {
     override val nameRes: Int = R.string.secret_friend_26_name
     override val categoryIds: List<String> = listOf(FeatureCategoryIds.SECRET_FRIEND)
     override val descriptionRes: Int? = null
+    override val defaultEnabled: Boolean = true
 
 
     private const val TAG = "HideStorageCache"
