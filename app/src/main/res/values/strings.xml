@@ -3989,6 +3989,7 @@
     <string name="noncompose_message_menu_automatic_section">Actions automatically applied to multiple messages</string>
     <string name="noncompose_wekit_settings_entry">WeKit settings</string>
     <string name="noncompose_wekit_settings_group">Plugins</string>
+    <string name="noncompose_wekit_self_check_entry">WeKit self-check</string>
 
     <!-- WeAgent live panel -->
     <string name="agent_panel_collapse_sessions">Collapse session sidebar</string>

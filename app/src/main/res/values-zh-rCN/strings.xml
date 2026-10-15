@@ -3990,6 +3990,7 @@
     <string name="noncompose_message_menu_automatic_section">自动兼容多选消息</string>
     <string name="noncompose_wekit_settings_entry">WeKit 设置</string>
     <string name="noncompose_wekit_settings_group">插件</string>
+    <string name="noncompose_wekit_self_check_entry">WeKit 模块自检</string>
     <!-- WeAgent live panel -->
     <string name="agent_panel_collapse_sessions">收起会话侧栏</string>
     <string name="agent_panel_sessions">会话</string>

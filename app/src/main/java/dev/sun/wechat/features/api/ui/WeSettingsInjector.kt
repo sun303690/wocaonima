@@ -21,6 +21,7 @@ import dev.ujhhgtg.reflekt.utils.isBuiltin
 import dev.ujhhgtg.reflekt.utils.toClassOrNull
 import dev.sun.wechat.BuildConfig
 import dev.sun.wechat.R
+import dev.sun.wechat.activity.self_check.SelfCheckSettingsActivity
 import dev.sun.wechat.activity.settings.SettingsActivity
 import dev.sun.wechat.constants.PackageNames
 import dev.sun.wechat.dexkit.abc.IResolveDex
@@ -161,6 +162,7 @@ object WeSettingsInjector : ApiFeature(), IResolveDex, WeChatInputBarApi.IInputB
     private const val TAG = "WeSettingsInjector"
 
     private const val PREFS_KEY = "wekit_settings_entry"
+    private const val PREFS_KEY_SELF_CHECK = "wekit_self_check_entry"
     private const val PREFERENCE_CLASS_NAME = "com.tencent.mm.ui.base.preference.Preference"
 
     @SuppressLint("NonUniqueDexKitData")
@@ -272,23 +274,27 @@ object WeSettingsInjector : ApiFeature(), IResolveDex, WeChatInputBarApi.IInputB
             val context = thisObject as SettingsUI
 
             try {
-                val prefInstance = IconPreference(context)
-
-                methodSetKey.method.invoke(prefInstance, PREFS_KEY)
                 val localizedContext = LocalizedContextFactory.create(
                     context,
                     WeKitLocaleController.resolvedLocale,
                     LocaleResourceMode.InjectedHost,
                 )
-                methodSetTitle.method.invoke(
-                    prefInstance,
-                    localizedContext.getString(R.string.noncompose_wekit_settings_entry),
-                )
-
                 val prefScreen = context.reflekt().invokeMethod("getPreferenceScreen", superclass = true)
 
-                methodAddPref.method.invoke(prefScreen, prefInstance, 0)
+                fun insertEntry(key: String, titleRes: Int, position: Int) {
+                    val prefInstance = IconPreference(context)
+                    methodSetKey.method.invoke(prefInstance, key)
+                    methodSetTitle.method.invoke(
+                        prefInstance,
+                        localizedContext.getString(titleRes),
+                    )
+                    methodAddPref.method.invoke(prefScreen, prefInstance, position)
+                }
 
+                // 入口 1：WeKit 设置 → 模块主设置
+                insertEntry(PREFS_KEY, R.string.noncompose_wekit_settings_entry, 0)
+                // 入口 2：模块自检 → 直达自检页
+                insertEntry(PREFS_KEY_SELF_CHECK, R.string.noncompose_wekit_self_check_entry, 1)
             } catch (e: Throwable) {
                 WeLogger.e(TAG, "failed to insert pref item", e)
             }
@@ -301,12 +307,19 @@ object WeSettingsInjector : ApiFeature(), IResolveDex, WeChatInputBarApi.IInputB
 
                 val key = methodGetKey.method.invoke(preference) as? String
 
-                if (PREFS_KEY == key) {
-                    val activity = thisObject as Activity
+                when (key) {
+                    PREFS_KEY -> {
+                        openSettingsDialog(thisObject as Activity)
+                        result = true
+                    }
 
-                    openSettingsDialog(activity)
-
-                    result = true
+                    PREFS_KEY_SELF_CHECK -> {
+                        // 直达自检页，不经过主设置
+                        (thisObject as Activity).startActivity(
+                            Intent(thisObject as Activity, SelfCheckSettingsActivity::class.java)
+                        )
+                        result = true
+                    }
                 }
             }
     }
@@ -395,6 +408,26 @@ object WeSettingsInjector : ApiFeature(), IResolveDex, WeChatInputBarApi.IInputB
             parentClass = SettingAdditionHeaderSearch::class.java
             childClass = SettingGroupPersonalInfo::class.java
             onClick = { openSettingsDialog(it) }
+        }
+
+        // 入口 2：模块自检 → 直达自检页
+        settingsManager.createItem {
+            key = "SettingGroup_Main_WeKitSelfCheck"
+            titleProvider = {
+                LocalizedContextFactory.create(
+                    HostInfo.application,
+                    WeKitLocaleController.resolvedLocale,
+                    LocaleResourceMode.InjectedHost,
+                ).getString(R.string.noncompose_wekit_self_check_entry)
+            }
+            level = 1
+            pageClass = SettingGroupMain::class.java
+            parentClass = SettingAdditionHeaderSearch::class.java
+            onClick = { activity ->
+                activity.startActivity(
+                    Intent(activity, SelfCheckSettingsActivity::class.java)
+                )
+            }
         }
 
         settingsManager.install()
