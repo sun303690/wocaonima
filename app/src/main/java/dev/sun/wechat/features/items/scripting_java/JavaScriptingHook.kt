@@ -23,6 +23,7 @@ import dev.sun.wechat.features.api.core.WeDatabaseApi
 import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
 import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.features.api.ui.WeChatInputBarMenuApi
+import dev.sun.wechat.features.items.scripting_center.ScriptCenter
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.extensions.ExtensionPackDialogs
@@ -87,6 +88,10 @@ object JavaScriptingHook : ClickableFeature(), IResolveDex, WeDatabaseListenerAp
     }
 
     override fun onEnable() {
+        if (!ScriptCenter.isScriptingAllowed()) {
+            WeLogger.i(TAG, "script center master switch is off, skip java script loading")
+            return
+        }
         val generation = synchronized(lifecycleLock) {
             lifecycleGeneration += 1
             lifecycleGeneration

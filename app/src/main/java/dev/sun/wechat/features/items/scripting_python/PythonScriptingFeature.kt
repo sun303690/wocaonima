@@ -6,6 +6,7 @@ import dev.sun.wechat.R
 import dev.sun.wechat.activity.scripting_python.PythonScriptsSettingsActivity
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
+import dev.sun.wechat.features.items.scripting_center.ScriptCenter
 import dev.sun.wechat.features.items.scripting_python.plugin.PythonPluginManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,6 +23,10 @@ object PythonScriptingFeature : ClickableFeature() {
 
     override fun onEnable() {
         scope.launch {
+            if (!ScriptCenter.isScriptingAllowed()) {
+                WeLogger.i(TAG, "script center master switch is off, skip python plugin discovery")
+                return@launch
+            }
             PythonPluginManager.discover()
             PythonPluginManager.activateDesired()
         }
