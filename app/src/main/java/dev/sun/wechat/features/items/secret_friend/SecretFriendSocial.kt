@@ -217,7 +217,7 @@ private fun hideDiscoverRowsByTitle(activity: Activity, titles: Set<String>) {
 /**
  * 发现页容器类名（按优先级）。微信内部把「发现页」命名为 FindMore：8.0.77 起稳定为
  * `com.tencent.mm.ui.FindMoreFriendsUI`；老版本或 discover 插件包为 `DiscoverUI`。
- * 锚点逐个探测，命中即用，全部落空才整段跳过。
+ * 逐个探测，命中即用，全部落空才整段跳过。
  */
 private val DISCOVER_UI_CLASSES = listOf(
     "com.tencent.mm.ui.FindMoreFriendsUI",
@@ -226,16 +226,20 @@ private val DISCOVER_UI_CLASSES = listOf(
 )
 
 /**
- * 已解析到的发现页容器类中，第一个 onCreate 命中（或 onCreate 缺失但 onResume 命中）的索引。
- * onCreate 是最稳的锚点；onResume 在新版可能被基类继承而不在本类声明，因此不作为硬性条件，
- * 命中才挂、未命中就只靠 onCreate。全落空返回 null。
+ * 从候选委托组里取第一个已解析的容器。
+ *
+ * 判定用 `!isPlaceholder` 之前必须确认委托已参与解析：框架在
+ * `resolveInlineDex` 里遍历的是**构造期就注册**的 `dexDelegates`，并用
+ * `check(all SUCCESS || EXPECTED_FAILURE)` 收尾。因此候选委托一律用 `by dexMethod`
+ * 声明（构造期注册、allowFailure 兜底为 EXPECTED_FAILURE），绝不能 lazy/按需创建，
+ * 否则要么赶不上内联查找、要么被 check 判为 INCOMPLETE 抛异常。
  */
-private fun resolveDiscoverUiIndex(
-    onCreateDelegates: List<DexMethodDelegate>,
-    onResumeDelegates: List<DexMethodDelegate>,
-): Int? = onCreateDelegates.indices.firstOrNull { i ->
-    !onCreateDelegates[i].isPlaceholder || !onResumeDelegates[i].isPlaceholder
-}
+private fun pickDiscoverContainer(
+    candidates: List<Pair<DexMethodDelegate, DexMethodDelegate>>,
+): Pair<DexMethodDelegate, DexMethodDelegate>? =
+    candidates.firstOrNull { (onCreate, onResume) ->
+        !onCreate.isPlaceholder || !onResume.isPlaceholder
+    }
 
 private fun hideRowsMatching(view: View, titles: Set<String>) {
     if (view is TextView && view.text?.toString().orEmpty() in titles) {
@@ -273,48 +277,55 @@ object HideDiscoverMoments : SwitchFeature(), IResolveDex {
     private const val TAG = "HideDiscoverMoments"
 
     // 发现页容器类名逐版漂移：微信内部叫 FindMore（8.0.77 = com.tencent.mm.ui.FindMoreFriendsUI），
-    // 老版本才是 DiscoverUI。三个候选都注册 dexMethod，运行时取第一个真正解析到的。
-    private val methodOnCreateList = DISCOVER_UI_CLASSES.map { cls ->
-        dexMethod(allowFailure = true) {
-            matcher {
-                declaredClass = cls
-                name = "onCreate"
-                paramCount = 1
-            }
-        }
+    // 老版本才是 DiscoverUI。三个候选各声明一组 onCreate/onResume，取第一组解析到的。
+    // 必须用 by dexMethod 在构造期注册：框架 resolveInlineDex 只遍历已注册的委托，
+    // 且以 check(all SUCCESS/EXPECTED_FAILURE) 收尾，懒创建会被判 INCOMPLETE。
+    private val findMoreOnCreate by dexMethod(allowFailure = true) {
+        matcher { declaredClass = DISCOVER_UI_CLASSES[0]; name = "onCreate"; paramCount = 1 }
+    }
+    private val findMoreOnResume by dexMethod(allowFailure = true) {
+        matcher { declaredClass = DISCOVER_UI_CLASSES[0]; name = "onResume"; paramCount = 0 }
+    }
+    private val discoverOnCreate by dexMethod(allowFailure = true) {
+        matcher { declaredClass = DISCOVER_UI_CLASSES[1]; name = "onCreate"; paramCount = 1 }
+    }
+    private val discoverOnResume by dexMethod(allowFailure = true) {
+        matcher { declaredClass = DISCOVER_UI_CLASSES[1]; name = "onResume"; paramCount = 0 }
+    }
+    private val pluginDiscoverOnCreate by dexMethod(allowFailure = true) {
+        matcher { declaredClass = DISCOVER_UI_CLASSES[2]; name = "onCreate"; paramCount = 1 }
+    }
+    private val pluginDiscoverOnResume by dexMethod(allowFailure = true) {
+        matcher { declaredClass = DISCOVER_UI_CLASSES[2]; name = "onResume"; paramCount = 0 }
     }
 
-    private val methodOnResumeList = DISCOVER_UI_CLASSES.map { cls ->
-        dexMethod(allowFailure = true) {
-            matcher {
-                declaredClass = cls
-                name = "onResume"
-                paramCount = 0
-            }
-        }
-    }
+    private val candidates
+        get() = listOf(
+            findMoreOnCreate to findMoreOnResume,
+            discoverOnCreate to discoverOnResume,
+            pluginDiscoverOnCreate to pluginDiscoverOnResume,
+        )
 
     override fun resolveDex(dexKit: DexKitBridge) {
-        if (resolveDiscoverUiIndex(methodOnCreateList, methodOnResumeList) == null) {
+        if (pickDiscoverContainer(candidates) == null) {
             dumpDiscoverCandidates(dexKit, TAG)
         }
     }
 
     override fun onEnable() {
-        val index = resolveDiscoverUiIndex(methodOnCreateList, methodOnResumeList)
-        if (index == null) {
+        val (onCreate, onResume) = pickDiscoverContainer(candidates) ?: run {
             WeLogger.w(TAG, "DiscoverUI 未解析, 发现页入口不过滤")
             return
         }
         val rowTitles = setOf("朋友圈")
-        if (!methodOnCreateList[index].isPlaceholder) {
-            methodOnCreateList[index].hookAfter {
+        if (!onCreate.isPlaceholder) {
+            onCreate.hookAfter {
                 hideDiscoverRowsByTitle(thisObject as Activity, rowTitles)
             }
         }
         // onResume 重走一遍：页面重建后行会重新绑定。新版可能未在本类声明，缺失时跳过。
-        if (!methodOnResumeList[index].isPlaceholder) {
-            methodOnResumeList[index].hookAfter {
+        if (!onResume.isPlaceholder) {
+            onResume.hookAfter {
                 hideDiscoverRowsByTitle(thisObject as Activity, rowTitles)
             }
         }
@@ -335,46 +346,51 @@ object HideDiscoverEntries : SwitchFeature(), IResolveDex {
 
     private const val TAG = "HideDiscoverEntries"
 
-    private val methodOnCreateList = DISCOVER_UI_CLASSES.map { cls ->
-        dexMethod(allowFailure = true) {
-            matcher {
-                declaredClass = cls
-                name = "onCreate"
-                paramCount = 1
-            }
-        }
+    private val findMoreOnCreate by dexMethod(allowFailure = true) {
+        matcher { declaredClass = DISCOVER_UI_CLASSES[0]; name = "onCreate"; paramCount = 1 }
+    }
+    private val findMoreOnResume by dexMethod(allowFailure = true) {
+        matcher { declaredClass = DISCOVER_UI_CLASSES[0]; name = "onResume"; paramCount = 0 }
+    }
+    private val discoverOnCreate by dexMethod(allowFailure = true) {
+        matcher { declaredClass = DISCOVER_UI_CLASSES[1]; name = "onCreate"; paramCount = 1 }
+    }
+    private val discoverOnResume by dexMethod(allowFailure = true) {
+        matcher { declaredClass = DISCOVER_UI_CLASSES[1]; name = "onResume"; paramCount = 0 }
+    }
+    private val pluginDiscoverOnCreate by dexMethod(allowFailure = true) {
+        matcher { declaredClass = DISCOVER_UI_CLASSES[2]; name = "onCreate"; paramCount = 1 }
+    }
+    private val pluginDiscoverOnResume by dexMethod(allowFailure = true) {
+        matcher { declaredClass = DISCOVER_UI_CLASSES[2]; name = "onResume"; paramCount = 0 }
     }
 
-    private val methodOnResumeList = DISCOVER_UI_CLASSES.map { cls ->
-        dexMethod(allowFailure = true) {
-            matcher {
-                declaredClass = cls
-                name = "onResume"
-                paramCount = 0
-            }
-        }
-    }
+    private val candidates
+        get() = listOf(
+            findMoreOnCreate to findMoreOnResume,
+            discoverOnCreate to discoverOnResume,
+            pluginDiscoverOnCreate to pluginDiscoverOnResume,
+        )
 
     override fun resolveDex(dexKit: DexKitBridge) {
-        if (resolveDiscoverUiIndex(methodOnCreateList, methodOnResumeList) == null) {
+        if (pickDiscoverContainer(candidates) == null) {
             dumpDiscoverCandidates(dexKit, TAG)
         }
     }
 
     override fun onEnable() {
-        val index = resolveDiscoverUiIndex(methodOnCreateList, methodOnResumeList)
-        if (index == null) {
+        val (onCreate, onResume) = pickDiscoverContainer(candidates) ?: run {
             WeLogger.w(TAG, "DiscoverUI 未解析, 发现页入口不过滤")
             return
         }
         val rowTitles = setOf("视频号", "看一看", "小程序")
-        if (!methodOnCreateList[index].isPlaceholder) {
-            methodOnCreateList[index].hookAfter {
+        if (!onCreate.isPlaceholder) {
+            onCreate.hookAfter {
                 hideDiscoverRowsByTitle(thisObject as Activity, rowTitles)
             }
         }
-        if (!methodOnResumeList[index].isPlaceholder) {
-            methodOnResumeList[index].hookAfter {
+        if (!onResume.isPlaceholder) {
+            onResume.hookAfter {
                 hideDiscoverRowsByTitle(thisObject as Activity, rowTitles)
             }
         }
