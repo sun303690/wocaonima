@@ -335,6 +335,29 @@ object Themes : ClickableFeature(), IResolveDex {
         }
     }
 
+    /**
+     * 同 [setNullBgRecursivelyWithTv]，但跳过 NoMeasuredTextView。
+     *
+     * NoMeasuredTextView 的文字依赖 background 携带 compound drawable；清空后微信下一帧重新绑定
+     * 会调用 setCompoundLeftDrawablesWithIntrinsicBounds(0)，以 Resource ID #0x0 崩溃
+     * （Resources$NotFoundException）。首页列表（含下拉入口等特殊行）经
+     * [applyConversationRowTheme] 走到这里。
+     *
+     * 用类名字符串匹配（同本文件 line 2510 的既有写法）：compileOnly stub 里的
+     * NoMeasuredTextView 未继承 View，`is` 检查会被编译器判为恒假。
+     */
+    private fun setNullBgRecursivelySkipNoMeasured(viewGroup: ViewGroup?) {
+        if (viewGroup == null) return
+        setNullBg(viewGroup)
+        for (child in viewGroup) {
+            if (child is ViewGroup) {
+                setNullBgRecursivelySkipNoMeasured(child)
+            } else if (child.javaClass.name != "com.tencent.mm.ui.base.NoMeasuredTextView") {
+                setNullBg(child)
+            }
+        }
+    }
+
     /** cherrywechat GK.setNullBackgroundAndTagRecursively：递归清空（跳过 TextView） */
     private fun setNullBgRecursively(viewGroup: ViewGroup?) {
         if (viewGroup == null) return
@@ -2229,6 +2252,10 @@ object Themes : ClickableFeature(), IResolveDex {
         if (row.context.javaClass.name != "com.tencent.mm.ui.LauncherUI" || row !is ViewGroup) {
             return
         }
+        // 首页列表含 header、下拉入口（TaskBar）等不对应会话对象的特殊行，getItem() 合法返回 null。
+        // 这些行一旦被当作会话行清空背景，下拉面板会失效（其 NoMeasuredTextView 还会触发
+        // Resource ID #0x0 崩溃），因此只主题化真正的会话行。
+        if (conversation == null) return
         val tag = row.tag ?: return
         val isTop = fieldValueOfType(
             tag,
@@ -2239,7 +2266,7 @@ object Themes : ClickableFeature(), IResolveDex {
         val lastMsgTv = row.findViewWithTag<View>("last_msg_tv") as? TextView
         val unreadNumIv = viewByPath(row, 0, 0, 2) as? ImageView
         val unreadNumTv = viewByPath(row, 0, 0, 1) as? TextView
-        if (conversation != null) callMethod(conversation, "convertTo")
+        callMethod(conversation, "convertTo")
         row.backgroundTintList = ColorStateList.valueOf(0)
         setThemedBackground(
             row.getChildAt(0),
@@ -2271,7 +2298,7 @@ object Themes : ClickableFeature(), IResolveDex {
         }
         val lastChild = row.getChildAt(row.childCount - 1) as? ViewGroup
         if (lastChild != null) {
-            setNullBgRecursivelyWithTv(lastChild)
+            setNullBgRecursivelySkipNoMeasured(lastChild)
             if (row.findViewWithTag<View>(VIEW_TAG_HIDDEN) == null) {
                 val list = mutableListOf<View>()
                 collectHeightOneViews(row, list)
@@ -2292,6 +2319,7 @@ object Themes : ClickableFeature(), IResolveDex {
                 val view = result as? View ?: return@hookAfter
                 val item = (thisObject as? HeaderViewListAdapter)
                     ?.getItem(args.getOrNull(0) as? Int ?: 0)
+                    ?: return@hookAfter
                 applyConversationRowTheme(view, item)
             }
 
