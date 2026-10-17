@@ -10,25 +10,6 @@ import dev.sun.wechat.utils.WeLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 
-/**
- * Ported from WechatChatRoomHelper (zhudongya123) — the classic "微信群消息助手".
- *
- * The original module injected two aggregate rows ("群聊消息" / "服务号消息") into the
- * homepage ListView by hooking GetCount / GetView / getItem and fabricating bean rows. That
- * adapter surgery needed WXClassParser pattern-matching against obfuscated classes for every
- * WeChat release, which is what broke it on 8.0.77.
- *
- * This port reproduces the same zero-config UX on top of WeKit's materialized-folder
- * machinery instead: enabling creates two preset folders (all group chats / all official
- * accounts). The homepage aggregate rows, unread badge aggregation, tap-to-open container,
- * live summary refresh, and share-target interception all come from
- * [ConversationAggregation] — no obfuscated methods are touched here, so this feature
- * inherits that feature's verified 8.0.77 compatibility.
- *
- * Disabling removes the two preset folders; ConversationAggregation's next full reconcile
- * (MainUI.onResume -> syncFoldersToDatabase) reclaims their materialized rows. Folders the
- * user created manually are untouched.
- */
 object ChatroomHelperCompat : SwitchFeature() {
 
     override val technicalId = "群聊消息助手"
