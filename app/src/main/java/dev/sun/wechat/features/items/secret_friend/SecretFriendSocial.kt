@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import dev.ujhhgtg.reflekt.reflekt
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import org.luckypray.dexkit.DexKitBridge
+import dev.sun.wechat.dexkit.dsl.DexMethodDelegate
 import dev.sun.wechat.dexkit.dsl.dexMethod
 import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
 import dev.sun.wechat.features.api.ui.WeMomentsContextMenuApi
@@ -213,6 +214,29 @@ private fun hideDiscoverRowsByTitle(activity: Activity, titles: Set<String>) {
     }
 }
 
+/**
+ * 发现页容器类名（按优先级）。微信内部把「发现页」命名为 FindMore：8.0.77 起稳定为
+ * `com.tencent.mm.ui.FindMoreFriendsUI`；老版本或 discover 插件包为 `DiscoverUI`。
+ * 锚点逐个探测，命中即用，全部落空才整段跳过。
+ */
+private val DISCOVER_UI_CLASSES = listOf(
+    "com.tencent.mm.ui.FindMoreFriendsUI",
+    "com.tencent.mm.ui.discover.DiscoverUI",
+    "com.tencent.mm.plugin.discover.ui.DiscoverUI",
+)
+
+/**
+ * 已解析到的发现页容器类中，第一个 onCreate 命中（或 onCreate 缺失但 onResume 命中）的索引。
+ * onCreate 是最稳的锚点；onResume 在新版可能被基类继承而不在本类声明，因此不作为硬性条件，
+ * 命中才挂、未命中就只靠 onCreate。全落空返回 null。
+ */
+private fun resolveDiscoverUiIndex(
+    onCreateDelegates: List<DexMethodDelegate>,
+    onResumeDelegates: List<DexMethodDelegate>,
+): Int? = onCreateDelegates.indices.firstOrNull { i ->
+    !onCreateDelegates[i].isPlaceholder || !onResumeDelegates[i].isPlaceholder
+}
+
 private fun hideRowsMatching(view: View, titles: Set<String>) {
     if (view is TextView && view.text?.toString().orEmpty() in titles) {
         // 沿父链找到列表行容器（RecyclerView/ListView/GridView 的直接子 view）后整行隐藏；
@@ -248,64 +272,51 @@ object HideDiscoverMoments : SwitchFeature(), IResolveDex {
 
     private const val TAG = "HideDiscoverMoments"
 
-    private val methodDiscoverUiOnCreate by dexMethod(allowFailure = true) {
-        matcher {
-            declaredClass = "com.tencent.mm.ui.discover.DiscoverUI"
-            name = "onCreate"
-            paramCount = 1
+    // 发现页容器类名逐版漂移：微信内部叫 FindMore（8.0.77 = com.tencent.mm.ui.FindMoreFriendsUI），
+    // 老版本才是 DiscoverUI。三个候选都注册 dexMethod，运行时取第一个真正解析到的。
+    private val methodOnCreateList = DISCOVER_UI_CLASSES.map { cls ->
+        dexMethod(allowFailure = true) {
+            matcher {
+                declaredClass = cls
+                name = "onCreate"
+                paramCount = 1
+            }
         }
     }
 
-    private val methodDiscoverUiOnResume by dexMethod(allowFailure = true) {
-        matcher {
-            declaredClass = "com.tencent.mm.ui.discover.DiscoverUI"
-            name = "onResume"
-            paramCount = 0
-        }
-    }
-
-    // 兜底锚点：新版微信把发现页迁进 discover 插件包，老锚点整类可能消失。
-    private val methodDiscoverUiOnCreateAlt by dexMethod(allowFailure = true) {
-        matcher {
-            declaredClass = "com.tencent.mm.plugin.discover.ui.DiscoverUI"
-            name = "onCreate"
-            paramCount = 1
-        }
-    }
-
-    private val methodDiscoverUiOnResumeAlt by dexMethod(allowFailure = true) {
-        matcher {
-            declaredClass = "com.tencent.mm.plugin.discover.ui.DiscoverUI"
-            name = "onResume"
-            paramCount = 0
+    private val methodOnResumeList = DISCOVER_UI_CLASSES.map { cls ->
+        dexMethod(allowFailure = true) {
+            matcher {
+                declaredClass = cls
+                name = "onResume"
+                paramCount = 0
+            }
         }
     }
 
     override fun resolveDex(dexKit: DexKitBridge) {
-        if (methodDiscoverUiOnCreate.isPlaceholder && methodDiscoverUiOnCreateAlt.isPlaceholder) {
+        if (resolveDiscoverUiIndex(methodOnCreateList, methodOnResumeList) == null) {
             dumpDiscoverCandidates(dexKit, TAG)
         }
     }
 
     override fun onEnable() {
-        val onCreate = when {
-            !methodDiscoverUiOnCreate.isPlaceholder -> methodDiscoverUiOnCreate
-            !methodDiscoverUiOnCreateAlt.isPlaceholder -> methodDiscoverUiOnCreateAlt
-            else -> {
-                WeLogger.w(TAG, "DiscoverUI 未解析, 发现页入口不过滤")
-                return
+        val index = resolveDiscoverUiIndex(methodOnCreateList, methodOnResumeList)
+        if (index == null) {
+            WeLogger.w(TAG, "DiscoverUI 未解析, 发现页入口不过滤")
+            return
+        }
+        val rowTitles = setOf("朋友圈")
+        if (!methodOnCreateList[index].isPlaceholder) {
+            methodOnCreateList[index].hookAfter {
+                hideDiscoverRowsByTitle(thisObject as Activity, rowTitles)
             }
         }
-        val onResume = if (onCreate === methodDiscoverUiOnCreate) methodDiscoverUiOnResume
-            else methodDiscoverUiOnResumeAlt
-
-        val rowTitles = setOf("朋友圈")
-        onCreate.hookAfter {
-            hideDiscoverRowsByTitle(thisObject as Activity, rowTitles)
-        }
-        // onResume 重走一遍：页面重建后行会重新绑定
-        onResume.hookAfter {
-            hideDiscoverRowsByTitle(thisObject as Activity, rowTitles)
+        // onResume 重走一遍：页面重建后行会重新绑定。新版可能未在本类声明，缺失时跳过。
+        if (!methodOnResumeList[index].isPlaceholder) {
+            methodOnResumeList[index].hookAfter {
+                hideDiscoverRowsByTitle(thisObject as Activity, rowTitles)
+            }
         }
     }
 }
@@ -324,63 +335,48 @@ object HideDiscoverEntries : SwitchFeature(), IResolveDex {
 
     private const val TAG = "HideDiscoverEntries"
 
-    private val methodDiscoverUiOnCreate by dexMethod(allowFailure = true) {
-        matcher {
-            declaredClass = "com.tencent.mm.ui.discover.DiscoverUI"
-            name = "onCreate"
-            paramCount = 1
+    private val methodOnCreateList = DISCOVER_UI_CLASSES.map { cls ->
+        dexMethod(allowFailure = true) {
+            matcher {
+                declaredClass = cls
+                name = "onCreate"
+                paramCount = 1
+            }
         }
     }
 
-    private val methodDiscoverUiOnResume by dexMethod(allowFailure = true) {
-        matcher {
-            declaredClass = "com.tencent.mm.ui.discover.DiscoverUI"
-            name = "onResume"
-            paramCount = 0
-        }
-    }
-
-    // 兜底锚点：新版微信把发现页迁进 discover 插件包，老锚点整类可能消失。
-    private val methodDiscoverUiOnCreateAlt by dexMethod(allowFailure = true) {
-        matcher {
-            declaredClass = "com.tencent.mm.plugin.discover.ui.DiscoverUI"
-            name = "onCreate"
-            paramCount = 1
-        }
-    }
-
-    private val methodDiscoverUiOnResumeAlt by dexMethod(allowFailure = true) {
-        matcher {
-            declaredClass = "com.tencent.mm.plugin.discover.ui.DiscoverUI"
-            name = "onResume"
-            paramCount = 0
+    private val methodOnResumeList = DISCOVER_UI_CLASSES.map { cls ->
+        dexMethod(allowFailure = true) {
+            matcher {
+                declaredClass = cls
+                name = "onResume"
+                paramCount = 0
+            }
         }
     }
 
     override fun resolveDex(dexKit: DexKitBridge) {
-        if (methodDiscoverUiOnCreate.isPlaceholder && methodDiscoverUiOnCreateAlt.isPlaceholder) {
+        if (resolveDiscoverUiIndex(methodOnCreateList, methodOnResumeList) == null) {
             dumpDiscoverCandidates(dexKit, TAG)
         }
     }
 
     override fun onEnable() {
-        val onCreate = when {
-            !methodDiscoverUiOnCreate.isPlaceholder -> methodDiscoverUiOnCreate
-            !methodDiscoverUiOnCreateAlt.isPlaceholder -> methodDiscoverUiOnCreateAlt
-            else -> {
-                WeLogger.w(TAG, "DiscoverUI 未解析, 发现页入口不过滤")
-                return
+        val index = resolveDiscoverUiIndex(methodOnCreateList, methodOnResumeList)
+        if (index == null) {
+            WeLogger.w(TAG, "DiscoverUI 未解析, 发现页入口不过滤")
+            return
+        }
+        val rowTitles = setOf("视频号", "看一看", "小程序")
+        if (!methodOnCreateList[index].isPlaceholder) {
+            methodOnCreateList[index].hookAfter {
+                hideDiscoverRowsByTitle(thisObject as Activity, rowTitles)
             }
         }
-        val onResume = if (onCreate === methodDiscoverUiOnCreate) methodDiscoverUiOnResume
-            else methodDiscoverUiOnResumeAlt
-
-        val rowTitles = setOf("视频号", "看一看", "小程序")
-        onCreate.hookAfter {
-            hideDiscoverRowsByTitle(thisObject as Activity, rowTitles)
-        }
-        onResume.hookAfter {
-            hideDiscoverRowsByTitle(thisObject as Activity, rowTitles)
+        if (!methodOnResumeList[index].isPlaceholder) {
+            methodOnResumeList[index].hookAfter {
+                hideDiscoverRowsByTitle(thisObject as Activity, rowTitles)
+            }
         }
     }
 }

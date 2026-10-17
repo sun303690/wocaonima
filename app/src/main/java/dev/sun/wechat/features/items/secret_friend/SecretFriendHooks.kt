@@ -130,13 +130,14 @@ internal fun BaseFeature.dumpSurfaceCandidates(dexKit: DexKitBridge, pkg: String
 }
 
 /**
- * 发现页诊断：DiscoverUI 候选类逐个探测 + 两个 discover 包内 UI 类枚举。
- * 微信新版把发现页迁进了 discover 插件包（com.tencent.mm.plugin.discover.ui.*），
- * 老锚点 com.tencent.mm.ui.discover.DiscoverUI 可能整类消失。
+ * 发现页诊断：候选类逐个探测 + 相关包内 UI 类枚举。
+ * 微信内部把发现页命名为 FindMore（8.0.77 = com.tencent.mm.ui.FindMoreFriendsUI），
+ * 老版本/插件包才是 discover 包下的 DiscoverUI。
  */
 internal fun BaseFeature.dumpDiscoverCandidates(dexKit: DexKitBridge, tag: String) {
     runCatching {
         for (name in listOf(
+                "com.tencent.mm.ui.FindMoreFriendsUI",
                 "com.tencent.mm.ui.discover.DiscoverUI",
                 "com.tencent.mm.plugin.discover.ui.DiscoverUI",
             )
@@ -145,14 +146,14 @@ internal fun BaseFeature.dumpDiscoverCandidates(dexKit: DexKitBridge, tag: Strin
             WeLogger.w(tag, "discover probe: $name exists=$found")
         }
         // 包内 UI 类枚举：走 searchPackages 的 FindClass（可用的公开 API）
-        for (pkg in listOf("com.tencent.mm.ui.discover", "com.tencent.mm.plugin.discover.ui")) {
+        for (pkg in listOf("com.tencent.mm.ui", "com.tencent.mm.ui.discover", "com.tencent.mm.plugin.discover.ui")) {
             val uiClasses = runCatching {
                 dexKit.findClass {
                     searchPackages(pkg)
                 }.map { it.name }
             }.getOrDefault(emptyList())
             val filtered = uiClasses
-                .filter { it.substringAfterLast('.').endsWith("UI") || it.contains("Discover") }
+                .filter { it.substringAfterLast('.').endsWith("UI") || it.contains("Discover") || it.contains("FindMore") }
                 .take(40)
             WeLogger.w(tag, "discover class candidates in $pkg: ${filtered.size}\n" + filtered.joinToString("\n"))
         }
