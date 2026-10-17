@@ -202,6 +202,18 @@ object ConversationAggregation : ClickableFeature(),
 
     private val folderMembersCache = ConcurrentHashMap<String, List<String>>()
 
+    /**
+     * Short-lived memo of [getFallbackAvatarMember] results, misses included. The provider is
+     * installed on five separate host avatar hooks and each one fires per bound ImageView, so a
+     * folder icon being painted can trigger several identical lookups within a single frame. Every
+     * miss would otherwise re-run the folder-member query from scratch, and for a folder holding
+     * hundreds of chats that is a full SQL pass (chunked) per binding. The TTL stays deliberately
+     * short because a folder borrows the avatar of its latest active chat, so being up to
+     * [FALLBACK_AVATAR_TTL_MS] behind is harmless while the query count collapses to at most one
+     * per folder per window.
+     */
+    private val fallbackAvatarCache = ConcurrentHashMap<String, FallbackAvatarEntry>()
+
     @Volatile
     private var membersByFolder: Map<String, List<String>> = emptyMap()
 
@@ -219,6 +231,10 @@ object ConversationAggregation : ClickableFeature(),
     private val REFRESH_TASK_TOKEN = Any()
     private val RECONCILE_TASK_TOKEN = Any()
     private const val SQLITE_BIND_CHUNK_SIZE = 900
+
+    /** How long a resolved folder fallback avatar (including a miss) may be reused, in ms. */
+    private const val FALLBACK_AVATAR_TTL_MS = 1_500L
+
     private val pendingRefreshMembers = ConcurrentHashMap.newKeySet<String>()
     private val pendingRefreshLock = Any()
     private val refreshAllFolders = AtomicBoolean(false)
@@ -230,6 +246,9 @@ object ConversationAggregation : ClickableFeature(),
     private var refreshHandler: Handler? = null
 
     override fun onEnable() {
+        // Drop any stale fallback avatars left over from a previous enable cycle; the folder
+        // membership may have changed while the feature was off.
+        fallbackAvatarCache.clear()
         loadFolders()
         WeDatabaseListenerApi.addListener(this)
         WeStartActivityApi.addListener(this)
@@ -290,6 +309,7 @@ object ConversationAggregation : ClickableFeature(),
                 membersByFolder = emptyMap()
                 folderByMember = emptyMap()
                 folderMembersCache.clear()
+                fallbackAvatarCache.clear()
             }
             WeConversationApi.reloadConversations()
             WeLogger.i(TAG, "released all folders on disable")
@@ -933,6 +953,7 @@ object ConversationAggregation : ClickableFeature(),
             withQueryRewriteSuppressed {
                 if (!isFolderSchemaReady()) return@withQueryRewriteSuppressed
                 folderMembersCache.clear()
+                fallbackAvatarCache.clear()
                 val desiredMembers = resolveOwnedMembers(folders)
                 val desiredOwners = reverseMemberIndex(desiredMembers)
                 val currentOwners = readCurrentMemberOwners()
@@ -2063,15 +2084,25 @@ object ConversationAggregation : ClickableFeature(),
     }
 
     private fun getFallbackAvatarMember(folderId: String): String? {
+        val now = SystemClock.elapsedRealtime()
+        fallbackAvatarCache[folderId]?.let { entry ->
+            if (now - entry.resolvedAt <= FALLBACK_AVATAR_TTL_MS) return entry.username
+        }
         val folder = folderById(folderId) ?: return null
         val members = getFolderMembers(folder).filterNot(::isFolderId).distinct()
-        if (members.isEmpty()) return null
         // Prefer the member whose conversation most recently saw activity: WeChat bumps
         // rconversation.conversationTime on every sent or received message, so the folder
         // borrows the avatar of the chat that last lit up rather than an arbitrary first
         // member. Falls back to the first member when none of them has any message yet.
-        return latestActiveMember(members) ?: members.firstOrNull()
+        val resolved = if (members.isEmpty()) null
+        else latestActiveMember(members) ?: members.firstOrNull()
+        // Stamp on completion so a slow query does not eat into the cached window.
+        fallbackAvatarCache[folderId] = FallbackAvatarEntry(resolved, SystemClock.elapsedRealtime())
+        return resolved
     }
+
+    /** Memoised [getFallbackAvatarMember] outcome; [username] is null when the folder has no member. */
+    private data class FallbackAvatarEntry(val username: String?, val resolvedAt: Long)
 
     /** Member with the newest conversationTime (latest sent/received message), or null. */
     private fun latestActiveMember(members: List<String>): String? {
@@ -2127,6 +2158,7 @@ object ConversationAggregation : ClickableFeature(),
     private fun invalidateFolders() {
         foldersCache = null
         folderMembersCache.clear()
+        fallbackAvatarCache.clear()
     }
 
     private suspend fun upsertFolder(folder: ChatFolder) {
