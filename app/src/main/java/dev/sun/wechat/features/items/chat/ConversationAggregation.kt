@@ -2079,20 +2079,34 @@ object ConversationAggregation : ClickableFeature(),
         return runCatching {
             // Suppress the container SQL fallback while querying aggregate members directly.
             withQueryRewriteSuppressed {
-                val placeholders = members.joinToString(",") { "?" }
-                val cursor = WeDatabaseApi.rawQuery(
-                    """
-                    SELECT ${ConversationTable.USERNAME}
-                    FROM ${ConversationTable.NAME}
-                    WHERE ${ConversationTable.USERNAME} IN ($placeholders) AND ${ConversationTable.CONVERSATION_TIME} > 0
-                    ORDER BY ${ConversationTable.CONVERSATION_TIME} DESC
-                    LIMIT 1
-                    """.trimIndent(),
-                    arrayOf(*members.toTypedArray())
-                )
-                cursor.use { c ->
-                    if (c.moveToFirst() && !c.isNull(0)) c.getString(0) else null
+                // A folder may hold far more members than SQLite's bind-variable limit
+                // (SQLITE_MAX_VARIABLE_NUMBER, 999 on older builds), so the IN(...) list must be
+                // chunked. Otherwise the whole query fails with "too many SQL variables" and the
+                // caller loses the avatar fallback.
+                var best: String? = null
+                var bestTime = Long.MIN_VALUE
+                members.chunked(SQLITE_BIND_CHUNK_SIZE).forEach { chunk ->
+                    val placeholders = chunk.joinToString(",") { "?" }
+                    WeDatabaseApi.rawQuery(
+                        """
+                        SELECT ${ConversationTable.USERNAME}, ${ConversationTable.CONVERSATION_TIME}
+                        FROM ${ConversationTable.NAME}
+                        WHERE ${ConversationTable.USERNAME} IN ($placeholders) AND ${ConversationTable.CONVERSATION_TIME} > 0
+                        ORDER BY ${ConversationTable.CONVERSATION_TIME} DESC
+                        LIMIT 1
+                        """.trimIndent(),
+                        arrayOf(*chunk.toTypedArray())
+                    ).use { c ->
+                        if (c.moveToFirst() && !c.isNull(0)) {
+                            val time = if (c.isNull(1)) 0L else c.getLong(1)
+                            if (time > bestTime) {
+                                bestTime = time
+                                best = c.getString(0)
+                            }
+                        }
+                    }
                 }
+                best
             }
         }.onFailure {
             WeLogger.w(TAG, "failed to resolve latest active member", it)

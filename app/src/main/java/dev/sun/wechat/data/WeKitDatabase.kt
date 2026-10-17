@@ -429,8 +429,15 @@ abstract class WeKitDatabase : RoomDatabase() {
                 }
                 val database = buildAt(prepared.file, JournalMode.WRITE_AHEAD_LOGGING)
                 return@withExclusiveLock try {
-                    database.openHelper.writableDatabase
-                    rewriteMovedEnvironmentPaths(database)
+                    // Opening the freshly relocated database can collide with the tail of the
+                    // previous host process: its SQLite handles may still own the file/WAL for a
+                    // moment after WeChat restarts (KillHostUtils), surfacing as SQLITE_BUSY. That
+                    // is transient, so retry with a short backoff instead of immediately rolling
+                    // back the migration and failing StartupAgent (which disables every feature).
+                    retryOnDatabaseLocked {
+                        database.openHelper.writableDatabase
+                        rewriteMovedEnvironmentPaths(database)
+                    }
                     relocator.commit(prepared)
                     database
                 } catch (t: Throwable) {
@@ -440,6 +447,60 @@ abstract class WeKitDatabase : RoomDatabase() {
                     throw IllegalStateException("Unable to open the unified WeKit database", t)
                 }
             }
+        }
+
+        /**
+         * Runs [block], retrying only on transient SQLite lock contention (SQLITE_BUSY /
+         * SQLITE_LOCKED). A concurrent WeChat process releasing the database after a host restart
+         * is the common cause; the retry window comfortably outlasts that teardown. Any other
+         * failure propagates immediately so genuine migration errors still roll back as before.
+         */
+        private fun <T> retryOnDatabaseLocked(
+            attempts: Int = 20,
+            initialDelayMs: Long = 50L,
+            maxDelayMs: Long = 500L,
+            block: () -> T,
+        ): T {
+            var delay = initialDelayMs
+            var lastError: Throwable? = null
+            repeat(attempts) { attempt ->
+                try {
+                    return block()
+                } catch (t: Throwable) {
+                    if (!isDatabaseLocked(t)) throw t
+                    lastError = t
+                    WeLogger.w(
+                        TAG,
+                        "database busy while opening (attempt ${attempt + 1}/$attempts), retrying in ${delay}ms",
+                        t,
+                    )
+                    if (attempt < attempts - 1) {
+                        runCatching { Thread.sleep(delay) }
+                        delay = (delay * 2).coerceAtMost(maxDelayMs)
+                    }
+                }
+            }
+            throw lastError ?: IllegalStateException("Unable to open the unified WeKit database")
+        }
+
+        private fun isDatabaseLocked(t: Throwable): Boolean {
+            var cause: Throwable? = t
+            var depth = 0
+            while (cause != null && depth < 8) {
+                val message = cause.message.orEmpty()
+                if (
+                    cause is android.database.sqlite.SQLiteDatabaseLockedException ||
+                    cause is android.database.sqlite.SQLiteException &&
+                        (message.contains("SQLITE_BUSY", ignoreCase = true) ||
+                            message.contains("SQLITE_LOCKED", ignoreCase = true) ||
+                            message.contains("database is locked", ignoreCase = true))
+                ) {
+                    return true
+                }
+                cause = cause.cause
+                depth++
+            }
+            return false
         }
 
         private fun rewriteMovedEnvironmentPaths(database: WeKitDatabase) {
