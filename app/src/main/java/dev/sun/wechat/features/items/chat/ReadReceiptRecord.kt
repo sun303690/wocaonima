@@ -39,15 +39,23 @@ fun normalizeThirdPartyReadReceiptEndpoint(value: String): String? {
     return url.toString().trimEnd('/')
 }
 
+/** The persistence backend responsible for a tracked read-receipt record. */
+enum class ReadReceiptBackend {
+    THIRD_PARTY,
+    BUILT_IN,
+}
+
 data class ReadReceiptRecord(
     val id: String,
     val wxId: String,
+    val backend: ReadReceiptBackend,
     val endpoint: String,
     val createdAtMillis: Long,
 )
 
 object ReadReceiptRecordCodec {
-    private const val SCHEMA_VERSION = 2
+    private const val SCHEMA_VERSION = 1
+    private const val BUILT_IN_ENDPOINT = "builtin://local"
     private const val MAX_ID_LENGTH = 128
     private const val MAX_WX_ID_BYTES = 128
     private const val MAX_ENDPOINT_LENGTH = MAX_THIRD_PARTY_ENDPOINT_LENGTH
@@ -59,6 +67,7 @@ object ReadReceiptRecordCodec {
             put("version", SCHEMA_VERSION)
             put("id", normalized.id)
             put("wxId", normalized.wxId)
+            put("backend", normalized.backend.name)
             put("endpoint", normalized.endpoint)
             put("createdAtMillis", normalized.createdAtMillis)
         }.toString()
@@ -67,15 +76,17 @@ object ReadReceiptRecordCodec {
     fun decode(value: String): ReadReceiptRecord? = runCatching {
         val objectValue = DefaultJson.parseToJsonElement(value).jsonObject
         val version = objectValue["version"]?.strictIntOrNull() ?: return null
-        if (version != 1 && version != SCHEMA_VERSION) return null
-        if (version == 1 && objectValue["backend"]?.stringOrNull() != "THIRD_PARTY") return null
+        if (version != SCHEMA_VERSION) return null
 
         val id = objectValue["id"]?.stringOrNull() ?: return null
         val wxId = objectValue["wxId"]?.stringOrNull() ?: return null
+        val backend = objectValue["backend"]?.stringOrNull()?.let {
+            ReadReceiptBackend.entries.firstOrNull { backend -> backend.name == it }
+        } ?: return null
         val endpoint = objectValue["endpoint"]?.stringOrNull() ?: return null
         val createdAtMillis = objectValue["createdAtMillis"]?.strictLongOrNull() ?: return null
 
-        normalize(ReadReceiptRecord(id, wxId, endpoint, createdAtMillis))
+        normalize(ReadReceiptRecord(id, wxId, backend, endpoint, createdAtMillis))
     }.getOrNull()
 
     fun prune(
@@ -91,6 +102,7 @@ object ReadReceiptRecordCodec {
             val key = RecordKey(
                 normalized.id,
                 normalized.wxId,
+                normalized.backend,
                 normalized.endpoint,
             )
             val previous = retained[key]
@@ -111,13 +123,23 @@ object ReadReceiptRecordCodec {
         require(record.endpoint.isNotBlank() && record.endpoint.length <= MAX_ENDPOINT_LENGTH)
         require(record.createdAtMillis > 0)
 
-        val endpoint = requireNotNull(normalizeThirdPartyReadReceiptEndpoint(record.endpoint))
+        val endpoint = when (record.backend) {
+            ReadReceiptBackend.THIRD_PARTY -> {
+                requireNotNull(normalizeThirdPartyReadReceiptEndpoint(record.endpoint))
+            }
+
+            ReadReceiptBackend.BUILT_IN -> {
+                require(record.endpoint == BUILT_IN_ENDPOINT)
+                BUILT_IN_ENDPOINT
+            }
+        }
         return record.copy(endpoint = endpoint)
     }
 
     private data class RecordKey(
         val id: String,
         val wxId: String,
+        val backend: ReadReceiptBackend,
         val endpoint: String,
     )
 

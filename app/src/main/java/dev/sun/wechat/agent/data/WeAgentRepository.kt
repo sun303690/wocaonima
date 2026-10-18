@@ -26,7 +26,6 @@ import dev.sun.wechat.agent.environment.LinuxEnvironmentSessionTransition
 import dev.sun.wechat.agent.environment.toSnapshot
 import dev.sun.wechat.agent.environment.NATIVE_ENVIRONMENT_ID
 import dev.sun.wechat.agent.tool.PermissionLevel
-import dev.sun.wechat.data.WeKitDatabase
 import dev.sun.wechat.utils.WeLogger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -902,9 +901,14 @@ object WeAgentRepository {
             "SSH credentials are incomplete"
         }
         when (environment.type) {
-            LinuxEnvironmentType.PROOT -> {
+            LinuxEnvironmentType.PROOT, LinuxEnvironmentType.CHROOT -> {
                 require(!environment.rootfsPath.isNullOrBlank()) { "local environments require a rootfs path" }
                 require(environment.sshHost == null) { "local environments cannot contain SSH configuration" }
+                if (environment.type == LinuxEnvironmentType.CHROOT) {
+                    dev.sun.wechat.agent.environment.ArchLinuxInstanceLayout.validatePublishedRootfs(
+                        environment.rootfsPath.asPath
+                    )
+                }
             }
             LinuxEnvironmentType.SSH -> {
                 require(environment.rootfsPath == null) { "SSH environments cannot contain a rootfs path" }
