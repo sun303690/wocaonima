@@ -673,8 +673,6 @@
     <string name="feature_chat_toolbar_description">Add a toolbar above the input box</string>
     <string name="feature_conversation_aggregation_name">Conversation aggregation</string>
     <string name="feature_conversation_aggregation_description">Gather multiple conversations into one folder\nTo set a conversation avatar, you need to enable "Customize friend local avatar" at the same time</string>
-    <string name="feature_chatroom_helper_name">Chatroom message helper</string>
-    <string name="feature_chatroom_helper_description">Ported from WechatChatRoomHelper: pins two aggregate entries, "Group chats" and "Official accounts", to the top of the conversation list\nRequires the "Conversation aggregation" feature (enabled automatically); disable that one instead if you only want folders without the preset entries</string>
     <string name="feature_conversation_grouping_name">Conversation grouping</string>
     <string name="feature_conversation_grouping_description">Add a Tab bar to the top of the homepage to group conversations\nIt is recommended to also enable "Interface Beautification/Hide the "Recent" Page on the Homepage"</string>
     <string name="feature_custom_chat_input_bar_placeholder_text_name">Custom input box placeholder text</string>

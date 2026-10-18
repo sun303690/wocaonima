@@ -633,8 +633,6 @@
     <string name="feature_chat_toolbar_name">聊天工具欄</string>
     <string name="feature_chat_toolbar_description">在輸入框上方添加工具欄</string>
     <string name="feature_conversation_aggregation_name">對話歸攏</string>
-    <string name="feature_chatroom_helper_name">群聊訊息助手</string>
-    <string name="feature_chatroom_helper_description">移植自 WechatChatRoomHelper：在會話列表頂部固定「群聊訊息」「服務號訊息」兩個聚合入口\n需要「對話歸攏」功能（會自動啟用）；若只想要資料夾不想要這兩個預置入口，請直接關閉對話歸攏</string>
     <string name="feature_conversation_aggregation_description">將多個對話歸攏在一個文件夾內\n設置對話頭像需同時啓用「自定義好友本地頭像」</string>
     <string name="feature_conversation_grouping_name">對話分組</string>
     <string name="feature_conversation_grouping_description">向主頁頂部添加 Tab 欄, 將對話分組\n建議同時啓用「界面美化/隱藏主頁下滑「最近」頁」</string>
