@@ -163,7 +163,7 @@ class PublicationTest(unittest.TestCase):
         commit = "2be8d3462d9ee2e1173faa7566dfcdb1a6206f46"
         for sdk_field in ("sdkVersion", "minSdkVersion"):
             badging = (
-                "package: name='dev.ujhhgtg.wekit' versionCode='1774' versionName='git+2be8d346'\n"
+                "package: name='dev.sun.wechat' versionCode='1774' versionName='git+2be8d346'\n"
                 f"{sdk_field}:'28'\n"
             )
             with self.subTest(sdk_field=sdk_field), patch.object(publisher.subprocess, "run"), patch.object(

@@ -1,1 +1,1 @@
-group = "dev.ujhhgtg.wekit.python.runtime"
+group = "dev.sun.wechat.python.runtime"

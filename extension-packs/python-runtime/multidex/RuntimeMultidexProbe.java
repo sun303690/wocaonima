@@ -1,4 +1,4 @@
-package dev.ujhhgtg.wekit.python.runtime;
+package dev.sun.wechat.python.runtime;
 
 /** Unique class kept in classes2.dex to exercise the runtime multi-DEX loader. */
 public final class RuntimeMultidexProbe {

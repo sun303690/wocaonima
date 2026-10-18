@@ -43,7 +43,7 @@
 - `libs/common/annotation-scanner/` — KSP processors: source-subtype discovery for
   `BaseFeature`/`ExtensionPack` objects plus the `@AgentTool` scanner
 - `libs/common/libxposed-api/` — compileOnly LibXposed API interface stubs (compileOnly since they are provided by user's Xposed framework)
-- `libs/common/bsh/` — submodule: forked BeanShell interpreter with snapshot serialization (`BshSnapshot`, `BshSnapshotHelper`); snapshots are encrypted AST byte representations used by the WAuxiliary Xposed module; `app/src/main/java/dev/ujhhgtg/wekit/utils/BshSnapshotDecompiler.kt` — decompiles encrypted BeanShell snapshot files back into Java-like source code; the AES key was recovered from WAuxiliary's decompiled source
+- `libs/common/bsh/` — submodule: forked BeanShell interpreter with snapshot serialization (`BshSnapshot`, `BshSnapshotHelper`); snapshots are encrypted AST byte representations used by the WAuxiliary Xposed module; `app/src/main/java/dev/sun/wechat/utils/BshSnapshotDecompiler.kt` — decompiles encrypted BeanShell snapshot files back into Java-like source code; the AES key was recovered from WAuxiliary's decompiled source
 - `libs/common/reflekt/` — submodule: reflection utility library (`dev.ujhhgtg.reflekt`)
 - `libs/common/stubs/` — compileOnly stubs for WeChat and Android hidden classes
 - `buildSrc/` — custom Gradle tasks: `GenerateMethodHashesTask` (`IResolveDex` `resolveDex` method MD5 cache), `GenerateNewFeaturesTask` (Kotlin source files added within 30 days of the HEAD commit → `NewFeatures.ADDED_AT_BY_SOURCE_KEY`; KSP joins source keys to discovered features for the 新功能 pseudo-category)
@@ -52,7 +52,7 @@
 
 ## Entry Points & Architecture
 
-- Xposed entry: `dev.ujhhgtg.wekit.loader.entry.lxp.LxpHookEntry` (libxposed 101 ~ 102) and legacy Xposed API (51+) entry: `dev.ujhhgtg.wekit.loader.entry.xp51.Xp51HookEntry`
+- Xposed entry: `dev.sun.wechat.loader.entry.lxp.LxpHookEntry` (libxposed 101 ~ 102) and legacy Xposed API (51+) entry: `dev.sun.wechat.loader.entry.xp51.Xp51HookEntry`
 - Unified flow: `UnifiedEntryPoint.entry()` → `StartupAgent.startup()` → `WeLauncher.init()`
 - Feature objects inherit `BaseFeature`, declare `technicalId`/resource/category metadata as
   override properties, and are auto-discovered by KSP from their source subtype at compile time
@@ -178,7 +178,7 @@
 
 ## Key Conventions
 
-- Package namespace: `dev.ujhhgtg.wekit`
+- Package namespace: `dev.sun.wechat`
 - `app` is an application module, not a library and cannot be consumed by other projects. Do not
   use the `internal` visibility modifier in Kotlin production sources under `app/src/main`; use
   Kotlin's default implicit `public` visibility instead, because `internal` provides no meaningful
@@ -205,7 +205,7 @@
   hand-rolled `getDeclaredField`/`getMethod` traversal.
 - **NEVER use `Path.of` or `Files.writeString`.** These are frequent mistakes and
   are unavailable on older Android API levels supported by WeKit. Convert strings through
-  `dev.ujhhgtg.wekit.utils.fs.asPath` from `utils/fs/PathUtils.kt` (for example,
+  `dev.sun.wechat.utils.fs.asPath` from `utils/fs/PathUtils.kt` (for example,
   `pathString.asPath` or `base.asPath.resolve(child)`) and write text through
   `kotlin.io.path.writeText`.
 - No excessive defensiveness. When e.g. the hooked method and its argument types are
@@ -224,7 +224,7 @@
 
 Design reference: `~/coding/InstallerX-Revived` — when unsure how a settings page should
 look or behave, read its `app/src/main/java/com/rosan/installer/ui/page/main/widget/setting/`.
-WeKit's ported widget family lives in `app/src/main/java/dev/ujhhgtg/wekit/ui/content/m3/`.
+WeKit's ported widget family lives in `app/src/main/java/dev/sun/wechat/ui/content/m3/`.
 
 ### Layout
 

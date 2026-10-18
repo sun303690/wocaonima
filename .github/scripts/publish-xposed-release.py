@@ -12,7 +12,7 @@ import tempfile
 import zipfile
 
 
-REPOSITORY = "Xposed-Modules-Repo/dev.ujhhgtg.wekit"
+REPOSITORY = "Xposed-Modules-Repo/dev.sun.wechat"
 API = f"repos/{REPOSITORY}"
 APK_NAME = "app-standard-release.apk"
 

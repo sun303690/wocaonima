@@ -40,16 +40,16 @@ lsparanoid {
     nativeNdkVersion = providers.gradleProperty("lspNdkVersion").orElse("29.0.14206865").get()
     omvllPlugin = providers.gradleProperty("lspOmvllPlugin").orNull
     omvllPythonPath = providers.gradleProperty("lspOmvllPythonPath").orNull
-    classFilter = { it.startsWith("dev.ujhhgtg.wekit.") }
+    classFilter = { it.startsWith("dev.sun.wechat.") }
     excludedClassPrefixes = setOf(
-        "dev.ujhhgtg.wekit.application.ModuleApplication",
-        "dev.ujhhgtg.wekit.loader.startup.ModuleLoader",
-        "dev.ujhhgtg.wekit.loader.entry",
-        "dev.ujhhgtg.wekit.loader.utils.NativeLoader",
-        "dev.ujhhgtg.wekit.loader.utils.ZygiskNativePayload",
-        "dev.ujhhgtg.wekit.constants.PackageNames",
-        "dev.ujhhgtg.wekit.utils.fs.PathUtilsKt",
-        "dev.ujhhgtg.wekit.BuildConfig",
+        "dev.sun.wechat.application.ModuleApplication",
+        "dev.sun.wechat.loader.startup.ModuleLoader",
+        "dev.sun.wechat.loader.entry",
+        "dev.sun.wechat.loader.utils.NativeLoader",
+        "dev.sun.wechat.loader.utils.ZygiskNativePayload",
+        "dev.sun.wechat.constants.PackageNames",
+        "dev.sun.wechat.utils.fs.PathUtilsKt",
+        "dev.sun.wechat.BuildConfig",
     )
     if (backend == "native") {
         wrappedResourceAccess = true
@@ -469,7 +469,7 @@ tasks.withType<Test>().configureEach {
     maxHeapSize = "4g"
     if (dexTestWorker.get()) {
         filter {
-            includeTestsMatching("dev.ujhhgtg.wekit.dextest.DexTestWorkerTest")
+            includeTestsMatching("dev.sun.wechat.dextest.DexTestWorkerTest")
         }
         dexTestWorkerProperties.forEach { propertyName ->
             systemProperty(propertyName, providers.gradleProperty(propertyName).orNull.orEmpty())
@@ -477,7 +477,7 @@ tasks.withType<Test>().configureEach {
         outputs.upToDateWhen { false }
     } else {
         filter {
-            excludeTestsMatching("dev.ujhhgtg.wekit.dextest.DexTestWorkerTest")
+            excludeTestsMatching("dev.sun.wechat.dextest.DexTestWorkerTest")
         }
     }
 }

@@ -7,7 +7,7 @@ plugins {
     id("org.jetbrains.kotlin.android") version libs.versions.kotlin
 }
 
-group = "dev.ujhhgtg.wekit.python.runtime"
+group = "dev.sun.wechat.python.runtime"
 version = "0.1.0"
 
 val nativeLibraries = listOf(
@@ -68,11 +68,11 @@ val generateRuntimeManifest = tasks.register("generateRuntimeManifest") {
 }
 
 configure<ApplicationExtension> {
-    namespace = "dev.ujhhgtg.wekit.python.runtime"
+    namespace = "dev.sun.wechat.python.runtime"
     compileSdk = libs.versions.compileSdk.get().toInt()
     ndkVersion = libs.versions.ndk.get()
     defaultConfig {
-        applicationId = "dev.ujhhgtg.wekit.python.runtime.container"
+        applicationId = "dev.sun.wechat.python.runtime.container"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = 1
@@ -108,7 +108,7 @@ dependencies {
     // Supplied by xtask from a controlled local Maven repository; compile-only
     // prevents API classes from entering the runtime DEX.
     val apiVersion = providers.gradleProperty("wekitPythonApiVersion").orElse("1.0.0")
-    compileOnly("dev.ujhhgtg.wekit:python-runtime-api:${apiVersion.get()}")
+    compileOnly("dev.sun.wechat:python-runtime-api:${apiVersion.get()}")
     chaquopyTarget(
         "com.chaquo.python:target:${libs.versions.pythonRuntimeChaquopyTarget.get()}:arm64-v8a@zip",
     )
