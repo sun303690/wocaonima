@@ -4443,4 +4443,5 @@
     <string name="local_llm_model_desc">%1$s · 上下文 %2$d · 支持思考</string>
     <string name="feature_display_hidden_contact_settings_name">显示隐藏朋友设置项</string>
     <string name="feature_display_hidden_contact_settings_description">阻止微信隐藏朋友设置; 部分设置项可能显示异常, 但不影响功能</string>
+    <string name="feature_ai_voice_assistant_name">AI语音助手</string>
 </resources>

@@ -4422,4 +4422,5 @@
     <string name="local_llm_model_desc">%1$s · 上下文 %2$d · 支援思考</string>
     <string name="feature_display_hidden_contact_settings_name">顯示隱藏朋友設置項</string>
     <string name="feature_display_hidden_contact_settings_description">阻止微信隱藏朋友設置; 部分設置項可能顯示異常, 但不影響功能</string>
+    <string name="feature_ai_voice_assistant_name">AI語音助手</string>
 </resources>

@@ -76,6 +76,10 @@ object BeautifyConversationList : ClickableFeature() {
     private var highlightUnreadEnabled by prefOption("beautify_conversation_list_highlight_unread", false)
     private var hideDividersEnabled by prefOption("beautify_conversation_list_hide_dividers", false)
 
+    /** 当前对话列表是否应用了非 NO_LAYOUT 的美化布局预设（供 ConversationGrouping 迁移读取）。 */
+    val isLayoutBeautificationEnabled: Boolean
+        get() = presetName != ConversationListPreset.NO_LAYOUT.name
+
     private val selectedPreset: ConversationListPreset
         get() = ConversationListPreset.entries.firstOrNull { it.name == presetName }
             ?: ConversationListPreset.NO_LAYOUT

@@ -4448,4 +4448,5 @@
     <string name="local_llm_model_desc">%1$s · ctx %2$d · thinking</string>
     <string name="feature_display_hidden_contact_settings_name">Show hidden contact settings</string>
     <string name="feature_display_hidden_contact_settings_description">Prevent WeChat from hiding friend settings; some settings may display abnormally, but this does not affect functionality</string>
+    <string name="feature_ai_voice_assistant_name">AI voice assistant</string>
 </resources>

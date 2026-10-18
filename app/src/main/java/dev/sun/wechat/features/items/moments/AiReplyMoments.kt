@@ -306,7 +306,7 @@ object AiReplyMoments : ClickableFeature(),
                 LlmMessage(LlmRole.SYSTEM, sysPrompt),
                 LlmMessage(LlmRole.USER, userContent),
             )
-            val request = ModelProviderManager.buildRequest(model, messages, emptyList(), stream = true)
+            val request = ModelProviderManager.buildRequest(model, messages, emptyList(), "moments", stream = true)
             val sb = StringBuilder()
             client.stream(request).collect { event ->
                 when (event) {

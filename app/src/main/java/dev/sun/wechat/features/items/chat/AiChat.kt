@@ -204,7 +204,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                 add(LlmMessage(LlmRole.USER, userText))
             }
 
-            val reply = requestModel(config, messages)
+            val reply = requestModel(config, messages, talker)
 
             // 生成期间配置可能已改（换了名单/模型/轮数），此时不再发出这条回复
             if (configVersion.get() != version) {
@@ -247,7 +247,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         return content.substring(0, index) to content.substring(index + 2)
     }
 
-    private suspend fun requestModel(config: Config, messages: List<LlmMessage>): Result<String> = runCatching {
+    private suspend fun requestModel(config: Config, messages: List<LlmMessage>, sessionId: String): Result<String> = runCatching {
         val modelId = WeAgentSettings.defaultModelId() ?: WeAgentRepository.firstModelId()
             ?: error("no AI model configured")
         val model = WeAgentRepository.getModel(modelId) ?: error("model not found: $modelId")
@@ -258,6 +258,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
             model = model,
             messages = messages,
             tools = emptyList(),
+            sessionId = sessionId,
             stream = true,
         )
         // Nuke 的 Temperature / 最大输出 Tokens 是显式配置项：maxTokens 是 LlmRequest 字段，

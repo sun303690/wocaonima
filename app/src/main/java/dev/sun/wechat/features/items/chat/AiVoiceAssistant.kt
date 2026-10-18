@@ -174,6 +174,7 @@ object AiVoiceAssistant : ClickableFeature(), WeDatabaseListenerApi.IInsertListe
                     model = model,
                     messages = messages,
                     tools = emptyList(),
+                    sessionId = talker,
                     stream = true,
                 )
                 val reply = StringBuilder()

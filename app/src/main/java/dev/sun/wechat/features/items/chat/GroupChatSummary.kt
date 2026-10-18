@@ -856,6 +856,7 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
             model = model,
             messages = messages2,
             tools = emptyList(),
+            sessionId = talker,
             stream = true,
         )
 

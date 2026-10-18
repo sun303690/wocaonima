@@ -351,7 +351,7 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
                     LlmMessage(LlmRole.SYSTEM, systemPrompt),
                     LlmMessage(LlmRole.USER, content),
                 )
-                val request = ModelProviderManager.buildRequest(model, messages, emptyList(), stream = true)
+                val request = ModelProviderManager.buildRequest(model, messages, emptyList(), talker, stream = true)
                 val sb = StringBuilder()
                 client.stream(request).collect { event ->
                     when (event) {

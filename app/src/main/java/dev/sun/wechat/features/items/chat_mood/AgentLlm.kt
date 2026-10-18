@@ -21,7 +21,7 @@ object AgentLlm {
      * 单轮对话补全，返回完整文本。模型未配置 / 调用失败时抛异常，由调用方降级。
      * 用法与 AiSmartReply 完全一致，只是不挂任何工具。
      */
-    suspend fun complete(prompt: String): String {
+    suspend fun complete(prompt: String, sessionId: String): String {
         val modelId = WeAgentRepository.firstModelId()
             ?: throw IllegalStateException("未在 WeAgent 中配置模型")
         val model = WeAgentRepository.getModel(modelId)
@@ -33,6 +33,7 @@ object AgentLlm {
             model = model,
             messages = listOf(LlmMessage(LlmRole.USER, prompt)),
             tools = emptyList(),
+            sessionId = sessionId,
             stream = true,
         )
         val sb = StringBuilder()

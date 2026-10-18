@@ -27,6 +27,7 @@ import dev.sun.wechat.agent.environment.toSnapshot
 import dev.sun.wechat.agent.environment.NATIVE_ENVIRONMENT_ID
 import dev.sun.wechat.agent.tool.PermissionLevel
 import dev.sun.wechat.utils.WeLogger
+import dev.sun.wechat.utils.fs.asPath
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
@@ -662,6 +663,26 @@ object WeAgentRepository {
      */
     suspend fun deleteModel(id: String) {
         val model = db.modelDao().getById(id) ?: return
+        val settingKeys = WeAgentSettings.modelDefaultKeysFor(setOf(model.id))
+        db.withTransaction {
+            db.sessionDao().clearModelBindings(listOf(model.id))
+            settingKeys.forEach { db.settingDao().delete(it) }
+            db.modelDao().deleteById(model.id)
+        }
+        settingKeys.forEach { WeAgentSettings.clearCached(it) }
+        notifyModelsDeleted(setOf(model.id))
+    }
+
+    /** Package sync-only stale-row deletion that retains the normal model-deletion cascade. */
+    suspend fun deleteLocalLlamaModelForSync(id: String) {
+        val model = db.modelDao().getById(id) ?: return
+        check(model.providerId == LocalLlama.PROVIDER_ID) {
+            "sync deletion is restricted to local llama model rows"
+        }
+        deleteStoredModel(model)
+    }
+
+    private suspend fun deleteStoredModel(model: ModelEntity) {
         val settingKeys = WeAgentSettings.modelDefaultKeysFor(setOf(model.id))
         db.withTransaction {
             db.sessionDao().clearModelBindings(listOf(model.id))
