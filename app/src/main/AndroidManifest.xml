@@ -89,6 +89,10 @@
 
         <activity
             android:name=".features.items.scheduledtask.ScheduledTaskActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Material3.DynamicColors.DayNight.NoActionBar" />
+
+        <activity
             android:name=".features.items.system.QrCodeRecordSettingsActivity"
             android:exported="true"
             android:theme="@style/Theme.Material3.DynamicColors.DayNight.NoActionBar" />
