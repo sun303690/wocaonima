@@ -1,9 +1,5 @@
-<<<<<<<< HEAD:app/src/main/java/dev/sun/wechat/ui/agent/settings/AgentSettingsCommon.kt
 
 package dev.sun.wechat.ui.agent.settings
-========
-package dev.sun.wechat.ui.content.m3
->>>>>>>> tmp-upstream:app/src/main/java/dev/sun/wechat/ui/content/m3/SettingsComponents.kt
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +23,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -54,27 +51,18 @@ import dev.sun.wechat.ui.content.m3AppBarBlur
 import dev.sun.wechat.ui.content.m3AppBarColor
 import dev.sun.wechat.ui.content.m3BackdropLayer
 import dev.sun.wechat.ui.content.rememberMaterial3BlurBackdrop
-<<<<<<<< HEAD:app/src/main/java/dev/sun/wechat/ui/agent/settings/AgentSettingsCommon.kt
 import dev.sun.wechat.ui.content.m3.ExpressiveBackButton
-========
->>>>>>>> tmp-upstream:app/src/main/java/dev/sun/wechat/ui/content/m3/SettingsComponents.kt
 
 /** Bottom padding so scrollable content clears the system nav bar comfortably. */
-val SETTINGS_CONTENT_BOTTOM_INSET = 32.dp
+val AGENT_CONTENT_BOTTOM_INSET = 32.dp
 
 /**
-<<<<<<<< HEAD:app/src/main/java/dev/sun/wechat/ui/agent/settings/AgentSettingsCommon.kt
  * Standard scaffold for every WeAgent settings sub-screen: collapsing blurred
  * [LargeFlexibleTopAppBar] with a back button + a scroll-through-blur [LazyColumn], mirroring
  * [dev.sun.wechat.activity.settings.M3ListScaffold] but with a navigation icon.
-========
- * Shared settings scaffold: collapsing blurred
- * [ExpressiveCollapsingTopAppBar] with an optional back button + a scroll-through-blur [LazyColumn], mirroring
- * [dev.sun.wechat.activity.settings.M3ListScaffold] with back and action callbacks.
->>>>>>>> tmp-upstream:app/src/main/java/dev/sun/wechat/ui/content/m3/SettingsComponents.kt
  */
 @Composable
-fun SettingsScaffold(
+fun AgentSettingsScaffold(
     title: String,
     onBack: (() -> Unit)?,
     actions: @Composable RowScope.() -> Unit = {},
@@ -88,12 +76,15 @@ fun SettingsScaffold(
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
-            ExpressiveCollapsingTopAppBar(
+            LargeFlexibleTopAppBar(
                 modifier = Modifier.m3AppBarBlur(barBackdrop),
-                title = title,
+                title = { Text(title) },
                 navigationIcon = {
                     if (onBack != null) {
-                        ExpressiveBackButton(onClick = onBack)
+                        Row {
+                            ExpressiveBackButton(onClick = onBack)
+                            Spacer(modifier = Modifier.size(16.dp))
+                        }
                     }
                 },
                 actions = actions,
@@ -116,11 +107,11 @@ fun SettingsScaffold(
 }
 
 /**
- * Full-viewport empty state for a settings list: centered title, optional message,
+ * Full-viewport empty state for an agent settings list: centered title, optional message,
  * and optional filled action button.
  */
 @Composable
-fun LazyItemScope.SettingsEmptyState(
+fun LazyItemScope.AgentEmptyState(
     title: String,
     message: String? = null,
     actionLabel: String? = null,
@@ -159,7 +150,7 @@ fun LazyItemScope.SettingsEmptyState(
 
 /** Two-button confirmation dialog; [destructive] tints the confirm action with the error color. */
 @Composable
-fun SettingsConfirmDialog(
+fun AgentConfirmDialog(
     show: Boolean,
     title: String,
     message: String,
@@ -201,7 +192,7 @@ fun SettingsConfirmDialog(
  * Back guard shared by the detail screens' creation mode: while [guardActive] (a savable but
  * unsaved draft), every back attempt — scaffold back button or system gesture — opens a
  * confirm-discard dialog instead of leaving; otherwise back passes straight through. Returns the
- * guarded callback to hand to [SettingsScaffold]'s onBack. Dialog copy defaults to the
+ * guarded callback to hand to [AgentSettingsScaffold]'s onBack. Dialog copy defaults to the
  * creation wording; override the labels for other guard kinds (e.g. discarding edits).
  */
 @Composable
@@ -214,7 +205,7 @@ fun rememberCreationBackGuard(
 ): () -> Unit {
     var showDiscard by remember { mutableStateOf(false) }
     BackHandler(enabled = guardActive) { showDiscard = true }
-    SettingsConfirmDialog(
+    AgentConfirmDialog(
         show = showDiscard,
         title = dialogTitle,
         message = dialogMessage,
@@ -232,7 +223,7 @@ fun rememberCreationBackGuard(
 
 /** Compact list action button with a leading icon that swaps to a progress spinner while loading. */
 @Composable
-fun SettingsListActionButton(
+fun AgentListActionButton(
     label: String,
     icon: ImageVector,
     loading: Boolean = false,
@@ -264,7 +255,7 @@ fun SettingsListActionButton(
 
 /** Horizontal wrapper for paired list actions, applying content padding and the bottom inset. */
 @Composable
-fun SettingsActionRow(
+fun AgentActionRow(
     modifier: Modifier = Modifier,
     content: @Composable RowScope.() -> Unit,
 ) {
@@ -272,7 +263,7 @@ fun SettingsActionRow(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .padding(bottom = SETTINGS_CONTENT_BOTTOM_INSET),
+            .padding(bottom = AGENT_CONTENT_BOTTOM_INSET),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         content = content,
     )
@@ -280,7 +271,7 @@ fun SettingsActionRow(
 
 /** Full-height editor sheet: scrolling body content plus a fixed bottom action bar. */
 @Composable
-fun SettingsEditorSheet(
+fun AgentEditorSheet(
     show: Boolean,
     title: String,
     onDismiss: () -> Unit,

@@ -1,8 +1,4 @@
-<<<<<<<< HEAD:app/src/main/java/dev/sun/wechat/loader/entry/common/ModuleLoader.kt
 package dev.sun.wechat.loader.entry.common
-========
-package dev.sun.wechat.loader.startup
->>>>>>>> tmp-upstream:app/src/main/java/dev/sun/wechat/loader/startup/UnifiedEntryPoint.kt
 
 import android.app.Application
 import android.content.Context
@@ -11,12 +7,9 @@ import dev.ujhhgtg.reflekt.reflekt
 import dev.ujhhgtg.reflekt.utils.toClass
 import dev.sun.wechat.loader.abc.IHookBridge
 import dev.sun.wechat.loader.abc.ILoaderService
-<<<<<<<< HEAD:app/src/main/java/dev/sun/wechat/loader/entry/common/ModuleLoader.kt
 import dev.sun.wechat.loader.environment.EnvironmentHider
 import dev.sun.wechat.loader.startup.StartupAgent
 import dev.sun.wechat.loader.startup.StartupInfo
-========
->>>>>>>> tmp-upstream:app/src/main/java/dev/sun/wechat/loader/startup/UnifiedEntryPoint.kt
 import dev.sun.wechat.loader.utils.HybridClassLoader
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.hookAfterDirectly

@@ -1,8 +1,4 @@
-<<<<<<<< HEAD:app/src/test/java/dev/sun/wechat/agent/data/WeAgentDatabaseRelocatorTest.kt
-package dev.sun.wechat.agent.data
-========
 package dev.sun.wechat.data
->>>>>>>> tmp-upstream:app/src/test/java/dev/sun/wechat/data/LegacyDatabaseRelocatorTest.kt
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
