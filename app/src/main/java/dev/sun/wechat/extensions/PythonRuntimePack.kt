@@ -9,7 +9,7 @@ import com.composables.icons.materialsymbols.outlined.Code
 import dev.sun.wechat.R
 import dev.sun.wechat.features.items.scripting_python.PythonScriptingFeature
 import dev.sun.wechat.features.items.scripting_python.plugin.PythonPluginManager
-import dev.sun.wechat.utils.HostInfo
+import dev.sun.wechat.utils.fs.KnownPaths
 import java.io.File
 
 data class MountedPythonRuntime(
@@ -37,7 +37,7 @@ object PythonRuntimePack : ExtensionPack {
     private var mountedRuntime: MountedPythonRuntime? = null
 
     private val baseDir: File
-        get() = File(HostInfo.application.filesDir, "wekit-extensions/$ID")
+        get() = KnownPaths.moduleRoot.resolve("extensions/$ID").toFile()
 
     override fun installDir(): File = baseDir
 

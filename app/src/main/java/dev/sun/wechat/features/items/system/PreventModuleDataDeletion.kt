@@ -8,6 +8,7 @@ import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.dexMethod
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature
+import dev.sun.wechat.utils.fs.KnownPaths
 import java.lang.reflect.Field
 
 object PreventModuleDataDeletion : SwitchFeature(), IResolveDex {
@@ -49,7 +50,9 @@ object PreventModuleDataDeletion : SwitchFeature(), IResolveDex {
             val basePath = basePathField.get(thisObject) as String
 
             val path = "$basePath/$relPath"
-            if (path.contains(BuildConfig.TAG) || path.contains("Layout Inspect")) {
+            if (path.startsWith(KnownPaths.moduleRoot.toFile().absolutePath) ||
+                path.contains(BuildConfig.TAG) || path.contains("Layout Inspect")
+            ) {
                 result = true
             }
         }

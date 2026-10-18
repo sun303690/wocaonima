@@ -1,4 +1,18 @@
+<<<<<<<< HEAD:app/src/main/java/dev/sun/wechat/features/items/secret_friend/SecretFriendSql.kt
 package dev.sun.wechat.features.items.secret_friend
+========
+package dev.sun.wechat.features.items.contacts.hidecontacts
+
+import dev.sun.wechat.features.api.core.WeDatabaseApi
+
+import com.tencent.wcdb.database.SQLiteDatabase
+import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.features.items.contacts.HideContacts
+import dev.sun.wechat.utils.WeLogger
+import dev.sun.wechat.utils.reflection.BString
+
+private const val TAG = "HideContacts.Sql"
+>>>>>>>> tmp-upstream:app/src/main/java/dev/sun/wechat/features/items/contacts/hidecontacts/HideContactsSql.kt
 
 /**
  * 密友查询期 SQL 改写器（原 HideContacts Sql 规则集，密友接管后归并至此）。

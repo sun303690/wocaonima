@@ -9,6 +9,7 @@ import com.composables.icons.materialsymbols.MaterialSymbols
 import com.composables.icons.materialsymbols.outlined.Add
 import com.composables.icons.materialsymbols.outlined.Chevron_right
 import com.composables.icons.materialsymbols.outlined.Terminal
+import dev.sun.wechat.ui.content.m3.SettingsScaffold
 import dev.sun.wechat.R
 import dev.sun.wechat.agent.data.WeAgentRepository
 import dev.sun.wechat.agent.environment.NATIVE_ENVIRONMENT_ID
@@ -25,7 +26,7 @@ fun LinuxEnvironmentsScreen(onBack: () -> Unit, onOpen: (String?) -> Unit) {
     val environments by WeAgentService.linuxEnvironmentManager.observeEnvironments().collectAsState(initial = emptyList())
     var defaultId by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(NATIVE_ENVIRONMENT_ID) }
     androidx.compose.runtime.LaunchedEffect(Unit) { defaultId = dev.sun.wechat.agent.data.WeAgentSettings.defaultLinuxEnvironmentId() ?: NATIVE_ENVIRONMENT_ID }
-    AgentSettingsScaffold(title = stringResource(R.string.agent_linux_environments_title), onBack = onBack) {
+    SettingsScaffold(title = stringResource(R.string.agent_linux_environments_title), onBack = onBack) {
         item {
             SegmentedColumn(title = stringResource(R.string.agent_linux_environments_section)) {
                 environments.forEach { environment ->

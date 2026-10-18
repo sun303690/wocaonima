@@ -5,6 +5,8 @@ import dev.sun.wechat.R
 import dev.sun.wechat.constants.Preferences
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.cache.DexCacheManager
+import dev.sun.wechat.features.items.beautify.BeautifyConversationList
+import dev.sun.wechat.features.items.chat.ConversationGrouping
 import dev.sun.wechat.features.items.system.SafeMode
 import dev.sun.wechat.i18n.LocaleResourceMode
 import dev.sun.wechat.i18n.LocalizedContextFactory
@@ -32,6 +34,11 @@ object FeaturesLoader {
     fun loadFeatures() {
         val allFeatures = FeaturesProvider.ALL_FEATURES
         allFeatures.filterIsInstance<SwitchFeature>().forEach(SwitchFeature::loadPersistedState)
+        if (TargetProcesses.isInMain) {
+            // Migrate even when grouping is disabled or its Dex cache needs rebuilding. Reading
+            // legacy style later could mistake a new beauty toggle for the user's pre-upgrade choice.
+            ConversationGrouping.migrateTabStyle(BeautifyConversationList.isLayoutBeautificationEnabled)
+        }
 
         val safeMode = SafeMode.isEnabled
         val featuresToStart = if (safeMode) {

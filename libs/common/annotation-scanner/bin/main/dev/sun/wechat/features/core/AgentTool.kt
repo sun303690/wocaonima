@@ -1,10 +1,10 @@
-package dev.ujhhgtg.wekit.features.core
+package dev.sun.wechat.features.core
 
 /**
- * Marks a function as a WeAgent built-in tool. The [dev.ujhhgtg.wekit.features.AgentToolScanner] KSP processor
+ * Marks a function as a WeAgent built-in tool. The [dev.sun.wechat.features.AgentToolScanner] KSP processor
  * discovers every annotated function at compile time and generates an `AgentToolsProvider`
  * registry (name, description, JSON-schema-derived parameter specs, and a direct invoker),
- * so no hand-written mapping table is needed and new [dev.ujhhgtg.wekit] APIs are picked up
+ * so no hand-written mapping table is needed and new [dev.sun.wechat] APIs are picked up
  * automatically once annotated.
  *
  * The annotated function must be a member of a Kotlin `object` or a top-level function, and

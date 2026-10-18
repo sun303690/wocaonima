@@ -3,7 +3,6 @@ package dev.sun.wechat.features.items.scripting_python.runtime
 import dalvik.system.InMemoryDexClassLoader
 import android.os.Build
 import dev.sun.wechat.extensions.MountedPythonRuntime
-import dev.sun.wechat.BuildConfig
 import dev.sun.wechat.extensions.PythonRuntimeArchive
 import dev.sun.wechat.extensions.PythonRuntimePack
 import dev.sun.wechat.loader.utils.InjectionHandle
@@ -39,10 +38,10 @@ data class PythonRuntimeStatus(
 class PythonRuntimeMissingException : IllegalStateException("Python runtime extension is not installed")
 
 object PythonRuntimeLimits {
-    val SYNC_HOOK_BUDGET_MS = BuildConfig.PYTHON_SYNC_HOOK_BUDGET_MS
-    val TASK_DRAIN_TIMEOUT_MS = BuildConfig.PYTHON_TASK_DRAIN_TIMEOUT_MS
-    val MAX_MANIFEST_BYTES = BuildConfig.PYTHON_MAX_MANIFEST_BYTES
-    val MAX_PLUGIN_FILE_BYTES = BuildConfig.PYTHON_MAX_PLUGIN_FILE_BYTES
+    const val SYNC_HOOK_BUDGET_MS = 5_000L
+    const val TASK_DRAIN_TIMEOUT_MS = 3_000L
+    const val MAX_MANIFEST_BYTES = 262_144L
+    const val MAX_PLUGIN_FILE_BYTES = 8_388_608L
 }
 
 object PythonRuntimeLoader {

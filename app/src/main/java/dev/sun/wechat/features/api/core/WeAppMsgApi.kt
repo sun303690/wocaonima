@@ -3,11 +3,13 @@ package dev.sun.wechat.features.api.core
 import android.util.Pair
 import dev.sun.wechat.R
 import dev.sun.wechat.dexkit.abc.IResolveDex
+import dev.sun.wechat.dexkit.dsl.dexField
 import dev.sun.wechat.dexkit.dsl.dexMethod
 import dev.sun.wechat.features.core.ApiFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.utils.WeLogger
 import org.luckypray.dexkit.DexKitBridge
+import org.luckypray.dexkit.result.FieldUsingType
 import java.lang.reflect.Modifier
 
 object WeAppMsgApi : ApiFeature(), IResolveDex {
@@ -21,6 +23,8 @@ object WeAppMsgApi : ApiFeature(), IResolveDex {
 
     private val methodParseXml by dexMethod()    // op0.q.u(String)
     private val methodSendAppMsg by dexMethod()  // k0.J(...)
+    private val fieldQuoteItem by dexField()
+    private val fieldQuoteMsgSource by dexField()
 
     private const val TAG = "WeAppMsgApi"
 
@@ -62,6 +66,24 @@ object WeAppMsgApi : ApiFeature(), IResolveDex {
                 )
             }
         }
+
+        val quoteItemField = classAppMsgContent.fields.single {
+            it.typeName == "com.tencent.mm.plugin.msgquote.model.MsgQuoteItem"
+        }
+        fieldQuoteItem.setDescriptor(quoteItemField)
+        // AppMsgLogic reads the outgoing msgSource, not the quoted message's msgsource.
+        fieldQuoteMsgSource.setDescriptor(
+            classAppMsgLogic.methods.asSequence()
+                .flatMap { it.usingFields.asSequence() }
+                .filter { it.usingType == FieldUsingType.Read }
+                .map { it.field }
+                .filter {
+                    it.className == quoteItemField.typeName &&
+                        it.typeName == "java.lang.String"
+                }
+                .distinctBy { it.descriptor }
+                .single()
+        )
     }
 
     fun sendXmlAppMsg(
@@ -80,13 +102,20 @@ object WeAppMsgApi : ApiFeature(), IResolveDex {
                 return false
             }
 
+            // XML parsing leaves the outgoing quote msgSource unset. Older send paths
+            // pass it to fromXml without a null check; native quote composition uses "".
+            val quoteItem = fieldQuoteItem.field.get(contentObj)
+            if (quoteItem != null && fieldQuoteMsgSource.field.get(quoteItem) == null) {
+                fieldQuoteMsgSource.field.set(quoteItem, "")
+            }
+
             methodSendAppMsg.method.invoke(
                 null,         // static
                 contentObj, // content
                 appId,             // appId
                 title,             // title/appName
                 target,            // toUser
-                url,               // url
+                url,               // attachFilePath
                 data               // thumbDat
             )
 

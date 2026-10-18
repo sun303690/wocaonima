@@ -29,6 +29,8 @@ import com.composables.icons.materialsymbols.outlined.Send
 import com.composables.icons.materialsymbols.outlined.Shield
 import com.composables.icons.materialsymbols.outlined.Smart_display
 import com.composables.icons.materialsymbols.outlined.Smart_toy
+import dev.sun.wechat.ui.content.m3.SETTINGS_CONTENT_BOTTOM_INSET
+import dev.sun.wechat.ui.content.m3.SettingsScaffold
 import dev.sun.wechat.R
 import dev.sun.wechat.activity.agent.AgentSettingsRoute
 import dev.sun.wechat.agent.data.OverlayMode
@@ -85,7 +87,7 @@ fun WeAgentHomeScreen(onOpen: (AgentSettingsRoute) -> Unit) {
         loaded = true
     }
 
-    AgentSettingsScaffold(title = stringResource(R.string.agent_settings_title), onBack = null) {
+    SettingsScaffold(title = stringResource(R.string.agent_settings_title), onBack = null) {
         // ---------- 界面 ----------
         item {
             SegmentedColumn(title = stringResource(R.string.settings_section_interface)) {
@@ -262,7 +264,7 @@ fun WeAgentHomeScreen(onOpen: (AgentSettingsRoute) -> Unit) {
             item {
                 SegmentedColumn(
                     title = stringResource(R.string.agent_section_defaults),
-                    modifier = Modifier.padding(bottom = AGENT_CONTENT_BOTTOM_INSET),
+                    modifier = Modifier.padding(bottom = SETTINGS_CONTENT_BOTTOM_INSET),
                 ) {
                     item {
                         DropDownMenuWidget(

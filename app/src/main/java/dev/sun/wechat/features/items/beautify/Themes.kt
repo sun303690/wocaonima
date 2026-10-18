@@ -107,7 +107,7 @@ import kotlin.math.roundToInt
 /**
  * 主题功能 —— 从 cherrywechat_deobf 忠实移植。
  *
- * 目录结构（`moduleData/themes/<主题ID>/`）：
+ * 目录结构（`filesDir/wekit/themes/<主题ID>/`）：
  * - `manifest.json`：名称/作者/版本/描述；
  * - `colors.json` / `strings.json`：颜色/字符串键值（键名按场景分组）；
  * - `home/`、`chat/`、`chat/bubbles/`、`chat/emoji_tabs/`、`plus/`、`settings/`、`splash/`：图片。
