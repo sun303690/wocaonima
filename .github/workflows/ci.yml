@@ -154,12 +154,11 @@ jobs:
           ./x build --release 2>&1 | tee /tmp/build.log
           status=${PIPESTATUS[0]}
           if [ $status -ne 0 ]; then
-            grep -n -E "^e: |error:|Caused by:|What went wrong|> Task .* FAILED|Compilation error" /tmp/build.log               | head -40               | sed "s/%/%25/g; s///g"               | while IFS= read -r line; do
-                  echo "::error title=BUILDERR::$line"
-                done
+            grep -n -E 'error:|What went wrong|FAILED|Cannot|Unresolved' /tmp/build.log | head -40 | tr '%' '#' | while IFS= read -r line; do
+              echo "::error title=BUILDERR::$line"
+            done
           fi
           exit $status
-
       - name: Recompress DEX and re-sign APKs
         if: github.event_name != 'pull_request'
         env:
