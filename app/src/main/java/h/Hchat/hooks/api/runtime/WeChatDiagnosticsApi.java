@@ -67,8 +67,6 @@ public final class WeChatDiagnosticsApi {
         append(sb, "interaction.media", WeChatApis.hasMedia());
         append(sb, "interaction.media.image", WeChatApis.media() != null
                 && WeChatApis.media().images().canSendSilently());
-        append(sb, "interaction.media.voice", WeChatApis.media() != null
-                && WeChatApis.media().voices().canSendSilently());
         append(sb, "interaction.media.video", WeChatApis.media() != null
                 && WeChatApis.media().videos().canSendSilently());
         append(sb, "interaction.currentActivity", WeChatApis.hasCurrentActivity());
@@ -119,8 +117,6 @@ public final class WeChatDiagnosticsApi {
                 WeChatApis.messages() != null && WeChatApis.messages().canSendXml());
         addMissing(optional, "interaction.media.image",
                 WeChatApis.media() != null && WeChatApis.media().images().canSendSilently());
-        addMissing(optional, "interaction.media.voice",
-                WeChatApis.media() != null && WeChatApis.media().voices().canSendSilently());
         addMissing(optional, "interaction.media.video",
                 WeChatApis.media() != null && WeChatApis.media().videos().canSendSilently(),
                 WeChatApis.media() != null ? WeChatApis.media().videos().diagnostic() : null);

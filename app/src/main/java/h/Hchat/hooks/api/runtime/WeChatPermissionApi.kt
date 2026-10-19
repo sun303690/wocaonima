@@ -37,7 +37,6 @@ class WeChatPermissionApi {
         val mediaApi = WeChatApis.interaction().media()
         return mediaApi != null &&
             (mediaApi.images().canSendSilently() ||
-                mediaApi.voices().canSendSilently() ||
                 mediaApi.videos().canSendSilently() ||
                 mediaApi.emojis().canSendSilently() ||
                 mediaApi.files().canSendSilently())

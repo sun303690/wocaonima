@@ -307,19 +307,6 @@ class WeChatFavoriteApi(
         )
     }
 
-    private fun sendResolvedFavoriteVoice(
-        talker: String,
-        source: FavoriteVoiceResolver.VoiceSource
-    ): Boolean {
-        if (!File(source.path).isFile) return false
-        return runCatching {
-            WeChatApis.media()?.voices()?.send(talker, source.path, source.durationMillis) == true
-        }.getOrElse {
-            log("发送收藏语音失败: ${it.message}")
-            false
-        }
-    }
-
     private fun logFavoriteVoice(message: String, throwable: Throwable?) {
         log(if (throwable == null) message else "$message: ${throwable.message}")
     }

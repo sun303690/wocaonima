@@ -61,6 +61,7 @@ import dev.sun.wechat.ui.content.m3.SwitchWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.HostInfo
 import dev.sun.wechat.utils.WeLogger
+import dev.sun.wechat.utils.android.getTopMostActivity
 import dev.sun.wechat.utils.android.isDarkMode
 import dev.sun.wechat.utils.android.showToast
 import dev.sun.wechat.utils.fs.KnownPaths
@@ -571,7 +572,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                 if (ok) {
                     backgroundRevision++
                     backgroundUri = backgroundImageFile.asAndroidUri.toString()
-                    applyBackgroundToActiveActivities()
+                    getTopMostActivity(allowPaused = true)?.let(::applyBackground)
                     showToast(context.localizedBeautifyString(R.string.beautify_global_background_selected))
                 } else {
                     showToast(context.localizedBeautifyString(R.string.beautify_global_background_import_failed))
