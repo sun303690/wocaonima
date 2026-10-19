@@ -671,8 +671,8 @@
     <string name="feature_chat_footer_hooks_description">Centrally provide hooks related to the chat input field</string>
     <string name="feature_chat_toolbar_name">Chat toolbar</string>
     <string name="feature_chat_toolbar_description">Add a toolbar above the input box</string>
-    <string name="feature_conversation_aggregation_name">Conversation aggregation</string>
-    <string name="feature_conversation_aggregation_description">Gather multiple conversations into one folder\nTo set a conversation avatar, you need to enable "Customize friend local avatar" at the same time</string>
+    <string name="feature_conversation_aggregation_name">Group chat aggregation</string>
+    <string name="feature_conversation_aggregation_description">Gather group chats into one folder, with optional automatic aggregation\nTo set a group avatar, also enable "Customize friend local avatar"</string>
     <string name="feature_conversation_grouping_name">Conversation grouping</string>
     <string name="feature_conversation_grouping_description">Add a Tab bar to the top of the homepage to group conversations\nIt is recommended to also enable "Interface Beautification/Hide the "Recent" Page on the Homepage"</string>
     <string name="feature_custom_chat_input_bar_placeholder_text_name">Custom input box placeholder text</string>
@@ -2660,7 +2660,12 @@
     <string name="chat_aggregation_select_forward_target">Choose a recipient from this folder</string>
     <string name="chat_aggregation_select">Select</string>
     <string name="chat_aggregation_configure">Configure</string>
-    <string name="chat_aggregation_title">Conversation folders</string>
+    <string name="chat_aggregation_title">Group chat aggregation</string>
+    <string name="chat_aggregation_auto_group_chats">Automatically aggregate group chats</string>
+    <string name="chat_aggregation_auto_group_chats_description">Automatically place all group chats in the “Group chats” folder, including newly joined groups</string>
+    <string name="chat_aggregation_auto_group_folder_name">Group chats</string>
+    <string name="chat_aggregation_add_conversation_to_folder">Add conversations to an aggregation folder</string>
+    <string name="chat_aggregation_add_conversation_need_folder">Create a manual aggregation folder first</string>
     <string name="chat_aggregation_no_folders">No folders yet. Tap Create to add one.</string>
     <string name="chat_aggregation_index_rebuilt">Folder index rebuilt</string>
     <string name="chat_aggregation_reload">Reload</string>
@@ -3137,6 +3142,11 @@
     <string name="beautify_global_background_cleared">Background image cleared. Restart WeChat to apply.</string>
     <string name="beautify_global_background_status_bar">Transparent status bar background</string>
     <string name="beautify_global_background_status_bar_summary">Make the status bar background transparent</string>
+    <string name="beautify_global_background_taskbar_black_text">Use black text on the pull-down Mini Programs page</string>
+    <string name="beautify_global_background_taskbar_black_text_summary">Only applies while global background is enabled with an image; disabling it restores WeChat’s original text colors</string>
+    <string name="beautify_global_background_text_color">Custom global text color</string>
+    <string name="beautify_global_background_text_color_summary">Applies to the home page and regular lists; excludes chats, Mini Programs, web pages, inputs, buttons, and links</string>
+    <string name="beautify_global_background_text_color_picker">Global text color</string>
     <string name="beautify_conversation_list_title">Beautify conversation list</string>
     <string name="beautify_conversation_preset">Layout preset</string>
     <string name="beautify_conversation_highlight_unread">Highlight unread conversations</string>

@@ -761,7 +761,11 @@ object CustomLocalFriendAvatars : ClickableFeature(), IContactInfoProvider, IRes
         }
     }
 
-    fun selectAvatarImage(context: Context, wxId: String) {
+    fun selectAvatarImage(
+        context: Context,
+        wxId: String,
+        onImported: ((Boolean) -> Unit)? = null,
+    ) {
         TransparentActivity.launch(context) {
             val launcher = registerForActivityResult(
                 ActivityResultContracts.PickVisualMedia()
@@ -777,12 +781,15 @@ object CustomLocalFriendAvatars : ClickableFeature(), IContactInfoProvider, IRes
                     setAvatar(wxId, bytes, resolver.getType(uri) ?: "application/octet-stream", uri.toString())
                 }.onFailure {
                     WeLogger.e(TAG, "failed to import picked avatar for $wxId", it)
+                    onImported?.invoke(false)
                 }.onSuccess { imported ->
                     if (imported) {
+                        refreshAvatarViews()
                         showToast(
                             context.localizedContactsString(R.string.contacts_custom_avatar_set_reopen),
                         )
                     }
+                    onImported?.invoke(imported)
                 }
             }
             launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))

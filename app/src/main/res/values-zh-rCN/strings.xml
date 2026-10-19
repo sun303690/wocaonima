@@ -634,8 +634,8 @@
     <string name="feature_chat_footer_hooks_description">集中提供聊天输入栏相关钩子</string>
     <string name="feature_chat_toolbar_name">聊天工具栏</string>
     <string name="feature_chat_toolbar_description">在输入框上方添加工具栏</string>
-    <string name="feature_conversation_aggregation_name">对话归拢</string>
-    <string name="feature_conversation_aggregation_description">将多个对话归拢在一个文件夹内\n设置对话头像需同时启用「自定义好友本地头像」</string>
+    <string name="feature_conversation_aggregation_name">群聊归拢</string>
+    <string name="feature_conversation_aggregation_description">将群聊归拢在一个文件夹内，支持自动归拢所有群聊\n设置群聊头像需同时启用「自定义好友本地头像」</string>
     <string name="feature_conversation_grouping_name">对话分组</string>
     <string name="feature_conversation_grouping_description">向主页顶部添加 Tab 栏, 将对话分组\n建议同时启用「界面美化/隐藏主页下滑「最近」页」</string>
     <string name="feature_custom_chat_input_bar_placeholder_text_name">自定义输入框占位符文本</string>
@@ -2586,7 +2586,12 @@
     <string name="chat_aggregation_select_forward_target">选择文件夹里的转发对象</string>
     <string name="chat_aggregation_select">选择</string>
     <string name="chat_aggregation_configure">配置</string>
-    <string name="chat_aggregation_title">对话归拢</string>
+    <string name="chat_aggregation_title">群聊归拢</string>
+    <string name="chat_aggregation_auto_group_chats">自动归拢群聊</string>
+    <string name="chat_aggregation_auto_group_chats_description">自动将所有群聊收进“群聊”文件夹，新加入的群聊也会自动归拢</string>
+    <string name="chat_aggregation_auto_group_folder_name">群聊</string>
+    <string name="chat_aggregation_add_conversation_to_folder">添加对话至归拢文件夹</string>
+    <string name="chat_aggregation_add_conversation_need_folder">请先创建一个手动归拢文件夹</string>
     <string name="chat_aggregation_no_folders">暂无文件夹，点击“新建”来创建一个</string>
     <string name="chat_aggregation_index_rebuilt">已重建文件夹索引</string>
     <string name="chat_aggregation_reload">重载</string>
@@ -3148,6 +3153,11 @@
     <string name="beautify_global_background_cleared">已清除背景图片，重启微信生效</string>
     <string name="beautify_global_background_status_bar">状态栏背景透明</string>
     <string name="beautify_global_background_status_bar_summary">设置状态栏背景为透明</string>
+    <string name="beautify_global_background_taskbar_black_text">下拉小程序页面使用黑色文字</string>
+    <string name="beautify_global_background_taskbar_black_text_summary">仅在全局背景启用且已选择图片时生效，关闭后恢复微信原文字颜色</string>
+    <string name="beautify_global_background_text_color">自定义全局字体颜色</string>
+    <string name="beautify_global_background_text_color_summary">应用于主页和普通列表，自动排除聊天页、小程序、网页、输入框、按钮和链接</string>
+    <string name="beautify_global_background_text_color_picker">全局字体颜色</string>
     <string name="beautify_conversation_list_title">美化对话列表</string>
     <string name="beautify_conversation_preset">布局预设</string>
     <string name="beautify_conversation_highlight_unread">突出未读会话</string>

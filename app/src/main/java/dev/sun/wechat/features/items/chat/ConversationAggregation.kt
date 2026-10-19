@@ -26,6 +26,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.rememberCoroutineScope
@@ -101,7 +102,7 @@ object ConversationAggregation : ClickableFeature(),
     WeStartActivityApi.IStartActivityListener,
     IResolveDex {
 
-    override val technicalId = "对话归拢"
+    override val technicalId = "群聊归拢"
     override val nameRes = R.string.feature_conversation_aggregation_name
     override val categoryIds = listOf(FeatureCategoryIds.CHAT)
     override val descriptionRes = R.string.feature_conversation_aggregation_description
@@ -110,6 +111,7 @@ object ConversationAggregation : ClickableFeature(),
     const val FOLDER_PREFIX = "wekit_folder_"
     private const val FOLDER_CONFIG_MENU_ID = 0x0721C0DE
     private const val REMOVE_FROM_FOLDER_MENU_ID = 777020
+    private const val AUTO_GROUP_FOLDER_ID = "${FOLDER_PREFIX}auto_groups"
 
     // Order pushes our item to the end of the container's context menu (its own items use 0).
     private const val REMOVE_FROM_FOLDER_MENU_ORDER = 1000
@@ -1517,6 +1519,10 @@ object ConversationAggregation : ClickableFeature(),
     private fun showManagerDialog(context: Context) {
         showComposeDialog(context) {
             var folders by remember { mutableStateOf(loadFolders()) }
+            var autoGroupChats by remember(folders) {
+                mutableStateOf(folders.any { it.id == AUTO_GROUP_FOLDER_ID })
+            }
+            val scope = rememberCoroutineScope()
 
             AlertDialogContent(
                 modifier = Modifier
@@ -1525,6 +1531,57 @@ object ConversationAggregation : ClickableFeature(),
                 title = { Text(stringResource(R.string.chat_aggregation_title)) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    val enabled = !autoGroupChats
+                                    autoGroupChats = enabled
+                                    scope.launch {
+                                        if (enabled) {
+                                            upsertFolder(
+                                                ChatFolder(
+                                                    id = AUTO_GROUP_FOLDER_ID,
+                                                    name = localizedChatString(R.string.chat_aggregation_auto_group_folder_name),
+                                                    type = FolderType.PRESET_GROUPS
+                                                )
+                                            )
+                                        } else {
+                                            deleteFolder(AUTO_GROUP_FOLDER_ID)
+                                        }
+                                        folders = loadFolders()
+                                    }
+                                }
+                                .padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(stringResource(R.string.chat_aggregation_auto_group_chats))
+                                Text(
+                                    stringResource(R.string.chat_aggregation_auto_group_chats_description),
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                            Switch(checked = autoGroupChats, onCheckedChange = null)
+                        }
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                val manualFolder = folders.firstOrNull { it.type == FolderType.MANUAL }
+                                if (manualFolder == null) {
+                                    showToast(localizedChatString(R.string.chat_aggregation_add_conversation_need_folder))
+                                    return@Button
+                                }
+                                showEditFolderDialog(
+                                    context = context,
+                                    folder = manualFolder,
+                                    onFolderUpdated = { folders = loadFolders() },
+                                    onFolderDeleted = { folders = loadFolders() },
+                                )
+                            },
+                        ) {
+                            Text(stringResource(R.string.chat_aggregation_add_conversation_to_folder))
+                        }
                         LazyColumn(
                             modifier = Modifier.heightIn(max = 420.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -1830,6 +1887,8 @@ object ConversationAggregation : ClickableFeature(),
                                     Button(enabled = !saving, onClick = {
                                         CustomLocalFriendAvatars.removeAvatar(folderId)
                                         hasAvatar = false
+                                        fallbackAvatarCache.remove(folderId)
+                                        syncFoldersToDatabase()
                                     }) {
                                         Text(stringResource(R.string.chat_aggregation_clear_avatar))
                                     }
@@ -1872,6 +1931,8 @@ object ConversationAggregation : ClickableFeature(),
                                     Button(enabled = !saving, onClick = {
                                         CustomLocalFriendAvatars.removeAvatar(folderId)
                                         hasAvatar = false
+                                        fallbackAvatarCache.remove(folderId)
+                                        syncFoldersToDatabase()
                                     }) {
                                         Text(stringResource(R.string.chat_aggregation_clear_avatar))
                                     }
@@ -1880,7 +1941,22 @@ object ConversationAggregation : ClickableFeature(),
                                     enabled = !saving,
                                     modifier = Modifier.weight(1f),
                                     onClick = {
-                                        CustomLocalFriendAvatars.selectAvatarImage(HostInfo.application, folderId)
+                                        if (!CustomLocalFriendAvatars.isEnabled) {
+                                            showToast(
+                                                localizedChatString(R.string.chat_aggregation_enable_custom_avatar),
+                                            )
+                                            return@Button
+                                        }
+                                        CustomLocalFriendAvatars.selectAvatarImage(
+                                            HostInfo.application,
+                                            folderId,
+                                        ) { imported ->
+                                            if (imported) {
+                                                hasAvatar = true
+                                                fallbackAvatarCache.remove(folderId)
+                                                syncFoldersToDatabase()
+                                            }
+                                        }
                                     }
                                 ) {
                                     Text(
@@ -1909,6 +1985,8 @@ object ConversationAggregation : ClickableFeature(),
                                     Button(enabled = !saving, onClick = {
                                         CustomLocalFriendAvatars.removeAvatar(folderId)
                                         hasAvatar = false
+                                        fallbackAvatarCache.remove(folderId)
+                                        syncFoldersToDatabase()
                                     }) {
                                         Text(stringResource(R.string.chat_aggregation_clear_avatar))
                                     }
@@ -1969,6 +2047,8 @@ object ConversationAggregation : ClickableFeature(),
                                     Button(enabled = !saving, onClick = {
                                         CustomLocalFriendAvatars.removeAvatar(folderId)
                                         hasAvatar = false
+                                        fallbackAvatarCache.remove(folderId)
+                                        syncFoldersToDatabase()
                                     }) {
                                         Text(stringResource(R.string.chat_aggregation_clear_avatar))
                                     }

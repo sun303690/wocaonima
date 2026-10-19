@@ -14,6 +14,7 @@ import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -33,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import com.composables.icons.materialsymbols.MaterialSymbols
 import com.composables.icons.materialsymbols.outlined.Delete
 import com.composables.icons.materialsymbols.outlined.Opacity
+import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
 import androidx.core.view.postDelayed
 import coil3.load
@@ -54,9 +56,9 @@ import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.TextButton
 import dev.sun.wechat.ui.content.m3.BaseItemContainer
 import dev.sun.wechat.ui.content.m3.BaseWidget
+import dev.sun.wechat.ui.content.m3.ColorPickerWidget
 import dev.sun.wechat.ui.content.m3.IntNumberPickerWidget
 import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
 import dev.sun.wechat.ui.content.m3.SwitchWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.HostInfo
@@ -67,6 +69,7 @@ import dev.sun.wechat.utils.android.showToast
 import dev.sun.wechat.utils.fs.KnownPaths
 import dev.sun.wechat.utils.fs.asAndroidUri
 import dev.sun.wechat.utils.nul
+import dev.sun.wechat.utils.reflection.toClass
 import java.util.WeakHashMap
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.div
@@ -102,6 +105,9 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     private var listHorizontalInset by prefOption("global_bg_list_horizontal_inset", 8)
     private var listVerticalSpacing by prefOption("global_bg_list_vertical_spacing", 4)
     private var listHeight by prefOption("global_bg_list_height", 0)
+    private var taskbarBlackText by prefOption("global_bg_taskbar_black_text", false)
+    private var globalTextColorEnabled by prefOption("global_bg_text_color_enabled", false)
+    private var globalTextColor by prefOption("global_bg_text_color", "#FF000000")
 
     private const val BACKGROUND_IMAGE_FILE = "global_background.png"
 
@@ -115,6 +121,8 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     private const val APPLY_STATUS_BAR_DELAY_MS = 80L
 
     private val rowStates = WeakHashMap<View, RowState>()
+    private val taskbarTextColors = WeakHashMap<TextView, Int>()
+    private val globalTextColors = WeakHashMap<TextView, Int>()
     private data class RowState(val background: android.graphics.drawable.Drawable?, val height: Int)
 
     private val conversationBindListener = WeConversationListViewApi.IBindViewListener { _, view, _, _ ->
@@ -163,7 +171,9 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                 parameters(Bundle::class)
             }.hookAfter {
                 val activity = thisObject as Activity
-                applyTransparentStatusBarIfEnabled(activity)
+                if (!isBackgroundExcluded(activity)) {
+                    applyTransparentStatusBarIfEnabled(activity)
+                }
             }
 
             firstMethod {
@@ -171,7 +181,9 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                 parameterCount = 0
             }.hookAfter {
                 val activity = thisObject as Activity
-                applyTransparentStatusBarIfEnabled(activity)
+                if (!isBackgroundExcluded(activity)) {
+                    applyTransparentStatusBarIfEnabled(activity)
+                }
             }
 
             firstMethod {
@@ -181,6 +193,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                 val activity = thisObject as Activity
                 applyTransparentStatusBarIfEnabled(activity)
                 applyBackground(activity)
+                applyGlobalTextColors(activity.window.decorView)
             }
 
             firstMethod {
@@ -188,9 +201,28 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                 parameters(Boolean::class)
             }.hookAfter {
                 val activity = thisObject as Activity
-                applyTransparentStatusBarIfEnabled(activity)
+                if (!isBackgroundExcluded(activity)) {
+                    applyTransparentStatusBarIfEnabled(activity)
+                }
+                applyGlobalTextColors(activity.window.decorView)
             }
         }
+
+        runCatching {
+            "com.tencent.mm.plugin.appbrand.widget.desktop.AppBrandDesktopContainerView"
+                .toClass()
+                .reflekt()
+                .constructors()
+                .forEach { constructor ->
+                    constructor.hookAfter {
+                        val root = thisObject as? ViewGroup ?: return@hookAfter
+                        root.post { applyTaskbarTextColors(root) }
+                        root.viewTreeObserver.addOnGlobalLayoutListener {
+                            applyTaskbarTextColors(root)
+                        }
+                    }
+                }
+        }.onFailure { WeLogger.w(TAG, "failed to hook taskbar text colors", it) }
 
         methodInitImageView.hookBefore {
             val view = thisObject as ImageView
@@ -238,6 +270,57 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
 
     private fun overlayFromActivity(activity: Activity): ImageView? =
         findOverlay(activity.window?.decorView as? ViewGroup ?: return null)
+
+    private fun applyTaskbarTextColors(root: View) {
+        val useBlack = isEnabled && backgroundUri != null && taskbarBlackText
+        if (root is TextView) {
+            if (useBlack) {
+                taskbarTextColors.putIfAbsent(root, root.currentTextColor)
+                if (root.currentTextColor != Color.BLACK) root.setTextColor(Color.BLACK)
+            } else {
+                taskbarTextColors.remove(root)?.let(root::setTextColor)
+            }
+        }
+        if (root is ViewGroup) {
+            for (index in 0 until root.childCount) {
+                root.getChildAt(index)?.let(::applyTaskbarTextColors)
+            }
+        }
+    }
+
+    private fun refreshTaskbarTextColors() {
+        getTopMostActivity(allowPaused = true)?.window?.decorView?.let(::applyTaskbarTextColors)
+    }
+
+    private fun applyGlobalTextColors(root: View) {
+        val activity = root.context as? Activity
+        val useCustomColor = isEnabled && backgroundUri != null && globalTextColorEnabled &&
+                activity != null && !isBackgroundExcluded(activity) &&
+                !activity.javaClass.name.contains("chatting", ignoreCase = true) &&
+                !activity.javaClass.name.contains("webview", ignoreCase = true)
+        val color = runCatching { globalTextColor.toColorInt() }.getOrDefault(Color.BLACK)
+
+        if (root is TextView) {
+            val isEditable = root is android.widget.EditText
+            val isButton = root is android.widget.Button
+            val hasLink = root.autoLinkMask != 0 || root.urls.isNotEmpty()
+            if (useCustomColor && !isEditable && !isButton && !hasLink && root.isEnabled) {
+                globalTextColors.putIfAbsent(root, root.currentTextColor)
+                if (root.currentTextColor != color) root.setTextColor(color)
+            } else {
+                globalTextColors.remove(root)?.let(root::setTextColor)
+            }
+        }
+        if (root is ViewGroup) {
+            for (index in 0 until root.childCount) {
+                root.getChildAt(index)?.let(::applyGlobalTextColors)
+            }
+        }
+    }
+
+    private fun refreshGlobalTextColors() {
+        getTopMostActivity(allowPaused = true)?.window?.decorView?.let(::applyGlobalTextColors)
+    }
 
     private const val MIN_OPACITY_PERCENT = 1
     private const val MAX_OPACITY_PERCENT = 80
@@ -368,6 +451,43 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                                 },
                             )
                         }
+                        item {
+                            SwitchWidget(
+                                iconPlaceholder = false,
+                                title = stringResource(R.string.beautify_global_background_taskbar_black_text),
+                                description = stringResource(R.string.beautify_global_background_taskbar_black_text_summary),
+                                checked = taskbarBlackText,
+                                onCheckedChange = {
+                                    taskbarBlackText = it
+                                    refreshTaskbarTextColors()
+                                },
+                            )
+                        }
+                        item {
+                            SwitchWidget(
+                                iconPlaceholder = false,
+                                title = stringResource(R.string.beautify_global_background_text_color),
+                                description = stringResource(R.string.beautify_global_background_text_color_summary),
+                                checked = globalTextColorEnabled,
+                                onCheckedChange = {
+                                    globalTextColorEnabled = it
+                                    refreshGlobalTextColors()
+                                },
+                            )
+                        }
+                        if (globalTextColorEnabled) {
+                            item {
+                                ColorPickerWidget(
+                                    iconPlaceholder = false,
+                                    title = stringResource(R.string.beautify_global_background_text_color_picker),
+                                    value = globalTextColor,
+                                    onValueChange = {
+                                        globalTextColor = it
+                                        refreshGlobalTextColors()
+                                    },
+                                )
+                            }
+                        }
                         item { SwitchWidget(iconPlaceholder = false, title = "列表卡片化", description = "启用圆角、内缩、间距和高度调节", checked = cardsInput, onCheckedChange = { cardsInput = it; listCards = it; restartRequired = true }) }
                         item { BaseItemContainer { IntNumberPickerWidget(iconPlaceholder = false, title = "列表圆角", value = radiusInput, startInt = 0, endInt = 40, stepSize = 1, valueSuffix = "dp", onValueChange = { radiusInput = it; listRadius = it; restartRequired = true }) } }
                         item { BaseItemContainer { IntNumberPickerWidget(iconPlaceholder = false, title = "左右内缩", value = horizontalInput, startInt = 0, endInt = 40, stepSize = 1, valueSuffix = "dp", onValueChange = { horizontalInput = it; listHorizontalInset = it; restartRequired = true }) } }
@@ -441,9 +561,25 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
         }
     }
 
+    private fun isBackgroundExcluded(activity: Activity): Boolean {
+        val className = activity.javaClass.name
+        if (className in blacklistedActivities) return true
+
+        // 微信小程序页面的类名在不同版本会变化，不能只维护单个 Activity 黑名单。
+        // appbrand 是传统小程序，wxa/liteapp 覆盖新版及轻应用容器。
+        val normalized = className.lowercase()
+        return normalized.contains(".plugin.appbrand.") ||
+                normalized.contains("wxaapp") ||
+                normalized.contains("wxalite") ||
+                normalized.contains("liteapp")
+    }
+
     private fun applyBackground(activity: Activity) {
         if (backgroundUri == null) return
-        if (activity.javaClass.name in blacklistedActivities) return
+        if (isBackgroundExcluded(activity)) {
+            overlayFromActivity(activity)?.visibility = View.GONE
+            return
+        }
 
         val uri = backgroundUri ?: return
         val decor = activity.window?.decorView as? ViewGroup ?: return
@@ -526,6 +662,14 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     override fun onDisable() {
         WeConversationListViewApi.removeListener(conversationBindListener)
         rowStates.clear()
+        taskbarTextColors.entries.toList().forEach { (view, color) ->
+            runCatching { view.setTextColor(color) }
+        }
+        taskbarTextColors.clear()
+        globalTextColors.entries.toList().forEach { (view, color) ->
+            runCatching { view.setTextColor(color) }
+        }
+        globalTextColors.clear()
     }
 
     private fun View.makeTransparent() {
