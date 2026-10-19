@@ -1,5 +1,6 @@
 package dev.sun.wechat.features.items.system
 
+import android.os.Process
 import android.util.Log
 import android.view.SurfaceView
 import android.view.TextureView
@@ -10,11 +11,14 @@ import dev.sun.wechat.R
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.utils.TargetProcess
+import dev.sun.wechat.utils.TargetProcesses
 import dev.sun.wechat.utils.WeLogger
+import dev.sun.wechat.utils.fs.KnownPaths
 import dev.sun.wechat.utils.reflection.ClassLoaders
 import dev.ujhhgtg.reflekt.reflekt
 import java.lang.reflect.Field
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.io.path.div
 
 /**
  * 诊断探针：把「已释放的 SurfaceControl 被再次 setPosition」写进日志，用于定位根因。
@@ -77,8 +81,12 @@ object NativeViewGuard : SwitchFeature() {
     private var nativeObjectField: Field? = null
 
     override fun onEnable() {
+        // 大声打点：证明探针真的在这个进程里装上了（上一次就是靠这条才能排除「没装上」）。
+        Log.e(BuildConfig.TAG, "[NativeViewGuard] onEnable pid=${Process.myPid()} process=${TargetProcesses.currentName}")
+        WeLogger.e(TAG, "onEnable pid=${Process.myPid()} process=${TargetProcesses.currentName}")
         hookSetPosition()
         installReparentHooksWhenFirstSurfaceAppears()
+        WeLogger.e(TAG, "setPosition/reparent 探针安装完毕")
     }
 
     /**
@@ -114,6 +122,9 @@ object NativeViewGuard : SwitchFeature() {
                 "thread=${Thread.currentThread().name}"
             // logcat 立即落盘（liblog 同步），随后紧跟的 SIGSEGV 会带着它一起进入 tombstone。
             Log.e(BuildConfig.TAG, line)
+            // 关键：进程 SIGSEGV 后 WeLogger 的异步队列会丢，所以这里同步直写文件。
+            appendDirect("=== 命中已释放 SurfaceControl 的 setPosition ===\n$line")
+            appendDirect(Log.getStackTraceString(Throwable("setPosition(handle=0)")))
             if (!reportedZeroHandle) {
                 reportedZeroHandle = true
                 WeLogger.e(TAG, line)
@@ -148,6 +159,8 @@ object NativeViewGuard : SwitchFeature() {
             }?.hookBefore {
                 val child = args.getOrNull(0) as? View ?: return@hookBefore
                 if (containsSurface(child)) {
+                    appendDirect("=== addView 含 Surface 子树 === ${child.javaClass.name}\n" +
+                        Log.getStackTraceString(Throwable("addView(surface-subtree)")))
                     Log.w(BuildConfig.TAG, "[Reparent] addView 含 Surface 子树: ${child.javaClass.name}")
                 }
             }
@@ -159,20 +172,37 @@ object NativeViewGuard : SwitchFeature() {
             }?.hookBefore {
                 val child = args.getOrNull(0) as? View ?: return@hookBefore
                 if (containsSurface(child)) {
+                    appendDirect("=== removeView 含 Surface 子树 === ${child.javaClass.name}\n" +
+                        Log.getStackTraceString(Throwable("removeView(surface-subtree)")))
                     Log.w(
                         BuildConfig.TAG,
-                        "[Reparent] removeView 含 Surface 子树: ${child.javaClass.name}\n" +
-                            Log.getStackTraceString(Throwable("removeView")),
+                        "[Reparent] removeView 含 Surface 子树: ${child.javaClass.name}",
                     )
                 }
             }
         }.onFailure { WeLogger.w(TAG, "removeView hook 安装失败", it) }
-        WeLogger.i(TAG, "reparent 遍历 hook 已安装（首个 SurfaceView 出现）")
+        WeLogger.e(TAG, "reparent 遍历 hook 已安装（首个 SurfaceView 出现）")
     }
-
     private fun nativeHandleOf(sc: Any): Long = runCatching {
         nativeObjectField?.getLong(sc) ?: -1L
     }.getOrDefault(-1L)
+
+    /**
+     * 同步、绕过日志异步队列地直写探针专属文件。
+     *
+     * 为什么必须同步：崩溃是 native SIGSEGV，进程随即被内核终止，WeLogger 的后台写盘线程来不及
+     * 把队列里的记录刷到文件——上一次排查就是因此「什么都看不到」。这里每次调用都自己开/关文件，
+     * 保证证据在进程死亡前已经落在磁盘上。开销只发生在「真的命中异常」和肉眼可见的低频事件上。
+     */
+    @Synchronized
+    private fun appendDirect(text: String) {
+        runCatching {
+            val file = (KnownPaths.moduleRoot / "nvg-probe.log").toFile()
+            file.parentFile?.mkdirs()
+            file.appendText("[${System.currentTimeMillis()}] pid=${Process.myPid()} $text\n")
+        }.onFailure { Log.e(BuildConfig.TAG, "[NativeViewGuard] appendDirect failed", it) }
+    }
+
 
     private fun String.classOrNull(): Class<*>? =
         runCatching { Class.forName(this, false, ClassLoaders.BOOT) }.getOrNull()
@@ -193,6 +223,8 @@ object NativeViewGuard : SwitchFeature() {
     @JvmStatic
     fun noteReparent(where: String, child: View?) {
         if (child == null || !containsSurface(child)) return
+        appendDirect("=== noteReparent: $where === ${child.javaClass.name}\n" +
+            Log.getStackTraceString(Throwable(where)))
         Log.w(BuildConfig.TAG, "[Reparent] $where 搬动含 Surface 子树: ${child.javaClass.name}")
     }
 }
