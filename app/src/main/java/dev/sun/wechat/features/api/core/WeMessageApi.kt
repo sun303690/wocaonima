@@ -1552,16 +1552,44 @@ object WeMessageApi : ApiFeature(), IResolveDex {
         }
     }
 
+    /**
+     * 构造 NetSceneSendMsg，兼容 8.0.79 的 6 参数及旧版 5 参数构造器。
+     * 第五参数在不同版本可能是 Object 或 long，不能固定传 null。
+     */
     private fun createSendMsgScene(toUser: String, content: String): Any {
-        val constructor = ctorNetSceneSendMsg.constructor
-        // The six-argument signature accepts an explicit msgsource. Empty preserves
-        // the host-generated source used by the original five-argument constructor.
-        return if (constructor.parameterCount == 6) {
-            constructor.newInstance(toUser, content, 1, 0, null, "")
-        } else {
-            constructor.newInstance(toUser, content, 1, 0, null)
+        val preferred = ctorNetSceneSendMsg.constructor
+        val constructors = buildList {
+            add(preferred)
+            addAll(classNetSceneSendMsg.clazz.constructors.filter { it != preferred })
+        }.filter {
+            it.parameterCount >= 5 && it.parameterTypes.firstOrNull() == String::class.java
+        }.sortedByDescending { it.parameterCount }
+
+        for (constructor in constructors) {
+            val args = buildSendMsgArgs(constructor.parameterTypes, toUser, content)
+            val scene = runCatching { constructor.newInstance(*args) }.getOrNull()
+            if (scene != null) return scene
         }
+        error("no compatible NetSceneSendMsg constructor")
     }
+
+    private fun buildSendMsgArgs(types: Array<Class<*>>, toUser: String, content: String): Array<Any?> =
+        Array(types.size) { index ->
+            val type = types[index]
+            when {
+                type == String::class.java -> when (index) {
+                    0 -> toUser
+                    1 -> content
+                    else -> ""
+                }
+                type == Int::class.javaPrimitiveType || type == Int::class.javaObjectType -> if (index == 2) 1 else 0
+                type == Long::class.javaPrimitiveType || type == Long::class.javaObjectType -> 0L
+                type == Boolean::class.javaPrimitiveType || type == Boolean::class.javaObjectType -> false
+                type == Byte::class.javaPrimitiveType || type == Byte::class.javaObjectType -> 0.toByte()
+                type == Char::class.javaPrimitiveType || type == Char::class.javaObjectType -> '\u0000'
+                else -> null
+            }
+        }
 
     /** 发送文本消息 */
     fun sendText(toUser: String, text: String): Boolean {

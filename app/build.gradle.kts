@@ -339,6 +339,8 @@ dependencies {
     implementation(libs.mmkv)
 
     implementation(project(":libs:common:bsh"))
+    implementation("io.github.billywei01:fastkv:3.0.1")
+    implementation("com.highcapable.kavaref:kavaref-core:1.1.0")
     add(arsclibSource.name, libs.arsclib)
     implementation(files(prepareAndroidArsclib))
     implementation(libs.apksig)
