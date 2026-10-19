@@ -69,7 +69,7 @@ import dev.sun.wechat.utils.android.showToast
 import dev.sun.wechat.utils.fs.KnownPaths
 import dev.sun.wechat.utils.fs.asAndroidUri
 import dev.sun.wechat.utils.nul
-import dev.sun.wechat.utils.reflection.toClass
+import dev.ujhhgtg.reflekt.utils.toClass
 import java.util.WeakHashMap
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.div
