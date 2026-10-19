@@ -34,7 +34,6 @@ import com.composables.icons.materialsymbols.MaterialSymbols
 import com.composables.icons.materialsymbols.outlined.Delete
 import com.composables.icons.materialsymbols.outlined.Opacity
 import androidx.core.view.postDelayed
-import androidx.viewpager.widget.ViewPager
 import com.tencent.mm.ui.mogic.WxViewPager
 import coil3.load
 import coil3.request.crossfade
@@ -62,6 +61,7 @@ import dev.sun.wechat.utils.android.isDarkMode
 import dev.sun.wechat.utils.android.showToast
 import dev.sun.wechat.utils.fs.KnownPaths
 import dev.sun.wechat.utils.fs.asAndroidUri
+import dev.sun.wechat.utils.reflection.float
 import dev.sun.wechat.utils.nul
 import java.util.WeakHashMap
 import kotlin.io.path.deleteIfExists
@@ -474,9 +474,12 @@ object ApplyGlobalBackground : ClickableFeature() {
 
     // ------------------------------------------------------------ 每页背景层
 
-    /** 已安装背景层的宿主 pager，作为幂等依据，避免重复注册监听器与层。 */
+    /** 已安装背景层的宿主 pager，作为幂等依据，避免重复安装层与回调。 */
     private val installedPagers =
         java.util.Collections.newSetFromMap(WeakHashMap<WxViewPager, Boolean>())
+
+    /** 每页背景层靠 pager 自身的滚动回调驱动，全进程只挂一次。 */
+    private var pageCallbacksHooked = false
 
     /**
      * 在主界面 pager 内安装「每页背景层」。
@@ -496,24 +499,49 @@ object ApplyGlobalBackground : ClickableFeature() {
 
     private fun attachPageBackgroundLayer(pager: WxViewPager) {
         if (!installedPagers.add(pager)) {
-            // 已安装过：只刷新一次内容，不重复注册监听器。
+            // 已安装过：只刷新一次内容，不重复挂回调。
             applyPageBackgroundLayer(pager, pager.currentItem, 0f)
             return
         }
-        pager.addOnPageChangeListener(object : ViewPager.SimpleOnPageChangeListener() {
-            override fun onPageScrolled(
-                position: Int,
-                positionOffset: Float,
-                positionOffsetPixels: Int,
-            ) {
-                applyPageBackgroundLayer(pager, position, positionOffset)
-            }
-
-            override fun onPageSelected(position: Int) {
-                applyPageBackgroundLayer(pager, position, 0f)
-            }
-        })
+        hookPagerPageCallbacks()
         applyPageBackgroundLayer(pager, pager.currentItem, 0f)
+    }
+
+    /**
+     * 直接把「每页背景层」挂到 WxViewPager 自身的滚动回调上。
+     *
+     * 不再向 pager 注册 OnPageChangeListener：宿主里那份 androidx.viewpager 的监听器类型由
+     * 宿主 ClassLoader 提供，与本模块 compileOnly 桩里的 androidx 副本并非同一个 Class，
+     * 直接 new 一个传进去在运行时会因类型不一致而失败（桩里也没声明 addOnPageChangeListener）。
+     *
+     * 因此改为 hook 回调本身：onPageScrolled / onPageSelected 的参数就是 pager 的物理页位，
+     * 再经 [MainTabLayout.visibleWechatIndices] 换算成 wechatIndex，语义与原监听器完全一致，
+     * 只是去掉了监听器这一层，也与 [ReplaceNavigationBar] / [HomeSidePanel] 同路。
+     * 仅作用于主界面自己的那个 pager（由 [installedPagers] 限定），其它 Activity 的 pager 直接跳过。
+     */
+    private fun hookPagerPageCallbacks() {
+        if (pageCallbacksHooked) return
+        pageCallbacksHooked = true
+        WxViewPager::class.reflekt().apply {
+            firstMethod {
+                name = "onPageScrolled"
+                parameters(int, float, int)
+                superclass = true
+            }.hookAfter {
+                val pager = thisObject as WxViewPager
+                if (pager !in installedPagers) return@hookAfter
+                applyPageBackgroundLayer(pager, args[0] as Int, args[1] as Float)
+            }
+            firstMethod {
+                name = "onPageSelected"
+                parameters(int)
+                superclass = true
+            }.hookAfter {
+                val pager = thisObject as WxViewPager
+                if (pager !in installedPagers) return@hookAfter
+                applyPageBackgroundLayer(pager, args[0] as Int, 0f)
+            }
+        }
     }
 
     /**
