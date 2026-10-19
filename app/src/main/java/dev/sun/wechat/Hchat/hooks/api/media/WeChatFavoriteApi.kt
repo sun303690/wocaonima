@@ -255,46 +255,13 @@ class WeChatFavoriteApi(
             return false
         }
         when (favoriteType(favorite)) {
-            3 -> return sendFavoriteVoice(talker, localId, favorite)
+            3 -> {
+                log("发送收藏语音失败: 当前移植未包含 Silk 语音发送组件")
+                return false
+            }
             19 -> sendFavoriteMiniProgram(talker, favorite)?.let { return it }
         }
         return sendNativeFavorite(talker, favorite)
-    }
-
-    private fun sendFavoriteVoice(talker: String, localId: Long, favorite: Any): Boolean {
-        resolveFavoriteVoice(favorite)?.let { source ->
-            return sendResolvedFavoriteVoice(talker, source)
-        }
-        val downloadStarted = FavoriteVoiceResolver.requestDownload(
-            hostContext = hostContext,
-            classLoader = hostClassLoader,
-            dexKitBridge = dexKitBridge,
-            favorite = favorite,
-            logger = ::logFavoriteVoice
-        )
-        if (!downloadStarted) {
-            log("发送收藏语音失败: 文件不存在且无法启动下载")
-            return false
-        }
-        val tasks = WeChatApis.tasks() ?: return false
-        val pendingKey = "$talker:$localId"
-        if (!pendingVoiceSends.add(pendingKey)) return true
-        tasks.runAsync {
-            try {
-                repeat(FAVORITE_VOICE_DOWNLOAD_POLLS) {
-                    Thread.sleep(FAVORITE_VOICE_DOWNLOAD_POLL_MS)
-                    val source = resolveFavoriteVoice(favorite) ?: return@repeat
-                    if (!sendResolvedFavoriteVoice(talker, source)) {
-                        log("发送收藏语音失败: 下载完成后语音发送未成功")
-                    }
-                    return@runAsync
-                }
-                log("发送收藏语音失败: 等待收藏语音下载超时")
-            } finally {
-                pendingVoiceSends.remove(pendingKey)
-            }
-        }
-        return true
     }
 
     private fun resolveFavoriteVoice(favorite: Any): FavoriteVoiceResolver.VoiceSource? {
