@@ -69,7 +69,6 @@ import dev.sun.wechat.utils.android.showToast
 import dev.sun.wechat.utils.fs.KnownPaths
 import dev.sun.wechat.utils.fs.asAndroidUri
 import dev.sun.wechat.utils.nul
-import dev.ujhhgtg.reflekt.utils.toClass
 import java.util.WeakHashMap
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.div
@@ -105,7 +104,6 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     private var listHorizontalInset by prefOption("global_bg_list_horizontal_inset", 8)
     private var listVerticalSpacing by prefOption("global_bg_list_vertical_spacing", 4)
     private var listHeight by prefOption("global_bg_list_height", 0)
-    private var taskbarBlackText by prefOption("global_bg_taskbar_black_text", false)
     private var globalTextColorEnabled by prefOption("global_bg_text_color_enabled", false)
     private var globalTextColor by prefOption("global_bg_text_color", "#FF000000")
 
@@ -121,8 +119,8 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     private const val APPLY_STATUS_BAR_DELAY_MS = 80L
 
     private val rowStates = WeakHashMap<View, RowState>()
-    private val taskbarTextColors = WeakHashMap<TextView, Int>()
     private val globalTextColors = WeakHashMap<TextView, Int>()
+    private val applyingGlobalTextColor = ThreadLocal.withInitial { false }
     private data class RowState(val background: android.graphics.drawable.Drawable?, val height: Int)
 
     private val conversationBindListener = WeConversationListViewApi.IBindViewListener { _, view, _, _ ->
@@ -208,21 +206,20 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
             }
         }
 
-        runCatching {
-            "com.tencent.mm.plugin.appbrand.widget.desktop.AppBrandDesktopContainerView"
-                .toClass()
-                .reflekt()
-                .constructors()
-                .forEach { constructor ->
-                    constructor.hookAfter {
-                        val root = thisObject as? ViewGroup ?: return@hookAfter
-                        root.post { applyTaskbarTextColors(root) }
-                        root.viewTreeObserver.addOnGlobalLayoutListener {
-                            applyTaskbarTextColors(root)
-                        }
-                    }
-                }
-        }.onFailure { WeLogger.w(TAG, "failed to hook taskbar text colors", it) }
+        TextView::class.reflekt().apply {
+            firstMethod {
+                name = "setTextColor"
+                parameters(Int::class)
+            }.hookAfter {
+                reapplyGlobalTextColor(thisObject as? TextView ?: return@hookAfter)
+            }
+            firstMethod {
+                name = "setTextColor"
+                parameters(android.content.res.ColorStateList::class)
+            }.hookAfter {
+                reapplyGlobalTextColor(thisObject as? TextView ?: return@hookAfter)
+            }
+        }
 
         methodInitImageView.hookBefore {
             val view = thisObject as ImageView
@@ -271,44 +268,45 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     private fun overlayFromActivity(activity: Activity): ImageView? =
         findOverlay(activity.window?.decorView as? ViewGroup ?: return null)
 
-    private fun applyTaskbarTextColors(root: View) {
-        val useBlack = isEnabled && backgroundUri != null && taskbarBlackText
-        if (root is TextView) {
-            if (useBlack) {
-                taskbarTextColors.putIfAbsent(root, root.currentTextColor)
-                if (root.currentTextColor != Color.BLACK) root.setTextColor(Color.BLACK)
-            } else {
-                taskbarTextColors.remove(root)?.let(root::setTextColor)
-            }
-        }
-        if (root is ViewGroup) {
-            for (index in 0 until root.childCount) {
-                root.getChildAt(index)?.let(::applyTaskbarTextColors)
-            }
-        }
+    private fun shouldApplyGlobalTextColor(view: TextView): Boolean {
+        val activity = view.context as? Activity ?: return false
+        if (!isEnabled || backgroundUri == null || !globalTextColorEnabled) return false
+        if (isBackgroundExcluded(activity)) return false
+        val className = activity.javaClass.name
+        if (className.contains("chatting", ignoreCase = true) ||
+            className.contains("webview", ignoreCase = true)
+        ) return false
+        if (view is android.widget.EditText || view is android.widget.Button || !view.isEnabled) return false
+        return view.autoLinkMask == 0 && view.urls.isEmpty()
     }
 
-    private fun refreshTaskbarTextColors() {
-        getTopMostActivity(allowPaused = true)?.window?.decorView?.let(::applyTaskbarTextColors)
+    private fun reapplyGlobalTextColor(view: TextView) {
+        if (applyingGlobalTextColor.get()) return
+        if (!shouldApplyGlobalTextColor(view)) return
+        val color = runCatching { globalTextColor.toColorInt() }.getOrDefault(Color.BLACK)
+        globalTextColors.putIfAbsent(view, view.currentTextColor)
+        if (view.currentTextColor == color) return
+        applyingGlobalTextColor.set(true)
+        try {
+            view.setTextColor(color)
+        } finally {
+            applyingGlobalTextColor.set(false)
+        }
     }
 
     private fun applyGlobalTextColors(root: View) {
-        val activity = root.context as? Activity
-        val useCustomColor = isEnabled && backgroundUri != null && globalTextColorEnabled &&
-                activity != null && !isBackgroundExcluded(activity) &&
-                !activity.javaClass.name.contains("chatting", ignoreCase = true) &&
-                !activity.javaClass.name.contains("webview", ignoreCase = true)
-        val color = runCatching { globalTextColor.toColorInt() }.getOrDefault(Color.BLACK)
-
         if (root is TextView) {
-            val isEditable = root is android.widget.EditText
-            val isButton = root is android.widget.Button
-            val hasLink = root.autoLinkMask != 0 || root.urls.isNotEmpty()
-            if (useCustomColor && !isEditable && !isButton && !hasLink && root.isEnabled) {
-                globalTextColors.putIfAbsent(root, root.currentTextColor)
-                if (root.currentTextColor != color) root.setTextColor(color)
+            if (shouldApplyGlobalTextColor(root)) {
+                reapplyGlobalTextColor(root)
             } else {
-                globalTextColors.remove(root)?.let(root::setTextColor)
+                globalTextColors.remove(root)?.let { original ->
+                    applyingGlobalTextColor.set(true)
+                    try {
+                        root.setTextColor(original)
+                    } finally {
+                        applyingGlobalTextColor.set(false)
+                    }
+                }
             }
         }
         if (root is ViewGroup) {
@@ -448,18 +446,6 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                                     transparentStatusBar = it
                                     restartRequired =
                                         opacity != originalOpacity || it != originalTransparentStatusBar
-                                },
-                            )
-                        }
-                        item {
-                            SwitchWidget(
-                                iconPlaceholder = false,
-                                title = stringResource(R.string.beautify_global_background_taskbar_black_text),
-                                description = stringResource(R.string.beautify_global_background_taskbar_black_text_summary),
-                                checked = taskbarBlackText,
-                                onCheckedChange = {
-                                    taskbarBlackText = it
-                                    refreshTaskbarTextColors()
                                 },
                             )
                         }
@@ -662,12 +648,13 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     override fun onDisable() {
         WeConversationListViewApi.removeListener(conversationBindListener)
         rowStates.clear()
-        taskbarTextColors.entries.toList().forEach { (view, color) ->
-            runCatching { view.setTextColor(color) }
-        }
-        taskbarTextColors.clear()
-        globalTextColors.entries.toList().forEach { (view, color) ->
-            runCatching { view.setTextColor(color) }
+        applyingGlobalTextColor.set(true)
+        try {
+            globalTextColors.entries.toList().forEach { (view, color) ->
+                runCatching { view.setTextColor(color) }
+            }
+        } finally {
+            applyingGlobalTextColor.set(false)
         }
         globalTextColors.clear()
     }

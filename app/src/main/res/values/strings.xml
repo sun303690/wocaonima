@@ -3142,8 +3142,6 @@
     <string name="beautify_global_background_cleared">Background image cleared. Restart WeChat to apply.</string>
     <string name="beautify_global_background_status_bar">Transparent status bar background</string>
     <string name="beautify_global_background_status_bar_summary">Make the status bar background transparent</string>
-    <string name="beautify_global_background_taskbar_black_text">Use black text on the pull-down Mini Programs page</string>
-    <string name="beautify_global_background_taskbar_black_text_summary">Only applies while global background is enabled with an image; disabling it restores WeChat’s original text colors</string>
     <string name="beautify_global_background_text_color">Custom global text color</string>
     <string name="beautify_global_background_text_color_summary">Applies to the home page and regular lists; excludes chats, Mini Programs, web pages, inputs, buttons, and links</string>
     <string name="beautify_global_background_text_color_picker">Global text color</string>

@@ -3153,8 +3153,6 @@
     <string name="beautify_global_background_cleared">已清除背景图片，重启微信生效</string>
     <string name="beautify_global_background_status_bar">状态栏背景透明</string>
     <string name="beautify_global_background_status_bar_summary">设置状态栏背景为透明</string>
-    <string name="beautify_global_background_taskbar_black_text">下拉小程序页面使用黑色文字</string>
-    <string name="beautify_global_background_taskbar_black_text_summary">仅在全局背景启用且已选择图片时生效，关闭后恢复微信原文字颜色</string>
     <string name="beautify_global_background_text_color">自定义全局字体颜色</string>
     <string name="beautify_global_background_text_color_summary">应用于主页和普通列表，自动排除聊天页、小程序、网页、输入框、按钮和链接</string>
     <string name="beautify_global_background_text_color_picker">全局字体颜色</string>
