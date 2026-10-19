@@ -18,6 +18,7 @@ import dev.sun.wechat.data.WeKitDatabase
 import dev.sun.wechat.agent.model.LlmMessage
 import dev.sun.wechat.agent.model.LlmRole
 import dev.sun.wechat.agent.model.LlmToolCall
+import dev.sun.wechat.agent.model.local.LocalLlama
 import dev.sun.wechat.agent.environment.LinuxEnvironmentType
 import dev.sun.wechat.agent.environment.EnvironmentSnapshot
 import dev.sun.wechat.agent.environment.LinuxEnvironmentDeletionPlan
