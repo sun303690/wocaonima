@@ -150,6 +150,10 @@ android {
             "META-INF/INDEX.LIST",
             // Monet reads host resource tables with default framework loading disabled.
             "frameworks/android/**",
+            // BouncyCastle 的 bcpkix/bcutil/bcprov 三个 jar 各自携带同名 license/notice，
+            // 打包时会触发 "3 files found with path 'META-INF/LICENSE.md'"。
+            "META-INF/LICENSE.md",
+            "META-INF/NOTICE.md",
             // Monet signs with RSA; Picnic's post-quantum lookup tables are unused.
             "org/bouncycastle/pqc/crypto/picnic/**"
         )
