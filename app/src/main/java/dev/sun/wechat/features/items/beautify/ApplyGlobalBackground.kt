@@ -44,7 +44,6 @@ import dev.sun.wechat.i18n.LocalWeKitLocalizedContext
 import dev.sun.wechat.activity.TransparentActivity
 import dev.sun.wechat.constants.PackageNames
 import dev.sun.wechat.data.KvStore.prefOption
-import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.features.api.ui.WeConversationListViewApi
 import dev.sun.wechat.features.api.ui.WeMainActivityBeautifyApi
 import dev.sun.wechat.features.core.ClickableFeature
@@ -70,7 +69,7 @@ import kotlin.io.path.div
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
+object ApplyGlobalBackground : ClickableFeature() {
 
     override val technicalId = "应用全局背景"
     override val nameRes = R.string.feature_apply_global_background_name
