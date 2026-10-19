@@ -154,21 +154,11 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     )
 
     /**
-     * 小程序 / 小游戏在微信主进程里的宿主 Activity（承载小程序 WebView 的容器）所在的包前缀。
-     *
-     * 全局背景是「美化微信原生界面」的能力，不应该铺到小程序自己的页面里——小程序有自己的
-     * 设计，盖一层半透明图会显得很脏，而且小程序容器内部就是 SurfaceView/WebView，全局背景
-     * 的 decor 层叠加也会把它卷进原生视图的布局变动里。小程序真正的渲染跑在 :appbrand 进程，
-     * 但宿主容器 Activity 仍注册在主进程，会被全局的 Activity hook 命中，所以必须在这里排除。
+     * 全局背景是「美化微信原生界面」的能力，不铺到小程序页与视频/沉浸式页面上。
+     * 具体排除范围（含原因）见 [BeautifyScopeExclusions]。
      */
-    private val miniProgramActivityPrefixes = listOf(
-        "${PackageNames.WECHAT}.plugin.appbrand",
-        "${PackageNames.WECHAT}.plugin.lite",
-        "${PackageNames.WECHAT}.plugin.subapp",
-    )
-
-    private fun isMiniProgramActivity(activity: Activity): Boolean =
-        miniProgramActivityPrefixes.any { activity.javaClass.name.startsWith(it) }
+    private fun isExcludedActivity(activity: Activity): Boolean =
+        BeautifyScopeExclusions.isExcludedForGlobalBeautify(activity)
 
     override fun onEnable() {
         migrateLegacyBackgroundUri()
@@ -406,7 +396,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
         val window = activity.window
         val shouldBeTransparent = transparentStatusBar &&
                 activity.javaClass.name !in blacklistedActivities &&
-                !isMiniProgramActivity(activity)
+                !isExcludedActivity(activity)
 
         if (shouldBeTransparent) {
             applyTransparentStatusBar(activity)
@@ -506,8 +496,8 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     private fun applyBackground(activity: Activity) {
         if (backgroundUri == null) return
         if (activity.javaClass.name in blacklistedActivities) return
-        // 小程序 / 小游戏宿主容器不铺全局背景：这是「美化微信原生界面」的能力，不应盖到小程序页面上。
-        if (isMiniProgramActivity(activity)) return
+        // 小程序 / 视频页的宿主容器不铺全局背景：这是「美化微信原生界面」的能力，不应盖到它们的页面上。
+        if (isExcludedActivity(activity)) return
 
         val uri = backgroundUri ?: return
         val decor = activity.window?.decorView as? ViewGroup ?: return
