@@ -45,8 +45,8 @@ import dev.sun.wechat.extensions.PythonRuntimePack
 import dev.sun.wechat.i18n.LocaleResourceMode
 import dev.sun.wechat.i18n.LocalWeKitLocalizedContext
 import dev.sun.wechat.i18n.WeKitLocaleProvider
-import dev.sun.wechat.ui.agent.settings.AgentConfirmDialog
-import dev.sun.wechat.ui.agent.settings.AgentListActionButton
+import dev.sun.wechat.ui.content.m3.SettingsConfirmDialog
+import dev.sun.wechat.ui.content.m3.SettingsListActionButton
 import dev.sun.wechat.ui.content.m3.BaseItemContainer
 import dev.sun.wechat.ui.content.m3.BaseWidget
 import dev.sun.wechat.ui.content.m3.ExpressiveBackButton
@@ -168,7 +168,7 @@ private fun PackGroup(pack: ExtensionPack) {
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        AgentListActionButton(
+                        SettingsListActionButton(
                             label = stringResource(
                                 when (s) {
                                     is UpdateAvailable -> R.string.extensions_pack_update
@@ -193,7 +193,7 @@ private fun PackGroup(pack: ExtensionPack) {
     }
 
     if (confirmDelete) {
-        AgentConfirmDialog(
+        SettingsConfirmDialog(
             show = true,
             title = stringResource(R.string.extensions_pack_delete_confirm_title),
             message = stringResource(R.string.extensions_pack_delete_confirm_msg),

@@ -66,6 +66,15 @@ object WeAgentOverlayController {
 
     private val mainHandler = Handler(Looper.getMainLooper())
 
+    /**
+     * 贴边滑入动画专用 Handler。
+     *
+     * 之前它直接复用 [mainHandler] 并调用 `removeCallbacksAndMessages(null)`，会连带清掉
+     * 主线程 Handler 上所有（本模块与宿主共用的）待执行消息；改用独立 Handler 后，取消动画
+     * 不会再误伤其它 postDelayed 任务，也便于在窗口摘除前先停掉动画。
+     */
+    private val dockAnimationHandler = Handler(Looper.getMainLooper())
+
     private var ballView: ComposeView? = null
     private var ballParams: WindowManager.LayoutParams? = null
     private var panelView: View? = null
@@ -170,6 +179,9 @@ object WeAgentOverlayController {
             isShown = true
         } else if (!want && isShown) {
             removePanel()
+            // 先停掉仍在排队的贴边滑动任务，再摘窗口：否则 postDelayed 的收尾一步会在
+            // removeView 之后命中一个已 detach 的窗口（SurfaceControl 生命周期竞态）。
+            dockAnimationHandler.removeCallbacksAndMessages(null)
             ballView?.let { runCatching { wm.removeView(it) } }
             ballView = null
             ballParams = null
@@ -336,12 +348,14 @@ object WeAgentOverlayController {
     ) {
         val from = params.x
         if (from == targetX) return
-        mainHandler.removeCallbacksAndMessages(null)
+        dockAnimationHandler.removeCallbacksAndMessages(null)
         for (i in 1..steps) {
             val frac = i.toFloat() / steps
             val stepX = (from + (targetX - from) * frac).toInt()
-            mainHandler.postDelayed({
-                if (view.parent != null && ballParams === params) {
+            dockAnimationHandler.postDelayed({
+                // 窗口已被摘除 / 已被另一次动画接管时，绝不再 updateViewLayout：
+                // 对已 detach 的窗口布局会触达其 SurfaceControl，正是 setMatrix 崩溃的入口。
+                if (ballView === view && view.parent != null && ballParams === params) {
                     params.x = stepX
                     runCatching { wm.updateViewLayout(view, params) }
                 }
@@ -412,7 +426,14 @@ object WeAgentOverlayController {
     }
 
     private fun removePanel() {
-        panelView?.let { runCatching { wm.removeView(it) } }
+        panelView?.let {
+            // 先 dispose Compose 组合，再摘窗口：窗口 detach 后仍在跑的 recomposition /
+            // 动画会继续往已失效的 Surface 上绘制。
+            (it as? FrameLayout)?.getChildAt(0)?.let { child ->
+                (child as? ComposeView)?.disposeComposition()
+            }
+            runCatching { wm.removeView(it) }
+        }
         panelView = null
     }
 

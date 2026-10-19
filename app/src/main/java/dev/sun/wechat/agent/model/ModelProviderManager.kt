@@ -130,6 +130,7 @@ object ModelProviderManager {
         model: ModelEntity,
         messages: List<LlmMessage>,
         tools: List<LlmToolSpec>,
+        sessionId: String,
         stream: Boolean = true,
     ): LlmRequest {
         val effort = model.reasoningEffort?.takeIf { it.isNotBlank() && it != "off" }
@@ -139,6 +140,7 @@ object ModelProviderManager {
         return LlmRequest(
             modelIdRemote = model.modelIdRemote,
             messages = messages,
+            sessionId = sessionId,
             tools = tools,
             reasoningEffort = effort,
             customJsonOverride = override,

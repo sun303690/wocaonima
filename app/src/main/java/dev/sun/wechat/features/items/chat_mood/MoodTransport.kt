@@ -60,7 +60,7 @@ object MoodTransport {
     suspend fun readingFor(input: AnalysisInput, mood: Mood): MoodReading {
         if (!AgentLlm.isReady()) return MoodReading.EMPTY
         return try {
-            SmartProtocol.parse(AgentLlm.complete(SmartProtocol.prompt(input.text)))
+            SmartProtocol.parse(AgentLlm.complete(SmartProtocol.prompt(input.text), "chat-mood"))
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

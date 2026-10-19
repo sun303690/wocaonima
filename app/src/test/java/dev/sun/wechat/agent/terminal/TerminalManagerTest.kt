@@ -1,6 +1,5 @@
 package dev.sun.wechat.agent.terminal
 
-import dev.sun.wechat.utils.fs.asPath
 import dev.sun.wechat.agent.environment.EnvironmentSnapshot
 import dev.sun.wechat.agent.environment.EnvironmentLease
 import dev.sun.wechat.agent.environment.LeaseReleaseResult
@@ -256,7 +255,6 @@ class TerminalManagerTest {
         val startupReleases = AtomicLong()
         val startupBackend = EnvironmentTerminalBackend(
             native = FakeBackend(startGate = startGate, startEntered = startEntered),
-            chrootInstancesRoot = "/tmp".asPath,
             acquireEnvironmentLease = { EnvironmentLease {
                 startupReleases.incrementAndGet()
                 LeaseReleaseResult.Committed
@@ -271,7 +269,6 @@ class TerminalManagerTest {
         val closeReleases = AtomicLong()
         val closeBackend = EnvironmentTerminalBackend(
             native = FakeBackend(closeGate = closeGate),
-            chrootInstancesRoot = "/tmp".asPath,
             acquireEnvironmentLease = { EnvironmentLease {
                 closeReleases.incrementAndGet()
                 LeaseReleaseResult.Committed

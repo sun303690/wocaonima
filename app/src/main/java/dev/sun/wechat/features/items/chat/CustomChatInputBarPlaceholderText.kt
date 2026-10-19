@@ -18,6 +18,7 @@ import dev.sun.wechat.R
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.dexMethod
 import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
+import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.features.api.core.models.MessageInfo
 import dev.sun.wechat.features.api.core.models.MessageType
 import dev.sun.wechat.features.core.ClickableFeature
@@ -107,8 +108,10 @@ object CustomChatInputBarPlaceholderText : ClickableFeature(), IResolveDex, WeDa
 
         val isSend = values.getAsInteger("isSend")
         val type = values.getAsInteger("type")
-        val msgInfo = MessageInfo.fromContentValues(values)
         if (isSend == 0) return
+        // Dex 尚未解析完时 classMsgInfo 是 placeholder，构造 MsgInfo 会抛异常
+        if (!WeMessageApi.classMsgInfo.isUsable) return
+        val msgInfo = MessageInfo.fromContentValues(values)
 
         if (type == MessageType.TEXT.code) {
             textC += 1

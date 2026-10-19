@@ -1,4 +1,4 @@
-package dev.ujhhgtg.wekit.features
+package dev.sun.wechat.features
 
 import com.google.devtools.ksp.KspExperimental
 import com.google.devtools.ksp.processing.CodeGenerator
@@ -19,7 +19,7 @@ import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.ksp.toClassName
 import com.squareup.kotlinpoet.ksp.writeTo
 
-private const val PACKAGE_NAME = "dev.ujhhgtg.wekit"
+private const val PACKAGE_NAME = "dev.sun.wechat"
 private const val FEATURES_CORE_PACKAGE = "$PACKAGE_NAME.features.core"
 private const val BASE_FEATURE = "BaseFeature"
 

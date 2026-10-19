@@ -40,6 +40,7 @@ import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.features.items.beautify.AddMainScreenFab
 import dev.sun.wechat.features.items.chat.ConversationGrouping
+import dev.sun.wechat.features.items.system.NativeViewGuard
 import dev.sun.wechat.ui.utils.LifecycleOwnerProvider
 import dev.sun.wechat.ui.utils.dpToPx
 import dev.sun.wechat.ui.utils.findViewWhich
@@ -144,6 +145,15 @@ object HomeSidePanel : SwitchFeature(), IResolveDex {
 
     private const val TAG = "HomeSidePanel"
     private const val LAUNCHER_BOTTOM_TAB_VIEW_CLASS = "com.tencent.mm.ui.LauncherUIBottomTabView"
+
+    /**
+     * 游离子视图回收的最大校验次数。
+     *
+     * bar 的 `attachBar()` 与面板的 `absorbStrayChildren()` 会争抢同一父级，理论上可无限
+     * 往返。这里限制重试次数，保证「最多搬几帧」而不是每帧搬家 —— 每帧 reparent 会让含
+     * SurfaceView 的子树不断重建 SurfaceControl，正是异步位置回调空指针崩溃的根源。
+     */
+    private const val MAX_STRAY_ABSORPTION_PASSES = 3
     private val sessions = WeakHashMap<WxViewPager, WeakReference<HomeSidePanelSession>>()
 
     fun blocksConversationGroupSwipe(pager: ViewGroup): Boolean =
@@ -556,6 +566,8 @@ object HomeSidePanel : SwitchFeature(), IResolveDex {
             pendingSyncFlags = 0
             if (flags and SYNC_HIERARCHY != 0) {
                 absorbStrayChildren()
+                // 游离子视图可能是 bar 在本帧之后才抢过去的，下一帧再做有限次校验。
+                scheduleStrayAbsorptionRetry(1)
                 resolveExternalChrome()
                 syncToolbarProfileBindings()
             }
@@ -1490,6 +1502,43 @@ object HomeSidePanel : SwitchFeature(), IResolveDex {
             }
         }
 
+        /**
+         * 把一个宿主子视图搬进 [contentWrapper]。
+         *
+         * 关键点：**已经在 wrapper 里就绝不再 remove+add**。对已 reparent 的视图反复
+         * removeView/addView 会强制重新创建它的 SurfaceControl，而 SurfaceView 的位置更新
+         * 回调是异步跑在 hwui 线程上的（`RenderNode.PositionUpdateListener`），一旦读到已经
+         * 失效的 SurfaceControl 就会在 `SurfaceView.onSetSurfacePositionAndScale → setPosition`
+         * 里空指针崩溃（libgui，fault addr 0）。这是把 ViewPager 整棵树搬进 wrapper 时最危险
+         * 的操作，必须收敛为「只在真正跨父级时才搬」。
+         */
+        private fun reparentIntoWrapper(child: View, index: Int?, params: ViewGroup.LayoutParams) {
+            // 跨父级搬运含 SurfaceView 的子树会重建其 SurfaceControl，而 hwui 的异步位置回调
+            // 仍持有旧句柄，正是本轮原生崩溃的根因。这里先落一条日志，便于事后把崩溃与这次
+            // 搬运对上。
+            NativeViewGuard.noteReparent("HomeSidePanel.reparentIntoWrapper", child)
+            val currentParent = child.parent
+            if (currentParent === contentWrapper) {
+                // 已经就位；仅在需要时调整层级，不触碰其 Surface。
+                if (index != null) {
+                    val currentIndex = contentWrapper.indexOfChild(child)
+                    if (currentIndex != index) {
+                        contentWrapper.removeViewAt(currentIndex)
+                        contentWrapper.addView(child, index, params)
+                    }
+                }
+                return
+            }
+            if (currentParent is ViewGroup) {
+                currentParent.removeView(child)
+            }
+            if (index != null) {
+                contentWrapper.addView(child, index, params)
+            } else {
+                contentWrapper.addView(child, params)
+            }
+        }
+
         private fun absorbStrayChildren() {
             var index = 0
             while (index < parent.childCount) {
@@ -1497,13 +1546,36 @@ object HomeSidePanel : SwitchFeature(), IResolveDex {
                 if (child === contentWrapper) {
                     index++
                 } else {
-                    val params = child.layoutParams
-                    parent.removeViewAt(index)
-                    contentWrapper.addView(child, params)
+                    // 用 reparentIntoWrapper 而不是裸 removeView/addView：后者在
+                    // bar 的 attachBar() 抢占同一父级时会频繁往返搬动含 SurfaceView 的子树。
+                    reparentIntoWrapper(child, null, child.layoutParams)
                 }
             }
             if (decorRoot.indexOfChild(overlayRoot) != decorRoot.childCount - 1) {
                 overlayRoot.bringToFront()
+            }
+        }
+
+        /**
+         * 搬运后做有限次校验，抵消 bar 的 `attachBar()` 在同一父级上的抢占。
+         *
+         * 只在有「游离子视图」时才继续下一帧；最多重试 [MAX_STRAY_ABSORPTION_PASSES] 次，
+         * 避免某一帧双方都不肯让步时把布局同步做成死循环 / 每帧搬家。
+         */
+        private fun scheduleStrayAbsorptionRetry(pass: Int) {
+            if (pass >= MAX_STRAY_ABSORPTION_PASSES) return
+            parent.post {
+                if (!attached) return@post
+                var stray = false
+                for (i in 0 until parent.childCount) {
+                    if (parent.getChildAt(i) !== contentWrapper) {
+                        stray = true
+                        break
+                    }
+                }
+                if (!stray) return@post
+                absorbStrayChildren()
+                scheduleStrayAbsorptionRetry(pass + 1)
             }
         }
 

@@ -13,7 +13,6 @@ import android.view.ViewGroup
 import android.widget.AbsListView
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
-import androidx.annotation.StringRes
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -50,7 +49,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -64,7 +62,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.ComposeView
@@ -82,15 +79,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.composables.icons.materialsymbols.MaterialSymbols
 import com.composables.icons.materialsymbols.outlined.Chevron_right
-import com.composables.icons.materialsymbols.outlined.Contacts
 import com.composables.icons.materialsymbols.outlined.Drag_handle
-import com.composables.icons.materialsymbols.outlined.Explore
-import com.composables.icons.materialsymbols.outlined.Home
-import com.composables.icons.materialsymbols.outlined.Person
-import com.composables.icons.materialsymbols.outlinedfilled.Contacts
-import com.composables.icons.materialsymbols.outlinedfilled.Explore
-import com.composables.icons.materialsymbols.outlinedfilled.Home
-import com.composables.icons.materialsymbols.outlinedfilled.Person
 import com.tencent.mm.ui.mogic.WxViewPager
 import dev.ujhhgtg.reflekt.firstMethod
 import dev.ujhhgtg.reflekt.reflekt
@@ -102,6 +91,7 @@ import dev.sun.wechat.features.api.ui.WeConversationListViewApi
 import dev.sun.wechat.features.api.ui.WeMainActivityBeautifyApi
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
+import dev.sun.wechat.features.items.system.NativeViewGuard
 import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
@@ -133,20 +123,9 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
     override val categoryIds = listOf(FeatureCategoryIds.BEAUTIFY)
     override val descriptionRes = R.string.feature_replace_navigation_bar_description
 
-    private data class NavItem(
-        val wechatIndex: Int,
-        val outlined: ImageVector,
-        val filled: ImageVector,
-        @StringRes val labelRes: Int,
-    )
-
-    @Stable
-    private val TAB_ITEMS = listOf(
-        NavItem(0, MaterialSymbols.Outlined.Home, MaterialSymbols.OutlinedFilled.Home, R.string.nav_tab_home),
-        NavItem(1, MaterialSymbols.Outlined.Contacts, MaterialSymbols.OutlinedFilled.Contacts, R.string.nav_tab_contacts),
-        NavItem(2, MaterialSymbols.Outlined.Explore, MaterialSymbols.OutlinedFilled.Explore, R.string.nav_tab_discover),
-        NavItem(3, MaterialSymbols.Outlined.Person, MaterialSymbols.OutlinedFilled.Person, R.string.nav_tab_me),
-    )
+    // Tab 排版模型（NavItem / TAB_ITEMS）已抽取到 MainTabLayout，
+    // 作为「pager 位置 ↔ wechatIndex」映射的唯一事实来源，供本功能与
+    // ApplyGlobalBackground 的分页背景层共用。
 
     private var useFloating by prefOption("nav_bar_use_floating", true)
     private var autoHideOnScroll by prefOption("nav_bar_auto_hide_on_scroll", false)
@@ -158,8 +137,7 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
     private var blurRadius by prefOption("nav_bar_blur_radius", 8)
     private var dynamicGravityHighlight by prefOption("nav_bar_dynamic_gravity_highlight", false)
     private var barScalePercent by prefOption("nav_bar_scale", 100)
-    private var tabOrder by prefOption("nav_bar_tab_order", TAB_ITEMS.joinToString(",") { it.wechatIndex.toString() })
-    private var enabledTabs by prefOption("nav_bar_enabled_tabs", TAB_ITEMS.map { it.wechatIndex.toString() }.toSet())
+    // tabOrder / enabledTabs 的偏好项定义已移到 MainTabLayout。
 
     private data class BarAppearance(
         val floating: Boolean,
@@ -241,7 +219,7 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
 
     @Composable
     private fun TabIcon(
-        item: NavItem,
+        item: MainTabLayout.NavItem,
         filled: Boolean,
         label: String,
         nativeIcons: Map<Int, WechatTabIcons>,
@@ -281,31 +259,15 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
     private const val SCROLL_HIDE_DURATION_MS = 300
     private const val SCROLL_HIDE_MIN_SCALE = 0.85f
 
-    private fun normalizedTabOrder(rawOrder: String = tabOrder): List<NavItem> {
-        val orderedIndices = rawOrder.split(",")
-            .mapNotNull(String::toIntOrNull)
-            .filter { index -> TAB_ITEMS.any { it.wechatIndex == index } }
-            .distinct()
-            .toMutableList()
-        TAB_ITEMS.forEach { item ->
-            if (item.wechatIndex !in orderedIndices) orderedIndices += item.wechatIndex
-        }
-        return orderedIndices.map { index -> TAB_ITEMS.first { it.wechatIndex == index } }
-    }
-
-    private fun normalizedEnabledTabIndices(rawEnabled: Set<String> = enabledTabs): Set<Int> {
-        val validIndices = TAB_ITEMS.mapTo(mutableSetOf(), NavItem::wechatIndex)
-        return rawEnabled.mapNotNull(String::toIntOrNull)
-            .filterTo(linkedSetOf()) { it in validIndices }
-    }
+    // normalizedTabOrder / normalizedEnabledTabIndices 已移到 MainTabLayout。
 
     override fun onEnable() {
         refreshBarAppearance()
         // Freeze the page set for this process. Changing these options is intentionally applied
         // only on the next WeChat launch because FragmentStatePagerAdapter cannot safely change
         // the meaning of already-instantiated positions.
-        val orderedTabItems = normalizedTabOrder()
-        val enabledTabIndices = normalizedEnabledTabIndices()
+        val orderedTabItems = MainTabLayout.normalizedTabOrder()
+        val enabledTabIndices = MainTabLayout.normalizedEnabledTabIndices()
         val visibleTabItems = orderedTabItems.filter { it.wechatIndex in enabledTabIndices }
 
         if (visibleTabItems.isEmpty()) {
@@ -332,7 +294,7 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
             return
         }
 
-        val visibleWechatIndices = visibleTabItems.map(NavItem::wechatIndex)
+        val visibleWechatIndices = visibleTabItems.map(MainTabLayout.NavItem::wechatIndex)
         val homePagerIndex = visibleWechatIndices.indexOf(0)
         val remapProgrammaticTab = ThreadLocal.withInitial { false }
         val animateNextPageChange = ThreadLocal.withInitial { false }
@@ -342,7 +304,7 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
         val tabsAdapterClass = $$"com.tencent.mm.ui.MainTabUI$TabsAdapter".toClass()
         tabsAdapterClass.reflekt().apply {
             firstMethod { name = "getCount" }.hookAfter(priority = 100) {
-                result = if (allowLogicalTabCount.get() == true) TAB_ITEMS.size else visibleTabItems.size
+                result = if (allowLogicalTabCount.get() == true) MainTabLayout.TAB_ITEMS.size else visibleTabItems.size
             }
             firstMethod {
                 name = "getItem"
@@ -557,7 +519,9 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
                 val contentParent = viewPager.parent as ViewGroup
                 val parent = if (floating) contentParent else bottomTabViewGroup
                 if (composeView.parent === parent) return
-
+                // 悬浮模式下把 bar 挂到与 ViewPager 相同的父级；若该父级里含 SurfaceView，搬运
+                // 顺序会牵动 hwui 的 Surface 位置回调，这里留痕便于事后对账。
+                NativeViewGuard.noteReparent("ReplaceNavigationBar.attachBar(floating=$floating)", composeView)
                 (composeView.parent as? ViewGroup)?.removeView(composeView)
                 bottomTabViewGroup.visibility = if (floating) View.GONE else View.VISIBLE
                 contentParent.clipChildren = false
@@ -1239,9 +1203,9 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
     @OptIn(ExperimentalFoundationApi::class)
     private fun showTabManagementDialog(context: ComponentActivity) {
         showComposeDialog(context) {
-            val currentOrder = remember { normalizedTabOrder().toMutableStateList() }
+            val currentOrder = remember { MainTabLayout.normalizedTabOrder().toMutableStateList() }
             val currentEnabled = remember {
-                normalizedEnabledTabIndices().toMutableStateList()
+                MainTabLayout.normalizedEnabledTabIndices().toMutableStateList()
             }
 
             AlertDialogContent(
@@ -1259,7 +1223,7 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
                         }
                         ReorderableList(
                             items = currentOrder,
-                            itemKey = NavItem::wechatIndex,
+                            itemKey = MainTabLayout.NavItem::wechatIndex,
                             onMove = { from, to ->
                                 currentOrder.add(to, currentOrder.removeAt(from))
                             },
@@ -1319,8 +1283,8 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
                 dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.dialog_cancel)) } },
                 confirmButton = {
                     Button(onClick = {
-                        tabOrder = currentOrder.joinToString(",") { it.wechatIndex.toString() }
-                        enabledTabs = currentEnabled.map(Int::toString).toSet()
+                        MainTabLayout.tabOrder = currentOrder.joinToString(",") { it.wechatIndex.toString() }
+                        MainTabLayout.enabledTabs = currentEnabled.map(Int::toString).toSet()
                         onDismiss()
                     }) { Text(stringResource(R.string.dialog_confirm)) }
                 },

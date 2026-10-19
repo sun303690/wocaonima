@@ -108,6 +108,15 @@ sealed class BaseDexDelegate(val key: String) {
     abstract fun getDescriptorString(): String?
     abstract val isPlaceholder: Boolean
 
+    /**
+     * 描述符已解析且不是失败占位符。
+     *
+     * 注意与 [isPlaceholder] 的区别：尚未解析（descriptor 为 null）时 [isPlaceholder] 为 false，
+     * 但此时访问 `clazz` / `method` 等同样会抛错。启动早期（缓存未命中、后台重解析尚未完成）
+     * 需要判断“现在能不能安全用这个委托”时，应当用本属性。
+     */
+    val isUsable: Boolean get() = getDescriptorString() != null && !isPlaceholder
+
     /** 从缓存字符串恢复状态 */
     abstract fun loadDescriptor(value: String)
 

@@ -2,6 +2,7 @@ package dev.sun.wechat.features.items.secret_friend
 
 import dev.sun.wechat.R
 import dev.sun.wechat.features.api.core.WeConversationApi
+import dev.sun.wechat.features.api.core.WeDatabaseApi
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.utils.WeLogger
@@ -31,7 +32,9 @@ object MuteSecretFriend : SwitchFeature() {
 
     override fun onEnable() {
         SecretFriendState.addOnListChanged(listChangedListener)
-        ensureAllSecretsMuted()
+        // 启动早期 DB 尚未就绪（宿主 storage 钩子未触发），此处查库会抛
+        // UninitializedPropertyAccessException。等库就绪后再补齐一次。
+        WeDatabaseApi.onReady { ensureAllSecretsMuted() }
     }
 
     override fun onDisable() {
@@ -40,6 +43,7 @@ object MuteSecretFriend : SwitchFeature() {
 
     /** 对名单内尚未免打扰的密友逐个开启（幂等，名单变动时只补齐增量）。 */
     private fun ensureAllSecretsMuted() {
+        if (!WeDatabaseApi.isReady) return
         for (wxId in SecretFriendState.getWxIds()) {
             if (WeConversationApi.isDnd(wxId)) continue
             WeLogger.d(TAG, "auto muting secret friend $wxId")

@@ -76,6 +76,10 @@ object BeautifyConversationList : ClickableFeature() {
     private var highlightUnreadEnabled by prefOption("beautify_conversation_list_highlight_unread", false)
     private var hideDividersEnabled by prefOption("beautify_conversation_list_hide_dividers", false)
 
+    /** 当前对话列表是否应用了非 NO_LAYOUT 的美化布局预设（供 ConversationGrouping 迁移读取）。 */
+    val isLayoutBeautificationEnabled: Boolean
+        get() = presetName != ConversationListPreset.NO_LAYOUT.name
+
     private val selectedPreset: ConversationListPreset
         get() = ConversationListPreset.entries.firstOrNull { it.name == presetName }
             ?: ConversationListPreset.NO_LAYOUT
@@ -626,15 +630,16 @@ object BeautifyConversationList : ClickableFeature() {
         return result
     }
 
-    /** 是否通用列表（RecyclerView / ListView），排除聊天页 */
+    /** 是否通用列表（RecyclerView / ListView），排除聊天页、小程序页与视频页 */
     private fun isGenericList(view: View): Boolean {
         globalListCache[view]?.let { return it }
         val name = view.javaClass.name
-        val result = !isInsideChatting(view) && (
-            name.contains("RecyclerView") ||
-                name.endsWith("ListView") ||
-                name.contains("PullDownListView")
-            )
+        val result = !isInsideChatting(view) &&
+            !BeautifyScopeExclusions.isExcludedForGlobalBeautify(BeautifyScopeExclusions.activityOf(view)) && (
+                name.contains("RecyclerView") ||
+                    name.endsWith("ListView") ||
+                    name.contains("PullDownListView")
+                )
         globalListCache[view] = result
         return result
     }
@@ -838,6 +843,7 @@ object BeautifyConversationList : ClickableFeature() {
         if (!globalCardsEnabled) return
         try {
             val activity = getTopMostActivity(allowPaused = true) ?: return
+            if (BeautifyScopeExclusions.isExcludedForGlobalBeautify(activity)) return
             val decor = activity.window?.decorView ?: return
             decor.post {
                 if (decor.width > 0 && decor.height > 0) {
@@ -861,6 +867,8 @@ object BeautifyConversationList : ClickableFeature() {
             }.hookAfter {
                 if (!globalCardsEnabled) return@hookAfter
                 val activity = thisObject as Activity
+                // 小程序 / 视频 / 直播页整页跳过，连 decor 都不用扫。
+                if (BeautifyScopeExclusions.isExcludedForGlobalBeautify(activity)) return@hookAfter
                 val decor = activity.window?.decorView ?: return@hookAfter
                 decor.postDelayed({
                     if (decor.width > 0 && decor.height > 0) {

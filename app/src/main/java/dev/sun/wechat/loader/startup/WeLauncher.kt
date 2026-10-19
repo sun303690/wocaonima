@@ -1,9 +1,7 @@
 package dev.sun.wechat.loader.startup
 
 import android.content.Context
-import com.tencent.mm.boot.BuildConfig
 import dev.sun.wechat.constants.PackageNames
-import dev.sun.wechat.constants.Preferences
 import dev.sun.wechat.dexkit.cache.DexCacheManager
 import dev.sun.wechat.features.core.FeaturesLoader
 import dev.sun.wechat.i18n.WeKitLocaleController
@@ -14,6 +12,7 @@ import dev.sun.wechat.utils.HostInfo
 import dev.sun.wechat.utils.RuntimeConfig
 import dev.sun.wechat.utils.TargetProcesses
 import dev.sun.wechat.utils.WeLogger
+import dev.sun.wechat.utils.fs.KnownPaths
 
 object WeLauncher {
 
@@ -23,8 +22,7 @@ object WeLauncher {
         ParcelableFixer.init()
 
         DexCacheManager.init(
-            if (!Preferences.resetDexCacheOnHotUpdate) "${HostInfo.versionName}${HostInfo.versionCode}"
-            else "${BuildConfig.VERSION_NAME}${BuildConfig.VERSION_CODE}${BuildConfig.CLIENT_VERSION_ARM64}"
+            KnownPaths.hostVersionKey()
         )
 
         val appContext = context.applicationContext ?: context

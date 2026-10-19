@@ -33,29 +33,26 @@ import androidx.compose.ui.unit.dp
 import com.composables.icons.materialsymbols.MaterialSymbols
 import com.composables.icons.materialsymbols.outlined.Delete
 import com.composables.icons.materialsymbols.outlined.Opacity
-import androidx.core.view.isVisible
 import androidx.core.view.postDelayed
+import com.tencent.mm.ui.mogic.WxViewPager
 import coil3.load
 import coil3.request.crossfade
 import dev.ujhhgtg.reflekt.reflekt
 import dev.sun.wechat.R
 import dev.sun.wechat.i18n.LocalWeKitLocalizedContext
-import dev.ujhhgtg.reflekt.utils.Modifiers
 import dev.sun.wechat.activity.TransparentActivity
 import dev.sun.wechat.constants.PackageNames
-import dev.sun.wechat.dexkit.abc.IResolveDex
-import dev.sun.wechat.dexkit.dsl.dexMethod
+import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.features.api.ui.WeConversationListViewApi
+import dev.sun.wechat.features.api.ui.WeMainActivityBeautifyApi
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
-import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.TextButton
 import dev.sun.wechat.ui.content.m3.BaseItemContainer
 import dev.sun.wechat.ui.content.m3.BaseWidget
 import dev.sun.wechat.ui.content.m3.IntNumberPickerWidget
 import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
 import dev.sun.wechat.ui.content.m3.SwitchWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.HostInfo
@@ -64,6 +61,8 @@ import dev.sun.wechat.utils.android.isDarkMode
 import dev.sun.wechat.utils.android.showToast
 import dev.sun.wechat.utils.fs.KnownPaths
 import dev.sun.wechat.utils.fs.asAndroidUri
+import dev.sun.wechat.utils.reflection.float
+import dev.sun.wechat.utils.reflection.int
 import dev.sun.wechat.utils.nul
 import java.util.WeakHashMap
 import kotlin.io.path.deleteIfExists
@@ -71,7 +70,7 @@ import kotlin.io.path.div
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
+object ApplyGlobalBackground : ClickableFeature() {
 
     override val technicalId = "应用全局背景"
     override val nameRes = R.string.feature_apply_global_background_name
@@ -80,19 +79,21 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
 
     private const val TAG = "ApplyGlobalBackground"
 
-    private val methodInitImageView by dexMethod {
-        matcher {
-            declaredClass = "com.tencent.mm.ui.base.MultiTouchImageView"
-            modifiers(Modifiers.FINAL)
-            returnType = "void"
-            addInvoke {
-                declaredClass = "android.widget.ImageView"
-                name = "setScaleType"
-            }
-        }
-    }
+    // 背景不再覆盖到「任意页面」上，因此原先用来把背景层让位给原生图片浏览视图的
+    // MultiTouchImageView 探针（methodInitImageView + activityAttachedViews）已随
+    // 「背景只作用于主界面」一并移除。详见 applyPageBackgroundLayer()。
 
-    private var backgroundUri by prefOption("global_bg_uri", nul<String>())
+    /**
+     * 每页背景图 URI，按 wechatIndex(0..3) 顺序以换行分隔；空串表示该页未设置。
+     *
+     * 主界面四个 Tab 各自一张图，随页面滑动平移。不再有「跨 Activity 的统一背景」——
+     * 背景只存在于主界面 pager 内部，小程序/视频等独立 Activity 天然不受影响。
+     */
+    private var pageBackgroundUris by prefOption("global_bg_page_uris", "")
+
+    /** 旧版「单一全局背景」偏好项。仅用于一次性迁移进 [pageBackgroundUris]，迁移后清空。 */
+    private var legacyBackgroundUri by prefOption("global_bg_uri", nul<String>())
+
     private var transparentStatusBar by prefOption("global_bg_transparent_status_bar", false)
     private var opacity by prefOption("global_bg_opacity", 0.10f)
     private var listCards by prefOption("global_bg_list_cards", false)
@@ -101,15 +102,30 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     private var listVerticalSpacing by prefOption("global_bg_list_vertical_spacing", 4)
     private var listHeight by prefOption("global_bg_list_height", 0)
 
-    private const val BACKGROUND_IMAGE_FILE = "global_background.png"
+    private const val LEGACY_BACKGROUND_IMAGE_FILE = "global_background.png"
 
     // The picked image is copied here instead of keeping a SAF content:// uri whose
     // persistable permission grant some custom ROMs drop after reboot.
-    private val backgroundImageFile by lazy { KnownPaths.moduleAssets / BACKGROUND_IMAGE_FILE }
+    private val legacyBackgroundImageFile by lazy {
+        KnownPaths.moduleAssets / LEGACY_BACKGROUND_IMAGE_FILE
+    }
 
-    private const val OVERLAY_TAG = "wekit_global_bg_overlay"
+    /** 第 [index] 个 Tab(wechatIndex) 的背景图落盘位置。 */
+    private fun pageBackgroundImageFile(index: Int) =
+        KnownPaths.moduleAssets / "global_background_$index.png"
+
+    /**
+     * 每页背景层：每个可见页一个 ImageView，全部带该标签，便于重复安装时识别、更新与移除。
+     */
+    private const val PAGE_LAYER_TAG = "wekit_page_bg_layer"
+
+    /** 每个背景 ImageView 上记录它对应的 wechatIndex，避免依赖子 View 顺序。 */
+    private const val PAGE_LAYER_INDEX_KEY = 0x55020003
     private const val APPLIED_URI_TAG_KEY = 0x55020001
     private const val APPLY_STATUS_BAR_DELAY_MS = 80L
+
+    /** 关闭「状态栏透明」时还原用的安全底色：半透明黑，等价于多数 App 的默认状态栏底色。 */
+    private const val RESTORED_STATUS_BAR_COLOR = 0x66000000
 
     private val rowStates = WeakHashMap<View, RowState>()
     private data class RowState(val background: android.graphics.drawable.Drawable?, val height: Int)
@@ -117,13 +133,11 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     private val conversationBindListener = WeConversationListViewApi.IBindViewListener { _, view, _, _ ->
         if (isEnabled && listCards) styleListRow(view) else restoreListRow(view)
     }
-
     /**
-     * Activities that must never receive the background overlay — full-screen media viewers,
-     * video recorders, scanners, and other UIs where a tinted overlay would be wrong.
+     * 「状态栏透明」仍要排除这些页面：全屏媒体查看器、录像、扫码等，套透明状态栏会出错。
      *
-     * Note: ThumbPlayerViewContainer / ThumbPlayerVideoView are Views (FrameLayout / TextureView),
-     * not Activities, so they were removed from this list — they would never match here.
+     * 注意：背景层已收窄为「只在主界面 pager 内安装」，不再走 Activity 黑白名单；
+     * 这份名单现在只服务于 [applyTransparentStatusBarIfEnabled]。
      */
     private val blacklistedActivities = setOf(
         "${PackageNames.WECHAT}.plugin.sns.ui.SnsOnlineVideoActivity",
@@ -150,8 +164,13 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
         "${PackageNames.WECHAT}.plugin.voip.ui.VideoActivity"
     )
 
+    /** 沉浸式（小程序 / 视频 / 直播）页面：状态栏透明同样跳过。范围见 [BeautifyScopeExclusions]。 */
+    private fun isExcludedActivity(activity: Activity): Boolean =
+        BeautifyScopeExclusions.isExcludedForGlobalBeautify(activity)
+
     override fun onEnable() {
         migrateLegacyBackgroundUri()
+        installMainTabBackgroundLayer()
         WeConversationListViewApi.addListener(conversationBindListener)
 
         Activity::class.reflekt().apply {
@@ -177,7 +196,6 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
             }.hookAfter {
                 val activity = thisObject as Activity
                 applyTransparentStatusBarIfEnabled(activity)
-                applyBackground(activity)
             }
 
             firstMethod {
@@ -188,41 +206,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                 applyTransparentStatusBarIfEnabled(activity)
             }
         }
-
-        methodInitImageView.hookBefore {
-            val view = thisObject as ImageView
-            view.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
-                override fun onViewAttachedToWindow(v: View) {
-                    val activity = activityOf(v.context) ?: return
-                    synchronized(activityAttachedViews) {
-                        activityAttachedViews.getOrPut(activity) { mutableSetOf() }.add(v)
-                    }
-                    WeLogger.d(TAG, "view attached to ${activity.javaClass.simpleName}")
-                    overlayFromActivity(activity)?.isVisible = false
-                }
-
-                override fun onViewDetachedFromWindow(v: View) {
-                    val activity = activityOf(v.context) ?: return
-                    val empty = synchronized(activityAttachedViews) {
-                        val set = activityAttachedViews[activity] ?: return
-                        set.remove(v)
-                        set.isEmpty()
-                    }
-                    if (empty) {
-                        WeLogger.d(TAG, "all views detached from ${activity.javaClass.simpleName}")
-                        overlayFromActivity(activity)?.isVisible = true
-                    }
-                }
-            })
-        }
     }
-
-    // Per-activity set of currently-attached MultiTouchImageViews.
-    // Using a Set means duplicate OnAttachStateChangeListener registrations (caused by
-    // t() being re-triggered via onMeasure after each setImageBitmap call on a recycled
-    // ViewPager page) are harmless: add/remove are idempotent on a Set, so the counter
-    // never goes negative regardless of how many listeners fire per attach/detach cycle.
-    private val activityAttachedViews = WeakHashMap<Activity, MutableSet<View>>()
 
     private fun activityOf(ctx: Context): Activity? {
         var c = ctx
@@ -233,41 +217,45 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
         return null
     }
 
-    private fun overlayFromActivity(activity: Activity): ImageView? =
-        findOverlay(activity.window?.decorView as? ViewGroup ?: return null)
-
     private const val MIN_OPACITY_PERCENT = 1
     private const val MAX_OPACITY_PERCENT = 80
 
     /**
-     * Old versions stored the SAF content:// uri of the picked image. Copy that image into
-     * moduleAssets once and rewrite the pref to a file uri. On failure the legacy value is
-     * kept so a transient failure (e.g. storage not ready yet) retries on the next startup.
+     * 迁移旧版「单一全局背景」到「每页背景」。
+     *
+     * - SAF content:// → 复制进 moduleAssets 改写为 file://（旧逻辑，防自定义 ROM 丢授权）；
+     * - 单一图迁到第 0 页（微信首页），随后清空旧项，避免每次启动重复迁移。
      */
     private fun migrateLegacyBackgroundUri() {
-        val legacy = backgroundUri ?: return
-        if (!legacy.startsWith("content://")) return
+        val legacy = legacyBackgroundUri ?: return
 
-        val migrated = runCatching {
-            HostInfo.application.contentResolver.openInputStream(Uri.parse(legacy))?.use { input ->
-                backgroundImageFile.toFile().outputStream().use { output ->
-                    input.copyTo(output)
-                }
-            } != null
-        }.onFailure {
-            WeLogger.w(TAG, "failed to migrate legacy background image", it)
-        }.isSuccess
-
-        if (migrated) {
-            backgroundUri = backgroundImageFile.asAndroidUri.toString()
+        val migratedUri = if (legacy.startsWith("content://")) {
+            val ok = runCatching {
+                HostInfo.application.contentResolver.openInputStream(Uri.parse(legacy))?.use { input ->
+                    legacyBackgroundImageFile.toFile().outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                } != null
+            }.onFailure {
+                WeLogger.w(TAG, "failed to migrate legacy background image", it)
+            }.isSuccess
+            if (!ok) return
+            legacyBackgroundImageFile.asAndroidUri.toString()
+        } else {
+            legacy
         }
+
+        if (pageUris().all { it == null }) {
+            setPageUri(0, migratedUri)
+        }
+        legacyBackgroundUri = null
     }
 
     override fun onClick(context: ComponentActivity) {
         showComposeDialog(context) {
             val originalOpacity = remember { opacity }
             val originalTransparentStatusBar = remember { transparentStatusBar }
-            var hasImage by remember { mutableStateOf(backgroundUri != null) }
+            var hasImage by remember { mutableStateOf(pageUris().any { it != null }) }
             var opacityPercent by remember {
                 mutableIntStateOf(
                     (opacity * 100f).roundToInt().coerceIn(MIN_OPACITY_PERCENT, MAX_OPACITY_PERCENT)
@@ -307,18 +295,20 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                                 ),
                                 onClick = {
                                     onDismiss()
-                                    selectBackgroundImage(context)
+                                    selectAllBackgroundImages(context)
                                 },
                                 trailingContent = {
                                     IconButton(
                                         enabled = hasImage,
                                         onClick = {
-                                            backgroundUri = null
-                                            hasImage = false
-                                            runCatching { backgroundImageFile.deleteIfExists() }
-                                                .onFailure {
-                                                    WeLogger.w(TAG, "failed to delete background image file", it)
+                                            for (index in MainTabLayout.TAB_ITEMS.indices) {
+                                                setPageUri(index, null)
+                                                val file = pageBackgroundImageFile(index)
+                                                runCatching { file.deleteIfExists() }.onFailure {
+                                                    WeLogger.w(TAG, "failed to delete background image file $index", it)
                                                 }
+                                            }
+                                            hasImage = false
                                             showToast(localizedContext.getString(R.string.beautify_global_background_cleared))
                                         },
                                     ) {
@@ -379,9 +369,54 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
         }
     }
 
+    /** 已被本模块改成透明状态栏的窗口，关闭开关时只还原它们，避免动到视频全屏等系统栏需求。 */
+    private val transparentWindows = WeakHashMap<android.view.Window, Boolean>()
+
     private fun applyTransparentStatusBarIfEnabled(activity: Activity) {
-        if (!transparentStatusBar) return
-        applyTransparentStatusBar(activity)
+        val window = activity.window
+        val shouldBeTransparent = transparentStatusBar &&
+                activity.javaClass.name !in blacklistedActivities &&
+                !isExcludedActivity(activity)
+
+        if (shouldBeTransparent) {
+            applyTransparentStatusBar(activity)
+            if (window != null) transparentWindows[window] = true
+        } else if (window != null && transparentWindows.remove(window) != null) {
+            // 只有本模块之前把它改透明过，才需要（也才可以安全地）还原回系统默认。
+            restoreTransparentStatusBar(activity)
+        }
+    }
+
+    /**
+     * 关闭「状态栏背景透明」时把状态栏还原成系统默认。
+     *
+     * 不还原就是之前那个 bug：applyTransparentStatusBar() 把 layout fullscreen / decorFitsSystemWindows
+     * 关掉之后，用户再关掉开关时没有任何代码把它改回去 —— 于是「关了也一直透明」，直到重启微信。
+     * 这里逐一撤销 [applyTransparentStatusBar] 做过的三件事。
+     *
+     * 注意：只在状态栏本来就默认不透明（APP 可自绘）时还原。微信原生界面自己也可能把状态栏设成
+     * 浅色，这里用「半透明黑」这个安全的默认值，而不是硬塞一个纯色，避免盖掉微信自身的适配。
+     */
+    @Suppress("DEPRECATION")
+    private fun restoreTransparentStatusBar(activity: Activity) {
+        runCatching {
+            val window = activity.window ?: return
+            val decor = window.decorView as? ViewGroup ?: return
+
+            window.statusBarColor = RESTORED_STATUS_BAR_COLOR
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                window.isStatusBarContrastEnforced = true
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                window.setDecorFitsSystemWindows(true)
+            } else {
+                decor.systemUiVisibility = decor.systemUiVisibility and
+                        (View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN).inv()
+            }
+        }.onFailure {
+            WeLogger.w(TAG, "failed to restore status bar", it)
+        }
     }
 
     @Suppress("DEPRECATION")
@@ -438,51 +473,177 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
         }
     }
 
-    private fun applyBackground(activity: Activity) {
-        if (backgroundUri == null) return
-        if (activity.javaClass.name in blacklistedActivities) return
+    // ------------------------------------------------------------ 每页背景层
 
-        val uri = backgroundUri ?: return
-        val decor = activity.window?.decorView as? ViewGroup ?: return
-        val overlay = findOverlay(decor) ?: createOverlay(activity, decor)
+    /** 已安装背景层的宿主 pager，作为幂等依据，避免重复安装层与回调。 */
+    private val installedPagers =
+        java.util.Collections.newSetFromMap(WeakHashMap<WxViewPager, Boolean>())
 
-        overlay.visibility = View.VISIBLE
-        overlay.alpha = opacity
-        overlay.bringToFront()
+    /** 每页背景层靠 pager 自身的滚动回调驱动，全进程只挂一次。 */
+    private var pageCallbacksHooked = false
 
-        if (overlay.getTag(APPLIED_URI_TAG_KEY) != uri) {
-            overlay.setTag(APPLIED_URI_TAG_KEY, uri)
-            overlay.load(uri) {
-                crossfade(true)
+    /**
+     * 在主界面 pager 内安装「每页背景层」。
+     *
+     * 背景只挂进主界面自己的 WxViewPager（LauncherUI 内），不碰任何其它 Activity 的 decor：
+     * 小程序 / 视频 / 图片浏览都是独立 Activity，结构上就不可能被这层背景波及。
+     * 这与 [ReplaceNavigationBar] 的 attachBar 复用同一套「挂到 pager 父容器」的做法。
+     */
+    private fun installMainTabBackgroundLayer() {
+        WeMainActivityBeautifyApi.methodDoOnCreate.hookAfter {
+            val viewPager = thisObject!!.reflekt()
+                .firstField { name = "mViewPager" }
+                .get() as? WxViewPager ?: return@hookAfter
+            attachPageBackgroundLayer(viewPager)
+        }
+    }
+
+    private fun attachPageBackgroundLayer(pager: WxViewPager) {
+        if (!installedPagers.add(pager)) {
+            // 已安装过：只刷新一次内容，不重复挂回调。
+            applyPageBackgroundLayer(pager, pager.currentItem, 0f)
+            return
+        }
+        hookPagerPageCallbacks()
+        applyPageBackgroundLayer(pager, pager.currentItem, 0f)
+    }
+
+    /**
+     * 直接把「每页背景层」挂到 WxViewPager 自身的滚动回调上。
+     *
+     * 不再向 pager 注册 OnPageChangeListener：宿主里那份 androidx.viewpager 的监听器类型由
+     * 宿主 ClassLoader 提供，与本模块 compileOnly 桩里的 androidx 副本并非同一个 Class，
+     * 直接 new 一个传进去在运行时会因类型不一致而失败（桩里也没声明 addOnPageChangeListener）。
+     *
+     * 因此改为 hook 回调本身：onPageScrolled / onPageSelected 的参数就是 pager 的物理页位，
+     * 再经 [MainTabLayout.visibleWechatIndices] 换算成 wechatIndex，语义与原监听器完全一致，
+     * 只是去掉了监听器这一层，也与 [ReplaceNavigationBar] / [HomeSidePanel] 同路。
+     * 仅作用于主界面自己的那个 pager（由 [installedPagers] 限定），其它 Activity 的 pager 直接跳过。
+     */
+    private fun hookPagerPageCallbacks() {
+        if (pageCallbacksHooked) return
+        pageCallbacksHooked = true
+        WxViewPager::class.reflekt().apply {
+            firstMethod {
+                name = "onPageScrolled"
+                parameters(int, float, int)
+                superclass = true
+            }.hookAfter {
+                val pager = thisObject as WxViewPager
+                if (pager !in installedPagers) return@hookAfter
+                applyPageBackgroundLayer(pager, args[0] as Int, args[1] as Float)
+            }
+            firstMethod {
+                name = "onPageSelected"
+                parameters(int)
+                superclass = true
+            }.hookAfter {
+                val pager = thisObject as WxViewPager
+                if (pager !in installedPagers) return@hookAfter
+                applyPageBackgroundLayer(pager, args[0] as Int, 0f)
             }
         }
     }
 
-    private fun createOverlay(context: Context, decor: ViewGroup): ImageView {
-        return ImageView(context).apply {
-            tag = OVERLAY_TAG
-            background = null
-            isClickable = false
-            isFocusable = false
-            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-            scaleType = ImageView.ScaleType.CENTER_CROP
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-            elevation = 100f
-            decor.addView(this)
+    /**
+     * 把每页背景层同步到 pager 当前状态：层挂在 pager 父容器里、位于 pager 下层，
+     * 每层水平平移 `(pagerIndex - position - offset) * width`，于是「每页各一张背景图、
+     * 随手指滑动一起平移」。
+     *
+     * 只保留当前页与左右相邻页（共 ≤3 个 ImageView），且位置恒定、滑动时只改
+     * translationX，不新增/移除子 View —— 这正是本仓库里 SurfaceView 位置回调崩溃的规避姿势。
+     */
+    private fun applyPageBackgroundLayer(
+        pager: WxViewPager,
+        position: Int = pager.currentItem,
+        offset: Float = 0f,
+    ) {
+        val container = pager.parent as? ViewGroup ?: return
+        val uris = pageUris()
+        val indices = MainTabLayout.visibleWechatIndices(ReplaceNavigationBar.isEnabled)
+        val width = pager.width
+        if (width <= 0 || indices.isEmpty()) {
+            container.post { applyPageBackgroundLayer(pager, pager.currentItem, 0f) }
+            return
+        }
+
+        val active = setOf(position, position + 1, position - 1)
+        removeStalePageLayers(container, active, uris, indices)
+
+        val pagerIndexInContainer = container.indexOfChild(pager)
+        var z = if (pagerIndexInContainer >= 0) pager.z else 0f
+        for (pagerIndex in active.sorted()) {
+            if (pagerIndex !in indices.indices) continue
+            val uri = uris.getOrNull(indices[pagerIndex]) ?: continue
+
+            val layer = findPageLayer(container, pagerIndex) ?: ImageView(pager.context).also {
+                it.tag = PAGE_LAYER_TAG
+                it.setTag(PAGE_LAYER_INDEX_KEY, pagerIndex)
+                it.background = null
+                it.isClickable = false
+                it.isFocusable = false
+                it.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                it.scaleType = ImageView.ScaleType.CENTER_CROP
+                container.addView(
+                    it,
+                    if (pagerIndexInContainer >= 0) pagerIndexInContainer else 0,
+                    ViewGroup.LayoutParams(width, ViewGroup.LayoutParams.MATCH_PARENT),
+                )
+            }
+            // 压在 pager 下层（多个时依次更低），避免抢 pager 子页的触摸与绘制。
+            z -= 1f
+            layer.z = z
+            layer.alpha = opacity
+            layer.translationX = (pagerIndex - position - offset) * width
+            if (layer.getTag(APPLIED_URI_TAG_KEY) != uri) {
+                layer.setTag(APPLIED_URI_TAG_KEY, uri)
+                layer.load(uri) { crossfade(true) }
+            }
         }
     }
 
-    private fun findOverlay(decor: ViewGroup): ImageView? {
-        for (index in 0 until decor.childCount) {
-            val child = decor.getChildAt(index)
-            if (child is ImageView && child.tag == OVERLAY_TAG) {
+    /** 移除不再需要的背景层：已滑出相邻范围的、或对应页已取消配图的。 */
+    private fun removeStalePageLayers(
+        container: ViewGroup,
+        active: Set<Int>,
+        uris: List<String?>,
+        indices: List<Int>,
+    ) {
+        for (i in container.childCount - 1 downTo 0) {
+            val child = container.getChildAt(i)
+            if (child.tag != PAGE_LAYER_TAG) continue
+            val pagerIndex = child.getTag(PAGE_LAYER_INDEX_KEY) as? Int
+            val uri = pagerIndex
+                ?.let { p -> indices.getOrNull(p)?.let { wechatIndex -> uris.getOrNull(wechatIndex) } }
+            if (pagerIndex == null || pagerIndex !in active || uri == null) {
+                container.removeView(child)
+            }
+        }
+    }
+
+    private fun findPageLayer(container: ViewGroup, pagerIndex: Int): ImageView? {
+        for (i in 0 until container.childCount) {
+            val child = container.getChildAt(i)
+            if (child is ImageView && child.tag == PAGE_LAYER_TAG &&
+                (child.getTag(PAGE_LAYER_INDEX_KEY) as? Int) == pagerIndex
+            ) {
                 return child
             }
         }
         return null
+    }
+
+    /** 读出每页的图片 uri；下标 = wechatIndex。 */
+    private fun pageUris(): List<String?> =
+        List(MainTabLayout.TAB_ITEMS.size) { index ->
+            pageBackgroundUris.split("\n").getOrNull(index)?.takeIf { it.isNotBlank() }
+        }
+
+    private fun setPageUri(wechatIndex: Int, uri: String?) {
+        val current = pageUris().toMutableList()
+        if (wechatIndex !in current.indices) return
+        current[wechatIndex] = uri
+        pageBackgroundUris = current.joinToString("\n") { it ?: "" }
     }
 
     private fun styleVisibleListRows(container: ViewGroup) {
@@ -545,7 +706,20 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
         }
     }
 
-    private fun selectBackgroundImage(context: ComponentActivity) {
+    /**
+     * 为每个 Tab 依次挑背景图。上一张选好后自动接着选下一张；中途返回则剩余未选的保持原样。
+     */
+    private fun selectAllBackgroundImages(context: ComponentActivity) {
+        selectBackgroundImage(context, 0)
+    }
+
+    /** 等上一步的 TransparentActivity 完全收尾后再发起下一次选择，避免连续 launch 互相打断。 */
+    private fun postAfterDialog(delayMs: Long = 400L, block: () -> Unit) {
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(block, delayMs)
+    }
+    /** 为第 [wechatIndex] 个 Tab 挑背景图；选好后自动继续下一个。 */
+    private fun selectBackgroundImage(context: ComponentActivity, wechatIndex: Int) {
+        if (wechatIndex !in MainTabLayout.TAB_ITEMS.indices) return
         TransparentActivity.launch(context) {
             val launcher = registerForActivityResult(
                 ActivityResultContracts.PickVisualMedia()
@@ -553,19 +727,23 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                 finish()
                 if (uri == null) return@registerForActivityResult
 
+                val file = pageBackgroundImageFile(wechatIndex)
                 val ok = runCatching {
                     HostInfo.application.contentResolver.openInputStream(uri)?.use { input ->
-                        backgroundImageFile.toFile().outputStream().use { output ->
+                        file.toFile().outputStream().use { output ->
                             input.copyTo(output)
                         }
                     } != null
                 }.onFailure {
-                    WeLogger.e(TAG, "failed to import background image", it)
+                    WeLogger.e(TAG, "failed to import background image for page $wechatIndex", it)
                 }.isSuccess
 
                 if (ok) {
-                    backgroundUri = backgroundImageFile.asAndroidUri.toString()
+                    setPageUri(wechatIndex, file.asAndroidUri.toString())
                     showToast(context.localizedBeautifyString(R.string.beautify_global_background_selected))
+                    context.runOnUiThread {
+                        postAfterDialog { selectBackgroundImage(context, wechatIndex + 1) }
+                    }
                 } else {
                     showToast(context.localizedBeautifyString(R.string.beautify_global_background_import_failed))
                 }

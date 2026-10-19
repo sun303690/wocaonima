@@ -175,6 +175,12 @@ object MessageEntranceAnimation : ClickableFeature(), IResolveDex {
             val createTimeMillis =
                 if (createTime in 100_000_000L..10_000_000_000L) createTime * 1000 else createTime
             val isFresh = now - createTimeMillis < FRESH_WINDOW_MS
+
+            // FRESH_WINDOW_MS 之前的消息必然不是“刚进来”，不必再往下走（也顺手跳过了一次
+            // rootView/tag 读写）。旧逻辑是「上一层 hook 里先算 isFresh，把 tag 写掉，再靠
+            // shouldAnimate 判掉」——只要 bounceAllOnEnter=false，这里的提前返回完全等价。
+            if (!isFresh && !bounceAllOnEnter) return@hookAfter
+
             if (isFresh) {
                 itemView.rootView.setTag(ROOT_TAG_FIRST_FRESH_RENDER, now)
             }

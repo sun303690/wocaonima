@@ -1,4 +1,4 @@
-package dev.ujhhgtg.wekit.features.core
+package dev.sun.wechat.features.core
 
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.SOURCE)
