@@ -40,6 +40,7 @@ import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.features.items.beautify.AddMainScreenFab
 import dev.sun.wechat.features.items.chat.ConversationGrouping
+import dev.sun.wechat.features.items.system.NativeViewGuard
 import dev.sun.wechat.ui.utils.LifecycleOwnerProvider
 import dev.sun.wechat.ui.utils.dpToPx
 import dev.sun.wechat.ui.utils.findViewWhich
@@ -1512,6 +1513,10 @@ object HomeSidePanel : SwitchFeature(), IResolveDex {
          * 的操作，必须收敛为「只在真正跨父级时才搬」。
          */
         private fun reparentIntoWrapper(child: View, index: Int?, params: ViewGroup.LayoutParams) {
+            // 跨父级搬运含 SurfaceView 的子树会重建其 SurfaceControl，而 hwui 的异步位置回调
+            // 仍持有旧句柄，正是本轮原生崩溃的根因。这里先落一条日志，便于事后把崩溃与这次
+            // 搬运对上。
+            NativeViewGuard.noteReparent("HomeSidePanel.reparentIntoWrapper", child)
             val currentParent = child.parent
             if (currentParent === contentWrapper) {
                 // 已经就位；仅在需要时调整层级，不触碰其 Surface。

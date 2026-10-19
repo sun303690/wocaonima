@@ -102,6 +102,7 @@ import dev.sun.wechat.features.api.ui.WeConversationListViewApi
 import dev.sun.wechat.features.api.ui.WeMainActivityBeautifyApi
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
+import dev.sun.wechat.features.items.system.NativeViewGuard
 import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
@@ -557,7 +558,9 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
                 val contentParent = viewPager.parent as ViewGroup
                 val parent = if (floating) contentParent else bottomTabViewGroup
                 if (composeView.parent === parent) return
-
+                // 悬浮模式下把 bar 挂到与 ViewPager 相同的父级；若该父级里含 SurfaceView，搬运
+                // 顺序会牵动 hwui 的 Surface 位置回调，这里留痕便于事后对账。
+                NativeViewGuard.noteReparent("ReplaceNavigationBar.attachBar(floating=$floating)", composeView)
                 (composeView.parent as? ViewGroup)?.removeView(composeView)
                 bottomTabViewGroup.visibility = if (floating) View.GONE else View.VISIBLE
                 contentParent.clipChildren = false

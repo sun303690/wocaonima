@@ -1075,6 +1075,8 @@
     <string name="feature_disable_resume_watching_toast_description">禁用微信啓動時彈出的「剛剛在看的「視頻號」」繼續瀏覽提示條</string>
     <string name="feature_disable_share_screenshot_toast_name">禁用「轉發截圖」提示</string>
     <string name="feature_disable_share_screenshot_toast_description">你在教我做事?</string>
+    <string name="feature_native_view_guard_name">主介面原生視圖崩潰日誌探針</string>
+    <string name="feature_native_view_guard_description">當已釋放的 SurfaceControl 被再次 setPosition 時寫入診斷日誌（即主介面下拉小程式崩潰背後的 hwui SIGSEGV）。只寫日誌、不做兜底，用於定位是哪條 reparent 路徑觸發崩潰，然後再真正修復該路徑。</string>
     <string name="feature_disable_web_view_safety_warnings_name">禁用 WebView 安全警告</string>
     <string name="feature_disable_web_view_safety_warnings_description">禁用 WebView 相關的安全警告提示</string>
     <string name="feature_enable_web_view_features_name">強制啓用 WebView 菜單</string>

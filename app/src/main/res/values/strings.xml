@@ -1144,6 +1144,8 @@
     <string name="feature_disable_resume_watching_toast_description">Disable the "Video number you were just watching" prompt that pops up when WeChat is started to continue browsing.</string>
     <string name="feature_disable_share_screenshot_toast_name">Disable "Forward screenshot" prompt</string>
     <string name="feature_disable_share_screenshot_toast_description">Are you teaching me how to do things?</string>
+    <string name="feature_native_view_guard_name">Native view crash log probe</string>
+    <string name="feature_native_view_guard_description">Writes a diagnosis log when a released SurfaceControl is used again (the hwui SIGSEGV behind the home-screen crash). Logs only, no fallback. Use it to pin down which reparent path triggers the crash, then fix that path.</string>
     <string name="feature_disable_web_view_safety_warnings_name">Disable WebView security warnings</string>
     <string name="feature_disable_web_view_safety_warnings_description">Disable WebView-related security warnings</string>
     <string name="feature_enable_web_view_features_name">Force enable WebView menu</string>

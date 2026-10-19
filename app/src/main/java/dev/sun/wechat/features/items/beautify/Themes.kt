@@ -96,6 +96,7 @@ import dev.sun.wechat.utils.currentHookBridge
 import dev.sun.wechat.utils.fs.KnownPaths
 import dev.sun.wechat.utils.fs.createDirsSafe
 import dev.sun.wechat.utils.reflection.any
+import dev.sun.wechat.features.items.system.NativeViewGuard
 import org.json.JSONObject
 import java.io.File
 import java.lang.reflect.Method
@@ -876,6 +877,7 @@ object Themes : ClickableFeature(), IResolveDex {
                     val linear = original.parent as? LinearLayout ?: return@let
                     val index = linear.indexOfChild(original)
                     val lp = original.layoutParams
+                    NativeViewGuard.noteReparent("Themes.setChatFooterTheme.publicAccountSwitch", original)
                     linear.removeView(original)
                     val frame = FrameLayout(view.context)
                     frame.addView(original)
@@ -897,6 +899,7 @@ object Themes : ClickableFeature(), IResolveDex {
                     val parent = view.parent as ViewGroup
                     val index = parent.indexOfChild(view)
                     val lp = view.layoutParams
+                    NativeViewGuard.noteReparent("Themes.setChatFooterTheme.voiceButton", view)
                     parent.removeView(view)
                     val frame = FrameLayout(view.context)
                     frame.addView(view)
