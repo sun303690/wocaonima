@@ -67,11 +67,6 @@ public final class WeChatMediaApi {
         return imageApi.canSendSilently();
     }
 
-    /** Compatibility wrapper. New code should use voices().canSendSilently(). */
-    public boolean canSendVoiceSilently() {
-        return voiceApi.canSendSilently();
-    }
-
     /** Compatibility wrapper. New code should use files().canSendSilently(). */
     public boolean canSendFileSilently() {
         return fileApi.canSendSilently();
@@ -100,16 +95,6 @@ public final class WeChatMediaApi {
     /** Compatibility wrapper. New code should use images().sendOriginal(...). */
     public boolean sendOriginalImage(String talker, String imagePath) {
         return imageApi.sendOriginal(talker, imagePath);
-    }
-
-    /** Compatibility wrapper. New code should use voices().send(...). */
-    public boolean sendVoice(String talker, String voicePath) {
-        return voiceApi.send(talker, voicePath);
-    }
-
-    /** Compatibility wrapper. New code should use voices().send(...). */
-    public boolean sendVoice(String talker, String voicePath, int durationMillis) {
-        return voiceApi.send(talker, voicePath, durationMillis);
     }
 
     /** Compatibility wrapper. New code should use files().send(...). */

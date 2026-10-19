@@ -97,6 +97,15 @@ object WeDatabaseApi : ApiFeature(), IResolveDex {
             .invokeStatic()!!
     }
 
+    /** Hchat 数据库定位失败时使用现有 WeDatabaseApi 解析结果兜底。 */
+    @JvmStatic
+    fun hchatCoreStorage(): Any? = runCatching { coreStorage }.getOrNull()
+
+    /** Hchat 消息监听使用的微信 SqliteDB wrapper 类型。 */
+    @JvmStatic
+    fun hchatSqliteDbWrapperClass(): Class<*>? =
+        runCatching { classSqliteDbWrapper.clazz }.getOrNull()
+
     val configStorage by lazy {
         coreStorage.reflekt()
             .firstMethod {
