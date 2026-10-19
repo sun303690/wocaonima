@@ -111,6 +111,9 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     private const val APPLIED_URI_TAG_KEY = 0x55020001
     private const val APPLY_STATUS_BAR_DELAY_MS = 80L
 
+    /** 关闭「状态栏透明」时还原用的安全底色：半透明黑，等价于多数 App 的默认状态栏底色。 */
+    private const val RESTORED_STATUS_BAR_COLOR = 0x66000000
+
     private val rowStates = WeakHashMap<View, RowState>()
     private data class RowState(val background: android.graphics.drawable.Drawable?, val height: Int)
 
@@ -149,6 +152,23 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
         "${PackageNames.WECHAT}.plugin.brandservice.ui.timeline.preload.ui.TmplWebViewMMUI",
         "${PackageNames.WECHAT}.plugin.voip.ui.VideoActivity"
     )
+
+    /**
+     * 小程序 / 小游戏在微信主进程里的宿主 Activity（承载小程序 WebView 的容器）所在的包前缀。
+     *
+     * 全局背景是「美化微信原生界面」的能力，不应该铺到小程序自己的页面里——小程序有自己的
+     * 设计，盖一层半透明图会显得很脏，而且小程序容器内部就是 SurfaceView/WebView，全局背景
+     * 的 decor 层叠加也会把它卷进原生视图的布局变动里。小程序真正的渲染跑在 :appbrand 进程，
+     * 但宿主容器 Activity 仍注册在主进程，会被全局的 Activity hook 命中，所以必须在这里排除。
+     */
+    private val miniProgramActivityPrefixes = listOf(
+        "${PackageNames.WECHAT}.plugin.appbrand",
+        "${PackageNames.WECHAT}.plugin.lite",
+        "${PackageNames.WECHAT}.plugin.subapp",
+    )
+
+    private fun isMiniProgramActivity(activity: Activity): Boolean =
+        miniProgramActivityPrefixes.any { activity.javaClass.name.startsWith(it) }
 
     override fun onEnable() {
         migrateLegacyBackgroundUri()
@@ -379,9 +399,54 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
         }
     }
 
+    /** 已被本模块改成透明状态栏的窗口，关闭开关时只还原它们，避免动到视频全屏等系统栏需求。 */
+    private val transparentWindows = WeakHashMap<android.view.Window, Boolean>()
+
     private fun applyTransparentStatusBarIfEnabled(activity: Activity) {
-        if (!transparentStatusBar) return
-        applyTransparentStatusBar(activity)
+        val window = activity.window
+        val shouldBeTransparent = transparentStatusBar &&
+                activity.javaClass.name !in blacklistedActivities &&
+                !isMiniProgramActivity(activity)
+
+        if (shouldBeTransparent) {
+            applyTransparentStatusBar(activity)
+            if (window != null) transparentWindows[window] = true
+        } else if (window != null && transparentWindows.remove(window) != null) {
+            // 只有本模块之前把它改透明过，才需要（也才可以安全地）还原回系统默认。
+            restoreTransparentStatusBar(activity)
+        }
+    }
+
+    /**
+     * 关闭「状态栏背景透明」时把状态栏还原成系统默认。
+     *
+     * 不还原就是之前那个 bug：applyTransparentStatusBar() 把 layout fullscreen / decorFitsSystemWindows
+     * 关掉之后，用户再关掉开关时没有任何代码把它改回去 —— 于是「关了也一直透明」，直到重启微信。
+     * 这里逐一撤销 [applyTransparentStatusBar] 做过的三件事。
+     *
+     * 注意：只在状态栏本来就默认不透明（APP 可自绘）时还原。微信原生界面自己也可能把状态栏设成
+     * 浅色，这里用「半透明黑」这个安全的默认值，而不是硬塞一个纯色，避免盖掉微信自身的适配。
+     */
+    @Suppress("DEPRECATION")
+    private fun restoreTransparentStatusBar(activity: Activity) {
+        runCatching {
+            val window = activity.window ?: return
+            val decor = window.decorView as? ViewGroup ?: return
+
+            window.statusBarColor = RESTORED_STATUS_BAR_COLOR
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                window.isStatusBarContrastEnforced = true
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                window.setDecorFitsSystemWindows(true)
+            } else {
+                decor.systemUiVisibility = decor.systemUiVisibility and
+                        (View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN).inv()
+            }
+        }.onFailure {
+            WeLogger.w(TAG, "failed to restore status bar", it)
+        }
     }
 
     @Suppress("DEPRECATION")
@@ -441,6 +506,8 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     private fun applyBackground(activity: Activity) {
         if (backgroundUri == null) return
         if (activity.javaClass.name in blacklistedActivities) return
+        // 小程序 / 小游戏宿主容器不铺全局背景：这是「美化微信原生界面」的能力，不应盖到小程序页面上。
+        if (isMiniProgramActivity(activity)) return
 
         val uri = backgroundUri ?: return
         val decor = activity.window?.decorView as? ViewGroup ?: return
