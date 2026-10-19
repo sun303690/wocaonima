@@ -31,6 +31,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
 import java.lang.reflect.Modifier
+import java.util.concurrent.CopyOnWriteArrayList
 
 @OptIn(ExperimentalSerializationApi::class)
 @SuppressLint("DiscouragedApi")
@@ -81,10 +82,22 @@ object WeDatabaseApi : ApiFeature(), IResolveDex {
             returnType("android.database.Cursor")
         }
     }
-
     lateinit var db: SQLiteDatabase
 
     val isReady: Boolean get() = ::db.isInitialized
+
+    private val readyListeners = CopyOnWriteArrayList<(SQLiteDatabase) -> Unit>()
+
+    /**
+     * 注册数据库就绪回调；若已就绪则立即回调。
+     *
+     * 用于启动早期（[dev.sun.wechat.features.core.BaseFeature.onEnable] 阶段）就需要读库的功能：
+     * 此时宿主的 storage 钩子还没触发，直接访问 [db] 会抛 UninitializedPropertyAccessException。
+     */
+    fun onReady(listener: (SQLiteDatabase) -> Unit) {
+        if (isReady) listener(db) else readyListeners.add(listener)
+    }
+
 
     private const val TAG = "WeDatabaseApi"
 
@@ -368,6 +381,11 @@ object WeDatabaseApi : ApiFeature(), IResolveDex {
                 parameterCount = 0
                 returnType = "com.tencent.wcdb.database.SQLiteDatabase"
             }.invoke()!! as SQLiteDatabase
+
+        readyListeners.forEach { listener ->
+            runCatching { listener(db) }
+                .onFailure { WeLogger.w(TAG, "database onReady listener failed", it) }
+        }
     }
 
     @Suppress("NOTHING_TO_INLINE")

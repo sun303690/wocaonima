@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import dev.sun.wechat.R
 import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
+import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.features.api.core.models.MessageInfo
 import dev.sun.wechat.features.api.core.models.MessageType
 import dev.sun.wechat.features.core.ClickableFeature
@@ -70,10 +71,7 @@ object QQMusicOrder : ClickableFeature(), WeDatabaseListenerApi.IInsertListener 
         val talker = values.getAsString("talker").orEmpty()
         if (talker.isBlank() || talker.startsWith("gh_")) return
 
-        val msgInfo = MessageInfo.fromContentValues(values)
         val isOutgoing = values.getAsInteger("isSend") != 0
-        val isGroup = msgInfo.isInGroupChat
-        val sender = msgInfo.sender
         val content = values.getAsString("content").orEmpty()
 
         val dedupeKey = values.getAsString("msgSvrId")?.takeIf { it.isNotBlank() && it != "0" }
@@ -91,7 +89,12 @@ object QQMusicOrder : ClickableFeature(), WeDatabaseListenerApi.IInsertListener 
             }
             return
         }
-        runtime?.onTextInserted(talker, content, msgSvrId, msgId, isOutgoing, isGroup, sender)
+
+        // 这里才需要 MsgInfo。Dex 尚未解析完（缓存未命中）时 classMsgInfo 是 placeholder，
+        // 直接构造会抛 IllegalStateException 并中断整条插入分发，故先跳过。
+        if (!WeMessageApi.classMsgInfo.isUsable) return
+        val msgInfo = MessageInfo.fromContentValues(values)
+        runtime?.onTextInserted(talker, content, msgSvrId, msgId, isOutgoing, msgInfo.isInGroupChat, msgInfo.sender)
     }
 
     private val appContext: Context

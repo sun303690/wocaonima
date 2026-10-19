@@ -176,6 +176,8 @@ object AutoOpenRedPackets : ClickableFeature(), WeDatabaseListenerApi.IInsertLis
 
     private fun handleRedPacket(values: ContentValues) {
         try {
+            // Dex 尚未解析完时 classMsgInfo 是 placeholder，构造 MsgInfo 会抛异常
+            if (!WeMessageApi.classMsgInfo.isUsable) return
             val msgInfo = MessageInfo.fromContentValues(values)
             val talker = msgInfo.talker
             val content = msgInfo.content
