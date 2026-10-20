@@ -3145,6 +3145,12 @@
     <string name="beautify_global_background_text_color">自定義全局字體顏色</string>
     <string name="beautify_global_background_text_color_summary">應用於主頁和普通列表，自動排除聊天頁、小程序、網頁、輸入框、按鈕和鏈接</string>
     <string name="beautify_global_background_text_color_picker">全局字體顏色</string>
+    <string name="beautify_global_background_list_cards">列表卡片化</string>
+    <string name="beautify_global_background_list_cards_summary">總開關，開啓後可調整列表圓角、左右內縮、上下間隔和列表高度</string>
+    <string name="beautify_global_background_list_radius">列表圓角</string>
+    <string name="beautify_global_background_list_horizontal_inset">左右內縮</string>
+    <string name="beautify_global_background_list_spacing">上下間隔</string>
+    <string name="beautify_global_background_list_height">列表高度（0爲原始）</string>
     <string name="beautify_conversation_list_title">美化對話列表</string>
     <string name="beautify_conversation_highlight_unread">突出未讀會話</string>
     <string name="beautify_conversation_hide_dividers">隱藏分隔線</string>

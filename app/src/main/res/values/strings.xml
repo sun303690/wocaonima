@@ -3145,6 +3145,12 @@
     <string name="beautify_global_background_text_color">Custom global text color</string>
     <string name="beautify_global_background_text_color_summary">Applies to the home page and regular lists; excludes chats, Mini Programs, web pages, inputs, buttons, and links</string>
     <string name="beautify_global_background_text_color_picker">Global text color</string>
+    <string name="beautify_global_background_list_cards">List cards</string>
+    <string name="beautify_global_background_list_cards_summary">Master switch for list corner radius, horizontal inset, vertical spacing, and item height</string>
+    <string name="beautify_global_background_list_radius">List corner radius</string>
+    <string name="beautify_global_background_list_horizontal_inset">Horizontal inset</string>
+    <string name="beautify_global_background_list_spacing">Vertical spacing</string>
+    <string name="beautify_global_background_list_height">List height (0 = original)</string>
     <string name="beautify_conversation_list_title">Beautify conversation list</string>
     <string name="beautify_conversation_preset">Layout preset</string>
     <string name="beautify_conversation_highlight_unread">Highlight unread conversations</string>

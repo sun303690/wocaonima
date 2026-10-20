@@ -474,11 +474,93 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                                 )
                             }
                         }
-                        item { SwitchWidget(iconPlaceholder = false, title = "列表卡片化", description = "启用圆角、内缩、间距和高度调节", checked = cardsInput, onCheckedChange = { cardsInput = it; listCards = it; restartRequired = true }) }
-                        item { BaseItemContainer { IntNumberPickerWidget(iconPlaceholder = false, title = "列表圆角", value = radiusInput, startInt = 0, endInt = 40, stepSize = 1, valueSuffix = "dp", onValueChange = { radiusInput = it; listRadius = it; restartRequired = true }) } }
-                        item { BaseItemContainer { IntNumberPickerWidget(iconPlaceholder = false, title = "左右内缩", value = horizontalInput, startInt = 0, endInt = 40, stepSize = 1, valueSuffix = "dp", onValueChange = { horizontalInput = it; listHorizontalInset = it; restartRequired = true }) } }
-                        item { BaseItemContainer { IntNumberPickerWidget(iconPlaceholder = false, title = "上下间隔", value = spacingInput, startInt = 0, endInt = 30, stepSize = 1, valueSuffix = "dp", onValueChange = { spacingInput = it; listVerticalSpacing = it; restartRequired = true }) } }
-                        item { BaseItemContainer { IntNumberPickerWidget(iconPlaceholder = false, title = "列表高度（0为原始）", value = heightInput, startInt = 0, endInt = 160, stepSize = 4, valueSuffix = "dp", onValueChange = { heightInput = it; listHeight = it; restartRequired = true }) } }
+                        item {
+                            SwitchWidget(
+                                iconPlaceholder = false,
+                                title = stringResource(R.string.beautify_global_background_list_cards),
+                                description = stringResource(R.string.beautify_global_background_list_cards_summary),
+                                checked = cardsInput,
+                                onCheckedChange = {
+                                    cardsInput = it
+                                    listCards = it
+                                    restartRequired = true
+                                },
+                            )
+                        }
+                        if (cardsInput) {
+                            item {
+                                BaseItemContainer {
+                                    IntNumberPickerWidget(
+                                        iconPlaceholder = false,
+                                        title = stringResource(R.string.beautify_global_background_list_radius),
+                                        value = radiusInput,
+                                        startInt = 0,
+                                        endInt = 40,
+                                        stepSize = 1,
+                                        valueSuffix = "dp",
+                                        onValueChange = {
+                                            radiusInput = it
+                                            listRadius = it
+                                            restartRequired = true
+                                        },
+                                    )
+                                }
+                            }
+                            item {
+                                BaseItemContainer {
+                                    IntNumberPickerWidget(
+                                        iconPlaceholder = false,
+                                        title = stringResource(R.string.beautify_global_background_list_horizontal_inset),
+                                        value = horizontalInput,
+                                        startInt = 0,
+                                        endInt = 40,
+                                        stepSize = 1,
+                                        valueSuffix = "dp",
+                                        onValueChange = {
+                                            horizontalInput = it
+                                            listHorizontalInset = it
+                                            restartRequired = true
+                                        },
+                                    )
+                                }
+                            }
+                            item {
+                                BaseItemContainer {
+                                    IntNumberPickerWidget(
+                                        iconPlaceholder = false,
+                                        title = stringResource(R.string.beautify_global_background_list_spacing),
+                                        value = spacingInput,
+                                        startInt = 0,
+                                        endInt = 30,
+                                        stepSize = 1,
+                                        valueSuffix = "dp",
+                                        onValueChange = {
+                                            spacingInput = it
+                                            listVerticalSpacing = it
+                                            restartRequired = true
+                                        },
+                                    )
+                                }
+                            }
+                            item {
+                                BaseItemContainer {
+                                    IntNumberPickerWidget(
+                                        iconPlaceholder = false,
+                                        title = stringResource(R.string.beautify_global_background_list_height),
+                                        value = heightInput,
+                                        startInt = 0,
+                                        endInt = 160,
+                                        stepSize = 4,
+                                        valueSuffix = "dp",
+                                        onValueChange = {
+                                            heightInput = it
+                                            listHeight = it
+                                            restartRequired = true
+                                        },
+                                    )
+                                }
+                            }
+                        }
                     }
                 },
                 dismissButton = {
