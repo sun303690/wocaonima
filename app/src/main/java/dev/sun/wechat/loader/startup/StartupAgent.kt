@@ -57,6 +57,13 @@ object StartupAgent {
         ensureHiddenApiAccess()
 
         HostInfo.init(application)
+        // 主线程卡顿看门狗越早装上越能抓到冷启动期间的卡顿；exit reason / 启动时间线也尽早落盘，
+        // 供「模块自检」页展示。全部静默容错，探针失败不影响任何功能。
+        runCatching { dev.sun.wechat.utils.MainThreadWatchdog.install() }
+        if (TargetProcesses.isInMain) {
+            runCatching { dev.sun.wechat.utils.crash.ExitReasonRecorder.recordOnStartup(application) }
+            runCatching { dev.sun.wechat.utils.crash.ProcessTimeline.recordStartup(application) }
+        }
         NativeLoader.init(application)
         // 旧存储/文档/JSON 迁移都是一次性写入，只有主进程负责。
         // 缺少这一步会让 KvStore/FeatureStore 在启动时抛「JSON migration has not completed」，
