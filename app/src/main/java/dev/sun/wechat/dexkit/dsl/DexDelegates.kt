@@ -108,6 +108,12 @@ sealed class BaseDexDelegate(val key: String) {
     abstract fun getDescriptorString(): String?
     abstract val isPlaceholder: Boolean
 
+    /**
+     * 把当前委托标记为解析失败占位。
+     * 各子类覆写为写入自己的哨兵描述符；缓存恢复「上次解析不到」的委托时也会调用它。
+     */
+    open fun setPlaceholderDescriptor(expectedFailure: Boolean = false, reason: String? = null) {}
+
     /** 从缓存字符串恢复状态 */
     abstract fun loadDescriptor(value: String)
 
@@ -153,9 +159,9 @@ class DexClassDelegate constructor(
         setDescriptor(c.name)
     }
 
-    fun setPlaceholderDescriptor(
-        expectedFailure: Boolean = false,
-        reason: String? = null,
+    override fun setPlaceholderDescriptor(
+        expectedFailure: Boolean,
+        reason: String?,
     ) {
         WeLogger.w("DexClassDelegate", "setting placeholder for $key")
         setDescriptor("com.tencent.mm.ui.LauncherUI")
@@ -257,9 +263,9 @@ class DexFieldDelegate constructor(
         setDescriptor(f.descriptor)
     }
 
-    fun setPlaceholderDescriptor(
-        expectedFailure: Boolean = false,
-        reason: String? = null,
+    override fun setPlaceholderDescriptor(
+        expectedFailure: Boolean,
+        reason: String?,
     ) {
         WeLogger.w("DexFieldDelegate", "setting placeholder for $key")
         setDescriptor(PLACEHOLDER_FIELD_DESCRIPTOR)
@@ -385,9 +391,9 @@ class DexMethodDelegate constructor(
     fun setDescriptor(className: String, methodName: String, methodSign: String) =
         setDescriptor(DexMethodDescriptor(className, methodName, methodSign))
 
-    fun setPlaceholderDescriptor(
-        expectedFailure: Boolean = false,
-        reason: String? = null,
+    override fun setPlaceholderDescriptor(
+        expectedFailure: Boolean,
+        reason: String?,
     ) {
         WeLogger.w("DexMethodDelegate", "setting placeholder for $key")
         setDescriptor(DexMethodDescriptor(PLACEHOLDER_DESCRIPTOR))
@@ -495,9 +501,9 @@ class DexConstructorDelegate constructor(
         recordDescriptorAfterSet(desc.descriptor)
     }
 
-    fun setPlaceholderDescriptor(
-        expectedFailure: Boolean = false,
-        reason: String? = null,
+    override fun setPlaceholderDescriptor(
+        expectedFailure: Boolean,
+        reason: String?,
     ) {
         WeLogger.w("DexConstructorDelegate", "setting placeholder for $key")
         setDescriptor(DexMethodDescriptor(PLACEHOLDER_DESCRIPTOR))
