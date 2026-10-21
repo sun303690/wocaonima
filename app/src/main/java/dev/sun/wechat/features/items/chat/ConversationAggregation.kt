@@ -627,13 +627,16 @@ object ConversationAggregation : ClickableFeature(),
     // activeFolderId (null on the homepage, so that path is untouched), and inject a "remove from
     // folder" item by wrapping the menu-create listener and the (obfuscated) select callback.
     private fun hookFolderContextMenu() {
-        if (methodShowPopupMenu.isPlaceholder) return
+        val showPopupMethod = runCatching { methodShowPopupMenu.method }.getOrElse {
+            WeLogger.w(TAG, "folder context menu unavailable; aggregation remains enabled", it)
+            return
+        }
 
         // The 5th parameter's declared type is the obfuscated select-callback interface (db5.t4,
         // with the single method onMMMenuItemSelected). We proxy it to intercept our own item.
-        val selectCallbackInterface = methodShowPopupMenu.method.parameterTypes[4]
+        val selectCallbackInterface = showPopupMethod.parameterTypes.getOrNull(4) ?: return
 
-        methodShowPopupMenu.hookBefore {
+        showPopupMethod.hookBefore {
             val folderId = activeFolderId ?: return@hookBefore
             val folder = folderById(folderId) ?: return@hookBefore
             if (folder.type != FolderType.MANUAL) return@hookBefore

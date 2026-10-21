@@ -49,9 +49,8 @@ object AutoCleanCache : ClickableFeature() {
         paths.add(dataDir / "MicroMsg" / "appbrand")
         paths.add(dataDir / "cache" / "liteapp")
         paths.add(dataDir / "files" / "liteapp")
-        paths.add(dataDir / "tinker")
-        paths.add(dataDir / "tinker_server")
-        paths.add(dataDir / "tinker_temp")
+        // Tinker directories may contain loaded patch files and lock files. Deleting them while
+        // WeChat is running fails repeatedly and can interfere with the host patch loader.
         paths.add(storageDataDir / "cache")
         paths.add(storageDataDir / "files" / "xlog")
         paths.add(storageDataDir / "files" / "onelog")

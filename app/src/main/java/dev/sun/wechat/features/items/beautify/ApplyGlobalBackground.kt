@@ -121,6 +121,9 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     private val rowStates = WeakHashMap<View, RowState>()
     private val globalTextColors = WeakHashMap<TextView, Int>()
     private val applyingGlobalTextColor = ThreadLocal.withInitial { false }
+    private val pendingTextScans = WeakHashMap<Activity, Boolean>()
+    private var cachedTextColorValue: String? = null
+    private var cachedTextColorInt: Int = Color.BLACK
     private data class RowState(val background: android.graphics.drawable.Drawable?, val height: Int)
 
     private val conversationBindListener = WeConversationListViewApi.IBindViewListener { _, view, _, _ ->
@@ -191,7 +194,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                 val activity = thisObject as Activity
                 applyTransparentStatusBarIfEnabled(activity)
                 applyBackground(activity)
-                applyGlobalTextColors(activity.window.decorView)
+                scheduleGlobalTextScan(activity)
             }
 
             firstMethod {
@@ -202,7 +205,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                 if (!isBackgroundExcluded(activity)) {
                     applyTransparentStatusBarIfEnabled(activity)
                 }
-                applyGlobalTextColors(activity.window.decorView)
+                scheduleGlobalTextScan(activity)
             }
         }
 
@@ -283,7 +286,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     private fun reapplyGlobalTextColor(view: TextView) {
         if (applyingGlobalTextColor.get()) return
         if (!shouldApplyGlobalTextColor(view)) return
-        val color = runCatching { globalTextColor.toColorInt() }.getOrDefault(Color.BLACK)
+        val color = resolvedGlobalTextColor()
         globalTextColors.putIfAbsent(view, view.currentTextColor)
         if (view.currentTextColor == color) return
         applyingGlobalTextColor.set(true)
@@ -291,6 +294,25 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
             view.setTextColor(color)
         } finally {
             applyingGlobalTextColor.set(false)
+        }
+    }
+
+    private fun resolvedGlobalTextColor(): Int {
+        val value = globalTextColor
+        if (cachedTextColorValue != value) {
+            cachedTextColorValue = value
+            cachedTextColorInt = runCatching { value.toColorInt() }.getOrDefault(Color.BLACK)
+        }
+        return cachedTextColorInt
+    }
+
+    private fun scheduleGlobalTextScan(activity: Activity) {
+        if (!globalTextColorEnabled || backgroundUri == null) return
+        if (pendingTextScans.put(activity, true) == true) return
+        activity.window.decorView.post {
+            pendingTextScans.remove(activity)
+            if (activity.isFinishing || activity.isDestroyed) return@post
+            applyGlobalTextColors(activity.window.decorView)
         }
     }
 
@@ -317,7 +339,20 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     }
 
     private fun refreshGlobalTextColors() {
-        getTopMostActivity(allowPaused = true)?.window?.decorView?.let(::applyGlobalTextColors)
+        val activity = getTopMostActivity(allowPaused = true) ?: return
+        if (globalTextColorEnabled) {
+            scheduleGlobalTextScan(activity)
+        } else {
+            applyingGlobalTextColor.set(true)
+            try {
+                globalTextColors.entries.toList().forEach { (view, color) ->
+                    runCatching { view.setTextColor(color) }
+                }
+            } finally {
+                applyingGlobalTextColor.set(false)
+            }
+            globalTextColors.clear()
+        }
     }
 
     private const val MIN_OPACITY_PERCENT = 1
@@ -739,6 +774,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
             applyingGlobalTextColor.set(false)
         }
         globalTextColors.clear()
+        pendingTextScans.clear()
     }
 
     private fun View.makeTransparent() {
