@@ -26,7 +26,7 @@ import dev.sun.wechat.utils.fs.createDirsSafe
 /**
  * 模块自检（最外层 / 全量）：把整个模块的公共依赖逐项扫描出来，并支持「一键修复」。
  *
- * 覆盖：各功能分类启用概况 / 微信公共 API 层（含完整性自检）/ 脚本运行时全链路 /
+ * 覆盖：各功能分类启用概况 / 脚本运行时全链路 /
  * Hook 安装任务逐项 / 关键类锚点 / 密友功能状态 / 运行状态（上次退出原因 + 启动时间线 + 主线程卡顿）。
  *
  * 每一项都可点开：弹出「状态 + 含义 + 恢复建议」，可修复的项还带一个**动作按钮**
@@ -58,7 +58,6 @@ object ModuleSelfCheck {
     class HealthStep(val title: String, val run: () -> List<HealthItem>)
 
     const val SECTION_OVERVIEW = "功能清单与分类启用概况"
-    const val SECTION_API = "微信公共 API 层"
     const val SECTION_SCRIPT = "脚本运行时"
     const val SECTION_HOOK = "Hook 安装任务与就绪阶段"
     const val SECTION_ANCHOR = "关键类锚点"
@@ -79,7 +78,6 @@ object ModuleSelfCheck {
     /** 自检步骤（全量）。 */
     fun healthSteps(context: Context): List<HealthStep> = listOf(
         HealthStep(SECTION_OVERVIEW) { featureOverview() },
-        HealthStep(SECTION_API) { wechatApiLayer() },
         HealthStep(SECTION_SCRIPT) { scriptRuntime() },
         HealthStep(SECTION_HOOK) { hookTasks() },
         HealthStep(SECTION_ANCHOR) { anchors() },
@@ -134,92 +132,6 @@ object ModuleSelfCheck {
             }
         return out
     }
-
-    // ------------------------------------------------------------------
-    //  微信公共 API 层
-    // ------------------------------------------------------------------
-
-    private fun wechatApiLayer(): List<HealthItem> {
-        val section = SECTION_API
-        val out = mutableListOf<HealthItem>()
-        val repair = dexRepairAction()
-        val retryInstall: Pair<String, () -> String> = "重试安装" to {
-            runCatching {
-                DexInstallScheduler.ensureWarmupReady()
-                DexInstallScheduler.retryAllPending()
-            }
-            val pending = runCatching { DexInstallScheduler.pendingCount() }.getOrDefault(0)
-            "已强制推进就绪阶段并重排全部 Hook 任务，当前待装 $pending 个。\n如仍未能初始化，请点「重置 Dex 缓存」后重启微信再自检。"
-        }
-
-        val db = runCatching { WeChatApis.database() }.getOrNull()
-        val account = runCatching { WeChatApis.account() }.getOrNull()
-        val contacts = runCatching { WeChatApis.contacts() }.getOrNull()
-        val conversations = runCatching { WeChatApis.conversations() }.getOrNull()
-        val messages = runCatching { WeChatApis.messages() }.getOrNull()
-        val chatrooms = runCatching { WeChatApis.chatrooms() }.getOrNull()
-        val version = runCatching { WeChatApis.version() }.getOrNull()
-        val diagnostics = runCatching { WeChatApis.diagnostics() }.getOrNull()
-
-        val resolvedCount = listOf(db, account, contacts, conversations, messages, chatrooms, version)
-            .count { it != null }
-        if (diagnostics == null && resolvedCount == 0) {
-            out += HealthItem(
-                "微信公共 API 层", section, "未初始化", false,
-                "微信公共 API 的静态注册表尚未被注入（WeChatApis.init 未执行），全部 API 项均为空。\n" +
-                    "通常是 Hchat「微信公共API」Feature 未被调度安装（该 Feature 需要微信启动流程走到 Hook 安装阶段），" +
-                    "或 DexKit 解析失败导致安装被跳过。\n" +
-                    "点「重试安装」强制推进就绪阶段并重排全部 Hook 任务；仍不行则点「重置 Dex 缓存」后重启微信再自检。",
-                actionLabel = retryInstall.first,
-                action = retryInstall.second,
-            )
-        }
-        out += apiItem(section, "微信 API·数据库", db, repair)
-        out += apiItem(section, "微信 API·账号", account, repair)
-        out += apiItem(section, "微信 API·联系人", contacts, repair)
-        out += apiItem(section, "微信 API·会话", conversations, repair)
-        out += apiItem(section, "微信 API·消息", messages, repair)
-        out += apiItem(section, "微信 API·群聊", chatrooms, repair)
-        out += apiItem(section, "微信 API·版本", version, repair)
-
-        if (diagnostics == null) {
-            out += HealthItem(
-                "微信 API·完整性自检", section, "诊断器不可用", false,
-                "微信公共 API 诊断器未初始化，无法执行完整性检查——API 层整体未就绪。\n" +
-                    "请先用「重试安装」或「重置 Dex 缓存」修复 API 层，再重新自检。",
-                actionLabel = retryInstall.first,
-                action = retryInstall.second,
-            )
-        } else {
-            val issues = runCatching { diagnostics.buildCompatibilityIssues() }.getOrNull().orEmpty()
-            val report = runCatching { diagnostics.buildReport() }.getOrNull().orEmpty()
-            out += HealthItem(
-                "微信 API·完整性自检", section,
-                if (issues.isBlank()) "全部能力就绪" else "存在缺失项",
-                issues.isBlank(),
-                if (issues.isBlank()) {
-                    "微信公共 API 全部关键能力均可用。\n\n完整报告：\n$report"
-                } else {
-                    "以下关键能力缺失，对应的用户功能可能失效：\n$issues\n\n完整报告：\n$report"
-                },
-                actionLabel = if (issues.isBlank()) null else repair.first,
-                action = if (issues.isBlank()) null else repair.second,
-            )
-        }
-        return out
-    }
-
-    private fun apiItem(section: String, label: String, obj: Any?, repair: Pair<String, () -> String>): HealthItem =
-        if (obj != null) {
-            HealthItem(label, section, "已解析", true, "已成功取得该 API 对象：${obj.javaClass.name}。")
-        } else {
-            HealthItem(
-                label, section, "未解析", false,
-                "未取得该 API 对象。\n通常是 DexKit 预热未完成，或当前微信版本未适配。\n点「${repair.first}」清除缓存并重新解析后可重试。",
-                actionLabel = repair.first,
-                action = repair.second,
-            )
-        }
 
     // ------------------------------------------------------------------
     //  脚本运行时（使用 WeKit 自己的脚本体系：ScriptCenter / Java / Python）
