@@ -30,7 +30,12 @@ object FeaturesLoader {
     private const val TAG = "FeaturesLoader"
 
     fun loadFeatures() {
-        val allFeatures = FeaturesProvider.ALL_FEATURES
+        // 按当前进程过滤：非主进程（如 APPBRAND 小程序进程）只加载 targetProcesses 含本进程的 Feature，
+        // 避免对几十个主进程 Feature 做 loadPersistedState + DEX 缓存磁盘读取 + startup 遍历，
+        // 这些在非目标进程全是浪费，会显著拖慢小程序等子进程的冷启动。
+        val allFeatures = FeaturesProvider.ALL_FEATURES.filter {
+            TargetProcesses.currentType in it.targetProcesses
+        }
         allFeatures.filterIsInstance<SwitchFeature>().forEach(SwitchFeature::loadPersistedState)
 
         val safeMode = SafeMode.isEnabled
