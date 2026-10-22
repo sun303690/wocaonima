@@ -272,12 +272,6 @@ object ModuleSelfCheck {
                 .fold({ "Dex 适配缓存已清除；下次启动微信将重新解析全部锚点" }) { "清除失败：" + (it.message ?: "未知原因") }
         }
 
-    private fun openScriptSwitchAction(): Pair<String, () -> String> =
-        "开启总开关" to {
-            runCatching { ScriptCenter.applyToggle(true) }
-                .fold({ "脚本总开关已开启" }, { "开启失败：" + (it.message ?: "未知原因") })
-        }
-
     /** 收集一份完整文本（用于复制反馈）。 */
     fun buildReportText(context: Context): String =
         healthSteps(context).flatMap { step ->
@@ -288,8 +282,7 @@ object ModuleSelfCheck {
 
     /** 概览卡片用的微信版本展示串。 */
     fun wechatVersionDisplay(): String =
-        runCatching { WeChatApis.version()?.current()?.displayVersion() }.getOrNull()
-            ?: "${HostInfo.versionName}(${HostInfo.versionCode})"
+        "${HostInfo.versionName}(${HostInfo.versionCode})"
 
     /** 概览卡片用的模块版本展示串。 */
     fun moduleVersionDisplay(): String = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})"
