@@ -143,7 +143,29 @@ jobs:
           WEKIT_KEYSTORE_PASSWORD: ${{ env.WEKIT_KEYSTORE_PASSWORD || secrets.KEYSTORE_PASSWORD }}
           WEKIT_KEY_ALIAS: ${{ env.WEKIT_KEY_ALIAS || secrets.KEY_ALIAS }}
           WEKIT_KEY_PASSWORD: ${{ env.WEKIT_KEY_PASSWORD || secrets.KEY_PASSWORD }}
-        run: ./gradlew assembleStandardRelease --warning-mode all --stacktrace
+        run: |
+          set -o pipefail
+          ./gradlew assembleStandardRelease --warning-mode all --stacktrace 2>&1 | tee build.log
+
+      - name: Upload Gradle build log
+        if: always() && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-log
+          path: build.log
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Summarize Gradle failure
+        if: failure() && github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          {
+            echo '## Gradle build failure'
+            echo '```text'
+            grep -E '(^e: | error: |FAILURE:|What went wrong|Could not resolve|Unresolved reference|Compilation error)' build.log | tail -n 120 || tail -n 120 build.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Build Release (Unsigned)
         if: github.event_name == 'pull_request'
