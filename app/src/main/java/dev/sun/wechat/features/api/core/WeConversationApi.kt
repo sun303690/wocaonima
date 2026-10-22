@@ -54,7 +54,7 @@ object WeConversationApi : ApiFeature(), IResolveDex {
     private val methodDelChatContact by dexMethod {
         matcher {
             declaredClass(classConversationStorage.data.name)
-            usingStrings("MicroMsg.ConversationStorage", "delChatContact username:")
+            usingStrings("MicroMsg.ConversationStorage", "delChatContact username:%s  stack:%s")
             paramCount = 1
             paramTypes(String::class.java)
             returnType(Void.TYPE)

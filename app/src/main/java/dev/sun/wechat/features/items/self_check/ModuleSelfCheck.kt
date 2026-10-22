@@ -2,32 +2,23 @@ package dev.sun.wechat.features.items.self_check
 
 import android.content.Context
 import dev.sun.wechat.BuildConfig
-import dev.sun.wechat.Hchat.hooks.api.core.WeChatApis
-import dev.sun.wechat.Hchat.hooks.core.DexInstallScheduler
-import dev.sun.wechat.Hchat.hooks.core.HookRegistry
 import dev.sun.wechat.features.api.core.WeConversationApi
 import dev.sun.wechat.features.core.FeaturesProvider
 import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.features.items.secret_friend.HideConversations
 import dev.sun.wechat.features.items.secret_friend.SecretFriendManager
 import dev.sun.wechat.features.items.secret_friend.SecretFriendState
-import dev.sun.wechat.features.items.scripting_center.ScriptCenter
-import dev.sun.wechat.features.items.scripting_java.JavaScriptingHook
-import dev.sun.wechat.features.items.scripting_python.PythonScriptingFeature
 import dev.sun.wechat.utils.HostInfo
 import dev.sun.wechat.utils.crash.ExitReasonRecorder
 import dev.sun.wechat.utils.crash.ProcessTimeline
 import dev.sun.wechat.utils.MainThreadWatchdog
-import dev.sun.wechat.utils.fs.KnownPaths
 import dev.sun.wechat.utils.reflection.ClassLoaders
-import kotlin.io.path.div
-import dev.sun.wechat.utils.fs.createDirsSafe
 
 /**
  * 模块自检（最外层 / 全量）：把整个模块的公共依赖逐项扫描出来，并支持「一键修复」。
  *
- * 覆盖：各功能分类启用概况 / 微信公共 API 层（含完整性自检）/ 脚本运行时全链路 /
- * Hook 安装任务逐项 / 关键类锚点 / 密友功能状态 / 运行状态（上次退出原因 + 启动时间线 + 主线程卡顿）。
+ * 覆盖：各功能分类启用概况 / 关键类锚点 / 密友功能状态 /
+ * 运行状态（上次退出原因 + 启动时间线 + 主线程卡顿）。
  *
  * 每一项都可点开：弹出「状态 + 含义 + 恢复建议」，可修复的项还带一个**动作按钮**
  * （如未解析的锚点可「重置 Dex 缓存重解析」、未开的密友总开关可「一键启用」）。
@@ -58,9 +49,7 @@ object ModuleSelfCheck {
     class HealthStep(val title: String, val run: () -> List<HealthItem>)
 
     const val SECTION_OVERVIEW = "功能清单与分类启用概况"
-    const val SECTION_API = "微信公共 API 层"
     const val SECTION_SCRIPT = "脚本运行时"
-    const val SECTION_HOOK = "Hook 安装任务与就绪阶段"
     const val SECTION_ANCHOR = "关键类锚点"
     const val SECTION_SECRET = "密友功能"
     const val SECTION_RUNTIME = "运行状态"
@@ -79,9 +68,6 @@ object ModuleSelfCheck {
     /** 自检步骤（全量）。 */
     fun healthSteps(context: Context): List<HealthStep> = listOf(
         HealthStep(SECTION_OVERVIEW) { featureOverview() },
-        HealthStep(SECTION_API) { wechatApiLayer() },
-        HealthStep(SECTION_SCRIPT) { scriptRuntime() },
-        HealthStep(SECTION_HOOK) { hookTasks() },
         HealthStep(SECTION_ANCHOR) { anchors() },
         HealthStep(SECTION_SECRET) { secretFriendSection() },
         HealthStep(SECTION_RUNTIME) { runtimeStatus(context) },
@@ -89,10 +75,7 @@ object ModuleSelfCheck {
 
     /** 「一键修复」步骤（全量）。 */
     fun repairSteps(context: Context): List<HealthStep> = listOf(
-        HealthStep("补建脚本运行目录") { repairScriptDirs() },
-        HealthStep("开启脚本总开关") { repairScriptSwitch() },
         HealthStep("重置并重建 Dex 适配缓存") { repairDexCache() },
-        HealthStep("推进就绪阶段并重排全部 Hook 任务") { repairHookSchedule() },
         HealthStep("密友隐藏面重新对账") { repairSecretFriend() },
     )
 
@@ -137,218 +120,6 @@ object ModuleSelfCheck {
 
     // ------------------------------------------------------------------
     //  微信公共 API 层
-    // ------------------------------------------------------------------
-
-    private fun wechatApiLayer(): List<HealthItem> {
-        val section = SECTION_API
-        val out = mutableListOf<HealthItem>()
-        val repair = dexRepairAction()
-        val retryInstall: Pair<String, () -> String> = "重试安装" to {
-            runCatching {
-                DexInstallScheduler.ensureWarmupReady()
-                DexInstallScheduler.retryAllPending()
-            }
-            val pending = runCatching { DexInstallScheduler.pendingCount() }.getOrDefault(0)
-            "已强制推进就绪阶段并重排全部 Hook 任务，当前待装 $pending 个。\n如仍未能初始化，请点「重置 Dex 缓存」后重启微信再自检。"
-        }
-
-        val db = runCatching { WeChatApis.database() }.getOrNull()
-        val account = runCatching { WeChatApis.account() }.getOrNull()
-        val contacts = runCatching { WeChatApis.contacts() }.getOrNull()
-        val conversations = runCatching { WeChatApis.conversations() }.getOrNull()
-        val messages = runCatching { WeChatApis.messages() }.getOrNull()
-        val chatrooms = runCatching { WeChatApis.chatrooms() }.getOrNull()
-        val version = runCatching { WeChatApis.version() }.getOrNull()
-        val diagnostics = runCatching { WeChatApis.diagnostics() }.getOrNull()
-
-        val resolvedCount = listOf(db, account, contacts, conversations, messages, chatrooms, version)
-            .count { it != null }
-        if (diagnostics == null && resolvedCount == 0) {
-            out += HealthItem(
-                "微信公共 API 层", section, "未初始化", false,
-                "微信公共 API 的静态注册表尚未被注入（WeChatApis.init 未执行），全部 API 项均为空。\n" +
-                    "通常是 Hchat「微信公共API」Feature 未被调度安装（该 Feature 需要微信启动流程走到 Hook 安装阶段），" +
-                    "或 DexKit 解析失败导致安装被跳过。\n" +
-                    "点「重试安装」强制推进就绪阶段并重排全部 Hook 任务；仍不行则点「重置 Dex 缓存」后重启微信再自检。",
-                actionLabel = retryInstall.first,
-                action = retryInstall.second,
-            )
-        }
-        out += apiItem(section, "微信 API·数据库", db, repair)
-        out += apiItem(section, "微信 API·账号", account, repair)
-        out += apiItem(section, "微信 API·联系人", contacts, repair)
-        out += apiItem(section, "微信 API·会话", conversations, repair)
-        out += apiItem(section, "微信 API·消息", messages, repair)
-        out += apiItem(section, "微信 API·群聊", chatrooms, repair)
-        out += apiItem(section, "微信 API·版本", version, repair)
-
-        if (diagnostics == null) {
-            out += HealthItem(
-                "微信 API·完整性自检", section, "诊断器不可用", false,
-                "微信公共 API 诊断器未初始化，无法执行完整性检查——API 层整体未就绪。\n" +
-                    "请先用「重试安装」或「重置 Dex 缓存」修复 API 层，再重新自检。",
-                actionLabel = retryInstall.first,
-                action = retryInstall.second,
-            )
-        } else {
-            val issues = runCatching { diagnostics.buildCompatibilityIssues() }.getOrNull().orEmpty()
-            val report = runCatching { diagnostics.buildReport() }.getOrNull().orEmpty()
-            out += HealthItem(
-                "微信 API·完整性自检", section,
-                if (issues.isBlank()) "全部能力就绪" else "存在缺失项",
-                issues.isBlank(),
-                if (issues.isBlank()) {
-                    "微信公共 API 全部关键能力均可用。\n\n完整报告：\n$report"
-                } else {
-                    "以下关键能力缺失，对应的用户功能可能失效：\n$issues\n\n完整报告：\n$report"
-                },
-                actionLabel = if (issues.isBlank()) null else repair.first,
-                action = if (issues.isBlank()) null else repair.second,
-            )
-        }
-        return out
-    }
-
-    private fun apiItem(section: String, label: String, obj: Any?, repair: Pair<String, () -> String>): HealthItem =
-        if (obj != null) {
-            HealthItem(label, section, "已解析", true, "已成功取得该 API 对象：${obj.javaClass.name}。")
-        } else {
-            HealthItem(
-                label, section, "未解析", false,
-                "未取得该 API 对象。\n通常是 DexKit 预热未完成，或当前微信版本未适配。\n点「${repair.first}」清除缓存并重新解析后可重试。",
-                actionLabel = repair.first,
-                action = repair.second,
-            )
-        }
-
-    // ------------------------------------------------------------------
-    //  脚本运行时（使用 WeKit 自己的脚本体系：ScriptCenter / Java / Python）
-    // ------------------------------------------------------------------
-
-    private fun scriptRuntime(): List<HealthItem> {
-        val section = SECTION_SCRIPT
-        val out = mutableListOf<HealthItem>()
-        val repair = dexRepairAction()
-        val openSwitch = openScriptSwitchAction()
-
-        val masterOn = runCatching { ScriptCenter.isScriptingAllowed() }.getOrDefault(false)
-        out += HealthItem(
-            "脚本总开关", section,
-            if (masterOn) "已开启" else "已关闭", masterOn,
-            if (masterOn) "脚本总开关已开启，启动时会加载已启用的脚本插件。"
-            else "脚本总开关未开启，所有脚本插件都不会工作。",
-            actionLabel = if (masterOn) null else openSwitch.first,
-            action = if (masterOn) null else openSwitch.second,
-            inactive = !masterOn,
-        )
-
-        val javaOn = runCatching { JavaScriptingHook.isEnabled }.getOrDefault(false)
-        out += HealthItem(
-            "Java 脚本引擎", section,
-            if (javaOn) "已开启" else "已关闭", javaOn,
-            if (javaOn) "Java 脚本引擎已开启。"
-            else "Java 脚本引擎已关闭——只有 Java 插件不会执行。",
-            inactive = !javaOn,
-        )
-
-        val pythonOn = runCatching { PythonScriptingFeature.isEnabled }.getOrDefault(false)
-        out += HealthItem(
-            "Python 脚本引擎", section,
-            if (pythonOn) "已开启" else "已关闭", pythonOn,
-            if (pythonOn) "Python 脚本引擎已开启。"
-            else "Python 脚本引擎已关闭——只有 Python 插件不会执行。",
-            inactive = !pythonOn,
-        )
-
-        val javaActive = runCatching { JavaScriptingHook.isActive }.getOrDefault(false)
-        val pythonActive = runCatching { PythonScriptingFeature.isActive }.getOrDefault(false)
-        val engineOk = (javaOn && javaActive) || (pythonOn && pythonActive) || !masterOn
-        out += HealthItem(
-            "脚本运行时就绪", section,
-            if (engineOk) "已就绪" else "未就绪", engineOk,
-            if (engineOk) "至少一个已开启的脚本引擎 Hook 已实际安装，插件可正常加载。"
-            else "开关已开但没有任何引擎 Hook 安装成功——通常是 DexKit 锚点失配。\n点「${repair.first}」重建适配缓存后重试。",
-            actionLabel = if (engineOk) null else repair.first,
-            action = if (engineOk) null else repair.second,
-        )
-
-        val hookCount = runCatching { HookRegistry.get().size() }.getOrDefault(0)
-        out += HealthItem(
-            "脚本 Hook 注册", section,
-            "$hookCount 个", hookCount > 0,
-            if (hookCount > 0) "已注册 $hookCount 个 Hook（脚本的消息/菜单等监听）。"
-            else "0 个：脚本引导链路可能未完成。",
-            actionLabel = if (hookCount > 0) null else repair.first,
-            action = if (hookCount > 0) null else repair.second,
-        )
-
-        val javaPlugins = runCatching { JavaScriptingHook.scripts.size }.getOrDefault(0)
-        val pythonPlugins = runCatching {
-            KnownPaths.moduleRoot.resolve("scripts_python").toFile().listFiles()?.count { it.isDirectory } ?: 0
-        }.getOrDefault(0)
-        out += HealthItem(
-            "本地插件", section,
-            "Java $javaPlugins 个，Python $pythonPlugins 个", true,
-            "本地已安装的脚本插件数量（不含未启用项）。\n可到「脚本插件中心」查看与安装。",
-        )
-
-        val marketSize = runCatching { ScriptCenter.marketEntriesSnapshot().size }.getOrDefault(0)
-        out += HealthItem(
-            "在线插件市场", section,
-            if (marketSize > 0) "已拉取 $marketSize 个" else "未拉取（可离线使用）", true,
-            if (marketSize > 0) "市场索引已缓存，共 $marketSize 个插件可安装。"
-            else "尚未拉取市场索引或网络不可用——不影响已安装插件运行。",
-        )
-        return out
-    }
-
-    // ------------------------------------------------------------------
-    //  Hook 安装任务与就绪阶段（以 DexInstallScheduler 快照为准）
-    // ------------------------------------------------------------------
-
-    private fun hookTasks(): List<HealthItem> {
-        val section = SECTION_HOOK
-        val snapshot = runCatching { DexInstallScheduler.snapshot() }.getOrDefault(emptyList())
-        val pending = snapshot.count { !it.installed }
-        val out = mutableListOf<HealthItem>()
-
-        val retryAll: Pair<String, () -> String> = "重排重试" to {
-            runCatching {
-                DexInstallScheduler.ensureWarmupReady()
-                DexInstallScheduler.retryAllPending()
-            }
-            "已触发重排重试，当前待装 " + runCatching { DexInstallScheduler.pendingCount() }.getOrDefault(0) + " 个"
-        }
-        out += HealthItem(
-            "Hook 安装任务", section, "共 ${snapshot.size} 个，待装 $pending", pending == 0,
-            "模块共有 ${snapshot.size} 个需要 DexKit 解析后安装的 Hook 任务，当前待装 $pending 个。\n待装/失败的任务会让对应功能暂时失效。",
-            actionLabel = if (pending == 0) null else retryAll.first,
-            action = if (pending == 0) null else retryAll.second,
-        )
-        snapshot.forEach { task ->
-            val ok = task.installed
-            val value = if (ok) "✅ 已安装" else "⚠ ${if (task.paused) "已暂停" else "待重试"}（第 ${task.retryIndex} 次）"
-            out += HealthItem(
-                "· ${task.label}", section, value, ok,
-                "key=${task.key}\n阶段=${task.stage}\n运行中=${task.running}\n已暂停=${task.paused}\n重试次数=${task.retryIndex}\n\n" +
-                    if (ok) "该 Hook 已安装完成。"
-                    else "该 Hook 尚未安装成功——点「重试安装」立即重排重试（推进到 WARMUP 后再执行一轮）。",
-                actionLabel = if (ok) null else "重试安装",
-                action = if (ok) null else retryAll.second,
-            )
-        }
-        val level = runCatching { DexInstallScheduler.readyLevelName() }.getOrDefault("未知")
-        out += HealthItem(
-            "就绪阶段", section, level, level.contains("WARMUP"),
-            "阶段顺序：EARLY < BRIDGE < WARMUP。\n只有推进到 WARMUP 后，脚本级 Hook（菜单/消息监听等）才会执行。当前为 $level。",
-            actionLabel = if (level.contains("WARMUP")) null else retryAll.first,
-            action = if (level.contains("WARMUP")) null else retryAll.second,
-        )
-        return out
-    }
-
-    // ------------------------------------------------------------------
-    //  关键类锚点
     // ------------------------------------------------------------------
 
     private fun anchors(): List<HealthItem> = ANCHORS.map { (name, className) ->
@@ -463,41 +234,6 @@ object ModuleSelfCheck {
     //  修复步骤
     // ------------------------------------------------------------------
 
-    private fun repairScriptDirs(): List<HealthItem> {
-        val out = mutableListOf<HealthItem>()
-        listOf("scripts_java" to "Java 插件目录", "scripts_python" to "Python 插件目录").forEach { (name, label) ->
-            val ok = runCatching {
-                val dir = (KnownPaths.moduleRoot / name).createDirsSafe().toFile()
-                dir.isDirectory
-            }.getOrDefault(false)
-            out += HealthItem(
-                label,
-                "补建脚本运行目录",
-                if (ok) "就绪" else "失败",
-                ok,
-                "目录 $name：${if (ok) "已就绪" else "创建失败（可能是存储权限问题）"}",
-            )
-        }
-        return out
-    }
-
-    private fun repairScriptSwitch(): List<HealthItem> {
-        val on = runCatching { ScriptCenter.isScriptingAllowed() }.getOrDefault(false)
-        if (on) {
-            return listOf(HealthItem("脚本总开关", "开启脚本总开关", "已是开启状态", true, "脚本总开关本来就开着，无需修复。"))
-        }
-        val r = runCatching { ScriptCenter.applyToggle(true) }
-        return listOf(
-            HealthItem(
-                "脚本总开关",
-                "开启脚本总开关",
-                if (r.isSuccess) "已开启" else "失败",
-                r.isSuccess,
-                if (r.isSuccess) "脚本总开关已开启。" else "开启失败：" + (r.exceptionOrNull()?.message ?: "未知原因"),
-            ),
-        )
-    }
-
     private fun repairDexCache(): List<HealthItem> {
         val r = runCatching { dev.sun.wechat.dexkit.cache.DexCacheManager.clearAllCache() }
         return listOf(
@@ -508,23 +244,6 @@ object ModuleSelfCheck {
                 r.isSuccess,
                 "已清除全部 DexKit 适配缓存。\n下次微信启动时将重新扫描全部锚点（首次可能较慢）。\n" +
                     "若仍失败，说明该锚点在当前微信版本确实已漂移，需要版本适配。",
-            ),
-        )
-    }
-
-    private fun repairHookSchedule(): List<HealthItem> {
-        runCatching {
-            DexInstallScheduler.ensureWarmupReady()
-            DexInstallScheduler.retryAllPending()
-        }
-        val level = runCatching { DexInstallScheduler.readyLevelName() }.getOrDefault("未知")
-        val pending = runCatching { DexInstallScheduler.pendingCount() }.getOrDefault(0)
-        return listOf(
-            HealthItem(
-                "Hook 任务",
-                "推进就绪阶段并重排全部 Hook 任务",
-                "阶段=$level，待装 $pending 个", true,
-                "已强制推进到 WARMUP，并把所有未装任务的计数清零后重排重试。",
             ),
         )
     }

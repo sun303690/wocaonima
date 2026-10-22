@@ -69,9 +69,13 @@ object WeDatabaseListenerApi : ApiFeature() {
     }
 
     override fun onEnable() {
-        hookDatabaseInsert()
-        hookDatabaseUpdate()
-        hookDatabaseQuery()
+        // 微信不同版本可能只存在部分 WCDB 路径，单项失败不能阻断其余数据库监听。
+        runCatching { hookDatabaseInsert() }
+            .onFailure { WeLogger.e(TAG, "hookDatabaseInsert failed", it) }
+        runCatching { hookDatabaseUpdate() }
+            .onFailure { WeLogger.e(TAG, "hookDatabaseUpdate failed", it) }
+        runCatching { hookDatabaseQuery() }
+            .onFailure { WeLogger.e(TAG, "hookDatabaseQuery failed", it) }
     }
 
     override fun onDisable() {
@@ -194,12 +198,18 @@ object WeDatabaseListenerApi : ApiFeature() {
     }
 
     private fun hookNewQueryMethod() {
-        com.tencent.wcdb.compat.SQLiteDatabase::class.reflekt()
-            .firstMethod {
-                name = "rawQuery"
-                parameters(String::class, Array<Any>::class)
-            }
-            .hookBefore {
+        val queryMethod = runCatching {
+            com.tencent.wcdb.compat.SQLiteDatabase::class.reflekt()
+                .firstMethodOrNull {
+                    name = "rawQuery"
+                    parameters(String::class, Array<Any>::class)
+                }
+        }.getOrNull()
+        if (queryMethod == null) {
+            WeLogger.w(TAG, "rawQuery not found in wcdb compat; query listener skipped")
+            return
+        }
+        queryMethod.hookBefore {
                 try {
                     if (queryListeners.isEmpty()) return@hookBefore
 

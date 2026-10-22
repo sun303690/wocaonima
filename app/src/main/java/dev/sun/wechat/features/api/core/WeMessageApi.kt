@@ -1391,6 +1391,10 @@ object WeMessageApi : ApiFeature(), IResolveDex {
     }
 
     fun sendVideo(toUser: String, videoPath: String): Boolean {
+        if (runCatching { !java.io.File(videoPath).let { it.isFile && it.length() > 0 } }.getOrDefault(true)) {
+            WeLogger.w(TAG, "sendVideo skipped: mp4 missing/empty ($videoPath)")
+            return false
+        }
         return try {
             WeLogger.i(TAG, "sending video: $videoPath to $toUser")
             val thread = classImportMultiVideo.clazz.createInstance(
