@@ -117,11 +117,11 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     var dailyLimit by KvStore.prefOption("ai_chat_daily_limit", 100)
     var maxContextChars by KvStore.prefOption("ai_chat_max_context_chars", 12000)
 
-    private var whitelist: Set<String>
+    var whitelist: Set<String>
         get() = KvStore.getStringSetOrDef("ai_chat_whitelist", emptySet())
         set(value) = KvStore.putStringSet("ai_chat_whitelist", value)
 
-    private var blacklist: Set<String>
+    var blacklist: Set<String>
         get() = KvStore.getStringSetOrDef("ai_chat_blacklist", emptySet())
         set(value) = KvStore.putStringSet("ai_chat_blacklist", value)
 
@@ -172,6 +172,20 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     @Volatile private var lastReceiveAt = 0L
     @Volatile private var lastSendAt = 0L
     @Volatile private var lastFailure: String? = null
+
+    data class DiagnosticSnapshot(
+        val receiveHookAvailable: Boolean,
+        val lastReceiveAt: Long,
+        val lastSendAt: Long,
+        val inFlightCount: Int,
+        val lastFailure: String?,
+    )
+
+    fun diagnosticSnapshot() = DiagnosticSnapshot(
+        WeMessageApi.methodMsgInfoStorageInsertMessage.isAvailable,
+        lastReceiveAt, lastSendAt, inFlight.size, lastFailure,
+    )
+
     private val scope = CoroutineScope(SupervisorJob() + Executors.newSingleThreadExecutor().asCoroutineDispatcher())
 
     override fun onEnable() {
@@ -187,9 +201,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     }
 
     override fun onClick(context: ComponentActivity) {
-        // Keep the proven, fully wired configuration UI until every control in the
-        // standalone tabbed activity is connected to the runtime and persistence layer.
-        showConfigDialog(context)
+        context.startActivity(android.content.Intent(context, AiChatSettingsActivity::class.java))
     }
 
     // ---------------- 消息入口 ----------------
