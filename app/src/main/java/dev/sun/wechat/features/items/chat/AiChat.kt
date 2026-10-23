@@ -104,24 +104,24 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     private const val GROUP_TRIGGER_PREFIX = 3
 
     // ---- 配置（键名与 Nuke 的 AIChatConfig 字段一一对应） ----
-    var systemPrompt by KvStore.prefOption("ai_chat_system_prompt", "")
+    internal var systemPrompt by KvStore.prefOption("ai_chat_system_prompt", "")
     var temperature by KvStore.prefOption("ai_chat_temperature", 0.7f)
     var maxTokens by KvStore.prefOption("ai_chat_max_tokens", 512)
     var contextRounds by KvStore.prefOption("ai_chat_context_rounds", 6)
     var replyDelayMs by KvStore.prefOption("ai_chat_reply_delay_ms", 0L)
-    var listMode by KvStore.prefOption("ai_chat_list_mode", LIST_WHITELIST)
-    var groupTriggerMode by KvStore.prefOption("ai_chat_group_trigger_mode", GROUP_TRIGGER_MENTION)
-    var groupKeywords by KvStore.prefOption("ai_chat_group_keywords", "")
-    var groupPrefix by KvStore.prefOption("ai_chat_group_prefix", "/ai")
-    var cooldownSeconds by KvStore.prefOption("ai_chat_cooldown_seconds", 15)
-    var dailyLimit by KvStore.prefOption("ai_chat_daily_limit", 100)
-    var maxContextChars by KvStore.prefOption("ai_chat_max_context_chars", 12000)
+    internal var listMode by KvStore.prefOption("ai_chat_list_mode", LIST_WHITELIST)
+    internal var groupTriggerMode by KvStore.prefOption("ai_chat_group_trigger_mode", GROUP_TRIGGER_MENTION)
+    internal var groupKeywords by KvStore.prefOption("ai_chat_group_keywords", "")
+    internal var groupPrefix by KvStore.prefOption("ai_chat_group_prefix", "/ai")
+    internal var cooldownSeconds by KvStore.prefOption("ai_chat_cooldown_seconds", 15)
+    internal var dailyLimit by KvStore.prefOption("ai_chat_daily_limit", 100)
+    internal var maxContextChars by KvStore.prefOption("ai_chat_max_context_chars", 12000)
 
-    var whitelist: Set<String>
+    internal var whitelist: Set<String>
         get() = KvStore.getStringSetOrDef("ai_chat_whitelist", emptySet())
         set(value) = KvStore.putStringSet("ai_chat_whitelist", value)
 
-    var blacklist: Set<String>
+    internal var blacklist: Set<String>
         get() = KvStore.getStringSetOrDef("ai_chat_blacklist", emptySet())
         set(value) = KvStore.putStringSet("ai_chat_blacklist", value)
 
@@ -351,7 +351,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     private fun dailyKey(talker: String): String =
         java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.ROOT).format(java.util.Date()) + ':' + talker
 
-    fun clearContext(talker: String? = null) {
+    internal fun clearContext(talker: String? = null) {
         if (talker == null) memories.clear() else memories.remove(talker)
         configVersion.incrementAndGet()
     }

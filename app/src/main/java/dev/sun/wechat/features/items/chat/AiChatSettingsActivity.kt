@@ -10,6 +10,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import dev.sun.wechat.utils.android.showToast
 import androidx.lifecycle.lifecycleScope
 import dev.sun.wechat.data.WeKitDatabase
 import dev.sun.wechat.data.entity.AiChatMemoryEntity
@@ -65,14 +67,14 @@ class AiChatSettingsActivity : ComponentActivity() {
     }
 
     @Composable private fun ReplyPage() = Page {
-        var enabled by remember { mutableStateOf(AiChat.enabled) }
+        var enabled by remember { mutableStateOf(AiChat.isEnabled) }
         var mode by remember { mutableStateOf(AiChat.groupTriggerMode) }
         var keywords by remember { mutableStateOf(AiChat.groupKeywords) }
         var prefix by remember { mutableStateOf(AiChat.groupPrefix) }
         var cooldown by remember { mutableStateOf(AiChat.cooldownSeconds.toString()) }
         var daily by remember { mutableStateOf(AiChat.dailyLimit.toString()) }
         var chars by remember { mutableStateOf(AiChat.maxContextChars.toString()) }
-        Block("自动回复", "只有授权会话会进入模型") { ToggleRow("启用 AI 自动回复", "关闭后不接收、不请求、不发送", enabled) { enabled = it; AiChat.enabled = it } }
+        Block("自动回复", "只有授权会话会进入模型") { ToggleRow("启用 AI 自动回复", "关闭后不接收、不请求、不发送", enabled) { enabled = it; AiChat.isEnabled = it } }
         Block("授权会话", "白名单 ${AiChat.whitelist.size} 个 · 黑名单 ${AiChat.blacklist.size} 个") {
             Button({ AiChat.showConfigDialog(this@AiChatSettingsActivity) }, Modifier.fillMaxWidth()) { Text("选择联系人或群聊") }
         }
