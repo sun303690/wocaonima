@@ -2,6 +2,9 @@ package dev.sun.wechat.features.items.chat
 
 import android.content.ContentValues
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -43,6 +46,7 @@ import dev.sun.wechat.features.api.core.models.MessageType
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.data.KvStore
+import dev.sun.wechat.data.WeKitDatabase
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.ContactsSelector
@@ -94,6 +98,10 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
 
     private const val LIST_WHITELIST = 0
     private const val LIST_BLACKLIST = 1
+    private const val GROUP_TRIGGER_ALL = 0
+    private const val GROUP_TRIGGER_MENTION = 1
+    private const val GROUP_TRIGGER_KEYWORD = 2
+    private const val GROUP_TRIGGER_PREFIX = 3
 
     // ---- 配置（键名与 Nuke 的 AIChatConfig 字段一一对应） ----
     var systemPrompt by KvStore.prefOption("ai_chat_system_prompt", "")
@@ -102,6 +110,12 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     var contextRounds by KvStore.prefOption("ai_chat_context_rounds", 6)
     var replyDelayMs by KvStore.prefOption("ai_chat_reply_delay_ms", 0L)
     var listMode by KvStore.prefOption("ai_chat_list_mode", LIST_WHITELIST)
+    var groupTriggerMode by KvStore.prefOption("ai_chat_group_trigger_mode", GROUP_TRIGGER_MENTION)
+    var groupKeywords by KvStore.prefOption("ai_chat_group_keywords", "")
+    var groupPrefix by KvStore.prefOption("ai_chat_group_prefix", "/ai")
+    var cooldownSeconds by KvStore.prefOption("ai_chat_cooldown_seconds", 15)
+    var dailyLimit by KvStore.prefOption("ai_chat_daily_limit", 100)
+    var maxContextChars by KvStore.prefOption("ai_chat_max_context_chars", 12000)
 
     private var whitelist: Set<String>
         get() = KvStore.getStringSetOrDef("ai_chat_whitelist", emptySet())
@@ -120,6 +134,12 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         val replyDelayMs: Long,
         val listMode: Int,
         val targets: Set<String>,
+        val groupTriggerMode: Int,
+        val groupKeywords: Set<String>,
+        val groupPrefix: String,
+        val cooldownMs: Long,
+        val dailyLimit: Int,
+        val maxContextChars: Int,
     )
 
     private fun snapshot(): Config = Config(
@@ -130,6 +150,12 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         replyDelayMs = replyDelayMs.coerceIn(0L, MAX_REPLY_DELAY_MS),
         listMode = listMode,
         targets = if (listMode == LIST_BLACKLIST) blacklist else whitelist,
+        groupTriggerMode = groupTriggerMode,
+        groupKeywords = groupKeywords.split(',', '，', '\n').map { it.trim() }.filter { it.isNotEmpty() }.toSet(),
+        groupPrefix = groupPrefix.trim(),
+        cooldownMs = cooldownSeconds.coerceIn(0, 3600) * 1000L,
+        dailyLimit = dailyLimit.coerceIn(0, 10000),
+        maxContextChars = maxContextChars.coerceIn(1000, 100000),
     )
 
     /** 白名单：命中才回；黑名单：命中就跳过（空名单=全部处理）。 */
@@ -140,6 +166,12 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     private val configVersion = AtomicLong(0)
     private val memories = ConcurrentHashMap<String, MutableList<LlmMessage>>()
     private val handledIds = ConcurrentHashMap<String, Boolean>()
+    private val lastReplyAt = ConcurrentHashMap<String, Long>()
+    private val inFlight = ConcurrentHashMap<String, Boolean>()
+    private val dailyCounts = ConcurrentHashMap<String, Int>()
+    @Volatile private var lastReceiveAt = 0L
+    @Volatile private var lastSendAt = 0L
+    @Volatile private var lastFailure: String? = null
     private val scope = CoroutineScope(SupervisorJob() + Executors.newSingleThreadExecutor().asCoroutineDispatcher())
 
     override fun onEnable() {
@@ -149,10 +181,13 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     override fun onDisable() {
         WeDatabaseListenerApi.removeListener(this)
         memories.clear()
+        lastReplyAt.clear()
+        inFlight.clear()
+        dailyCounts.clear()
     }
 
     override fun onClick(context: ComponentActivity) {
-        showConfigDialog(context)
+        context.startActivity(android.content.Intent(context, AiChatSettingsActivity::class.java))
     }
 
     // ---------------- 消息入口 ----------------
@@ -177,9 +212,18 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
 
         val config = snapshot()
         if (!config.allowsTalker(talker)) return
+        val triggeredContent = applyGroupTrigger(talker, content, config) ?: return
+        val now = System.currentTimeMillis()
+        if (config.cooldownMs > 0 && now - (lastReplyAt[talker] ?: 0L) < config.cooldownMs) return
+        if (config.dailyLimit > 0 && (dailyCounts[dailyKey(talker)] ?: 0) >= config.dailyLimit) return
+        if (inFlight.putIfAbsent(talker, true) != null) return
+        lastReceiveAt = now
 
         val version = configVersion.get()
-        scope.launch { processMessage(talker, content, config, version) }
+        scope.launch {
+            try { processMessage(talker, triggeredContent, config, version) }
+            finally { inFlight.remove(talker) }
+        }
     }
 
     private suspend fun processMessage(talker: String, rawContent: String, config: Config, version: Long) {
@@ -194,11 +238,29 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
             val userText = sender?.let { "[WeChat sender: $it]\n$body" } ?: body
 
             val history = memories.getOrPut(talker) { mutableListOf() }
+            val persistentMemories = runCatching {
+                WeKitDatabase.instance.aiChatMemoryDao().forPrompt(
+                    talker = talker,
+                    isGroup = talker.endsWith("@chatroom") || talker.endsWith("@im.chatroom"),
+                )
+            }.getOrElse {
+                WeLogger.w(TAG, "failed to load persistent memories for $talker", it)
+                emptyList()
+            }
             val messages = buildList {
-                if (config.systemPrompt.isNotBlank()) add(LlmMessage(LlmRole.SYSTEM, config.systemPrompt))
+                val memoryPrompt = persistentMemories.asReversed().joinToString("\n") { "- ${it.content}" }
+                val effectiveSystemPrompt = buildString {
+                    append(resolvePersona(talker, config.systemPrompt))
+                    if (memoryPrompt.isNotBlank()) {
+                        if (isNotEmpty()) append("\n\n")
+                        append("Known user facts (use only when relevant):\n")
+                        append(memoryPrompt)
+                    }
+                }
+                if (effectiveSystemPrompt.isNotBlank()) add(LlmMessage(LlmRole.SYSTEM, effectiveSystemPrompt))
                 if (config.contextRounds > 0) {
                     synchronized(history) {
-                        addAll(history.take(config.contextRounds * 2))
+                        addAll(trimContext(history.takeLast(config.contextRounds * 2), config.maxContextChars))
                     }
                 }
                 add(LlmMessage(LlmRole.USER, userText))
@@ -217,6 +279,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                 return
             }
             if (reply.isFailure) {
+                lastFailure = reply.exceptionOrNull()?.message ?: "模型请求失败"
                 WeLogger.e(
                     TAG,
                     "AI completion failed: talker=$talker, model=${WeAgentRepository.firstModelId()}, reason=${reply.exceptionOrNull()?.message}",
@@ -226,6 +289,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
             val text = reply.getOrThrow().trim()
             if (text.isEmpty()) return
             if (!WeMessageApi.sendText(talker, text)) {
+                lastFailure = "微信发送 API 返回失败"
                 WeLogger.e(TAG, "failed to send AI reply to talker=$talker")
                 return
             }
@@ -235,8 +299,47 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                 val keep = MAX_CONTEXT_ROUNDS * 2
                 while (history.size > keep) history.removeAt(0)
             }
+            lastSendAt = System.currentTimeMillis()
+            lastFailure = null
+            lastReplyAt[talker] = lastSendAt
+            dailyCounts.merge(dailyKey(talker), 1, Int::plus)
             WeLogger.i(TAG, "AI replied to talker=$talker")
-        }.onFailure { WeLogger.e(TAG, "AI chat processing failed", it) }
+        }.onFailure {
+            lastFailure = it.message ?: it.javaClass.simpleName
+            WeLogger.e(TAG, "AI chat processing failed", it)
+        }
+    }
+
+    private fun applyGroupTrigger(talker: String, content: String, config: Config): String? {
+        if (!talker.endsWith("@chatroom") && !talker.endsWith("@im.chatroom")) return content
+        val (_, body) = splitGroupSender(talker, content)
+        return when (config.groupTriggerMode) {
+            GROUP_TRIGGER_ALL -> content
+            GROUP_TRIGGER_MENTION -> if (body.contains("@${dev.sun.wechat.features.api.core.WeApi.selfWxId}", true)) content else null
+            GROUP_TRIGGER_KEYWORD -> if (config.groupKeywords.any { body.contains(it, true) }) content else null
+            GROUP_TRIGGER_PREFIX -> if (config.groupPrefix.isNotEmpty() && body.startsWith(config.groupPrefix)) {
+                val stripped = body.removePrefix(config.groupPrefix).trimStart()
+                val sender = splitGroupSender(talker, content).first
+                sender?.let { "$it:\n$stripped" } ?: stripped
+            } else null
+            else -> null
+        }
+    }
+
+    private fun trimContext(messages: List<LlmMessage>, maxChars: Int): List<LlmMessage> {
+        var chars = 0
+        return messages.asReversed().takeWhile {
+            val size = it.content?.length ?: 0
+            if (chars + size > maxChars) false else { chars += size; true }
+        }.asReversed()
+    }
+
+    private fun dailyKey(talker: String): String =
+        java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.ROOT).format(java.util.Date()) + ':' + talker
+
+    fun clearContext(talker: String? = null) {
+        if (talker == null) memories.clear() else memories.remove(talker)
+        configVersion.incrementAndGet()
     }
 
     /** 群聊 content 形如 "昵称:\n正文"，拆出发送者；单聊返回 null。 */
@@ -299,12 +402,39 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
             val roundsInput = remember { mutableStateOf(contextRounds.coerceIn(0, MAX_CONTEXT_ROUNDS)) }
             val delayInput = remember { mutableStateOf(replyDelayMs.coerceIn(0L, MAX_REPLY_DELAY_MS).toInt()) }
             val modeInput = remember { mutableStateOf(listMode) }
+            val groupTriggerInput = remember { mutableStateOf(groupTriggerMode) }
+            val groupKeywordsInput = remember { mutableStateOf(groupKeywords) }
+            val groupPrefixInput = remember { mutableStateOf(groupPrefix) }
+            val cooldownInput = remember { mutableStateOf(cooldownSeconds.coerceIn(0, 3600)) }
+            val dailyLimitInput = remember { mutableStateOf(dailyLimit.coerceIn(0, 10000)) }
+            val contextCharsInput = remember { mutableStateOf(maxContextChars.coerceIn(1000, 100000)) }
             val whitelistInput = remember { mutableStateOf(whitelist) }
             val blacklistInput = remember { mutableStateOf(blacklist) }
             val customPersonasInput = remember { mutableStateOf(loadCustomPersonas()) }
             val showSavePersonaDialog = remember { mutableStateOf(false) }
             val personaNameInput = remember { mutableStateOf("") }
             val localizedContext by rememberUpdatedState(LocalWeKitLocalizedContext.current)
+            val composeContext = LocalContext.current
+            val exportPersonasLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.CreateDocument("application/json"),
+            ) { uri ->
+                if (uri != null) runCatching {
+                    composeContext.contentResolver.openOutputStream(uri, "w")!!.bufferedWriter().use {
+                        it.write(exportPersonas())
+                    }
+                }.onSuccess { showToast("人设已导出") }
+                    .onFailure { showToast("导出失败: ${it.message}") }
+            }
+            val importPersonasLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.OpenDocument(),
+            ) { uri ->
+                if (uri != null) runCatching {
+                    val text = composeContext.contentResolver.openInputStream(uri)!!.bufferedReader().use { it.readText() }
+                    importPersonas(text)
+                    customPersonasInput.value = loadCustomPersonas()
+                }.onSuccess { showToast("人设已导入") }
+                    .onFailure { showToast("导入失败: ${it.message}") }
+            }
 
             fun openPicker() {
                 val useWhitelist = modeInput.value == LIST_WHITELIST
@@ -356,6 +486,20 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                                     }
                                 }
                             },
+                        )
+                        BaseWidget(
+                            iconPlaceholder = false,
+                            title = "导出全部人设",
+                            description = "导出自定义、联系人和群聊专属人设（不包含 API Key）",
+                            onClick = { exportPersonasLauncher.launch("wekit-ai-personas.json") },
+                            trailingContent = { Icon(MaterialSymbols.Outlined.Save, null) },
+                        )
+                        BaseWidget(
+                            iconPlaceholder = false,
+                            title = "导入人设",
+                            description = "导入 WeKit 人设 JSON；同名项目会被文件内容替换",
+                            onClick = { importPersonasLauncher.launch(arrayOf("application/json", "text/plain")) },
+                            trailingContent = { Icon(MaterialSymbols.Outlined.Chevron_right, null) },
                         )
                         FieldRow(
                             label = stringResource(R.string.ai_chat_system_prompt),
@@ -454,6 +598,73 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                         Spacer(Modifier.height(8.dp))
                         DropDownMenuWidget(
                             iconPlaceholder = false,
+                            title = "群聊触发方式",
+                            description = "仅影响群聊；私聊仍按授权名单回复",
+                            value = groupTriggerInput.value,
+                            options = listOf(
+                                DropdownOption(GROUP_TRIGGER_ALL, "全部消息"),
+                                DropdownOption(GROUP_TRIGGER_MENTION, "被 @ 时"),
+                                DropdownOption(GROUP_TRIGGER_KEYWORD, "包含关键词"),
+                                DropdownOption(GROUP_TRIGGER_PREFIX, "指定前缀"),
+                            ),
+                            onValueChange = { groupTriggerInput.value = it },
+                        )
+                        if (groupTriggerInput.value == GROUP_TRIGGER_KEYWORD) FieldRow(
+                            "群聊关键词", groupKeywordsInput.value,
+                            { groupKeywordsInput.value = it }, "使用逗号或换行分隔", false,
+                        )
+                        if (groupTriggerInput.value == GROUP_TRIGGER_PREFIX) FieldRow(
+                            "群聊触发前缀", groupPrefixInput.value,
+                            { groupPrefixInput.value = it }, "例如 /ai，发送给模型前自动移除",
+                        )
+                        IntNumberPickerWidget(
+                            iconPlaceholder = false, title = "单会话冷却时间",
+                            description = "避免连续消息触发刷屏", value = cooldownInput.value,
+                            startInt = 0, endInt = 3600, stepSize = 5, valueSuffix = " 秒",
+                            onValueChange = { cooldownInput.value = it },
+                        )
+                        IntNumberPickerWidget(
+                            iconPlaceholder = false, title = "单会话每日上限",
+                            description = "0 表示不限制", value = dailyLimitInput.value,
+                            startInt = 0, endInt = 10000, stepSize = 10, valueSuffix = " 条",
+                            onValueChange = { dailyLimitInput.value = it },
+                        )
+                        IntNumberPickerWidget(
+                            iconPlaceholder = false, title = "上下文字符上限",
+                            description = "超出时优先保留最近消息", value = contextCharsInput.value,
+                            startInt = 1000, endInt = 100000, stepSize = 1000, valueSuffix = " 字符",
+                            onValueChange = { contextCharsInput.value = it },
+                        )
+                        BaseWidget(
+                            iconPlaceholder = false,
+                            title = "AI 自动回复诊断",
+                            description = buildString {
+                                append("消息 Hook: ")
+                                append(if (WeMessageApi.methodMsgInfoStorageInsertMessage.isAvailable) "可用" else "不可用")
+                                append(" · 模型: ")
+                                append("请在 WeAgent 模型设置中检查")
+                                append("\n收件: ").append(if (lastReceiveAt == 0L) "暂无" else java.util.Date(lastReceiveAt))
+                                append(" · 发送: ").append(if (lastSendAt == 0L) "暂无" else java.util.Date(lastSendAt))
+                                append("\n处理中: ").append(inFlight.size)
+                                lastFailure?.let { append(" · 最近失败: ").append(it) }
+                            },
+                            onClick = {
+                                val target = whitelistInput.value.firstOrNull()
+                                if (target == null) showToast("请先在白名单中选择一个测试联系人")
+                                else if (WeMessageApi.sendText(target, "WeKit AI 发送链路测试")) showToast("测试消息已提交")
+                                else showToast("测试消息发送失败")
+                            },
+                            trailingContent = { Icon(MaterialSymbols.Outlined.Chevron_right, null) },
+                        )
+                        BaseWidget(
+                            iconPlaceholder = false, title = "清除全部 AI 上下文",
+                            description = "立即丢弃当前内存中的所有会话上下文",
+                            onClick = { clearContext(); showToast("AI 上下文已清除") },
+                            trailingContent = { Icon(MaterialSymbols.Outlined.Delete, null) },
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        DropDownMenuWidget(
+                            iconPlaceholder = false,
                             title = stringResource(R.string.ai_chat_list_mode),
                             description = stringResource(
                                 if (modeInput.value == LIST_WHITELIST) R.string.ai_chat_whitelist_description
@@ -496,6 +707,12 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                         contextRounds = roundsInput.value.coerceIn(0, MAX_CONTEXT_ROUNDS)
                         replyDelayMs = delayInput.value.toLong().coerceIn(0L, MAX_REPLY_DELAY_MS)
                         listMode = modeInput.value
+                        groupTriggerMode = groupTriggerInput.value
+                        groupKeywords = groupKeywordsInput.value.trim()
+                        groupPrefix = groupPrefixInput.value.trim()
+                        cooldownSeconds = cooldownInput.value
+                        dailyLimit = dailyLimitInput.value
+                        maxContextChars = contextCharsInput.value
                         whitelist = whitelistInput.value
                         blacklist = blacklistInput.value
 

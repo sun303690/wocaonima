@@ -117,6 +117,8 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     private const val APPLIED_URI_TAG_KEY = 0x55020001
     private var backgroundRevision = 0L
     private const val APPLY_STATUS_BAR_DELAY_MS = 80L
+    private const val AGGREGATION_CONTAINER_UI =
+        "com.tencent.mm.ui.conversation.ConvBoxServiceConversationUI"
 
     private val rowStates = WeakHashMap<View, RowState>()
     private val globalTextColors = WeakHashMap<TextView, Int>()
@@ -196,7 +198,11 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                 parameterCount = 0
             }.hookAfter {
                 val activity = thisObject as Activity
-                applyTransparentStatusBarIfEnabled(activity)
+                // The status bar is already configured in onCreate/onStart. Re-applying it
+                // in every onResume overlaps the aggregation container's list setup.
+                if (activity.javaClass.name != AGGREGATION_CONTAINER_UI) {
+                    applyTransparentStatusBarIfEnabled(activity)
+                }
                 // Normally already loaded from onCreate/onStart. This only restores an
                 // existing overlay after returning from a paused Activity.
                 applyBackground(activity)
@@ -207,7 +213,9 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                 parameters(Boolean::class)
             }.hookAfter {
                 val activity = thisObject as Activity
-                if (!isBackgroundExcluded(activity)) {
+                if (!isBackgroundExcluded(activity) &&
+                    activity.javaClass.name != AGGREGATION_CONTAINER_UI
+                ) {
                     applyTransparentStatusBarIfEnabled(activity)
                 }
             }
@@ -626,8 +634,13 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
             }
 
             clearStatusBarBackground(activity, decor)
-            decor.postDelayed(APPLY_STATUS_BAR_DELAY_MS) {
-                clearStatusBarBackground(activity, decor)
+            // The aggregation container already has a stable system-bar hierarchy.
+            // Its list is initialized in onResume; posting another decor traversal into
+            // that first frame causes the visible hitch when opening a folder.
+            if (activity.javaClass.name != AGGREGATION_CONTAINER_UI) {
+                decor.postDelayed(APPLY_STATUS_BAR_DELAY_MS) {
+                    clearStatusBarBackground(activity, decor)
+                }
             }
         }.onFailure {
             WeLogger.w(TAG, "failed to apply transparent status bar", it)
