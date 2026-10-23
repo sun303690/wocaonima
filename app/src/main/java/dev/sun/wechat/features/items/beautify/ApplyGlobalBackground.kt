@@ -173,6 +173,10 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                 val activity = thisObject as Activity
                 if (!isBackgroundExcluded(activity)) {
                     applyTransparentStatusBarIfEnabled(activity)
+                    // Install and start decoding the overlay before the first resume frame.
+                    // Folder/container pages do substantial synchronous list setup in onResume;
+                    // starting the image there made navigation visibly hitch.
+                    applyBackground(activity)
                 }
             }
 
@@ -183,6 +187,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                 val activity = thisObject as Activity
                 if (!isBackgroundExcluded(activity)) {
                     applyTransparentStatusBarIfEnabled(activity)
+                    applyBackground(activity)
                 }
             }
 
@@ -192,6 +197,8 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
             }.hookAfter {
                 val activity = thisObject as Activity
                 applyTransparentStatusBarIfEnabled(activity)
+                // Normally already loaded from onCreate/onStart. This only restores an
+                // existing overlay after returning from a paused Activity.
                 applyBackground(activity)
             }
 
@@ -685,9 +692,12 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
         if (overlay.getTag(APPLIED_URI_TAG_KEY) != imageKey) {
             overlay.setTag(APPLIED_URI_TAG_KEY, imageKey)
             overlay.load(backgroundImageFile.toFile()) {
-                memoryCachePolicy(CachePolicy.DISABLED)
+                // The source file is versioned by APPLIED_URI_TAG_KEY when replaced, so
+                // Coil's memory cache is safe and prevents decoding the same full-screen
+                // bitmap again for every Activity (notably aggregation folders).
+                memoryCachePolicy(CachePolicy.ENABLED)
                 diskCachePolicy(CachePolicy.DISABLED)
-                crossfade(true)
+                crossfade(false)
             }
         }
     }
