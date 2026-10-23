@@ -1,6 +1,10 @@
 package dev.sun.wechat.features.items.chat
 
 import android.os.Bundle
+import android.widget.Toast
+import androidx.compose.ui.graphics.Color
+import java.text.DateFormat
+import java.util.Date
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -133,7 +137,7 @@ class AiChatSettingsActivity : ComponentActivity() {
                 Edit("会话 ID，留空表示全局", talker) { talker = it }
                 Edit("记忆内容", content) { content = it }
                 ToggleRow("允许群聊使用", "关闭时保存为 private_only", groupOk) { groupOk = it }
-                Button({ if (content.isNotBlank()) lifecycleScope.launch { withContext(Dispatchers.IO) { WeKitDatabase.instance.aiChatMemoryDao().upsert(AiChatMemoryEntity(talker = talker.trim(), content = content.trim(), scope = if (groupOk) "group_ok" else "private_only")) }; content = ""; reload() } }, Modifier.fillMaxWidth()) { Text("新增记忆") }
+                Button({ if (content.isNotBlank()) lifecycleScope.launch { withContext(Dispatchers.IO) { WeKitDatabase.instance.aiChatMemoryDao().insert(AiChatMemoryEntity(talker = talker.trim(), content = content.trim(), scope = if (groupOk) "group_ok" else "private_only")) }; content = ""; reload() } }, Modifier.fillMaxWidth()) { Text("新增记忆") }
             }
             memories.forEach { m -> Block(m.talker.ifBlank { "全局记忆" }, m.scope) {
                 Text(m.content)

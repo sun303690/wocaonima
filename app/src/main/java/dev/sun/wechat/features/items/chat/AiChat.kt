@@ -407,7 +407,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
 
     // ---------------- 配置界面（对齐 Nuke 的「AI 聊天设置」） ----------------
 
-    private fun showConfigDialog(context: ComponentActivity) {
+    internal fun showConfigDialog(context: ComponentActivity) {
         dev.sun.wechat.ui.utils.showComposeDialog(context, directlyDismissable = false) {
             val promptInput = remember { mutableStateOf(systemPrompt) }
             val personaKeyInput = remember { mutableStateOf(personaKeyOf(systemPrompt)) }
