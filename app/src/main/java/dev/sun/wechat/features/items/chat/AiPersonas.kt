@@ -11,6 +11,15 @@ import dev.sun.wechat.data.KvStore
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.intOrNull
 
 internal data class AiPersona(val key: String, val name: String, val prompt: String)
 
@@ -90,90 +99,91 @@ internal const val CUSTOM_PERSONA_PREFIX = "custom:"
 private const val CUSTOM_PERSONAS_PREF = "ai_chat_custom_personas"
 
 @Serializable
-internal data class CustomPersona(val name: String, val prompt: String)
+internal data class CustomPersona(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val name: String,
+    val prompt: String,
+    val scene: String = "",
+    val boundaries: String = "",
+    val shareMemory: Boolean = false,
+)
 
 @Serializable
 internal data class ScopedPersona(
     val talker: String,
-    val prompt: String,
+    val personaId: String = "",
+    val prompt: String = "",
     val isGroup: Boolean,
 )
 
 @Serializable
 internal data class PersonaExport(
-    val version: Int = 1,
+    val version: Int = 2,
     val custom: List<CustomPersona> = emptyList(),
     val scoped: List<ScopedPersona> = emptyList(),
 )
 
 private const val SCOPED_PERSONAS_PREF = "ai_chat_scoped_personas"
-
-private val personaJson = Json {
-    ignoreUnknownKeys = true
-    encodeDefaults = true
-}
-
+private const val MAX_CUSTOM_PERSONAS = 8
+private val personaJson = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 private val customPersonaSerializer = ListSerializer(CustomPersona.serializer())
 private val scopedPersonaSerializer = ListSerializer(ScopedPersona.serializer())
 
-/** 已保存的自定义人设（按名字去重，保持存入顺序）。 */
-internal fun loadCustomPersonas(): List<CustomPersona> =
-    runCatching {
-        personaJson.decodeFromString(
-            customPersonaSerializer,
-            KvStore.getStringOrDef(CUSTOM_PERSONAS_PREF, "[]"),
-        )
-    }.getOrDefault(emptyList())
+internal fun loadCustomPersonas(): List<CustomPersona> = runCatching {
+    personaJson.decodeFromString(customPersonaSerializer, KvStore.getStringOrDef(CUSTOM_PERSONAS_PREF, "[]"))
+}.getOrDefault(emptyList())
 
-internal fun saveCustomPersona(name: String, prompt: String) {
-    val trimmed = name.trim()
-    if (trimmed.isEmpty()) return
-    val merged = loadCustomPersonas().filterNot { it.name == trimmed } + CustomPersona(trimmed, prompt)
+internal fun saveCustomPersona(value: CustomPersona) {
+    val normalized = value.copy(name = value.name.trim().ifEmpty { "未命名人设" }, prompt = value.prompt.trim())
+    val existing = loadCustomPersonas()
+    require(existing.any { it.id == normalized.id } || existing.size < MAX_CUSTOM_PERSONAS) { "最多只能创建 8 个人设" }
+    val merged = existing.filterNot { it.id == normalized.id } + normalized
     KvStore.putString(CUSTOM_PERSONAS_PREF, personaJson.encodeToString(customPersonaSerializer, merged))
 }
 
-internal fun deleteCustomPersona(name: String) {
-    val remaining = loadCustomPersonas().filterNot { it.name == name.trim() }
-    KvStore.putString(CUSTOM_PERSONAS_PREF, personaJson.encodeToString(customPersonaSerializer, remaining))
+internal fun saveCustomPersona(name: String, prompt: String) = saveCustomPersona(CustomPersona(name = name, prompt = prompt))
+internal fun deleteCustomPersona(name: String) = saveCustomPersonas(loadCustomPersonas().filterNot { it.name == name.trim() })
+internal fun deleteCustomPersonaById(id: String) {
+    saveCustomPersonas(loadCustomPersonas().filterNot { it.id == id })
+    val remaining = loadScopedPersonas().filterNot { it.personaId == id }
+    KvStore.putString(SCOPED_PERSONAS_PREF, personaJson.encodeToString(scopedPersonaSerializer, remaining))
 }
+private fun saveCustomPersonas(values: List<CustomPersona>) =
+    KvStore.putString(CUSTOM_PERSONAS_PREF, personaJson.encodeToString(customPersonaSerializer, values))
 
-/**
- * 根据系统提示词反查当前命中的模板 key；不匹配任何模板时返回 [PERSONA_CUSTOM]。
- * 自定义条目的 key 形如 `custom:我的分身`，便于在下拉里高亮。
- */
 internal fun loadScopedPersonas(): List<ScopedPersona> = runCatching {
-    personaJson.decodeFromString(
-        scopedPersonaSerializer,
-        KvStore.getStringOrDef(SCOPED_PERSONAS_PREF, "[]"),
-    )
+    personaJson.decodeFromString(scopedPersonaSerializer, KvStore.getStringOrDef(SCOPED_PERSONAS_PREF, "[]"))
 }.getOrDefault(emptyList())
-
-internal fun saveScopedPersona(talker: String, prompt: String, isGroup: Boolean) {
-    val id = talker.trim()
-    if (id.isEmpty()) return
-    val merged = loadScopedPersonas().filterNot { it.talker == id } + ScopedPersona(id, prompt.trim(), isGroup)
+internal fun bindScopedPersona(talker: String, personaId: String, isGroup: Boolean) {
+    val id = talker.trim(); if (id.isEmpty()) return
+    val merged = loadScopedPersonas().filterNot { it.talker == id } + ScopedPersona(id, personaId, isGroup = isGroup)
     KvStore.putString(SCOPED_PERSONAS_PREF, personaJson.encodeToString(scopedPersonaSerializer, merged))
 }
-
+internal fun saveScopedPersona(talker: String, prompt: String, isGroup: Boolean) {
+    val id = talker.trim(); if (id.isEmpty()) return
+    val merged = loadScopedPersonas().filterNot { it.talker == id } + ScopedPersona(id, prompt = prompt.trim(), isGroup = isGroup)
+    KvStore.putString(SCOPED_PERSONAS_PREF, personaJson.encodeToString(scopedPersonaSerializer, merged))
+}
 internal fun deleteScopedPersona(talker: String) {
     val remaining = loadScopedPersonas().filterNot { it.talker == talker.trim() }
     KvStore.putString(SCOPED_PERSONAS_PREF, personaJson.encodeToString(scopedPersonaSerializer, remaining))
 }
-
-/** Contact/group persona overrides the global persona. */
-internal fun resolvePersona(talker: String, globalPrompt: String): String =
-    loadScopedPersonas().lastOrNull { it.talker == talker }?.prompt?.takeIf { it.isNotBlank() }
-        ?: globalPrompt
-
-internal fun exportPersonas(): String = personaJson.encodeToString(
-    PersonaExport.serializer(),
-    PersonaExport(custom = loadCustomPersonas(), scoped = loadScopedPersonas()),
-)
-
+internal fun personaForTalker(talker: String): CustomPersona? =
+    loadScopedPersonas().lastOrNull { it.talker == talker }?.personaId?.takeIf { it.isNotBlank() }?.let { id -> loadCustomPersonas().firstOrNull { it.id == id } }
+internal fun resolvePersona(talker: String, globalPrompt: String): String {
+    val scoped = loadScopedPersonas().lastOrNull { it.talker == talker }
+    val persona = scoped?.personaId?.let { id -> loadCustomPersonas().firstOrNull { it.id == id } }
+    return persona?.let { listOf(it.prompt, it.scene.takeIf(String::isNotBlank)?.let { s -> "Scene: $s" }, it.boundaries.takeIf(String::isNotBlank)?.let { b -> "Boundaries: $b" }).filterNotNull().joinToString("\n\n") }
+        ?: scoped?.prompt?.takeIf { it.isNotBlank() } ?: globalPrompt
+}
+internal fun exportPersonas(): String = personaJson.encodeToString(PersonaExport.serializer(), PersonaExport(custom = loadCustomPersonas(), scoped = loadScopedPersonas()))
 internal fun importPersonas(payload: String) {
+    val root = personaJson.parseToJsonElement(payload).jsonObject
+    val version = root["version"]?.jsonPrimitive?.intOrNull ?: 1
+    require(version in 1..2) { "Unsupported persona export version: $version" }
     val data = personaJson.decodeFromString(PersonaExport.serializer(), payload)
-    require(data.version == 1) { "Unsupported persona export version: ${data.version}" }
-    KvStore.putString(CUSTOM_PERSONAS_PREF, personaJson.encodeToString(customPersonaSerializer, data.custom))
+    require(data.custom.size <= MAX_CUSTOM_PERSONAS) { "导入文件包含超过 8 个人设" }
+    saveCustomPersonas(data.custom)
     KvStore.putString(SCOPED_PERSONAS_PREF, personaJson.encodeToString(scopedPersonaSerializer, data.scoped))
 }
 

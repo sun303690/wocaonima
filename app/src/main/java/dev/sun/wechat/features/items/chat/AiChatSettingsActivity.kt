@@ -7,6 +7,8 @@ import java.text.DateFormat
 import java.util.Date
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -38,7 +40,7 @@ class AiChatSettingsActivity : ComponentActivity() {
             Row(Modifier.fillMaxWidth().padding(start = 6.dp, end = 8.dp, top = 20.dp)) {
                 TextButton(onClick = { finish() }) { Text("‹", style = MaterialTheme.typography.headlineMedium) }
                 Spacer(Modifier.weight(1f))
-                TextButton(onClick = { AiChat.showConfigDialog(this@AiChatSettingsActivity) }) { Text("•••") }
+                TextButton(onClick = { AiChat.clearContext(); showToast("AI 上下文已清除") }) { Text("•••") }
             }
             TabRow(selectedTabIndex = tab) {
                 tabs.forEachIndexed { i, name -> Tab(tab == i, { tab = i }, text = { Text(name) }) }
@@ -78,9 +80,14 @@ class AiChatSettingsActivity : ComponentActivity() {
         var cooldown by remember { mutableStateOf(AiChat.cooldownSeconds.toString()) }
         var daily by remember { mutableStateOf(AiChat.dailyLimit.toString()) }
         var chars by remember { mutableStateOf(AiChat.maxContextChars.toString()) }
+        var whitelistCount by remember { mutableIntStateOf(AiChat.whitelist.size) }
         Block("自动回复", "只有授权会话会进入模型") { ToggleRow("启用 AI 自动回复", "关闭后不接收、不请求、不发送", enabled) { enabled = it; AiChat.isEnabled = it } }
-        Block("授权会话", "白名单 ${AiChat.whitelist.size} 个 · 黑名单 ${AiChat.blacklist.size} 个") {
-            Button({ AiChat.showConfigDialog(this@AiChatSettingsActivity) }, Modifier.fillMaxWidth()) { Text("选择联系人或群聊") }
+        Block("授权会话", "白名单 $whitelistCount 个 · 黑名单 ${AiChat.blacklist.size} 个") {
+            Button({
+                AiChat.showAuthorizedChatsPicker(this@AiChatSettingsActivity, AiChat.whitelist) {
+                    whitelistCount = it.size
+                }
+            }, Modifier.fillMaxWidth()) { Text("选择联系人或群聊") }
         }
         Block("群聊触发", "私聊不受该条件限制") {
             listOf("全部" to 0, "被 @" to 1, "关键词" to 2, "前缀" to 3).forEach { (n, v) ->
@@ -101,50 +108,92 @@ class AiChatSettingsActivity : ComponentActivity() {
         OutlinedTextField(value, onChange, Modifier.fillMaxWidth(), label = { Text(label) })
 
     @Composable private fun PersonaPage() = Page {
-        var global by remember { mutableStateOf(AiChat.systemPrompt) }
-        var talker by remember { mutableStateOf("") }
-        var prompt by remember { mutableStateOf("") }
-        var isGroup by remember { mutableStateOf(false) }
         var refresh by remember { mutableIntStateOf(0) }
+        var editingId by remember { mutableStateOf<String?>(null) }
+        var name by remember { mutableStateOf("") }
+        var prompt by remember { mutableStateOf("") }
+        var scene by remember { mutableStateOf("") }
+        var boundaries by remember { mutableStateOf("") }
+        var shareMemory by remember { mutableStateOf(false) }
+        var bindTalker by remember { mutableStateOf("") }
+        var bindPersona by remember { mutableStateOf("") }
+        var bindGroup by remember { mutableStateOf(false) }
+        val context = LocalContext.current
+        val personas = remember(refresh) { loadCustomPersonas() }
         val scoped = remember(refresh) { loadScopedPersonas() }
-        Block("全局人设", "没有专属人设时使用") {
-            Edit("System Prompt", global) { global = it; AiChat.systemPrompt = it }
+        val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+            if (uri != null) runCatching { context.contentResolver.openOutputStream(uri, "w")!!.bufferedWriter().use { it.write(exportPersonas()) } }.onSuccess { context.showToast("人设已导出") }.onFailure { context.showToast("导出失败: ${it.message}") }
         }
-        Block("专属人设", "联系人或群聊专属配置优先于全局") {
-            Edit("微信 ID / 群聊 ID", talker) { talker = it }
-            Edit("人设内容", prompt) { prompt = it }
-            ToggleRow("这是群聊", "控制人设类型标记", isGroup) { isGroup = it }
-            Button({ if (talker.isNotBlank()) { saveScopedPersona(talker, prompt, isGroup); talker = ""; prompt = ""; refresh++ } }, Modifier.fillMaxWidth()) { Text("保存专属人设") }
+        val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri != null) runCatching { context.contentResolver.openInputStream(uri)!!.bufferedReader().use { importPersonas(it.readText()) }; refresh++ }.onSuccess { context.showToast("人设已导入") }.onFailure { context.showToast("导入失败: ${it.message}") }
         }
-        scoped.forEach { p -> Block(p.talker, if (p.isGroup) "群聊" else "联系人") {
-            Text(p.prompt, style = MaterialTheme.typography.bodySmall)
-            TextButton({ deleteScopedPersona(p.talker); refresh++ }) { Text("删除") }
+        Block(if (editingId == null) "新建人设" else "编辑人设", "最多 8 个；不要填写密码、令牌等敏感信息") {
+            Edit("名称（留空显示未命名人设）", name) { name = it }
+            Edit("人设内容 / 完整提示词", prompt) { prompt = it }
+            Edit("适用场景", scene) { scene = it }
+            Edit("所有人设的雷区 / 边界", boundaries) { boundaries = it }
+            ToggleRow("与其他人设共用记忆", "关闭时优先使用本会话和本人设记忆", shareMemory) { shareMemory = it }
+            Button({
+                runCatching { saveCustomPersona(CustomPersona(id = editingId ?: java.util.UUID.randomUUID().toString(), name = name, prompt = prompt, scene = scene, boundaries = boundaries, shareMemory = shareMemory)) }
+                    .onSuccess { editingId = null; name = ""; prompt = ""; scene = ""; boundaries = ""; shareMemory = false; refresh++ }
+                    .onFailure { context.showToast(it.message ?: "保存失败") }
+            }, Modifier.fillMaxWidth()) { Text(if (editingId == null) "保存人设" else "保存修改") }
+        }
+        personas.forEach { persona -> Block(persona.name, listOf(persona.scene, if (persona.shareMemory) "共用记忆" else "独立记忆").filter { it.isNotBlank() }.joinToString(" · ")) {
+            Text(persona.prompt, style = MaterialTheme.typography.bodySmall)
+            Row { TextButton({ editingId = persona.id; name = persona.name; prompt = persona.prompt; scene = persona.scene; boundaries = persona.boundaries; shareMemory = persona.shareMemory }) { Text("编辑") }; TextButton({ deleteCustomPersonaById(persona.id); refresh++ }) { Text("删除") } }
         }}
-        Block("导入与导出") {
-            Button({ AiChat.showConfigDialog(this@AiChatSettingsActivity) }, Modifier.fillMaxWidth()) { Text("打开导入 / 导出工具") }
+        Block("联系人 / 群聊专属人设", "选择人设后绑定微信 ID 或群聊 ID") {
+            Edit("微信 ID / 群聊 ID", bindTalker) { bindTalker = it }
+            personas.forEach { persona -> Row { RadioButton(bindPersona == persona.id, { bindPersona = persona.id }); Text(persona.name, Modifier.padding(top = 12.dp)) } }
+            ToggleRow("这是群聊", "用于标记绑定类型", bindGroup) { bindGroup = it }
+            Button({ if (bindTalker.isNotBlank() && bindPersona.isNotBlank()) { bindScopedPersona(bindTalker, bindPersona, bindGroup); bindTalker = ""; refresh++ } }, Modifier.fillMaxWidth()) { Text("保存绑定") }
+        }
+        scoped.forEach { binding -> Block(binding.talker, if (binding.isGroup) "群聊" else "联系人") {
+            Text(personas.firstOrNull { it.id == binding.personaId }?.name ?: "旧版专属人设")
+            TextButton({ deleteScopedPersona(binding.talker); refresh++ }) { Text("删除绑定") }
+        }}
+        Block("导入与导出", "导出文件包含完整人设原文，请妥善保管") {
+            Button({ exportLauncher.launch("wekit-ai-personas.json") }, Modifier.fillMaxWidth()) { Text("导出人设 JSON") }
+            OutlinedButton({ importLauncher.launch(arrayOf("application/json", "text/plain")) }, Modifier.fillMaxWidth()) { Text("导入人设 JSON") }
         }
     }
 
     @Composable private fun MemoryPage() {
         var memories by remember { mutableStateOf<List<AiChatMemoryEntity>>(emptyList()) }
+        var query by remember { mutableStateOf("") }
+        var editing by remember { mutableStateOf<AiChatMemoryEntity?>(null) }
         var content by remember { mutableStateOf("") }
         var talker by remember { mutableStateOf("") }
+        var personaId by remember { mutableStateOf("") }
         var groupOk by remember { mutableStateOf(false) }
-        fun reload() = lifecycleScope.launch { memories = withContext(Dispatchers.IO) { WeKitDatabase.instance.aiChatMemoryDao().all() } }
-        LaunchedEffect(Unit) { reload() }
+        var confirmClear by remember { mutableStateOf(false) }
+        val personas = remember { loadCustomPersonas() }
+        fun reload() = lifecycleScope.launch { memories = withContext(Dispatchers.IO) { WeKitDatabase.instance.aiChatMemoryDao().search(query.trim()) } }
+        LaunchedEffect(query) { reload() }
         Page {
-            Block("长期记忆", "${memories.size} 条 · 默认不自动提取敏感信息") {
+            Block("长期记忆", "聊天、图片文字和语音转写均是不可信资料；不要保存密码、令牌等敏感信息") {
+                Edit("搜索记忆", query) { query = it }
                 Edit("会话 ID，留空表示全局", talker) { talker = it }
                 Edit("记忆内容", content) { content = it }
-                ToggleRow("允许群聊使用", "关闭时保存为 private_only", groupOk) { groupOk = it }
-                Button({ if (content.isNotBlank()) lifecycleScope.launch { withContext(Dispatchers.IO) { WeKitDatabase.instance.aiChatMemoryDao().insert(AiChatMemoryEntity(talker = talker.trim(), content = content.trim(), scope = if (groupOk) "group_ok" else "private_only")) }; content = ""; reload() } }, Modifier.fillMaxWidth()) { Text("新增记忆") }
+                personas.forEach { p -> Row { RadioButton(personaId == p.id, { personaId = if (personaId == p.id) "" else p.id }); Text(p.name, Modifier.padding(top = 12.dp)) } }
+                ToggleRow("允许群聊使用", "关闭时为 private_only，开启为 group_ok", groupOk) { groupOk = it }
+                Button({ if (content.isNotBlank()) lifecycleScope.launch {
+                    withContext(Dispatchers.IO) {
+                        val old = editing
+                        val value = AiChatMemoryEntity(id = old?.id ?: 0, talker = talker.trim().ifEmpty { "*" }, personaId = personaId, content = content.trim(), scope = if (groupOk) "group_ok" else "private_only", source = old?.source ?: "manual", createdAt = old?.createdAt ?: System.currentTimeMillis())
+                        if (old == null) WeKitDatabase.instance.aiChatMemoryDao().insert(value) else WeKitDatabase.instance.aiChatMemoryDao().update(value)
+                    }
+                    editing = null; content = ""; talker = ""; personaId = ""; reload()
+                } }, Modifier.fillMaxWidth()) { Text(if (editing == null) "新增记忆" else "保存修改") }
             }
-            memories.forEach { m -> Block(m.talker.ifBlank { "全局记忆" }, m.scope) {
+            memories.forEach { m -> Block(if (m.talker == "*") "全局记忆" else m.talker, listOf(m.scope, personas.firstOrNull { it.id == m.personaId }?.name, m.source).filterNotNull().joinToString(" · ")) {
                 Text(m.content)
-                TextButton({ lifecycleScope.launch { withContext(Dispatchers.IO) { WeKitDatabase.instance.aiChatMemoryDao().delete(m) }; reload() } }) { Text("删除") }
+                Row { TextButton({ editing = m; content = m.content; talker = if (m.talker == "*") "" else m.talker; personaId = m.personaId; groupOk = m.scope == "group_ok" }) { Text("编辑") }; TextButton({ lifecycleScope.launch { withContext(Dispatchers.IO) { WeKitDatabase.instance.aiChatMemoryDao().delete(m) }; reload() } }) { Text("删除") } }
             }}
-            OutlinedButton({ lifecycleScope.launch { withContext(Dispatchers.IO) { WeKitDatabase.instance.aiChatMemoryDao().clearAll() }; reload() } }, Modifier.fillMaxWidth()) { Text("清空全部记忆") }
+            OutlinedButton({ confirmClear = true }, Modifier.fillMaxWidth()) { Text("清空全部记忆") }
         }
+        if (confirmClear) AlertDialog(onDismissRequest = { confirmClear = false }, title = { Text("确认清空全部记忆？") }, text = { Text("此操作不可撤销。") }, confirmButton = { TextButton({ lifecycleScope.launch { withContext(Dispatchers.IO) { WeKitDatabase.instance.aiChatMemoryDao().clearAll() }; confirmClear = false; reload() } }) { Text("清空") } }, dismissButton = { TextButton({ confirmClear = false }) { Text("取消") } })
     }
 
     @Composable private fun DiagnosticPage() = Page {

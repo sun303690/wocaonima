@@ -130,7 +130,7 @@ import java.io.File
         MomentAutomationContentTypeEntity::class,
         AiChatMemoryEntity::class,
     ],
-    version = 23,
+    version = 24,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 9, to = 10), // adds external_services table
@@ -530,6 +530,14 @@ abstract class WeKitDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_23_24 = object : Migration(23, 24) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `ai_chat_memories` ADD COLUMN `personaId` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE `ai_chat_memories` ADD COLUMN `source` TEXT NOT NULL DEFAULT 'manual'")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_chat_memories_personaId` ON `ai_chat_memories` (`personaId`)")
+            }
+        }
+
         private fun buildAt(
             dbFile: File,
             journalMode: JournalMode,
@@ -539,7 +547,7 @@ abstract class WeKitDatabase : RoomDatabase() {
             dbFile.toString()
         )
             .setJournalMode(journalMode)
-            .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23)
+            .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24)
             // Destructive fallback is scoped to the pre-release schemas (1–8) only, which no
             // migration path was ever written for. From 9 onwards every step must have a
             // migration: a missing one then fails loudly at open time instead of silently

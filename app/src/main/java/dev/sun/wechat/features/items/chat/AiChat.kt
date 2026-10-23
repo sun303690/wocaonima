@@ -68,6 +68,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import androidx.lifecycle.lifecycleScope
+import dev.sun.wechat.ui.utils.showComposeDialog
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -116,6 +119,9 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     internal var cooldownSeconds by KvStore.prefOption("ai_chat_cooldown_seconds", 15)
     internal var dailyLimit by KvStore.prefOption("ai_chat_daily_limit", 100)
     internal var maxContextChars by KvStore.prefOption("ai_chat_max_context_chars", 12000)
+    internal var monitorAuthorizedChats by KvStore.prefOption("ai_chat_monitor_authorized_chats", true)
+    internal var monitorOnly by KvStore.prefOption("ai_chat_monitor_only", false)
+    internal var historyBackfillCount by KvStore.prefOption("ai_chat_history_backfill_count", 30)
 
     internal var whitelist: Set<String>
         get() = KvStore.getStringSetOrDef("ai_chat_whitelist", emptySet())
@@ -140,6 +146,9 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         val cooldownMs: Long,
         val dailyLimit: Int,
         val maxContextChars: Int,
+        val monitorAuthorizedChats: Boolean,
+        val monitorOnly: Boolean,
+        val historyBackfillCount: Int,
     )
 
     private fun snapshot(): Config = Config(
@@ -156,6 +165,9 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         cooldownMs = cooldownSeconds.coerceIn(0, 3600) * 1000L,
         dailyLimit = dailyLimit.coerceIn(0, 10000),
         maxContextChars = maxContextChars.coerceIn(1000, 100000),
+        monitorAuthorizedChats = monitorAuthorizedChats,
+        monitorOnly = monitorOnly,
+        historyBackfillCount = historyBackfillCount.coerceIn(0, 200),
     )
 
     /** 白名单：命中才回；黑名单：命中就跳过（空名单=全部处理）。 */
@@ -226,6 +238,9 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
 
         val config = snapshot()
         if (!config.allowsTalker(talker)) return
+        val isGroup = isGroupTalker(talker)
+        if (config.monitorAuthorizedChats && isGroup) appendObservedMessage(talker, content, isSend = false)
+        if (config.monitorOnly && isGroup) return
         val triggeredContent = applyGroupTrigger(talker, content, config) ?: return
         val now = System.currentTimeMillis()
         if (config.cooldownMs > 0 && now - (lastReplyAt[talker] ?: 0L) < config.cooldownMs) return
@@ -252,11 +267,14 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
             val userText = sender?.let { "[WeChat sender: $it]\n$body" } ?: body
 
             val history = memories.getOrPut(talker) { mutableListOf() }
+            backfillHistoryIfNeeded(talker, history, config)
             val persistentMemories = runCatching {
+                val activePersona = personaForTalker(talker)
                 WeKitDatabase.instance.aiChatMemoryDao().forPrompt(
                     talker = talker,
+                    personaId = activePersona?.id.orEmpty(),
                     isGroup = talker.endsWith("@chatroom") || talker.endsWith("@im.chatroom"),
-                )
+                ).filter { activePersona == null || activePersona.shareMemory || it.talker == talker }
             }.getOrElse {
                 WeLogger.w(TAG, "failed to load persistent memories for $talker", it)
                 emptyList()
@@ -324,6 +342,48 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         }
     }
 
+    private fun isGroupTalker(talker: String): Boolean =
+        talker.endsWith("@chatroom") || talker.endsWith("@im.chatroom")
+
+    private fun appendObservedMessage(talker: String, content: String, isSend: Boolean) {
+        if (content.isBlank()) return
+        val (sender, body) = splitGroupSender(talker, content)
+        val text = when {
+            isSend -> "[WeChat sender: self]\n$body"
+            sender != null -> "[WeChat sender: $sender]\n$body"
+            else -> body
+        }
+        val history = memories.getOrPut(talker) { mutableListOf() }
+        synchronized(history) {
+            history += LlmMessage(if (isSend) LlmRole.ASSISTANT else LlmRole.USER, text)
+            while (history.size > MAX_CONTEXT_ROUNDS * 4) history.removeAt(0)
+        }
+    }
+
+    private fun backfillHistoryIfNeeded(talker: String, history: MutableList<LlmMessage>, config: Config) {
+        if (config.historyBackfillCount <= 0 || !WeDatabaseApi.isReady) return
+        synchronized(history) { if (history.isNotEmpty()) return }
+        val rows = runCatching { WeDatabaseApi.getMessages(talker, 1, config.historyBackfillCount) }
+            .getOrElse { WeLogger.w(TAG, "failed to backfill context for $talker", it); emptyList() }
+            .asReversed()
+            .filter { MessageType.fromCode(it.typeCode)?.isText == true && it.content.isNotBlank() }
+        synchronized(history) {
+            if (history.isNotEmpty()) return
+            rows.forEach { message ->
+                val (sender, body) = splitGroupSender(talker, message.content)
+                val text = when {
+                    message.isSend != 0 -> "[WeChat sender: self]\n$body"
+                    sender != null -> "[WeChat sender: $sender]\n$body"
+                    else -> body
+                }
+                history += LlmMessage(if (message.isSend != 0) LlmRole.ASSISTANT else LlmRole.USER, text)
+            }
+        }
+    }
+
+    internal fun contextPreview(talker: String): List<LlmMessage> =
+        memories[talker]?.let { synchronized(it) { it.toList() } }.orEmpty()
+
     private fun applyGroupTrigger(talker: String, content: String, config: Config): String? {
         if (!talker.endsWith("@chatroom") && !talker.endsWith("@im.chatroom")) return content
         val (_, body) = splitGroupSender(talker, content)
@@ -358,7 +418,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
 
     /** 群聊 content 形如 "昵称:\n正文"，拆出发送者；单聊返回 null。 */
     private fun splitGroupSender(talker: String, content: String): Pair<String?, String> {
-        if (!talker.endsWith("@chatroom")) return null to content
+        if (!isGroupTalker(talker)) return null to content
         val index = content.indexOf(":\n")
         if (index !in 1..64) return null to content
         return content.substring(0, index) to content.substring(index + 2)
@@ -407,6 +467,33 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
 
     // ---------------- 配置界面（对齐 Nuke 的「AI 聊天设置」） ----------------
 
+    internal fun showAuthorizedChatsPicker(
+        context: ComponentActivity,
+        initial: Set<String> = whitelist,
+        onSaved: (Set<String>) -> Unit = {},
+    ) {
+        context.lifecycleScope.launch(Dispatchers.IO) {
+            val contacts = WeDatabaseApi.getAllContacts(false)
+            withContext(Dispatchers.Main) {
+                lateinit var dialog: android.app.Dialog
+                dialog = context.showComposeDialog {
+                    ContactsSelector(
+                        title = "选择授权会话",
+                        contacts = contacts,
+                        initialSelectedWxIds = initial,
+                        onDismiss = { dialog.dismiss() },
+                        onConfirm = { selected ->
+                            whitelist = selected
+                            configVersion.incrementAndGet()
+                            onSaved(selected)
+                            dialog.dismiss()
+                        },
+                    )
+                }
+            }
+        }
+    }
+
     internal fun showConfigDialog(context: ComponentActivity) {
         dev.sun.wechat.ui.utils.showComposeDialog(context, directlyDismissable = false) {
             val promptInput = remember { mutableStateOf(systemPrompt) }
@@ -422,6 +509,9 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
             val cooldownInput = remember { mutableStateOf(cooldownSeconds.coerceIn(0, 3600)) }
             val dailyLimitInput = remember { mutableStateOf(dailyLimit.coerceIn(0, 10000)) }
             val contextCharsInput = remember { mutableStateOf(maxContextChars.coerceIn(1000, 100000)) }
+            val monitorInput = remember { mutableStateOf(monitorAuthorizedChats) }
+            val monitorOnlyInput = remember { mutableStateOf(monitorOnly) }
+            val backfillInput = remember { mutableStateOf(historyBackfillCount.coerceIn(0, 200)) }
             val whitelistInput = remember { mutableStateOf(whitelist) }
             val blacklistInput = remember { mutableStateOf(blacklist) }
             val customPersonasInput = remember { mutableStateOf(loadCustomPersonas()) }
@@ -649,6 +739,26 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                             startInt = 1000, endInt = 100000, stepSize = 1000, valueSuffix = " 字符",
                             onValueChange = { contextCharsInput.value = it },
                         )
+                        IntNumberPickerWidget(
+                            iconPlaceholder = false, title = "历史消息回读条数",
+                            description = "触发时从微信数据库恢复最近的现场上下文；0 表示关闭", value = backfillInput.value,
+                            startInt = 0, endInt = 200, stepSize = 10, valueSuffix = " 条",
+                            onValueChange = { backfillInput.value = it },
+                        )
+                        DropDownMenuWidget(
+                            iconPlaceholder = false, title = "授权群聊上下文监控",
+                            description = "监听授权群聊消息并持续加入现场上下文",
+                            value = if (monitorInput.value) 1 else 0,
+                            options = listOf(DropdownOption(1, "开启"), DropdownOption(0, "关闭")),
+                            onValueChange = { monitorInput.value = it == 1 },
+                        )
+                        DropDownMenuWidget(
+                            iconPlaceholder = false, title = "群聊仅监控不回复",
+                            description = "开启后只收集授权群聊上下文，不触发模型回复",
+                            value = if (monitorOnlyInput.value) 1 else 0,
+                            options = listOf(DropdownOption(1, "开启"), DropdownOption(0, "关闭")),
+                            onValueChange = { monitorOnlyInput.value = it == 1 },
+                        )
                         BaseWidget(
                             iconPlaceholder = false,
                             title = "AI 自动回复诊断",
@@ -727,6 +837,9 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                         cooldownSeconds = cooldownInput.value
                         dailyLimit = dailyLimitInput.value
                         maxContextChars = contextCharsInput.value
+                        monitorAuthorizedChats = monitorInput.value
+                        monitorOnly = monitorOnlyInput.value
+                        historyBackfillCount = backfillInput.value.coerceIn(0, 200)
                         whitelist = whitelistInput.value
                         blacklist = blacklistInput.value
 
