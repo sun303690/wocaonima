@@ -132,6 +132,10 @@ object WeContactApi : ApiFeature(), IResolveDex {
                 pending.deferred.complete(classifyRelationshipProbe(errType, errCode, errMsg))
             }
 
+        if (!WeMessageApi.methodMsgInfoStorageInsertMessage.isAvailable) {
+            WeLogger.w(TAG, "message insert hook unavailable; relationship probe suppression disabled")
+            return
+        }
         WeMessageApi.methodMsgInfoStorageInsertMessage.hookBefore {
             val message = MessageInfo(args[0]!!)
             val suppressionUntil = probeMessageSuppressionUntil[message.talker] ?: return@hookBefore

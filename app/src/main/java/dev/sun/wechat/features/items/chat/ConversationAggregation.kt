@@ -886,6 +886,7 @@ object ConversationAggregation : ClickableFeature(),
     // WeChat's folder container fires against our folder id, so exiting a folder without opening any
     // member never clears the aggregate row's unread badge.
     private fun hookConversationStorageUpdateUnread() {
+        if (!WeConversationApi.methodUpdateUnreadByTalker.isAvailable) return
         WeConversationApi.methodUpdateUnreadByTalker.hookBefore {
             val username = args.firstOrNull() as? String ?: return@hookBefore
             if (isFolderId(username)) result = true

@@ -55,7 +55,7 @@ object HideRecentForward : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.I
     }
 
     override fun resolveDex(dexKit: DexKitBridge) {
-        if (methodTransmitListInstaller.isPlaceholder && methodTransmitListInstallerAlt.isPlaceholder) {
+        if (!methodTransmitListInstaller.isAvailable && !methodTransmitListInstallerAlt.isAvailable) {
             dumpSurfaceCandidates(dexKit, "com.tencent.mm.ui.transmit", "RecentForwardList")
         }
     }
@@ -63,7 +63,7 @@ object HideRecentForward : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.I
     override fun onEnable() {
         WeDatabaseListenerApi.addListener(this)
         hookSecretStringArgListFilter(
-            if (!methodTransmitListInstaller.isPlaceholder) methodTransmitListInstaller
+            if (methodTransmitListInstaller.isAvailable) methodTransmitListInstaller
             else methodTransmitListInstallerAlt,
             "RecentForwardList",
         )
@@ -126,14 +126,14 @@ object HideStatusPage : SwitchFeature(), IResolveDex {
     }
 
     override fun resolveDex(dexKit: DexKitBridge) {
-        if (methodStatusListInstaller.isPlaceholder && methodStatusListInstallerAlt.isPlaceholder) {
+        if (!methodStatusListInstaller.isAvailable && !methodStatusListInstallerAlt.isAvailable) {
             dumpSurfaceCandidates(dexKit, "com.tencent.mm.plugin.status", "StatusList")
         }
     }
 
     override fun onEnable() {
         hookSecretStringArgListFilter(
-            if (!methodStatusListInstaller.isPlaceholder) methodStatusListInstaller
+            if (methodStatusListInstaller.isAvailable) methodStatusListInstaller
             else methodStatusListInstallerAlt,
             "StatusList",
         )
@@ -179,14 +179,14 @@ object HideStorageRecords : SwitchFeature(), IResolveDex {
     }
 
     override fun resolveDex(dexKit: DexKitBridge) {
-        if (methodCleanRecordListInstaller.isPlaceholder && methodCleanRecordListInstallerAlt.isPlaceholder) {
+        if (!methodCleanRecordListInstaller.isAvailable && !methodCleanRecordListInstallerAlt.isAvailable) {
             dumpSurfaceCandidates(dexKit, "com.tencent.mm.plugin.clean", "StorageRecordList")
         }
     }
 
     override fun onEnable() {
         hookSecretStringArgListFilter(
-            if (!methodCleanRecordListInstaller.isPlaceholder) methodCleanRecordListInstaller
+            if (methodCleanRecordListInstaller.isAvailable) methodCleanRecordListInstaller
             else methodCleanRecordListInstallerAlt,
             "StorageRecordList",
         )
@@ -226,14 +226,14 @@ object HideStorageCache : SwitchFeature(), IResolveDex {
     }
 
     override fun resolveDex(dexKit: DexKitBridge) {
-        if (methodCleanCacheListInstaller.isPlaceholder && methodCleanCacheListInstallerAlt.isPlaceholder) {
+        if (!methodCleanCacheListInstaller.isAvailable && !methodCleanCacheListInstallerAlt.isAvailable) {
             dumpSurfaceCandidates(dexKit, "com.tencent.mm.plugin.clean", "StorageCacheList")
         }
     }
 
     override fun onEnable() {
         hookSecretStringArgListFilter(
-            if (!methodCleanCacheListInstaller.isPlaceholder) methodCleanCacheListInstaller
+            if (methodCleanCacheListInstaller.isAvailable) methodCleanCacheListInstaller
             else methodCleanCacheListInstallerAlt,
             "StorageCacheList",
         )

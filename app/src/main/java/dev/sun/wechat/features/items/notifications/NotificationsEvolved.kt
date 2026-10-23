@@ -702,7 +702,7 @@ object NotificationsEvolved : ClickableFeature(), IResolveDex {
         mediaScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         mediaScope.launch { cleanupNotificationMediaCache() }
 
-        WeMessageApi.methodMsgInfoStorageInsertMessage.hookAfter {
+        if (WeMessageApi.methodMsgInfoStorageInsertMessage.isAvailable) WeMessageApi.methodMsgInfoStorageInsertMessage.hookAfter {
             val insertedMessageId = result as Long
             if (insertedMessageId < 0L) return@hookAfter
             enqueueMessage(MessageInfo(args[0]!!), insertedMessageId)
@@ -728,8 +728,10 @@ object NotificationsEvolved : ClickableFeature(), IResolveDex {
         // WeChat calls ConversationStorage.updateUnreadByTalker(talker) when a conversation's
         // unread state is cleared outside our receiver (chat opened, read elsewhere, ...). Drop
         // that talker's accumulated history so the next notification doesn't replay stale messages.
-        WeConversationApi.methodUpdateUnreadByTalker.hookBefore {
-            clearConversationState(args[0] as String)
+        if (WeConversationApi.methodUpdateUnreadByTalker.isAvailable) {
+            WeConversationApi.methodUpdateUnreadByTalker.hookBefore {
+                clearConversationState(args[0] as String)
+            }
         }
 
         Notification.Builder::class.reflekt()

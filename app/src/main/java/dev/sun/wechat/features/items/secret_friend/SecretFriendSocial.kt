@@ -238,7 +238,7 @@ private fun pickDiscoverContainer(
     candidates: List<Pair<DexMethodDelegate, DexMethodDelegate>>,
 ): Pair<DexMethodDelegate, DexMethodDelegate>? =
     candidates.firstOrNull { (onCreate, onResume) ->
-        !onCreate.isPlaceholder || !onResume.isPlaceholder
+        onCreate.isAvailable || onResume.isAvailable
     }
 
 private fun hideRowsMatching(view: View, titles: Set<String>) {
@@ -318,13 +318,13 @@ object HideDiscoverMoments : SwitchFeature(), IResolveDex {
             return
         }
         val rowTitles = setOf("朋友圈")
-        if (!onCreate.isPlaceholder) {
+        if (onCreate.isAvailable) {
             onCreate.hookAfter {
                 hideDiscoverRowsByTitle(thisObject as Activity, rowTitles)
             }
         }
         // onResume 重走一遍：页面重建后行会重新绑定。新版可能未在本类声明，缺失时跳过。
-        if (!onResume.isPlaceholder) {
+        if (onResume.isAvailable) {
             onResume.hookAfter {
                 hideDiscoverRowsByTitle(thisObject as Activity, rowTitles)
             }
@@ -384,12 +384,12 @@ object HideDiscoverEntries : SwitchFeature(), IResolveDex {
             return
         }
         val rowTitles = setOf("视频号", "看一看", "小程序")
-        if (!onCreate.isPlaceholder) {
+        if (onCreate.isAvailable) {
             onCreate.hookAfter {
                 hideDiscoverRowsByTitle(thisObject as Activity, rowTitles)
             }
         }
-        if (!onResume.isPlaceholder) {
+        if (onResume.isAvailable) {
             onResume.hookAfter {
                 hideDiscoverRowsByTitle(thisObject as Activity, rowTitles)
             }

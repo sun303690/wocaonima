@@ -238,7 +238,7 @@ object WeMessageApi : ApiFeature(), IResolveDex {
             usingEqStrings("MicroMsg.MsgInfoStorage", "protect:c2c msg should not here")
         }
     }
-    val methodMsgInfoStorageInsertMessage by dexMethod {
+    val methodMsgInfoStorageInsertMessage by dexMethod(allowFailure = true) {
         matcher {
             declaredClass(classMsgInfoStorage.data.name)
             usingEqStrings("MsgInfo processAddMsg insert db error")
@@ -790,6 +790,10 @@ object WeMessageApi : ApiFeature(), IResolveDex {
             put("content", content)
         }
         val msgInfo = convertMsgInfoInstanceFromContentValues(values)
+        if (!methodMsgInfoStorageInsertMessage.isAvailable) {
+            WeLogger.w(TAG, "message insert method unavailable; skipping synthetic message")
+            return
+        }
         methodMsgInfoStorageInsertMessage.method.invoke(
             WeServiceApi.msgInfoStorage,
             msgInfo

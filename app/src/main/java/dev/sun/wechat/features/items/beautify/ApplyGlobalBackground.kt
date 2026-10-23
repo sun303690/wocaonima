@@ -121,7 +121,6 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     private val rowStates = WeakHashMap<View, RowState>()
     private val globalTextColors = WeakHashMap<TextView, Int>()
     private val applyingGlobalTextColor = ThreadLocal.withInitial { false }
-    private val pendingTextScans = WeakHashMap<Activity, Boolean>()
     private var cachedTextColorValue: String? = null
     private var cachedTextColorInt: Int = Color.BLACK
     private data class RowState(val background: android.graphics.drawable.Drawable?, val height: Int)
@@ -194,7 +193,6 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                 val activity = thisObject as Activity
                 applyTransparentStatusBarIfEnabled(activity)
                 applyBackground(activity)
-                scheduleGlobalTextScan(activity)
             }
 
             firstMethod {
@@ -205,10 +203,11 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                 if (!isBackgroundExcluded(activity)) {
                     applyTransparentStatusBarIfEnabled(activity)
                 }
-                scheduleGlobalTextScan(activity)
             }
         }
 
+        // Applying the color when TextViews receive their own color is O(changed views).
+        // Do not traverse the complete Activity tree on every resume/focus event.
         TextView::class.reflekt().apply {
             firstMethod {
                 name = "setTextColor"
@@ -306,16 +305,6 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
         return cachedTextColorInt
     }
 
-    private fun scheduleGlobalTextScan(activity: Activity) {
-        if (!globalTextColorEnabled || backgroundUri == null) return
-        if (pendingTextScans.put(activity, true) == true) return
-        activity.window.decorView.post {
-            pendingTextScans.remove(activity)
-            if (activity.isFinishing || activity.isDestroyed) return@post
-            applyGlobalTextColors(activity.window.decorView)
-        }
-    }
-
     private fun applyGlobalTextColors(root: View) {
         if (root is TextView) {
             if (shouldApplyGlobalTextColor(root)) {
@@ -341,7 +330,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     private fun refreshGlobalTextColors() {
         val activity = getTopMostActivity(allowPaused = true) ?: return
         if (globalTextColorEnabled) {
-            scheduleGlobalTextScan(activity)
+            applyGlobalTextColors(activity.window.decorView)
         } else {
             applyingGlobalTextColor.set(true)
             try {
@@ -774,7 +763,6 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
             applyingGlobalTextColor.set(false)
         }
         globalTextColors.clear()
-        pendingTextScans.clear()
     }
 
     private fun View.makeTransparent() {

@@ -357,7 +357,7 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
     override fun onEnable() {
         loadGroups()
         WeDatabaseListenerApi.addListener(contactUnreadListener)
-        WeConversationApi.methodNotifyConversationChanged.hookAfter {
+        if (WeConversationApi.methodNotifyConversationChanged.isAvailable) WeConversationApi.methodNotifyConversationChanged.hookAfter {
             // This method belongs to the shared storage base; ignore other storage instances.
             if (WeConversationApi.classConversationStorage.clazz.isInstance(thisObject)) {
                 unreadRefreshVersion.update { it + 1 }

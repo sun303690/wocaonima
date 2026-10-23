@@ -175,7 +175,9 @@ object DisplayGroupMemberRealNamesLastChar : ClickableFeature(), IContactInfoPro
                 onFailure { errType, errCode, errMsg ->
                     WeLogger.w(TAG, "fetch failed for $senderId (groupId=$groupId): errType=$errType errCode=$errCode errMsg=$errMsg")
 
-                    if (groupId != null) {
+                    // -10090 is a deterministic server rejection. Retrying without the
+                    // group id only duplicates the request and warning; do not fall back.
+                    if (groupId != null && errCode != -10090) {
                         actualFetchRealName(senderId, null, onResult)
                     } else {
                         onResult(FetchResult.Failure(errType, errCode, errMsg))

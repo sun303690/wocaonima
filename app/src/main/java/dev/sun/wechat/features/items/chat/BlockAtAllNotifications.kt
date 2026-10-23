@@ -186,6 +186,10 @@ object BlockAtAllNotificationsRuntime : ApiFeature(), IResolveDex {
     override val targetProcesses = setOf(TargetProcess.MAIN, TargetProcess.PUSH)
 
     override fun onEnable() {
+        if (!WeMessageApi.methodMsgInfoStorageInsertMessage.isAvailable) {
+            WeLogger.w(TAG, "message insert hook unavailable; @all suppression disabled")
+            return
+        }
         WeMessageApi.methodMsgInfoStorageInsertMessage.hookAfter {
             val message = MessageInfo(args[0]!!)
             if (message.isSelfSender || !message.isInGroupChat || !message.isNotifyAll) return@hookAfter

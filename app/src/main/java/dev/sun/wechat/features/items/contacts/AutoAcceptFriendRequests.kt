@@ -245,7 +245,9 @@ object AutoAcceptFriendRequests : ClickableFeature(), IResolveDex,
     // ==================== 数据库监听 — 检测好友验证消息 ====================
 
     override fun onInsert(table: String, values: ContentValues) {
-        WeLogger.i(TAG, "onInsert: table=" + table + " masterEnabled=" + masterEnabled)
+        // The listener remains registered with the feature, but disabled mode must be inert.
+        // Returning before logging also avoids one line for every normal message insert.
+        if (!masterEnabled) return
         if (table == "rcontact") {
             handleRcontactInsert()
             return
@@ -260,7 +262,6 @@ object AutoAcceptFriendRequests : ClickableFeature(), IResolveDex,
             return
         }
         if (table != "message") return
-        if (!masterEnabled) return
 
         val msgInfo = runCatching { MessageInfo.fromContentValues(values) }
             .onFailure { WeLogger.e(TAG, "MessageInfo.fromContentValues failed", it) }

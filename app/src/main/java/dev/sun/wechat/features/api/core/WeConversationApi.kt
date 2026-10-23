@@ -41,7 +41,7 @@ object WeConversationApi : ApiFeature(), IResolveDex {
             usingEqStrings("rconversation", "PRAGMA table_info( rconversation)")
         }
     }
-    val methodUpdateUnreadByTalker by dexMethod {
+    val methodUpdateUnreadByTalker by dexMethod(allowFailure = true) {
         matcher {
             declaredClass(classConversationStorage.data.name)
             usingEqStrings("MicroMsg.ConversationStorage", "updateUnreadByTalker %s")
@@ -256,6 +256,10 @@ object WeConversationApi : ApiFeature(), IResolveDex {
     }
 
     fun markAllAsRead() {
+        if (!methodUpdateUnreadByTalker.isAvailable) {
+            WeLogger.w(TAG, "update-unread method unavailable; mark-all-read skipped")
+            return
+        }
         val cursor = WeDatabaseApi.rawQuery("SELECT username FROM rconversation WHERE unReadCount>0 OR unReadMuteCount>0 OR atCount>0")
         while (cursor.moveToNext()) {
             val talker = cursor.getString(0)
@@ -306,6 +310,10 @@ object WeConversationApi : ApiFeature(), IResolveDex {
 //    }
 
     fun markAsRead(talker: String) {
+        if (!methodUpdateUnreadByTalker.isAvailable) {
+            WeLogger.w(TAG, "update-unread method unavailable; mark-read skipped for $talker")
+            return
+        }
         try {
             methodUpdateUnreadByTalker.method.invoke(conversationStorage, talker)
             WeLogger.d(TAG, "marked $talker as read")
@@ -477,7 +485,7 @@ object WeConversationApi : ApiFeature(), IResolveDex {
     }
 
     private fun notifyConversationChanged(talker: String, eventType: Int = 3) {
-        if (methodNotifyConversationChanged.isPlaceholder) return
+        if (!methodNotifyConversationChanged.isAvailable) return
         methodNotifyConversationChanged.method.invoke(conversationStorage, eventType, conversationStorage, talker)
     }
 
