@@ -187,7 +187,9 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     }
 
     override fun onClick(context: ComponentActivity) {
-        context.startActivity(android.content.Intent(context, AiChatSettingsActivity::class.java))
+        // Keep the proven, fully wired configuration UI until every control in the
+        // standalone tabbed activity is connected to the runtime and persistence layer.
+        showConfigDialog(context)
     }
 
     // ---------------- 消息入口 ----------------
