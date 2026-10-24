@@ -473,20 +473,19 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         onSaved: (Set<String>) -> Unit = {},
     ) {
         context.lifecycleScope.launch(Dispatchers.IO) {
-            val contacts = WeDatabaseApi.getAllContacts(false)
+            val contacts = WeDatabaseApi.getContacts()
             withContext(Dispatchers.Main) {
-                lateinit var dialog: android.app.Dialog
-                dialog = context.showComposeDialog {
+                showComposeDialog(context) {
                     ContactsSelector(
                         title = "选择授权会话",
                         contacts = contacts,
                         initialSelectedWxIds = initial,
-                        onDismiss = { dialog.dismiss() },
+                        onDismiss = onDismiss,
                         onConfirm = { selected ->
                             whitelist = selected
                             configVersion.incrementAndGet()
                             onSaved(selected)
-                            dialog.dismiss()
+                            onDismiss()
                         },
                     )
                 }

@@ -17,7 +17,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
-import dev.sun.wechat.utils.android.showToast
 import androidx.lifecycle.lifecycleScope
 import dev.sun.wechat.data.WeKitDatabase
 import dev.sun.wechat.data.entity.AiChatMemoryEntity
@@ -122,10 +121,10 @@ class AiChatSettingsActivity : ComponentActivity() {
         val personas = remember(refresh) { loadCustomPersonas() }
         val scoped = remember(refresh) { loadScopedPersonas() }
         val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-            if (uri != null) runCatching { context.contentResolver.openOutputStream(uri, "w")!!.bufferedWriter().use { it.write(exportPersonas()) } }.onSuccess { context.showToast("人设已导出") }.onFailure { context.showToast("导出失败: ${it.message}") }
+            if (uri != null) runCatching { context.contentResolver.openOutputStream(uri, "w")!!.bufferedWriter().use { it.write(exportPersonas()) } }.onSuccess { Toast.makeText(context, "人设已导出", Toast.LENGTH_SHORT).show() }.onFailure { Toast.makeText(context, "导出失败: ${it.message}", Toast.LENGTH_SHORT).show() }
         }
         val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-            if (uri != null) runCatching { context.contentResolver.openInputStream(uri)!!.bufferedReader().use { importPersonas(it.readText()) }; refresh++ }.onSuccess { context.showToast("人设已导入") }.onFailure { context.showToast("导入失败: ${it.message}") }
+            if (uri != null) runCatching { context.contentResolver.openInputStream(uri)!!.bufferedReader().use { importPersonas(it.readText()) }; refresh++ }.onSuccess { Toast.makeText(context, "人设已导入", Toast.LENGTH_SHORT).show() }.onFailure { Toast.makeText(context, "导入失败: ${it.message}", Toast.LENGTH_SHORT).show() }
         }
         Block(if (editingId == null) "新建人设" else "编辑人设", "最多 8 个；不要填写密码、令牌等敏感信息") {
             Edit("名称（留空显示未命名人设）", name) { name = it }
@@ -136,7 +135,7 @@ class AiChatSettingsActivity : ComponentActivity() {
             Button({
                 runCatching { saveCustomPersona(CustomPersona(id = editingId ?: java.util.UUID.randomUUID().toString(), name = name, prompt = prompt, scene = scene, boundaries = boundaries, shareMemory = shareMemory)) }
                     .onSuccess { editingId = null; name = ""; prompt = ""; scene = ""; boundaries = ""; shareMemory = false; refresh++ }
-                    .onFailure { context.showToast(it.message ?: "保存失败") }
+                    .onFailure { Toast.makeText(context, it.message ?: "保存失败", Toast.LENGTH_SHORT).show() }
             }, Modifier.fillMaxWidth()) { Text(if (editingId == null) "保存人设" else "保存修改") }
         }
         personas.forEach { persona -> Block(persona.name, listOf(persona.scene, if (persona.shareMemory) "共用记忆" else "独立记忆").filter { it.isNotBlank() }.joinToString(" · ")) {
