@@ -610,7 +610,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     }
 
     private fun applyTransparentStatusBarIfEnabled(activity: Activity) {
-        if (!transparentStatusBar) return
+        if (!transparentStatusBar || backgroundUri == null || isBackgroundExcluded(activity)) return
         applyTransparentStatusBar(activity)
     }
 

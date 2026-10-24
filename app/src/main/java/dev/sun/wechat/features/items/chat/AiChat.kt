@@ -121,7 +121,8 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     internal var maxContextChars by KvStore.prefOption("ai_chat_max_context_chars", 12000)
     internal var monitorAuthorizedChats by KvStore.prefOption("ai_chat_monitor_authorized_chats", true)
     internal var monitorOnly by KvStore.prefOption("ai_chat_monitor_only", false)
-    internal var historyBackfillCount by KvStore.prefOption("ai_chat_history_backfill_count", 30)
+    internal var historyBackfillCount by KvStore.prefOption("ai_chat_history_backfill_count", 10)
+    internal var groupMaxReplyChars by KvStore.prefOption("ai_chat_group_max_reply_chars", 500)
 
     internal var whitelist: Set<String>
         get() = KvStore.getStringSetOrDef("ai_chat_whitelist", emptySet())
@@ -149,6 +150,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         val monitorAuthorizedChats: Boolean,
         val monitorOnly: Boolean,
         val historyBackfillCount: Int,
+        val groupMaxReplyChars: Int,
     )
 
     private fun snapshot(): Config = Config(
@@ -167,7 +169,8 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         maxContextChars = maxContextChars.coerceIn(1000, 100000),
         monitorAuthorizedChats = monitorAuthorizedChats,
         monitorOnly = monitorOnly,
-        historyBackfillCount = historyBackfillCount.coerceIn(0, 200),
+        historyBackfillCount = 10,
+        groupMaxReplyChars = groupMaxReplyChars.coerceIn(100, 4000),
     )
 
     /** 白名单：命中才回；黑名单：命中就跳过（空名单=全部处理）。 */
@@ -180,6 +183,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     private val handledIds = ConcurrentHashMap<String, Boolean>()
     private val lastReplyAt = ConcurrentHashMap<String, Long>()
     private val inFlight = ConcurrentHashMap<String, Boolean>()
+    private val pendingGroupMessages = ConcurrentHashMap<String, String>()
     private val dailyCounts = ConcurrentHashMap<String, Int>()
     @Volatile private var lastReceiveAt = 0L
     @Volatile private var lastSendAt = 0L
@@ -209,6 +213,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         memories.clear()
         lastReplyAt.clear()
         inFlight.clear()
+        pendingGroupMessages.clear()
         dailyCounts.clear()
     }
 
@@ -243,21 +248,51 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         if (config.monitorOnly && isGroup) return
         val triggeredContent = applyGroupTrigger(talker, content, config) ?: return
         val now = System.currentTimeMillis()
-        if (config.cooldownMs > 0 && now - (lastReplyAt[talker] ?: 0L) < config.cooldownMs) return
-        if (config.dailyLimit > 0 && (dailyCounts[dailyKey(talker)] ?: 0) >= config.dailyLimit) return
-        if (inFlight.putIfAbsent(talker, true) != null) return
+        if (!isGroup && config.cooldownMs > 0 && now - (lastReplyAt[talker] ?: 0L) < config.cooldownMs) return
+        if (!isGroup && config.dailyLimit > 0 && (dailyCounts[dailyKey(talker)] ?: 0) >= config.dailyLimit) return
+        if (inFlight.putIfAbsent(talker, true) != null) {
+            if (isGroup) pendingGroupMessages[talker] = triggeredContent
+            return
+        }
         lastReceiveAt = now
 
         val version = configVersion.get()
         scope.launch {
-            try { processMessage(talker, triggeredContent, config, version) }
-            finally { inFlight.remove(talker) }
+            var next: String? = triggeredContent
+            try {
+                while (next != null) {
+                    processMessage(talker, next, snapshot(), configVersion.get())
+                    next = pendingGroupMessages.remove(talker)
+                }
+            } finally {
+                inFlight.remove(talker)
+                pendingGroupMessages.remove(talker)?.let { queued -> onQueuedGroupMessage(talker, queued) }
+            }
+        }
+    }
+
+    private fun onQueuedGroupMessage(talker: String, content: String) {
+        if (inFlight.putIfAbsent(talker, true) != null) {
+            pendingGroupMessages[talker] = content
+            return
+        }
+        scope.launch {
+            var next: String? = content
+            try {
+                while (next != null) {
+                    processMessage(talker, next, snapshot(), configVersion.get())
+                    next = pendingGroupMessages.remove(talker)
+                }
+            } finally {
+                inFlight.remove(talker)
+            }
         }
     }
 
     private suspend fun processMessage(talker: String, rawContent: String, config: Config, version: Long) {
         runCatching {
-            if (config.replyDelayMs > 0) delay(config.replyDelayMs.milliseconds)
+            val effectiveDelay = if (isGroupTalker(talker)) 10_000L else config.replyDelayMs
+            if (effectiveDelay > 0) delay(effectiveDelay.milliseconds)
             if (configVersion.get() != version) {
                 WeLogger.i(TAG, "AI reply discarded because configuration changed: talker=$talker")
                 return
@@ -267,9 +302,9 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
             val userText = sender?.let { "[WeChat sender: $it]\n$body" } ?: body
 
             val history = memories.getOrPut(talker) { mutableListOf() }
-            backfillHistoryIfNeeded(talker, history, config)
+            val backfilledCount = refreshRecentGroupContext(talker, history, config)
+            val activePersona = personaForTalker(talker)
             val persistentMemories = runCatching {
-                val activePersona = personaForTalker(talker)
                 WeKitDatabase.instance.aiChatMemoryDao().forPrompt(
                     talker = talker,
                     personaId = activePersona?.id.orEmpty(),
@@ -283,6 +318,10 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                 val memoryPrompt = persistentMemories.asReversed().joinToString("\n") { "- ${it.content}" }
                 val effectiveSystemPrompt = buildString {
                     append(resolvePersona(talker, config.systemPrompt))
+                    if (isGroupTalker(talker)) {
+                        if (isNotEmpty()) append("\n\n")
+                        append("Group-chat reply rules: Answer the latest message in its actual conversational context. Do not guess or expand an unclear abbreviation into a named entity. If the meaning is ambiguous, ask one brief clarification question. Reply naturally and concisely in the language used by the group. Avoid headings, numbered analysis, generic background introductions, closing sales questions, and emoji unless explicitly requested. Keep the answer within ${config.groupMaxReplyChars} characters.")
+                    }
                     if (memoryPrompt.isNotBlank()) {
                         if (isNotEmpty()) append("\n\n")
                         append("Known user facts (use only when relevant):\n")
@@ -297,6 +336,14 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                 }
                 add(LlmMessage(LlmRole.USER, userText))
             }
+            val contextMessageCount = messages.count { it.role != LlmRole.SYSTEM } - 1
+            val contextCharCount = messages.sumOf { it.content?.length ?: 0 }
+            WeLogger.i(
+                TAG,
+                "AI context prepared: talker=$talker, trigger=${triggerName(config.groupTriggerMode)}, " +
+                    "persona=${activePersona?.id ?: "default"}, memories=${persistentMemories.size}, " +
+                    "backfilled=$backfilledCount, contextMessages=$contextMessageCount, contextChars=$contextCharCount",
+            )
 
             val reply = requestModel(config, messages)
 
@@ -318,8 +365,9 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                 )
                 return
             }
-            val text = reply.getOrThrow().trim()
-            if (text.isEmpty()) return
+            val rawText = reply.getOrThrow().trim()
+            if (rawText.isEmpty()) return
+            val text = if (isGroupTalker(talker)) sanitizeGroupReply(rawText, config.groupMaxReplyChars) else rawText
             if (!WeMessageApi.sendText(talker, text)) {
                 lastFailure = "微信发送 API 返回失败"
                 WeLogger.e(TAG, "failed to send AI reply to talker=$talker")
@@ -335,7 +383,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
             lastFailure = null
             lastReplyAt[talker] = lastSendAt
             dailyCounts.merge(dailyKey(talker), 1, Int::plus)
-            WeLogger.i(TAG, "AI replied to talker=$talker")
+            WeLogger.i(TAG, "AI replied to talker=$talker, replyChars=${text.length}, truncated=${text.length < rawText.length}")
         }.onFailure {
             lastFailure = it.message ?: it.javaClass.simpleName
             WeLogger.e(TAG, "AI chat processing failed", it)
@@ -360,15 +408,15 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         }
     }
 
-    private fun backfillHistoryIfNeeded(talker: String, history: MutableList<LlmMessage>, config: Config) {
-        if (config.historyBackfillCount <= 0 || !WeDatabaseApi.isReady) return
-        synchronized(history) { if (history.isNotEmpty()) return }
-        val rows = runCatching { WeDatabaseApi.getMessages(talker, 1, config.historyBackfillCount) }
-            .getOrElse { WeLogger.w(TAG, "failed to backfill context for $talker", it); emptyList() }
+    private fun refreshRecentGroupContext(talker: String, history: MutableList<LlmMessage>, config: Config): Int {
+        if (!isGroupTalker(talker) || !WeDatabaseApi.isReady) return 0
+        val rows = runCatching { WeDatabaseApi.getMessages(talker, 1, 10) }
+            .getOrElse { WeLogger.w(TAG, "failed to refresh recent group context for $talker", it); emptyList() }
             .asReversed()
             .filter { MessageType.fromCode(it.typeCode)?.isText == true && it.content.isNotBlank() }
+            .takeLast(10)
         synchronized(history) {
-            if (history.isNotEmpty()) return
+            history.clear()
             rows.forEach { message ->
                 val (sender, body) = splitGroupSender(talker, message.content)
                 val text = when {
@@ -379,6 +427,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                 history += LlmMessage(if (message.isSend != 0) LlmRole.ASSISTANT else LlmRole.USER, text)
             }
         }
+        return rows.size
     }
 
     internal fun contextPreview(talker: String): List<LlmMessage> =
@@ -398,6 +447,32 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
             } else null
             else -> null
         }
+    }
+
+    private fun triggerName(mode: Int): String = when (mode) {
+        GROUP_TRIGGER_ALL -> "all"
+        GROUP_TRIGGER_MENTION -> "mention"
+        GROUP_TRIGGER_KEYWORD -> "keyword"
+        GROUP_TRIGGER_PREFIX -> "prefix"
+        else -> "unknown"
+    }
+
+    private fun sanitizeGroupReply(text: String, maxChars: Int): String {
+        val cleaned = text
+            .replace(Regex("(?m)^#{1,6}\\s*"), "")
+            .replace("**", "")
+            .replace(Regex("(?m)^\\s*[-*]\\s+"), "")
+            .replace(Regex("(?m)^\\s*\\d+[.、]\\s*"), "")
+            .replace(Regex("\\n{3,}"), "\n\n")
+            .trim()
+        return limitReply(cleaned, maxChars)
+    }
+
+    private fun limitReply(text: String, maxChars: Int): String {
+        if (text.length <= maxChars) return text
+        val safeEnd = text.substring(0, maxChars).lastIndexOfAny(charArrayOf('\n', '。', '！', '？', '.', '!', '?'))
+            .takeIf { it >= maxChars / 2 } ?: maxChars
+        return text.substring(0, safeEnd).trimEnd() + "\n…（回复已精简）"
     }
 
     private fun trimContext(messages: List<LlmMessage>, maxChars: Int): List<LlmMessage> {
@@ -740,9 +815,9 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                         )
                         IntNumberPickerWidget(
                             iconPlaceholder = false, title = "历史消息回读条数",
-                            description = "触发时从微信数据库恢复最近的现场上下文；0 表示关闭", value = backfillInput.value,
-                            startInt = 0, endInt = 200, stepSize = 10, valueSuffix = " 条",
-                            onValueChange = { backfillInput.value = it },
+                            description = "每次自动回复前固定读取微信群最近 10 条文本消息", value = 10,
+                            startInt = 10, endInt = 10, stepSize = 1, valueSuffix = " 条",
+                            onValueChange = { },
                         )
                         DropDownMenuWidget(
                             iconPlaceholder = false, title = "授权群聊上下文监控",
@@ -838,7 +913,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                         maxContextChars = contextCharsInput.value
                         monitorAuthorizedChats = monitorInput.value
                         monitorOnly = monitorOnlyInput.value
-                        historyBackfillCount = backfillInput.value.coerceIn(0, 200)
+                        historyBackfillCount = 10
                         whitelist = whitelistInput.value
                         blacklist = blacklistInput.value
 
