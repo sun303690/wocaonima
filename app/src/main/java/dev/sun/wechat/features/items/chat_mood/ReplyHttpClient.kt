@@ -77,7 +77,7 @@ object ReplyHttpClient {
                             check(source.buffer.size <= 1024 * 1024L) { "模型响应过长" }
                             source.readUtf8()
                         }
-                        continuation.resume(body)
+                        continuation.resume(body) { _, _, _ -> }
                     } catch (error: IllegalStateException) {
                         if (continuation.isActive) continuation.resumeWithException(error)
                     } catch (error: Exception) {
