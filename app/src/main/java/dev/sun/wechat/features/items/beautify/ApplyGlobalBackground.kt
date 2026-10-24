@@ -632,6 +632,9 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                         View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
                         View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
             }
+            window.attributes = window.attributes.apply {
+                flags = flags and android.view.WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS.inv()
+            }
 
             clearStatusBarBackground(activity, decor)
             // The aggregation container already has a stable system-bar hierarchy.
@@ -728,7 +731,17 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
             elevation = 100f
-            decor.addView(this)
+            // Attach with explicit full-decor bounds. On some WeChat pages decor's content
+            // child is inset below the status bar; addView(view) can inherit that inset and
+            // leave the top system-bar area black even when the bar itself is transparent.
+            decor.addView(
+                this,
+                ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                ),
+            )
+            translationY = 0f
         }
     }
 
