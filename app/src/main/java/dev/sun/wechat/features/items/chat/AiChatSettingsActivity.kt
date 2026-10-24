@@ -39,7 +39,7 @@ class AiChatSettingsActivity : ComponentActivity() {
             Row(Modifier.fillMaxWidth().padding(start = 6.dp, end = 8.dp, top = 20.dp)) {
                 TextButton(onClick = { finish() }) { Text("‹", style = MaterialTheme.typography.headlineMedium) }
                 Spacer(Modifier.weight(1f))
-                TextButton(onClick = { AiChat.clearContext(); showToast("AI 上下文已清除") }) { Text("•••") }
+                TextButton(onClick = { AiChat.clearContext(); Toast.makeText(this@AiChatSettingsActivity, "AI 上下文已清除", Toast.LENGTH_SHORT).show() }) { Text("•••") }
             }
             TabRow(selectedTabIndex = tab) {
                 tabs.forEachIndexed { i, name -> Tab(tab == i, { tab = i }, text = { Text(name) }) }
