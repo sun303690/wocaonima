@@ -610,7 +610,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     }
 
     private fun applyTransparentStatusBarIfEnabled(activity: Activity) {
-        if (!transparentStatusBar || backgroundUri == null || isBackgroundExcluded(activity)) return
+        if (!transparentStatusBar) return
         applyTransparentStatusBar(activity)
     }
 
@@ -631,9 +631,6 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                 decor.systemUiVisibility = decor.systemUiVisibility or
                         View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
                         View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-            }
-            window.attributes = window.attributes.apply {
-                flags = flags and android.view.WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS.inv()
             }
 
             clearStatusBarBackground(activity, decor)
@@ -731,17 +728,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
             elevation = 100f
-            // Attach with explicit full-decor bounds. On some WeChat pages decor's content
-            // child is inset below the status bar; addView(view) can inherit that inset and
-            // leave the top system-bar area black even when the bar itself is transparent.
-            decor.addView(
-                this,
-                ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                ),
-            )
-            translationY = 0f
+            decor.addView(this)
         }
     }
 
