@@ -117,22 +117,8 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     private const val APPLIED_URI_TAG_KEY = 0x55020001
     private var backgroundRevision = 0L
     private const val APPLY_STATUS_BAR_DELAY_MS = 80L
-    private const val APPLY_STATUS_BAR_STRIP_DELAY_MS = 300L
-    private const val DRAW_STATUS_BAR_FRAME_CLASS =
-        "com.tencent.mm.ui.statusbar.DrawStatusBarFrameLayout"
-    private const val EDGE_TO_EDGE_WRAPPER_CLASS =
-        "com.tencent.mm.ui.widget.EdgeToEdgeWrapperLayout"
     private const val AGGREGATION_CONTAINER_UI =
         "com.tencent.mm.ui.conversation.ConvBoxServiceConversationUI"
-
-    // WeChat paints the status bar area with its own views instead of the window colour:
-    // DrawStatusBarFrameLayout draws a strip and EdgeToEdgeWrapperLayout paints its inset
-    // padding. Both stay black, which shows as a dark band under the translucent system bar.
-    private val statusBarColorPainters by lazy {
-        listOf(DRAW_STATUS_BAR_FRAME_CLASS, EDGE_TO_EDGE_WRAPPER_CLASS)
-            .mapNotNull { name -> runCatching { Class.forName(name) }.getOrNull() }
-    }
-    private val statusBarColorSetters = HashMap<Class<*>, java.lang.reflect.Method?>()
 
     private val rowStates = WeakHashMap<View, RowState>()
     private val globalTextColors = WeakHashMap<TextView, Int>()
@@ -648,19 +634,13 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
             }
 
             clearStatusBarBackground(activity, decor)
-            clearStatusBarStrips(decor)
             // The aggregation container already has a stable system-bar hierarchy.
             // Its list is initialized in onResume; posting another decor traversal into
             // that first frame causes the visible hitch when opening a folder.
             if (activity.javaClass.name != AGGREGATION_CONTAINER_UI) {
                 decor.postDelayed(APPLY_STATUS_BAR_DELAY_MS) {
                     clearStatusBarBackground(activity, decor)
-                    clearStatusBarStrips(decor)
                 }
-            }
-            // WeChat re-applies its own status bar strip color after onCreate returns.
-            decor.postDelayed(APPLY_STATUS_BAR_STRIP_DELAY_MS) {
-                clearStatusBarStrips(decor)
             }
         }.onFailure {
             WeLogger.w(TAG, "failed to apply transparent status bar", it)
@@ -690,29 +670,6 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
             if (name == "statusBarBackground" || child.height <= statusBarHeightGuess(child)) {
                 child.makeTransparent()
             }
-        }
-    }
-
-    private fun clearStatusBarStrips(decor: ViewGroup) {
-        if (statusBarColorPainters.isEmpty()) return
-        val painters = mutableListOf<View>()
-        collectStatusBarPainters(decor, painters)
-        painters.forEach { painter ->
-            val setColor = statusBarColorSetters.getOrPut(painter.javaClass) {
-                runCatching {
-                    painter.javaClass.getMethod("setStatusBarColor", Int::class.javaPrimitiveType)
-                }.getOrNull()
-            } ?: return@forEach
-            runCatching { setColor.invoke(painter, Color.TRANSPARENT) }
-                .onFailure { WeLogger.w(TAG, "failed to clear WeChat status bar color", it) }
-        }
-    }
-
-    private fun collectStatusBarPainters(root: View, out: MutableList<View>) {
-        if (statusBarColorPainters.any { it.isInstance(root) }) out.add(root)
-        if (root !is ViewGroup) return
-        for (index in 0 until root.childCount) {
-            collectStatusBarPainters(root.getChildAt(index), out)
         }
     }
 
