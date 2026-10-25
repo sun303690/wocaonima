@@ -119,8 +119,11 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     private const val APPLY_STATUS_BAR_DELAY_MS = 80L
     private const val AGGREGATION_CONTAINER_UI =
         "com.tencent.mm.ui.conversation.ConvBoxServiceConversationUI"
+    private const val EDGE_TO_EDGE_WRAPPER_CLASS = "com.tencent.mm.ui.widget.EdgeToEdgeWrapperLayout"
 
     private val rowStates = WeakHashMap<View, RowState>()
+    private val collapsedStatusBarWrappers = WeakHashMap<View, Boolean>()
+    private val loggedStatusBarBands = WeakHashMap<View, Boolean>()
     private val globalTextColors = WeakHashMap<TextView, Int>()
     private val applyingGlobalTextColor = ThreadLocal.withInitial { false }
     private var cachedTextColorValue: String? = null
@@ -634,17 +637,99 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
             }
 
             clearStatusBarBackground(activity, decor)
+            collapseStatusBarWrapperInset(decor)
             // The aggregation container already has a stable system-bar hierarchy.
             // Its list is initialized in onResume; posting another decor traversal into
             // that first frame causes the visible hitch when opening a folder.
             if (activity.javaClass.name != AGGREGATION_CONTAINER_UI) {
                 decor.postDelayed(APPLY_STATUS_BAR_DELAY_MS) {
                     clearStatusBarBackground(activity, decor)
+                    collapseStatusBarWrapperInset(decor)
+                    logStatusBarBandCandidates(decor)
                 }
             }
         }.onFailure {
             WeLogger.w(TAG, "failed to apply transparent status bar", it)
         }
+    }
+
+    /**
+     * MMActivity wraps its content in an EdgeToEdgeWrapperLayout that turns the top window inset
+     * into its own padding and paints that strip with the status bar color. The window is already
+     * edge-to-edge here, so that padding is a second status bar tall strip right below the real
+     * status bar — the dark band seen between the status bar and the title bar. Switch the wrapper
+     * to ALWAYS_HIDE so later inset dispatches keep top = 0, then drop the padding it already set.
+     */
+    private fun collapseStatusBarWrapperInset(decor: ViewGroup) {
+        val wrapper = decor.firstViewByClassName(EDGE_TO_EDGE_WRAPPER_CLASS) ?: return
+        if (collapsedStatusBarWrappers.put(wrapper, true) == null) {
+            runCatching {
+                val setter = wrapper.reflekt().firstMethod {
+                    name = "setStatusBarStrategy"
+                    parameterCount = 1
+                }
+                val alwaysHide = setter.parameterTypes.single().enumConstants!!.single {
+                    (it as Enum<*>).name == "ALWAYS_HIDE"
+                }
+                setter.invoke(alwaysHide)
+                wrapper.requestApplyInsets()
+            }.onFailure {
+                WeLogger.w(TAG, "failed to hide WeChat edge-to-edge status bar wrapper", it)
+            }
+        }
+        if (wrapper.paddingTop != 0) {
+            wrapper.setPadding(wrapper.paddingLeft, 0, wrapper.paddingRight, wrapper.paddingBottom)
+        }
+    }
+
+    private fun View.firstViewByClassName(className: String): View? {
+        if (javaClass.name == className) return this
+        if (this !is ViewGroup) return null
+        for (index in 0 until childCount) {
+            getChildAt(index).firstViewByClassName(className)?.let { return it }
+        }
+        return null
+    }
+
+    /**
+     * The transparent status bar exposes the top of the window, so any opaque view left in that
+     * area shows up as a dark band. Log the painted views in the top two status bar heights once
+     * per window; the runtime log then names the view that is actually painting the band.
+     */
+    private fun logStatusBarBandCandidates(decor: ViewGroup) {
+        if (loggedStatusBarBands.put(decor, true) != null) return
+        val statusBarHeight = statusBarHeightGuess(decor)
+        if (statusBarHeight <= 0) return
+
+        val decorLocation = IntArray(2).also { decor.getLocationInWindow(it) }
+        val bandEnd = statusBarHeight * 2
+        val viewLocation = IntArray(2)
+        val report = StringBuilder("statusBarHeight=$statusBarHeight")
+
+        fun visit(view: View, depth: Int) {
+            if (depth > 8 || report.length > 1600) return
+            view.getLocationInWindow(viewLocation)
+            val top = viewLocation[1] - decorLocation[1]
+            if (view.visibility != View.VISIBLE || view.height <= 0 || top >= bandEnd) return
+
+            val background = view.background
+            if (background != null || view is ImageView) {
+                report.append(" | ")
+                    .append("  ".repeat(depth))
+                    .append(view.javaClass.simpleName)
+                    .append('#').append(view.resourceEntryName() ?: "-")
+                    .append(' ').append(view.width).append('x').append(view.height)
+                    .append(" top=").append(top)
+                    .append(" pad=").append(view.paddingTop)
+                    .append(" bg=").append(background?.javaClass?.simpleName ?: "null")
+            }
+            if (view is ViewGroup) {
+                for (index in 0 until view.childCount) visit(view.getChildAt(index), depth + 1)
+            }
+        }
+
+        visit(decor, 0)
+        WeLogger.d(TAG, "status bar band: $report")
     }
 
     @SuppressLint("DiscouragedApi")
