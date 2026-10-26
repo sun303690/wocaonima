@@ -120,7 +120,20 @@ object BeautifyConversationList : ClickableFeature() {
     private var globalCardsHeight by prefOption("beautify_global_list_cards_height", 0)
     private var globalCardsDark by prefOption("beautify_global_list_cards_dark", false)
     private var globalHooksRegistered = false
-    private val globalFillsStripped = WeakHashMap<View, Boolean>()
+    private data class GlobalRowState(
+        val background: Drawable?,
+        val foreground: Drawable?,
+        val leftMargin: Int,
+        val topMargin: Int,
+        val rightMargin: Int,
+        val bottomMargin: Int,
+        val layoutHeight: Int,
+        val minimumHeight: Int,
+        val elevation: Float,
+    )
+
+    private val globalFillsStripped = WeakHashMap<View, Drawable?>()
+    private val globalRowStates = WeakHashMap<View, GlobalRowState>()
     private val globalOrigHeights = WeakHashMap<View, Int>()
     private val globalCardDrawables = WeakHashMap<View, GlobalCardDrawable>()
     private val globalChattingCache = WeakHashMap<View, Boolean>()
@@ -696,6 +709,20 @@ object BeautifyConversationList : ClickableFeature() {
             return
         }
         try {
+            if (!globalRowStates.containsKey(row)) {
+                val margins = row.layoutParams as? ViewGroup.MarginLayoutParams
+                globalRowStates[row] = GlobalRowState(
+                    background = row.background,
+                    foreground = row.foreground,
+                    leftMargin = margins?.leftMargin ?: 0,
+                    topMargin = margins?.topMargin ?: 0,
+                    rightMargin = margins?.rightMargin ?: 0,
+                    bottomMargin = margins?.bottomMargin ?: 0,
+                    layoutHeight = row.layoutParams?.height ?: ViewGroup.LayoutParams.WRAP_CONTENT,
+                    minimumHeight = row.minimumHeight,
+                    elevation = row.elevation,
+                )
+            }
             val lp = row.layoutParams
             if (lp is ViewGroup.MarginLayoutParams) {
                 val mlp = lp
@@ -774,7 +801,10 @@ object BeautifyConversationList : ClickableFeature() {
                 val wide = c.width * 10 >= w * 6
                 val plate = wide && h > 0 && w > 0 &&
                     (c.height * 10 >= h * 7 || c.height >= dp(c, 20))
-                if (plate && isGlobalOpaqueFill(c)) c.background = null
+                if (plate && isGlobalOpaqueFill(c)) {
+                    if (!globalFillsStripped.containsKey(c)) globalFillsStripped[c] = c.background
+                    c.background = null
+                }
                 stripGlobalRowFills(c, depth + 1)
             }
         } catch (ignored: Throwable) {
@@ -825,14 +855,36 @@ object BeautifyConversationList : ClickableFeature() {
     private fun dp(view: View, dp: Int): Int =
         (dp * view.resources.displayMetrics.density).roundToInt()
 
-    /** 关闭全局卡片：清理所有缓存，页面重建后微信自然恢复原始背景 */
+    /** 关闭全局卡片：立即完整恢复所有被修改的行和内部底板。 */
     private fun restoreGlobalCards() {
+        globalFillsStripped.entries.toList().forEach { (view, background) ->
+            runCatching { view.background = background }
+        }
+        globalRowStates.entries.toList().forEach { (row, state) ->
+            runCatching {
+                row.background = state.background
+                row.foreground = state.foreground
+                row.minimumHeight = state.minimumHeight
+                row.elevation = state.elevation
+                row.layoutParams?.let { lp ->
+                    lp.height = state.layoutHeight
+                    if (lp is ViewGroup.MarginLayoutParams) {
+                        lp.setMargins(state.leftMargin, state.topMargin, state.rightMargin, state.bottomMargin)
+                    }
+                    row.layoutParams = lp
+                }
+                row.requestLayout()
+                row.invalidate()
+            }
+        }
         globalFillsStripped.clear()
+        globalRowStates.clear()
         globalOrigHeights.clear()
         globalCardDrawables.clear()
         globalChattingCache.clear()
         globalListCache.clear()
         globalPendingLists.clear()
+        WeConversationListViewApi.refresh()
     }
 
     /**

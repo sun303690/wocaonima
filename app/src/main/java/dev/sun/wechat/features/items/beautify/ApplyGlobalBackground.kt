@@ -171,7 +171,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
 
     override fun onEnable() {
         migrateLegacyBackgroundUri()
-        WeConversationListViewApi.addListener(conversationBindListener)
+        if (listCards) WeConversationListViewApi.addListener(conversationBindListener)
 
         Activity::class.reflekt().apply {
             firstMethod {
@@ -292,7 +292,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
         findOverlay(activity.window?.decorView as? ViewGroup ?: return null)
 
     private fun shouldApplyGlobalTextColor(view: TextView): Boolean {
-        val activity = view.context as? Activity ?: return false
+        val activity = activityOf(view.context) ?: return false
         if (!isEnabled || backgroundUri == null || !globalTextColorEnabled) return false
         if (isBackgroundExcluded(activity)) return false
         val className = activity.javaClass.name
@@ -349,9 +349,13 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     }
 
     private fun refreshGlobalTextColors() {
-        val activity = getTopMostActivity(allowPaused = true) ?: return
         if (globalTextColorEnabled) {
-            applyGlobalTextColors(activity.window.decorView)
+            val roots = LinkedHashSet<View>()
+            getTopMostActivity(allowPaused = true)?.window?.decorView?.let(roots::add)
+            globalTextColors.keys.toList().forEach { view ->
+                activityOf(view.context)?.window?.decorView?.let(roots::add)
+            }
+            roots.forEach(::applyGlobalTextColors)
         } else {
             applyingGlobalTextColor.set(true)
             try {
@@ -525,10 +529,17 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                                 title = stringResource(R.string.beautify_global_background_list_cards),
                                 description = stringResource(R.string.beautify_global_background_list_cards_summary),
                                 checked = cardsInput,
-                                onCheckedChange = {
-                                    cardsInput = it
-                                    listCards = it
-                                    restartRequired = true
+                                onCheckedChange = { enabled ->
+                                    cardsInput = enabled
+                                    listCards = enabled
+                                    if (enabled) {
+                                        WeConversationListViewApi.removeListener(conversationBindListener)
+                                        WeConversationListViewApi.addListener(conversationBindListener)
+                                    } else {
+                                        WeConversationListViewApi.removeListener(conversationBindListener)
+                                        rowStates.keys.toList().forEach(::restoreListRow)
+                                    }
+                                    restartRequired = false
                                 },
                             )
                         }
@@ -639,20 +650,11 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                         View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
             }
 
+            // Only make the real Android status bar transparent. Do not collapse WeChat's
+            // edge-to-edge wrapper or clear its internal DrawStatusBarFrameLayout: those views
+            // belong to the same content hierarchy as the wallpaper. Altering both layers makes
+            // the wallpaper appear twice (one copy inside, another outside the title area).
             clearStatusBarBackground(activity, decor)
-            collapseStatusBarWrapperInset(decor)
-            clearWeChatStatusBarStrip(decor)
-            // The aggregation container already has a stable system-bar hierarchy.
-            // Its list is initialized in onResume; posting another decor traversal into
-            // that first frame causes the visible hitch when opening a folder.
-            if (activity.javaClass.name != AGGREGATION_CONTAINER_UI) {
-                decor.postDelayed(APPLY_STATUS_BAR_DELAY_MS) {
-                    clearStatusBarBackground(activity, decor)
-                    collapseStatusBarWrapperInset(decor)
-                    clearWeChatStatusBarStrip(decor)
-                    logStatusBarBandCandidates(activity, decor)
-                }
-            }
         }.onFailure {
             WeLogger.w(TAG, "failed to apply transparent status bar", it)
         }
