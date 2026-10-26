@@ -116,6 +116,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     private val backgroundImageFile by lazy { KnownPaths.moduleAssets / BACKGROUND_IMAGE_FILE }
 
     private const val OVERLAY_TAG = "wekit_global_bg_overlay"
+    private const val BACKDROP_TAG = "wekit_global_bg_backdrop"
     private const val APPLIED_URI_TAG_KEY = 0x55020001
     private var backgroundRevision = 0L
     private const val APPLY_STATUS_BAR_DELAY_MS = 80L
@@ -290,6 +291,9 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
 
     private fun overlayFromActivity(activity: Activity): ImageView? =
         findOverlay(activity.window?.decorView as? ViewGroup ?: return null)
+
+    private fun backdropFromActivity(activity: Activity): ImageView? =
+        findBackdrop(activity.window?.decorView as? ViewGroup ?: return null)
 
     private fun shouldApplyGlobalTextColor(view: TextView): Boolean {
         val activity = view.context as? Activity ?: return false
@@ -650,6 +654,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                     clearStatusBarBackground(activity, decor)
                     collapseStatusBarWrapperInset(decor)
                     clearWeChatStatusBarStrip(decor)
+                    clearStatusBarBandScrim(decor)
                     logStatusBarBandCandidates(activity, decor)
                 }
             }
@@ -709,6 +714,49 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
             name = "setStatusBarColor"
             parameterCount = 1
         }?.invoke(Color.TRANSPARENT)
+    }
+
+    /**
+     * The strip between the status bar and the title bar (one status bar tall, one below the bar)
+     * is the WeChat page root's own background left exposed: WeChat offsets its root by the
+     * status bar height, then leaves that same height empty above its first child, so the root's
+     * scrim paints the band. Walk the tree and clear the background of every view that owns the
+     * band region without a child covering it; the backdrop behind the content then shows through.
+     */
+    private fun clearStatusBarBandScrim(decor: ViewGroup) {
+        val statusBarHeight = statusBarHeightGuess(decor)
+        if (statusBarHeight <= 0) return
+        val decorLocation = IntArray(2).also { decor.getLocationInWindow(it) }
+        val bandTop = statusBarHeight
+        val bandBottom = statusBarHeight * 2
+        val viewLocation = IntArray(2)
+
+        fun coversBand(view: View): Boolean {
+            if (view.visibility != View.VISIBLE || view.height <= 0) return false
+            view.getLocationInWindow(viewLocation)
+            val top = viewLocation[1] - decorLocation[1]
+            return top <= bandTop && top + view.height >= bandBottom
+        }
+
+        fun visit(view: View) {
+            if (view.visibility != View.VISIBLE || view.height <= 0) return
+            view.getLocationInWindow(viewLocation)
+            val top = viewLocation[1] - decorLocation[1]
+            if (top >= bandBottom) return
+
+            if (coversBand(view)) {
+                val covered = view is ViewGroup &&
+                        (0 until view.childCount).any { coversBand(view.getChildAt(it)) }
+                if (!covered && view.background != null) {
+                    view.makeTransparent()
+                }
+            }
+            if (view is ViewGroup) {
+                for (index in 0 until view.childCount) visit(view.getChildAt(index))
+            }
+        }
+
+        visit(decor)
     }
 
     /**
@@ -813,28 +861,40 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
         if (backgroundUri == null) return
         if (isBackgroundExcluded(activity)) {
             overlayFromActivity(activity)?.visibility = View.GONE
+            backdropFromActivity(activity)?.visibility = View.GONE
             return
         }
 
         val uri = backgroundUri ?: return
         val decor = activity.window?.decorView as? ViewGroup ?: return
         val overlay = findOverlay(decor) ?: createOverlay(activity, decor)
+        val backdrop = findBackdrop(decor) ?: createBackdrop(activity, decor)
 
         overlay.visibility = View.VISIBLE
         overlay.alpha = opacity
         overlay.bringToFront()
 
+        // The backdrop sits behind every WeChat view so the areas WeChat leaves empty (the strip
+        // under the status bar, page roots it offsets itself) show the same image at full strength
+        // instead of the window's default backdrop.
+        backdrop.visibility = View.VISIBLE
+        backdrop.alpha = 1f
+
         val imageKey = "$uri#$backgroundRevision"
-        if (overlay.getTag(APPLIED_URI_TAG_KEY) != imageKey) {
-            overlay.setTag(APPLIED_URI_TAG_KEY, imageKey)
-            overlay.load(backgroundImageFile.toFile()) {
-                // The source file is versioned by APPLIED_URI_TAG_KEY when replaced, so
-                // Coil's memory cache is safe and prevents decoding the same full-screen
-                // bitmap again for every Activity (notably aggregation folders).
-                memoryCachePolicy(CachePolicy.ENABLED)
-                diskCachePolicy(CachePolicy.DISABLED)
-                crossfade(false)
-            }
+        loadBackgroundImage(overlay, imageKey)
+        loadBackgroundImage(backdrop, imageKey)
+    }
+
+    private fun loadBackgroundImage(view: ImageView, imageKey: String) {
+        if (view.getTag(APPLIED_URI_TAG_KEY) == imageKey) return
+        view.setTag(APPLIED_URI_TAG_KEY, imageKey)
+        view.load(backgroundImageFile.toFile()) {
+            // The source file is versioned by APPLIED_URI_TAG_KEY when replaced, so
+            // Coil's memory cache is safe and prevents decoding the same full-screen
+            // bitmap again for every Activity (notably aggregation folders).
+            memoryCachePolicy(CachePolicy.ENABLED)
+            diskCachePolicy(CachePolicy.DISABLED)
+            crossfade(false)
         }
     }
 
@@ -855,10 +915,30 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
         }
     }
 
-    private fun findOverlay(decor: ViewGroup): ImageView? {
+    private fun createBackdrop(context: Context, decor: ViewGroup): ImageView {
+        return ImageView(context).apply {
+            tag = BACKDROP_TAG
+            background = null
+            isClickable = false
+            isFocusable = false
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            decor.addView(this, 0)
+        }
+    }
+
+    private fun findOverlay(decor: ViewGroup): ImageView? = findDecorImage(decor, OVERLAY_TAG)
+
+    private fun findBackdrop(decor: ViewGroup): ImageView? = findDecorImage(decor, BACKDROP_TAG)
+
+    private fun findDecorImage(decor: ViewGroup, tag: String): ImageView? {
         for (index in 0 until decor.childCount) {
             val child = decor.getChildAt(index)
-            if (child is ImageView && child.tag == OVERLAY_TAG) {
+            if (child is ImageView && child.tag == tag) {
                 return child
             }
         }
