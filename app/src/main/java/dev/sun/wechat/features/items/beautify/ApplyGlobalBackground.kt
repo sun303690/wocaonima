@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.InsetDrawable
 import android.graphics.drawable.RippleDrawable
@@ -120,6 +121,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     private const val AGGREGATION_CONTAINER_UI =
         "com.tencent.mm.ui.conversation.ConvBoxServiceConversationUI"
     private const val EDGE_TO_EDGE_WRAPPER_CLASS = "com.tencent.mm.ui.widget.EdgeToEdgeWrapperLayout"
+    private const val DRAW_STATUS_BAR_FRAME_CLASS = "com.tencent.mm.ui.statusbar.DrawStatusBarFrameLayout"
 
     private val rowStates = WeakHashMap<View, RowState>()
     private val collapsedStatusBarWrappers = WeakHashMap<View, Boolean>()
@@ -638,6 +640,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
 
             clearStatusBarBackground(activity, decor)
             collapseStatusBarWrapperInset(decor)
+            clearWeChatStatusBarStrip(decor)
             // The aggregation container already has a stable system-bar hierarchy.
             // Its list is initialized in onResume; posting another decor traversal into
             // that first frame causes the visible hitch when opening a folder.
@@ -645,6 +648,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                 decor.postDelayed(APPLY_STATUS_BAR_DELAY_MS) {
                     clearStatusBarBackground(activity, decor)
                     collapseStatusBarWrapperInset(decor)
+                    clearWeChatStatusBarStrip(decor)
                     logStatusBarBandCandidates(decor)
                 }
             }
@@ -692,6 +696,21 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     }
 
     /**
+     * WeChat paints its own status bar strip (DrawStatusBarFrameLayout) inside the window content
+     * instead of asking the window to color the bar. With the window bar already transparent the
+     * strip is a second copy of the bar drawn one status bar height too low, so keep it transparent
+     * and let the background show through. WeChat re-applies the color late, so this runs on every
+     * pass rather than once.
+     */
+    private fun clearWeChatStatusBarStrip(decor: ViewGroup) {
+        val strip = decor.firstViewByClassName(DRAW_STATUS_BAR_FRAME_CLASS) ?: return
+        strip.reflekt().firstMethodOrNull {
+            name = "setStatusBarColor"
+            parameterCount = 1
+        }?.invoke(Color.TRANSPARENT)
+    }
+
+    /**
      * The transparent status bar exposes the top of the window, so any opaque view left in that
      * area shows up as a dark band. Log the painted views in the top two status bar heights once
      * per window; the runtime log then names the view that is actually painting the band.
@@ -704,24 +723,22 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
         val decorLocation = IntArray(2).also { decor.getLocationInWindow(it) }
         val bandEnd = statusBarHeight * 2
         val viewLocation = IntArray(2)
-        val report = StringBuilder("statusBarHeight=$statusBarHeight")
+        val lines = mutableListOf<String>()
 
         fun visit(view: View, depth: Int) {
-            if (depth > 8 || report.length > 1600) return
+            if (depth > 16) return
             view.getLocationInWindow(viewLocation)
             val top = viewLocation[1] - decorLocation[1]
-            if (view.visibility != View.VISIBLE || view.height <= 0 || top >= bandEnd) return
-
-            val background = view.background
-            if (background != null || view is ImageView) {
-                report.append(" | ")
-                    .append("  ".repeat(depth))
-                    .append(view.javaClass.simpleName)
-                    .append('#').append(view.resourceEntryName() ?: "-")
-                    .append(' ').append(view.width).append('x').append(view.height)
-                    .append(" top=").append(top)
-                    .append(" pad=").append(view.paddingTop)
-                    .append(" bg=").append(background?.javaClass?.simpleName ?: "null")
+            if (top >= bandEnd) return
+            if (view.visibility == View.VISIBLE && view.height > 0) {
+                val color = (view.background as? ColorDrawable)?.color
+                lines += "  ".repeat(depth) + view.javaClass.simpleName +
+                        "#" + (view.resourceEntryName() ?: "-") +
+                        " " + view.width + "x" + view.height +
+                        " top=" + top +
+                        " pad=" + view.paddingTop +
+                        " bg=" + (color?.let { "%08X".format(it) }
+                        ?: view.background?.javaClass?.simpleName ?: "-")
             }
             if (view is ViewGroup) {
                 for (index in 0 until view.childCount) visit(view.getChildAt(index), depth + 1)
@@ -729,7 +746,9 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
         }
 
         visit(decor, 0)
-        WeLogger.d(TAG, "status bar band: $report")
+        lines.chunked(40).forEachIndexed { index, chunk ->
+            WeLogger.d(TAG, "status bar band #$index:\n" + chunk.joinToString("\n"))
+        }
     }
 
     @SuppressLint("DiscouragedApi")
