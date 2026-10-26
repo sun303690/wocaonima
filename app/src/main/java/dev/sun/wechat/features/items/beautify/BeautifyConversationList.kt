@@ -740,7 +740,7 @@ object BeautifyConversationList : ClickableFeature() {
             }
             globalCardDrawables[row] = desired
             if (row.width > 0 && row.height > 0 && !globalFillsStripped.containsKey(row)) {
-                globalFillsStripped[row] = true
+                globalFillsStripped[row] = row.background
                 stripGlobalRowFills(row, 0)
             }
             applyGlobalCardHeight(row)
