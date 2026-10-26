@@ -8,6 +8,7 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.InsetDrawable
+import android.graphics.drawable.LayerDrawable
 import android.graphics.drawable.RippleDrawable
 import android.net.Uri
 import android.os.Build
@@ -649,7 +650,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                     clearStatusBarBackground(activity, decor)
                     collapseStatusBarWrapperInset(decor)
                     clearWeChatStatusBarStrip(decor)
-                    logStatusBarBandCandidates(decor)
+                    logStatusBarBandCandidates(activity, decor)
                 }
             }
         }.onFailure {
@@ -715,7 +716,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
      * area shows up as a dark band. Log the painted views in the top two status bar heights once
      * per window; the runtime log then names the view that is actually painting the band.
      */
-    private fun logStatusBarBandCandidates(decor: ViewGroup) {
+    private fun logStatusBarBandCandidates(activity: Activity, decor: ViewGroup) {
         if (loggedStatusBarBands.put(decor, true) != null) return
         val statusBarHeight = statusBarHeightGuess(decor)
         if (statusBarHeight <= 0) return
@@ -731,14 +732,12 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
             val top = viewLocation[1] - decorLocation[1]
             if (top >= bandEnd) return
             if (view.visibility == View.VISIBLE && view.height > 0) {
-                val color = (view.background as? ColorDrawable)?.color
                 lines += "  ".repeat(depth) + view.javaClass.simpleName +
                         "#" + (view.resourceEntryName() ?: "-") +
                         " " + view.width + "x" + view.height +
                         " top=" + top +
                         " pad=" + view.paddingTop +
-                        " bg=" + (color?.let { "%08X".format(it) }
-                        ?: view.background?.javaClass?.simpleName ?: "-")
+                        " bg=" + view.describeBackground()
             }
             if (view is ViewGroup) {
                 for (index in 0 until view.childCount) visit(view.getChildAt(index), depth + 1)
@@ -747,7 +746,27 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
 
         visit(decor, 0)
         lines.chunked(40).forEachIndexed { index, chunk ->
-            WeLogger.d(TAG, "status bar band #$index:\n" + chunk.joinToString("\n"))
+            WeLogger.d(
+                TAG,
+                "status bar band #$index (${activity.javaClass.name}, " +
+                        "statusBar=${statusBarHeight}):\n" + chunk.joinToString("\n")
+            )
+        }
+    }
+
+    private fun View.describeBackground(): String {
+        return when (val background = background) {
+            null -> "-"
+            is ColorDrawable -> "%08X".format(background.color)
+            is LayerDrawable -> (0 until background.numberOfLayers).joinToString(
+                prefix = "Layer[", postfix = "]"
+            ) { index ->
+                val layer = background.getDrawable(index)
+                val color = (layer as? ColorDrawable)?.color?.let { "%08X".format(it) }
+                "$index:${color ?: layer?.javaClass?.simpleName ?: "-"}@" +
+                        (layer?.bounds?.toShortString() ?: "-")
+            }
+            else -> background.javaClass.simpleName
         }
     }
 
