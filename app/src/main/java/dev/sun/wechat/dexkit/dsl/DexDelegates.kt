@@ -106,6 +106,11 @@ sealed class BaseDexDelegate(val key: String) {
 
     protected abstract fun clearResolvedValue()
     abstract fun getDescriptorString(): String?
+
+    /** True only after this delegate has a real resolved descriptor. */
+    val isAvailable: Boolean
+        get() = getDescriptorString() != null && !isPlaceholder
+
     abstract val isPlaceholder: Boolean
 
     /**

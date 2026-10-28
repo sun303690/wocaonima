@@ -304,7 +304,7 @@ object AutoRestoreOnLeave : SwitchFeature(), IResolveDex {
                 SecretFriendState.tempOff()
             }
 
-        if (!methodLauncherFocusChanged.isPlaceholder) {
+        if (methodLauncherFocusChanged.isAvailable) {
             methodLauncherFocusChanged.hookAfter {
                 val hasFocus = args.getOrNull(0) as? Boolean ?: return@hookAfter
                 if (!hasFocus) {

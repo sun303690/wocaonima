@@ -35,7 +35,7 @@ private const val TAG = "SecretFriendHooks"
  * `com.tencent.mm.storage` 类型字段 Contact）。
  */
 internal fun BaseFeature.hookSecretMvvmListFilter(target: DexMethodDelegate, label: String) {
-    if (target.isPlaceholder) {
+    if (!target.isAvailable) {
         WeLogger.w(TAG, "$label preprocess method wasn't resolved; that list stays unfiltered")
         return
     }
@@ -81,7 +81,7 @@ internal fun BaseFeature.hookSecretMvvmListFilter(target: DexMethodDelegate, lab
  * 过滤结果写回同一位置。
  */
 internal fun BaseFeature.hookSecretStringArgListFilter(target: DexMethodDelegate, label: String) {
-    if (target.isPlaceholder) {
+    if (!target.isAvailable) {
         WeLogger.w(TAG, "$label target wasn't resolved; that surface stays unfiltered")
         return
     }
@@ -178,7 +178,7 @@ internal fun entryMentionsSecret(entry: Any, secrets: Set<String>): Boolean {
  * 过滤后的克隆体，幂等无副作用）。
  */
 internal fun BaseFeature.installSnsInlineSecretFilter(methodSnsInfoToSnsStruct: DexMethodDelegate) {
-    if (methodSnsInfoToSnsStruct.isPlaceholder) {
+    if (!methodSnsInfoToSnsStruct.isAvailable) {
         WeLogger.w(TAG, "snsInfoToSnsStruct wasn't resolved; moments inline likes/comments stay visible")
         return
     }

@@ -228,7 +228,7 @@ private val DISCOVER_UI_CLASSES = listOf(
 /**
  * 从候选委托组里取第一个已解析的容器。
  *
- * 判定用 `!isPlaceholder` 之前必须确认委托已参与解析：框架在
+ * 判定用 `isAvailable` 之前必须确认委托已参与解析：框架在
  * `resolveInlineDex` 里遍历的是**构造期就注册**的 `dexDelegates`，并用
  * `check(all SUCCESS || EXPECTED_FAILURE)` 收尾。因此候选委托一律用 `by dexMethod`
  * 声明（构造期注册、allowFailure 兜底为 EXPECTED_FAILURE），绝不能 lazy/按需创建，
@@ -238,7 +238,7 @@ private fun pickDiscoverContainer(
     candidates: List<Pair<DexMethodDelegate, DexMethodDelegate>>,
 ): Pair<DexMethodDelegate, DexMethodDelegate>? =
     candidates.firstOrNull { (onCreate, onResume) ->
-        !onCreate.isPlaceholder || !onResume.isPlaceholder
+        onCreate.isAvailable || onResume.isAvailable
     }
 
 private fun hideRowsMatching(view: View, titles: Set<String>) {
@@ -318,13 +318,13 @@ object HideDiscoverMoments : SwitchFeature(), IResolveDex {
             return
         }
         val rowTitles = setOf("朋友圈")
-        if (!onCreate.isPlaceholder) {
+        if (onCreate.isAvailable) {
             onCreate.hookAfter {
                 hideDiscoverRowsByTitle(thisObject as Activity, rowTitles)
             }
         }
         // onResume 重走一遍：页面重建后行会重新绑定。新版可能未在本类声明，缺失时跳过。
-        if (!onResume.isPlaceholder) {
+        if (onResume.isAvailable) {
             onResume.hookAfter {
                 hideDiscoverRowsByTitle(thisObject as Activity, rowTitles)
             }
@@ -384,12 +384,12 @@ object HideDiscoverEntries : SwitchFeature(), IResolveDex {
             return
         }
         val rowTitles = setOf("视频号", "看一看", "小程序")
-        if (!onCreate.isPlaceholder) {
+        if (onCreate.isAvailable) {
             onCreate.hookAfter {
                 hideDiscoverRowsByTitle(thisObject as Activity, rowTitles)
             }
         }
-        if (!onResume.isPlaceholder) {
+        if (onResume.isAvailable) {
             onResume.hookAfter {
                 hideDiscoverRowsByTitle(thisObject as Activity, rowTitles)
             }

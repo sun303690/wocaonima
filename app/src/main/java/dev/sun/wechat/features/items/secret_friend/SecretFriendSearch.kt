@@ -56,7 +56,7 @@ object HideSearch : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.IQueryLi
     override fun onEnable() {
         WeDatabaseListenerApi.addListener(this)
 
-        if (!methodFtsSearchChatroomMemberTask.isPlaceholder) {
+        if (methodFtsSearchChatroomMemberTask.isAvailable) {
             methodFtsSearchChatroomMemberTask.hookAfter {
                 val secrets = SecretFriendState.getWxIds()
                 if (secrets.isEmpty() || SecretFriendState.isTemporarilyShown()) return@hookAfter
@@ -79,7 +79,7 @@ object HideSearch : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.IQueryLi
             WeLogger.w(TAG, "SearchChatroomMemberTask 未解析, 群成员搜索不过滤")
         }
 
-        if (!methodFtsSearchCommonChatroomUserTask.isPlaceholder) {
+        if (methodFtsSearchCommonChatroomUserTask.isAvailable) {
             methodFtsSearchCommonChatroomUserTask.hookAfter {
                 val secrets = SecretFriendState.getWxIds()
                 if (secrets.isEmpty() || SecretFriendState.isTemporarilyShown()) return@hookAfter

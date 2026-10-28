@@ -12,6 +12,7 @@ import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import io.ktor.utils.io.readUTF8Line
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.addJsonObject
@@ -38,72 +39,99 @@ class OpenAiChatCompletionsClient(
 
     override fun stream(request: LlmRequest): Flow<LlmStreamEvent> = flow {
         val body = LlmJson.shallowMerge(buildBody(request, stream = true), request.customJsonOverride)
-        // The response is scoped to `execute { … }`: every early exit below (HTTP error, break on
-        // [DONE]) previously abandoned an open SSE body channel, leaking the connection until GC.
-        // `execute` releases it on every path, including exceptions.
-        http.preparePost(endpoint) {
+
+        // Retry with exponential backoff for rate-limit (429) errors, up to maxRetries
+        var attempt = 0
+        val maxRetries = 3
+        while (true) {
+            val result = executeWithRetry(body)
+            if (result is RetryNeeded) {
+                if (attempt < maxRetries) {
+                    attempt++
+                    val delayMs = if (result.retryAfterMs > 0) result.retryAfterMs else (1L shl attempt) * 1000L
+                    WeLogger.w(TAG, "rate limited (429), retry $attempt/$maxRetries after ${delayMs}ms")
+                    emit(LlmStreamEvent.ReasoningDelta(""))
+                    delay(delayMs)
+                    continue
+                } else {
+                    emit(LlmStreamEvent.Failed(LlmException("HTTP 429: rate limit exceeded after $maxRetries retries")))
+                    return@flow
+                }
+            } else if (result is StreamReady) {
+                val resp = result.response
+                val acc = ToolCallAccumulator()
+                val textBuf = StringBuilder()
+                val reasoningBuf = StringBuilder()
+                var finishReason: String? = null
+                var usage: LlmUsage? = null
+                val channel = resp.bodyAsChannel()
+                while (true) {
+                    @Suppress("DEPRECATION")
+                    val line = channel.readUTF8Line() ?: break
+                    val data = SseParser.dataOrNull(line) ?: continue
+                    if (data == "[DONE]") break
+                    val chunk = runCatching { LlmJson.json.parseToJsonElement(data).jsonObject }.getOrNull() ?: continue
+                    chunk["usage"]?.let { if (it is JsonObject) usage = parseUsage(it) }
+                    val choice = chunk["choices"]?.jsonArray?.firstOrNull()?.jsonObject ?: continue
+                    choice["finish_reason"]?.jsonPrimitive?.contentOrNullSafe()?.let { finishReason = it }
+                    val delta = choice["delta"]?.jsonObject ?: continue
+                    delta["content"]?.jsonPrimitive?.contentOrNullSafe()?.let {
+                        if (it.isNotEmpty()) {
+                            textBuf.append(it); emit(LlmStreamEvent.TextDelta(it))
+                        }
+                    }
+                    (delta["reasoning"] ?: delta["reasoning_content"])?.jsonPrimitive?.contentOrNullSafe()?.let {
+                        if (it.isNotEmpty()) {
+                            if (reasoningBuf.isEmpty()) emit(LlmStreamEvent.ReasoningDelta(""))
+                            reasoningBuf.append(it); emit(LlmStreamEvent.ReasoningDelta(it))
+                        }
+                    }
+                    delta["tool_calls"]?.jsonArray?.forEach { acc.accept(it.jsonObject) }
+                }
+                emit(
+                    LlmStreamEvent.Completed(
+                        LlmMessage(
+                            role = LlmRole.ASSISTANT,
+                            content = textBuf.toString().ifEmpty { null },
+                            reasoning = reasoningBuf.toString().ifEmpty { null },
+                            toolCalls = acc.build(),
+                        ),
+                        finishReason,
+                        usage,
+                    )
+                )
+                return@flow
+            } else if (result is ErrorResponse) {
+                emit(LlmStreamEvent.Failed(LlmException("HTTP ${result.status}: ${result.bodyText}")))
+                return@flow
+            }
+        }
+    }
+
+    // --- Internal result types for the retry loop ---
+    private sealed interface RequestResult
+    private data class RetryNeeded(val retryAfterMs: Long) : RequestResult
+    private data class StreamReady(val response: io.ktor.client.statement.HttpResponse) : RequestResult
+    private data class ErrorResponse(val status: Int, val bodyText: String) : RequestResult
+
+    private suspend fun executeWithRetry(body: JsonObject): RequestResult {
+        return http.preparePost(endpoint) {
             header(HttpHeaders.Authorization, "Bearer $apiKey")
             contentType(ContentType.Application.Json)
             setBody(LlmJson.json.encodeToString(JsonObject.serializer(), body))
         }.execute { resp ->
-            if (!resp.status.isSuccess()) {
-                emit(LlmStreamEvent.Failed(LlmException("HTTP ${resp.status.value}: ${readBodyText(resp)}")))
-                return@execute
+            if (resp.status.value == 429) {
+                val retryAfter = resp.headers[HttpHeaders.RetryAfter]?.toIntOrNull() ?: 0
+                RetryNeeded(if (retryAfter > 0) retryAfter * 1000L else 0L)
+            } else if (!resp.status.isSuccess()) {
+                ErrorResponse(resp.status.value, readBodyText(resp))
+            } else {
+                StreamReady(resp)
             }
-            val acc = ToolCallAccumulator()
-            val textBuf = StringBuilder()
-            val reasoningBuf = StringBuilder()
-            var finishReason: String? = null
-            var usage: LlmUsage? = null
-
-            val channel = resp.bodyAsChannel()
-            while (true) {
-                @Suppress("DEPRECATION")
-                val line = channel.readUTF8Line() ?: break
-                val data = SseParser.dataOrNull(line) ?: continue
-                if (data == "[DONE]") break
-
-                val chunk = runCatching { LlmJson.json.parseToJsonElement(data).jsonObject }.getOrNull() ?: continue
-                // The final chunk (with stream_options.include_usage) carries `usage` and an empty
-                // `choices` array, so parse usage before the empty-choices `continue` below.
-                chunk["usage"]?.let { if (it is JsonObject) usage = parseUsage(it) }
-                val choice = chunk["choices"]?.jsonArray?.firstOrNull()?.jsonObject ?: continue
-                choice["finish_reason"]?.jsonPrimitive?.contentOrNullSafe()?.let { finishReason = it }
-
-                val delta = choice["delta"]?.jsonObject ?: continue
-                delta["content"]?.jsonPrimitive?.contentOrNullSafe()?.let {
-                    if (it.isNotEmpty()) {
-                        textBuf.append(it); emit(LlmStreamEvent.TextDelta(it))
-                    }
-                }
-                // Some providers expose reasoning under `reasoning` or `reasoning_content`.
-                (delta["reasoning"] ?: delta["reasoning_content"])?.jsonPrimitive?.contentOrNullSafe()?.let {
-                    if (it.isNotEmpty()) {
-                        // On the very first reasoning chunk, emit an empty sentinel so the UI shows the
-                        // "思考中..." card immediately — before the first real token is appended.
-                        if (reasoningBuf.isEmpty()) emit(LlmStreamEvent.ReasoningDelta(""))
-                        reasoningBuf.append(it); emit(LlmStreamEvent.ReasoningDelta(it))
-                    }
-                }
-                delta["tool_calls"]?.jsonArray?.forEach { acc.accept(it.jsonObject) }
-            }
-
-            emit(
-                LlmStreamEvent.Completed(
-                    LlmMessage(
-                        role = LlmRole.ASSISTANT,
-                        content = textBuf.toString().ifEmpty { null },
-                        reasoning = reasoningBuf.toString().ifEmpty { null },
-                        toolCalls = acc.build(),
-                    ),
-                    finishReason,
-                    usage,
-                )
-            )
         }
     }
 
-    // -- request body ---------------------------------------------------------
+// -- request body ---------------------------------------------------------
 
     private fun buildBody(request: LlmRequest, stream: Boolean): JsonObject = buildJsonObject {
         put("model", request.modelIdRemote)

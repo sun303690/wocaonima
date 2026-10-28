@@ -268,14 +268,29 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         }
         val request = base.copy(maxTokens = config.maxTokens, customJsonOverride = override)
         val builder = StringBuilder()
-        client.stream(request).collect { event ->
-            when (event) {
-                is LlmStreamEvent.TextDelta -> builder.append(event.text)
-                is LlmStreamEvent.Completed -> if (builder.isEmpty()) {
-                    event.message.content?.let { builder.append(it) }
+        // 流式请求本身已在客户端层做 429 指数退避重试；这里再做一次整体重试，
+        // 覆盖网络抖动/服务端 5xx 等瞬时错误，最多 2 次。
+        var attempt = 0
+        val maxAttempts = 3
+        while (true) {
+            try {
+                builder.setLength(0)
+                client.stream(request).collect { event ->
+                    when (event) {
+                        is LlmStreamEvent.TextDelta -> builder.append(event.text)
+                        is LlmStreamEvent.Completed -> if (builder.isEmpty()) {
+                            event.message.content?.let { builder.append(it) }
+                        }
+                        is LlmStreamEvent.Failed -> throw event.error
+                        else -> {}
+                    }
                 }
-                is LlmStreamEvent.Failed -> throw event.error
-                else -> {}
+                break
+            } catch (e: Exception) {
+                attempt++
+                if (attempt >= maxAttempts) throw e
+                WeLogger.w(TAG, "model request failed (attempt $attempt/$maxAttempts), retrying: ${e.message}")
+                delay((1L shl attempt) * 500L)
             }
         }
         builder.toString()

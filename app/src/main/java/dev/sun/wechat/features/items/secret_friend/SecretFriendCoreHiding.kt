@@ -72,7 +72,7 @@ object HideConversations : SwitchFeature(), IResolveDex,
     override fun onEnable() {
         WeDatabaseListenerApi.addListener(this)
 
-        if (methodSqliteWrapperRawQuery.isPlaceholder) {
+        if (!methodSqliteWrapperRawQuery.isAvailable) {
             WeLogger.w(TAG, "SQLite wrapper query method not resolved; conversation hiding disabled")
         } else {
             methodSqliteWrapperRawQuery.hookBefore {

@@ -60,7 +60,7 @@ object HideMoments : SwitchFeature(), IResolveDex, WeDatabaseListenerApi.IQueryL
     override fun onEnable() {
         WeDatabaseListenerApi.addListener(this)
 
-        if (!methodSnsSyncUpdateRedDotCache.isPlaceholder) {
+        if (methodSnsSyncUpdateRedDotCache.isAvailable) {
             methodSnsSyncUpdateRedDotCache.hookBefore {
                 if (SecretFriendState.isTemporarilyShown()) return@hookBefore
                 // 静态两参方法: args[0] 是 NetSceneSnsSync 实例, args[1] 是 SnsObject;
@@ -174,7 +174,7 @@ object HideMomentsGroupIcon : SwitchFeature(), IResolveDex {
     }
 
     override fun onEnable() {
-        if (methodSnsInfoToSnsStruct.isPlaceholder) {
+        if (!methodSnsInfoToSnsStruct.isAvailable) {
             WeLogger.w(TAG, "snsInfoToSnsStruct 未解析, 分组图标不过滤")
             return
         }
