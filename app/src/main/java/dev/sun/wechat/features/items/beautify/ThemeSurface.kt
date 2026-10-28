@@ -247,7 +247,10 @@ internal object ThemeSurface {
         lastChatHit = hit
 
         // ── ⓪ 正向判定：先问「这里是不是主页面」（放行条件之一，先算以便本次事件就用上） ──
-        onMainPage = ChatPageGuard.detectMainPage(activity, chatPageVisible)
+        // LauncherUI Activity 内同时常驻多个 Tab/Fragment；临时布局变化不应把整个窗口
+        // 降级为“非主页”，否则已经挂好的 Drawable 会在某次重绘后永久停止绘制。
+        onMainPage = if (ThemePages.isLauncher(activity)) true
+            else ChatPageGuard.detectMainPage(activity, chatPageVisible)
 
         // ── ① 实时特征命中 = 在聊天页（最高优先，特征命中就绝不放行）──
         if (visible) {
@@ -725,11 +728,9 @@ internal object ThemeSurface {
         // 【正向闸】LauncherUI 的 doOnCreate / 生命周期回调本身就是主界面强证据。
         // 此时视图可能尚未完成布局，结构扫描会暂时返回 false；若据此拒绝挂载，
         // 首次启动就没有遮罩，且没有后续监听能补挂。聊天页状态仍是独立硬闸。
-        runCatching { onMainPage = ChatPageGuard.detectMainPage(activity, chatPageVisible) }
-        if (!onMainPage && !chatPageVisible) {
-            onMainPage = true
-            noteEvent("LauncherUI 尚未布局完成 → 先挂壁纸，后续结构检测校正")
-        }
+        // applyTabWallpapers 只接受 LauncherUI；该 Activity 自身就是稳定主页证据。
+        // 不再让某一帧的 View 结构扫描把全局绘制闸门关掉。
+        onMainPage = true
         if (!onMainPage || chatPageVisible) {
             noteEvent("挂载前识别到聊天页或非主页面 → 跳过挂载")
             return
@@ -760,7 +761,7 @@ internal object ThemeSurface {
         val file = fileForTab(files, tab) ?: files.firstOrNull { it != null }
         val alphaPct = ThemeStore.overlayOpacity()
         val result = TabWallpaperRenderer.apply(activity, file, tab, alphaPct) {
-            onMainPage && !chatPageVisible && ThemeStore.wallpaperSwitchOn()
+            !chatPageVisible && ThemeStore.wallpaperSwitchOn()
         }
         if (result != "ok") {
             wallpaperFailStreak += 1
@@ -788,7 +789,7 @@ internal object ThemeSurface {
             if (files.all { it == null }) return@runCatching
             val file = fileForTab(files, position) ?: files.firstOrNull { it != null }
             val result = TabWallpaperRenderer.apply(activity, file, position, ThemeStore.overlayOpacity()) {
-                onMainPage && !chatPageVisible && ThemeStore.wallpaperSwitchOn()
+                !chatPageVisible && ThemeStore.wallpaperSwitchOn()
             }
             WeLogger.i(TAG, "切页换图 → Tab=$position 文件=${file?.name ?: "null"} 结果=$result")
         }.onFailure { WeLogger.w(TAG, "切 Tab 换背景失败：${it.message}") }
