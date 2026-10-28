@@ -104,7 +104,7 @@ object ThemeStore : ClickableFeature(), WeChatMessageViewApi.ICreateViewListener
                     // 写成 thisObject as? Activity 会永远是 null，整个 hook 第一行就 return
                     // （2026-10-27 的「4 页全用主页图、adapter 0 处」就是这么来的）。
                     val activity = runCatching {
-                        thisObject.reflekt()
+                        thisObject!!.reflekt()
                             .firstField { type = "com.tencent.mm.ui.MMFragmentActivity" }
                             .get() as? Activity
                     }.getOrNull() ?: (thisObject as? Activity) ?: run {
@@ -116,7 +116,7 @@ object ThemeStore : ClickableFeature(), WeChatMessageViewApi.ICreateViewListener
                     // doOnCreate 时 DecorView 往往还没完成首次布局，下一帧再挂一次兜底
                     activity.window?.decorView?.post { ThemeSurface.applyNow(activity) }
                     val tabsAdapter = runCatching {
-                        thisObject.reflekt().firstField { name = "mTabsAdapter" }.get()
+                        thisObject!!.reflekt().firstField { name = "mTabsAdapter" }.get()
                     }.getOrNull() ?: run {
                         WeLogger.w(TAG, "主界面 hook：未找到 mTabsAdapter，切页换图不可用（4 页会一直显示第 1 张）")
                         return@hookAfter
@@ -199,7 +199,7 @@ object ThemeStore : ClickableFeature(), WeChatMessageViewApi.ICreateViewListener
                             ?: return@runCatching
                         method.hookAfter {
                             val view = runCatching {
-                                thisObject.javaClass.getMethod("getView").invoke(thisObject) as? View
+                                thisObject!!.javaClass.getMethod("getView").invoke(thisObject) as? View
                             }.getOrNull()
                             ThemeSurface.onChattingFragmentShown(view)
                         }
@@ -226,10 +226,10 @@ object ThemeStore : ClickableFeature(), WeChatMessageViewApi.ICreateViewListener
                     val method = mmFragment.reflekt().firstMethodOrNull { name = methodName }
                         ?: return@runCatching
                     method.hookAfter {
-                        val cn = thisObject.javaClass.name.orEmpty()
+                        val cn = thisObject!!.javaClass.name.orEmpty()
                         if (cn.contains("Chatting", ignoreCase = true)) {
                             val view = runCatching {
-                                thisObject.javaClass.getMethod("getView").invoke(thisObject) as? View
+                                thisObject!!.javaClass.getMethod("getView").invoke(thisObject) as? View
                             }.getOrNull()
                             ThemeSurface.onChattingFragmentShown(view)
                         }

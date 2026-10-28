@@ -218,24 +218,21 @@ internal object ChatPageGuard {
 
         // ── 反证（聊天页铁证，任一命中就绝不放行）──
         if (bottomInput) {
-            mainPageInfo = "底部输入框=有 → 聊天页；Tab组=${tabGroup} 列表=${bigList} FAB=${AddMainScreenFab.visibleInMain} 遍历=${visited}节点"
+            mainPageInfo = "底部输入框=有 → 聊天页；Tab组=${tabGroup} 列表=${bigList} 遍历=${visited}节点"
             return false
         }
 
-        // ── 正向证据：**全部用上，任一成立即可**（用户要求的综合判定）──
-        //  A. 底部 4 个 Tab 按钮（同容器 ≥2 个，避免被结构微调卡死）
-        //  B. FAB 悬浮按钮可见 —— FAB 只在 4 个 Tab 主页面显示，主页面专属证据
-        //  C. 会话列表大列表可见（占据内容区）
+        // ── 正向证据：底部 Tab 结构或大面积主列表 ──
+        // WeKit 的 FAB 没有导出可见状态，因此只依赖稳定的页面结构证据。
         val evidenceTab = tabGroup >= 2
-        val evidenceFab = AddMainScreenFab.visibleInMain
         val evidenceList = bigList
-        val evidence = evidenceTab || evidenceFab || evidenceList
+        val evidence = evidenceTab || evidenceList
         // 注意：这里**不再让 chatPageVisible 参与否决**。
         // 聊天页的拦截已由 bottomInput（铁证）+ 特征识别承担；若再让 chatPageVisible
         // 参与，Fragment onPause 迟到（实测 21 秒）期间它恒为 true，会把真正的主页面
         // 判成非主页面 → 挂载被跳过/绘制被拦 →「回到主页面 4 页全空」。
         val onMain = evidence
-        mainPageInfo = "Tab组=${tabGroup}${if (evidenceTab) "✓" else "✗"} FAB=${if (evidenceFab) "✓" else "✗"} 列表=${if (evidenceList) "✓" else "✗"} 底部输入框=无 遍历=${visited}节点"
+        mainPageInfo = "Tab组=${tabGroup}${if (evidenceTab) "✓" else "✗"} 列表=${if (evidenceList) "✓" else "✗"} 底部输入框=无 遍历=${visited}节点"
         onMain
     }.onFailure {
         mainPageInfo = "异常：${it.message}"

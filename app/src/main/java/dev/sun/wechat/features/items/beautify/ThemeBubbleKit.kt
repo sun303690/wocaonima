@@ -208,15 +208,15 @@ internal object ThemeBubbleKit {
             @Suppress("DEPRECATION")
             when (msgInfo.type) {
                 MessageType.TEXT, MessageType.LINK, MessageType.GROUP_NOTE, MessageType.QUOTE -> {
-                    val bubble = view.findViewWhich<MMNeat7extView> { it is MMNeat7extView } ?: return
+                    val bubble = view.findViewWhich { it is MMNeat7extView } as? MMNeat7extView ?: return
                     applyToView(bubble, msgInfo.isSelfSender)
                 }
                 MessageType.VOIP -> {
-                    val bubbleView = view.findViewWhich<LinearLayout> {
+                    val bubbleView = view.findViewWhich {
                         it.javaClass == LinearLayout::class.java &&
                             it.tag?.javaClass?.name?.startsWith("com.tencent.mm.ui.chatting.viewitems") == true
-                    } ?: return
-                    val bubbleTextView = bubbleView.findViewWhich<TextView> { it is TextView } ?: return
+                    } as? LinearLayout ?: return
+                    val bubbleTextView = bubbleView.findViewWhich { it is TextView } as? TextView ?: return
                     applyToView(bubbleTextView, msgInfo.isSelfSender)
                 }
                 else -> { /* 其它消息类型不换气泡 */ }

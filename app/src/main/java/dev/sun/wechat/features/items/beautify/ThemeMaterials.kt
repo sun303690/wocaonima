@@ -140,7 +140,7 @@ internal object ThemeMaterials {
      */
     fun wallpaperSourceFor(activity: Activity?, activeId: String): java.nio.file.Path? {
         if (activity != null && ThemePages.isChatting(activity)) {
-            if (!runCatching { dev.sun.wechat.preferences.KvStore.getBoolOrFalse(ThemeExtras.KEY_RANDOM_WALLPAPER) }
+            if (!runCatching { dev.sun.wechat.data.KvStore.getBoolOrFalse(ThemeExtras.KEY_RANDOM_WALLPAPER) }
                     .getOrDefault(false)
             ) return null
             val pool = runCatching { ThemePack.randomPoolFiles() }.getOrDefault(emptyList())
