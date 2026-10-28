@@ -600,6 +600,8 @@
     <string name="feature_replace_navigation_bar_description">将首页底栏替换为 Material Design 或 Backdrop 风格</string>
     <string name="feature_themes_name">主题</string>
     <string name="feature_themes_description">应用 THEMES_PATH 中的主题，切换后重启微信生效</string>
+    <string name="feature_theme_workshop_name">主题工坊</string>
+    <string name="feature_theme_workshop_description">内置六款沉浸主题，支持四个 Tab 独立壁纸、消息气泡、前景遮罩渲染与主题诊断。</string>
     <string name="feature_home_side_panel_name">主页侧滑面板</string>
     <string name="feature_home_side_panel_description">在微信主页添加一个左划侧栏面板 (负一屏)</string>
     <string name="feature_add_to_aggregation_folder_name">添加对话至归拢文件夹</string>
