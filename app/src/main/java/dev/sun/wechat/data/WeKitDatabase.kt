@@ -7,6 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import dev.sun.wechat.data.dao.AiChatMemoryDao
 import dev.sun.wechat.data.dao.AssetDao
 import dev.sun.wechat.data.dao.AutomationDao
 import dev.sun.wechat.data.dao.ConversationCollectionDao
@@ -52,6 +53,7 @@ import dev.sun.wechat.agent.data.dao.TriggerDao
 import dev.sun.wechat.data.entity.AssetBindingEntity
 import dev.sun.wechat.data.entity.AssetChunkEntity
 import dev.sun.wechat.data.entity.AssetEntity
+import dev.sun.wechat.data.entity.AiChatMemoryEntity
 import dev.sun.wechat.agent.data.entity.BridgeToolAuditEntity
 import dev.sun.wechat.agent.data.entity.ConditionalPromptEntity
 import dev.sun.wechat.data.entity.DexCacheDescriptorEntity
@@ -85,6 +87,7 @@ import java.io.File
 
 @Database(
     entities = [
+        AiChatMemoryEntity::class,
         SessionEntity::class,
         MessageEntity::class,
         ToolCallEntity::class,
@@ -127,7 +130,7 @@ import java.io.File
         MomentAutomationKeywordEntity::class,
         MomentAutomationContentTypeEntity::class,
     ],
-    version = 22,
+    version = 24,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 9, to = 10), // adds external_services table
@@ -160,12 +163,13 @@ abstract class WeKitDatabase : RoomDatabase() {
     abstract fun conversationCollectionDao(): ConversationCollectionDao
     abstract fun simpleStructuredDao(): SimpleStructuredDao
     abstract fun automationDao(): AutomationDao
+    abstract fun aiChatMemoryDao(): AiChatMemoryDao
 
     companion object {
         private const val TAG = "WeKitDatabase"
 
         const val FILE_NAME = "wekit.db"
-        const val SCHEMA_VERSION = 22
+        const val SCHEMA_VERSION = 24
 
         /** Location of the unified database after the path migration has completed. */
         val file: File
@@ -349,6 +353,24 @@ abstract class WeKitDatabase : RoomDatabase() {
             "DROP TABLE structured_store_state",
         )
 
+        val MIGRATION_22_23 = object : Migration(22, 23) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `ai_chat_memories` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `talker` TEXT NOT NULL, `content` TEXT NOT NULL, `scope` TEXT NOT NULL, `enabled` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)"
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_chat_memories_talker` ON `ai_chat_memories` (`talker`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_chat_memories_scope` ON `ai_chat_memories` (`scope`)")
+            }
+        }
+
+        val MIGRATION_23_24 = object : Migration(23, 24) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `ai_chat_memories` ADD COLUMN `personaId` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE `ai_chat_memories` ADD COLUMN `source` TEXT NOT NULL DEFAULT 'manual'")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_chat_memories_personaId` ON `ai_chat_memories` (`personaId`)")
+            }
+        }
+
         val migration17To18Sql = listOf(
             "CREATE TABLE IF NOT EXISTS `preference_entries` (`namespace` TEXT NOT NULL, `key` TEXT NOT NULL, `valueType` TEXT NOT NULL, `valueText` TEXT, `valueLong` INTEGER, `valueDouble` REAL, `valueBlob` BLOB, `encodingVersion` INTEGER NOT NULL, `revision` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `exportable` INTEGER NOT NULL, PRIMARY KEY(`namespace`, `key`))",
             "CREATE INDEX IF NOT EXISTS `index_preference_entries_namespace` ON `preference_entries` (`namespace`)",
@@ -526,7 +548,7 @@ abstract class WeKitDatabase : RoomDatabase() {
             dbFile.toString()
         )
             .setJournalMode(journalMode)
-            .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22)
+            .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24)
             // Destructive fallback is scoped to the pre-release schemas (1–8) only, which no
             // migration path was ever written for. From 9 onwards every step must have a
             // migration: a missing one then fails loudly at open time instead of silently
