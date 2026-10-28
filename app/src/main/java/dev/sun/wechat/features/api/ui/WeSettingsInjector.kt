@@ -267,6 +267,20 @@ object WeSettingsInjector : ApiFeature(), IResolveDex, WeChatInputBarApi.IInputB
             return
         }
 
+        // legacy 注入依赖的 Preference 操作方法可能因微信版本漂移解析不到。
+        // 核心锚点缺失时安全跳过（不崩溃，保持模块其余部分可用）。
+        if (!methodSetKey.isAvailable ||
+            !methodSetTitle.isAvailable ||
+            !methodGetKey.isAvailable ||
+            !methodAddPref.isAvailable
+        ) {
+            WeLogger.w(
+                TAG,
+                "legacy settings pref anchors unresolved (version drift); legacy injection skipped",
+            )
+            return
+        }
+
         clsSettingsUi.reflekt().firstMethod {
             name = "initView"
             parameterCount = 0
@@ -378,6 +392,24 @@ object WeSettingsInjector : ApiFeature(), IResolveDex, WeChatInputBarApi.IInputB
                 WeLogger.w(TAG, "modern settings class not found, skipping")
                 return
             }
+
+        // 微信版本漂移时这些锚点可能解析不到（allowFailure）。访问 .clazz/.method 会抛异常，
+        // 导致整个注入崩溃。核心锚点缺失时安全降级到 legacy 注入路径。
+        if (!classSettingItemClassesProvider.isAvailable ||
+            !classBaseSettingItem.isAvailable ||
+            !classBaseSettingSwitchItem.isAvailable ||
+            !classSettingLocation.isAvailable ||
+            !methodSettingGroupAccountInfoGetStringId.isAvailable ||
+            !methodSettingGroupAccountInfoReturns1.isAvailable ||
+            !methodSettingGroupPersonalInfoGetGroupNameResId.isAvailable ||
+            !methodResourceHelperGetStringById.isAvailable
+        ) {
+            WeLogger.w(
+                TAG,
+                "modern settings anchors unresolved (version drift); falling back to legacy injection",
+            )
+            return
+        }
 
         resolveMethodNames()
 

@@ -24,10 +24,17 @@ object EnhanceQuery : SwitchFeature(), WeDatabaseListenerApi.IQueryListener {
     }
 
     override fun onQuery(sql: String): String? {
+        // 快速路径：本功能只关心朋友圈信息流主查询（select *,rowid from SnsInfo）。
+        // 微信内绝大多数 SQL 与朋友圈无关，用最低成本的 contains 先过滤掉，
+        // 避免对每个查询都执行重写/字符串拼接（该 listener 会被所有数据库查询触发）。
+        if (!sql.contains("from SnsInfo", ignoreCase = true)) return null
+
         val rewritten = rewriteSql(sql)
 
         if (rewritten != sql) {
-            WeLogger.i(TAG, "enhanced moments SQL query")
+            // 命中次数通常极低（仅朋友圈信息流刷新时），但仍保持 info 级可追踪；
+            // 相同 SQL 反复重写属于正常行为，不再逐条打日志，避免高频刷日志拖慢 I/O。
+            WeLogger.d(TAG, "enhanced moments SQL query")
             return rewritten
         }
 

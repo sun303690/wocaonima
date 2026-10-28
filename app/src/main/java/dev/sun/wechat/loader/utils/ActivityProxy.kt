@@ -160,12 +160,15 @@ object ActivityProxy {
          *    被启动组件在清单里的 flag（见 `ActivityRecord.supportsPictureInPicture()`），
          *    而宿主没有任何 Activity 声明过它，借壳就永远进不了画中画。也正因为如此，
          *    对应的功能只能在 LSPosed 模式下用（Zygisk 模式下模块应用没有安装）。
+         *
+         * 按「完整类名的最后一段」精确匹配，避免 `contains` 误伤
+         * （如 MainActivityHelper 之类包含子串但并非免代理 Activity 的类）。
          */
-        private val NON_PROXY_ACTIVITIES = listOf("MainActivity", "PipVoipActivity")
+        private val NON_PROXY_ACTIVITIES = setOf("MainActivity", "PipVoipActivity")
 
         fun isModuleProxyActivity(className: String?): Boolean =
             className?.startsWith(PackageNames.MODULE) == true &&
-                NON_PROXY_ACTIVITIES.none { className.contains(it) }
+                className.substringAfterLast('.') !in NON_PROXY_ACTIVITIES
     }
 
     private class IActivityManagerHandler(private val origin: Any) : InvocationHandler {
