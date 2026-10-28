@@ -40,16 +40,8 @@ internal object ThemeMaterials {
      * 所有内置主题就只剩一个纯色块 —— 用户感知就是「点了默认主题没效果」。
      */
     fun readBuiltinAsset(assetPath: String): ByteArray? {
-        runCatching {
-            val pkgCtx = hostApp?.createPackageContext(BuildConfig.APPLICATION_ID, 0)
-            pkgCtx?.assets?.open(assetPath)?.use { return it.readBytes() }
-        }.onFailure { WeLogger.w(TAG, "createPackageContext 读素材失败：$assetPath（${it.message}）") }
-
-        runCatching {
-            ThemeMaterials::class.java.classLoader?.getResourceAsStream("assets/$assetPath")
-                ?.use { return it.readBytes() }
-        }.onFailure { WeLogger.w(TAG, "ClassLoader 读素材失败：$assetPath（${it.message}）") }
-
+        // 注入微信后模块包通常未安装，优先直接读 LSPosed 传入的真实 APK，
+        // 避免每次切主题都先制造一条 createPackageContext 警告。
         runCatching {
             val apk = moduleApkPath() ?: return@runCatching
             java.util.zip.ZipFile(apk).use { zip ->
@@ -58,6 +50,16 @@ internal object ThemeMaterials {
                 }
             }
         }.onFailure { WeLogger.w(TAG, "ZipFile 读素材失败：$assetPath（${it.message}）") }
+
+        runCatching {
+            ThemeMaterials::class.java.classLoader?.getResourceAsStream("assets/$assetPath")
+                ?.use { return it.readBytes() }
+        }.onFailure { WeLogger.w(TAG, "ClassLoader 读素材失败：$assetPath（${it.message}）") }
+
+        runCatching {
+            val pkgCtx = hostApp?.createPackageContext(BuildConfig.APPLICATION_ID, 0)
+            pkgCtx?.assets?.open(assetPath)?.use { return it.readBytes() }
+        }.onFailure { WeLogger.w(TAG, "createPackageContext 读素材失败：$assetPath（${it.message}）") }
 
         WeLogger.w(TAG, "内置素材三种方式都读不到：$assetPath")
         return null

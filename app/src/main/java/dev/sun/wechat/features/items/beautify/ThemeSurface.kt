@@ -494,11 +494,18 @@ internal object ThemeSurface {
     // 挂载分发
     // ══════════════════════════════════════════════════════════
 
-    /** 对全部存活页面重挂一次。 */
+    /** 对全部存活页面重挂一次。只处理当前已 resumed 的页面，避免后台的工坊代理
+     * Activity 在遍历顺序末尾再次把刚挂好的 LauncherUI 遮罩清掉。 */
     fun applyToAllLive() {
-        liveActivities().forEach { act ->
+        val resumed = resumedRef?.get()
+        if (resumed != null) {
+            runCatching { applyTo(resumed) }
+                .onFailure { WeLogger.w(TAG, "应用主题到 ${resumed.javaClass.simpleName} 异常", it) }
+            return
+        }
+        liveActivities().filter { !it.isFinishing }.forEach { act ->
             try {
-                applyTo(act)
+                if (ThemePages.isLauncher(act)) applyTo(act)
             } catch (e: Throwable) {
                 WeLogger.w(TAG, "应用主题到 ${act.javaClass.simpleName} 异常", e)
             }
