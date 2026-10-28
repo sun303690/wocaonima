@@ -715,11 +715,16 @@ internal object ThemeSurface {
             }
             return
         }
-        // 【正向闸】挂载前刷新「是否在 4 个 Tab 主页面」：不在主页面一律不挂。
-        // 聊天页与二级页面都不需要壁纸，挂上去只会带来「挂着却要挡着不画」的不一致。
+        // 【正向闸】LauncherUI 的 doOnCreate / 生命周期回调本身就是主界面强证据。
+        // 此时视图可能尚未完成布局，结构扫描会暂时返回 false；若据此拒绝挂载，
+        // 首次启动就没有遮罩，且没有后续监听能补挂。聊天页状态仍是独立硬闸。
         runCatching { onMainPage = ChatPageGuard.detectMainPage(activity, chatPageVisible) }
-        if (!onMainPage) {
-            noteEvent("挂载前识别到非主页面 → 跳过挂载")
+        if (!onMainPage && !chatPageVisible) {
+            onMainPage = true
+            noteEvent("LauncherUI 尚未布局完成 → 先挂壁纸，后续结构检测校正")
+        }
+        if (!onMainPage || chatPageVisible) {
+            noteEvent("挂载前识别到聊天页或非主页面 → 跳过挂载")
             return
         }
         if (wallpaperFailStreak >= 3) return

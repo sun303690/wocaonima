@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Application
 import dev.sun.wechat.BuildConfig
 import dev.sun.wechat.utils.WeLogger
+import dev.sun.wechat.loader.startup.StartupInfo
 import dev.sun.wechat.utils.fs.createDirsSafe
 import java.io.File
 import java.nio.file.Files
@@ -64,9 +65,7 @@ internal object ThemeMaterials {
 
     /** 模块自身 APK 路径（直接从 zip 读 assets 的兜底）。 */
     private fun moduleApkPath(): String? = runCatching {
-        hostApp?.packageManager
-            ?.getApplicationInfo(BuildConfig.APPLICATION_ID, 0)
-            ?.sourceDir
+        StartupInfo.modulePath.takeIf { it.isNotBlank() && File(it).canRead() }
     }.getOrNull()
 
     // ══════════════════════════════════════════════════════════
