@@ -2,6 +2,7 @@ package dev.sun.wechat.activity.settings
 
 import android.content.Intent
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,6 +23,9 @@ import java.text.Collator
 import java.util.Locale
 import dev.sun.wechat.activity.self_check.SelfCheckSettingsActivity
 import dev.sun.wechat.ui.utils.theme.AppThemeMode
+import dev.sun.wechat.ui.utils.theme.SettingsUiEngine
+import dev.sun.wechat.ui.content.miuix.DropdownOption
+import dev.sun.wechat.ui.content.miuix.MiuixDropDownMenuWidget
 import dev.sun.wechat.ui.utils.theme.PageTransitionAnimation
 import dev.sun.wechat.features.core.BaseFeature
 import dev.sun.wechat.features.core.ClickableFeature
@@ -123,7 +127,22 @@ private fun MiuixAppearancePage(back: () -> Unit) {
                     ThemeSettings.updatePageTransitionAnimation(entries[(entries.indexOf(ThemeSettings.pageTransitionAnimation) + 1) % entries.size]); tick++
                 }
                 HorizontalDivider()
-                MiuixAction("UI 组件引擎", "Miuix") { }
+                MiuixDropDownMenuWidget(
+                    title = "UI 组件引擎",
+                    description = null,
+                    value = ThemeSettings.uiEngine,
+                    options = SettingsUiEngine.entries.map {
+                        DropdownOption(it, it.displayName)
+                    },
+                    onValueChange = {
+                        ThemeSettings.updateUiEngine(it)
+                        tick++
+                    },
+                )
+                HorizontalDivider()
+                MiuixToggle("设置页背景图", ThemeSettings.settingsWallpaper) {
+                    ThemeSettings.updateSettingsWallpaper(it); tick++
+                }
                 HorizontalDivider()
                 MiuixToggle("使用动态壁纸颜色", ThemeSettings.dynamicWallpaper) {
                     ThemeSettings.updateDynamicWallpaper(it); tick++
@@ -313,7 +332,26 @@ private fun MiuixAction(title: String, summary: String, click: () -> Unit) {
 
 @Composable
 private fun MiuixPageFrame(title: String, back: () -> Unit, content: androidx.compose.foundation.lazy.LazyListScope.() -> Unit) {
+    val showWallpaper = ThemeSettings.settingsWallpaper
+    val wallpaper = remember(showWallpaper) {
+        if (showWallpaper) dev.sun.wechat.features.items.beautify.ThemePack.active()?.wallpaper() else null
+    }
     Box(Modifier.fillMaxSize().navigationBarsPadding()) {
+        if (wallpaper != null) {
+            coil3.compose.AsyncImage(
+                model = wallpaper,
+                contentDescription = null,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                imageLoader = dev.sun.wechat.ui.content.GlobalImageLoader,
+                modifier = Modifier.fillMaxSize(),
+            )
+            // 压一层底色保证卡片/文字对比度
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(MiuixTheme.colorScheme.background.copy(alpha = 0.82f)),
+            )
+        }
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 82.dp, bottom = 24.dp), content = content)
         Surface(Modifier.fillMaxWidth(), color = MiuixTheme.colorScheme.background.copy(alpha = .95f)) {
             Row(Modifier.statusBarsPadding().height(64.dp).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {

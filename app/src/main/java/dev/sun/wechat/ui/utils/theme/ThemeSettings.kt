@@ -160,6 +160,10 @@ object ThemeSettings {
     /** Seed the accent from the platform wallpaper accent (SDK >= 31) instead of [seedColor]. */
     var dynamicWallpaper by mutableStateOf(KvStore.getBoolOrFalse(Preferences.THEME_DYNAMIC_WALLPAPER))
         private set
+
+    /** 设置页是否用当前主题包壁纸做背景图（Miuix 设置页生效）。 */
+    var settingsWallpaper by mutableStateOf(KvStore.getBoolOrDef("theme_settings_wallpaper", true))
+        private set
     var paletteStyle by mutableStateOf(
         AppPaletteStyle.fromName(KvStore.getString(Preferences.THEME_PALETTE_STYLE))
     )
@@ -246,6 +250,11 @@ object ThemeSettings {
         updateNukePopupAnimation(NukePopupAnimationMode.Vanilla)
         updateNukePopupDialogHost(false)
         updateNukePopupPredictiveExit(false)
+    }
+
+    fun updateSettingsWallpaper(value: Boolean) {
+        settingsWallpaper = value
+        KvStore.putBool("theme_settings_wallpaper", value)
     }
 
     fun updateDynamicWallpaper(value: Boolean) {
