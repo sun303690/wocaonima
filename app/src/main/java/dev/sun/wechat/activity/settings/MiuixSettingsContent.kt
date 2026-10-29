@@ -71,7 +71,7 @@ private fun MiuixFeatures(query: String, update: (String) -> Unit, back: () -> U
     val features = remember(query, tick) { FEATURE_CATEGORIES.flatMap { it.items }.distinct().filter { query.isBlank() || it.localizedName(context).contains(query, true) || it.localizedDescription(context).contains(query, true) } }
     MiuixPageFrame("功能", back) {
         item { MiuixSearch(query, update, {}); Spacer(Modifier.height(12.dp)) }
-        if (features.isEmpty()) item { MiuixCard { Text(stringResource(R.string.features_no_results), modifier = Modifier.padding(18.dp), color = MiuixTheme.colorScheme.onSurfaceVariant) } }
+        if (features.isEmpty()) item { MiuixCard { Text(stringResource(R.string.features_no_results), modifier = Modifier.padding(18.dp), color = MiuixTheme.colorScheme.onSurfaceVariantSummary) } }
         items(features, key = { it.id }) { feature ->
             MiuixFeatureRow(feature) { tick++ }
             Spacer(Modifier.height(8.dp))
@@ -88,7 +88,7 @@ private fun MiuixFeatureRow(feature: BaseFeature, changed: () -> Unit) {
         }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(feature.localizedName(context), fontSize = 17.sp, fontWeight = FontWeight.Medium, color = MiuixTheme.colorScheme.onSurface)
-                Text(feature.localizedDescription(context), fontSize = 13.sp, color = MiuixTheme.colorScheme.onSurfaceVariant)
+                Text(feature.localizedDescription(context), fontSize = 13.sp, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
             }
             if (feature is SwitchFeature) Switch(feature.isEnabled, onCheckedChange = { feature.applyToggle(it); changed() })
             else Text("›", fontSize = 25.sp, color = MiuixTheme.colorScheme.primary)
@@ -109,7 +109,7 @@ private fun MiuixCard(content: @Composable ColumnScope.() -> Unit) {
 @Composable
 private fun MiuixAction(title: String, summary: String, click: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable(onClick = click).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) { Text(title, fontSize = 17.sp, color = MiuixTheme.colorScheme.onSurface); Text(summary, fontSize = 13.sp, color = MiuixTheme.colorScheme.onSurfaceVariant) }
+        Column(Modifier.weight(1f)) { Text(title, fontSize = 17.sp, color = MiuixTheme.colorScheme.onSurface); Text(summary, fontSize = 13.sp, color = MiuixTheme.colorScheme.onSurfaceVariantSummary) }
         Text("›", fontSize = 25.sp, color = MiuixTheme.colorScheme.primary)
     }
 }
