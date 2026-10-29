@@ -127,9 +127,7 @@ class SettingsActivity : ComponentActivity() {
                         }
 
                         SettingsUiEngine.MIUIX -> MiuixModuleTheme {
-                            // Existing navigation/content remains shared; Miuix-aware controls
-                            // consume MiuixTheme while migration proceeds page by page.
-                            ModuleTheme { SettingsRoot(onFinish = { finish() }) }
+                            MiuixSettingsContent(onFinish = { finish() })
                         }
 
                         SettingsUiEngine.NUKE -> NukeSettingsContent()
