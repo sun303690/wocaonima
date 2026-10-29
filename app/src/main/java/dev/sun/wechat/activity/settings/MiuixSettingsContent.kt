@@ -17,6 +17,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.sun.wechat.R
+import dev.sun.wechat.i18n.WeKitLocaleController
+import java.text.Collator
+import java.util.Locale
 import dev.sun.wechat.activity.self_check.SelfCheckSettingsActivity
 import dev.sun.wechat.ui.utils.theme.AppThemeMode
 import dev.sun.wechat.ui.utils.theme.PageTransitionAnimation
@@ -24,6 +27,7 @@ import dev.sun.wechat.features.core.BaseFeature
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.features.core.FeaturesProvider
+import dev.sun.wechat.features.core.featureCategoryComparator
 import dev.sun.wechat.ui.utils.theme.ThemeSettings
 import dev.sun.wechat.utils.WeLogger
 import top.yukonga.miuix.kmp.basic.*
@@ -225,8 +229,26 @@ private fun MiuixBackupPage(back: () -> Unit) {
 private fun MiuixFeatures(query: String, update: (String) -> Unit, back: () -> Unit) {
     val context = LocalContext.current
     var tick by remember { mutableIntStateOf(0) }
-    val features = remember(query, tick) {
-        FeaturesProvider.ALL_FEATURES.distinct().filter {
+    val resolvedLocale = WeKitLocaleController.resolvedLocale
+    val revision = FeatureCategoryState.revision
+    // 与 Material 3 / Nuke 共用同一份排序：分类顺序 → displayOrder → 名称（本地化 Collator）→ technicalId。
+    val ordered = remember(resolvedLocale, revision) {
+        val collator = Collator.getInstance(Locale.forLanguageTag(resolvedLocale.androidTag))
+        val comparator = featureCategoryComparator { first, second ->
+            collator.compare(first.localizedName(context), second.localizedName(context))
+        }
+        val grouped = FEATURE_CATEGORIES.flatMap { category ->
+            FeaturesProvider.ALL_FEATURES
+                .filter { category.id in it.categoryIds }
+                .sortedWith(comparator)
+        }
+        val rest = FeaturesProvider.ALL_FEATURES
+            .filter { feature -> FEATURE_CATEGORIES.none { it.id in feature.categoryIds } }
+            .sortedWith(comparator)
+        (grouped + rest).distinctBy { it.technicalId }
+    }
+    val features = remember(query, ordered) {
+        ordered.filter {
             query.isBlank() || it.localizedName(context).contains(query, true) ||
                 it.localizedDescription(context).contains(query, true)
         }
