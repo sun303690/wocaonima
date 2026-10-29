@@ -1531,15 +1531,13 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                             }
                         }
                     }
-                    androidx.compose.foundation.horizontalScroll(
-                        androidx.compose.foundation.rememberScrollState(),
-                    ).let { scroll ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth().then(scroll),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) { tabs() }
-                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(androidx.compose.foundation.rememberScrollState()),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) { tabs() }
                 }
             }
 
@@ -1837,6 +1835,8 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
         Box(modifier.background(MiuixTheme.colorScheme.primary.copy(alpha = 0.12f), CircleShape))
     }
 
+    @OptIn(ExperimentalFoundationApi::class)
+    @Composable
     private fun GroupTab(
         label: String,
         unread: ConversationUnreadState,
@@ -2104,7 +2104,7 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                         value = name,
                         onValueChange = { name = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text(stringResource(R.string.conversation_group_name)) },
+                        label = stringResource(R.string.conversation_group_name),
                         placeholder = { Text(stringResource(R.string.conversation_group_all)) },
                         singleLine = true
                     )
@@ -2161,7 +2161,7 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                         value = name,
                         onValueChange = { name = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text(stringResource(R.string.conversation_group_name)) },
+                        label = stringResource(R.string.conversation_group_name),
                         placeholder = builtInLabel?.let { label ->
                             { Text(stringResource(label.nameRes)) }
                         },
@@ -2292,7 +2292,7 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                                 value = selectFields,
                                 onValueChange = { selectFields = it },
                                 modifier = Modifier.fillMaxWidth(),
-                                label = { Text(stringResource(R.string.conversation_group_select_fields)) },
+                                label = stringResource(R.string.conversation_group_select_fields),
                                 singleLine = true
                             )
                             MiuixCompatTextField(
@@ -2300,7 +2300,7 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                                 value = whereClause,
                                 onValueChange = { whereClause = it },
                                 modifier = Modifier.fillMaxWidth(),
-                                label = { Text(stringResource(R.string.conversation_group_where_clause)) },
+                                label = stringResource(R.string.conversation_group_where_clause),
                                 singleLine = false,
                                 maxLines = 4
                             )

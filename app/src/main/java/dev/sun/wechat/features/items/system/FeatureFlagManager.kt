@@ -687,7 +687,7 @@ object FeatureFlagManager : ClickableFeature(), IResolveDex {
                         value = rawValue,
                         onValueChange = { rawValue = it },
                         singleLine = true,
-                        label = { Text(stringResource(R.string.system_feature_flags_value)) }
+                        label = stringResource(R.string.system_feature_flags_value)
                     )
                 }
             },

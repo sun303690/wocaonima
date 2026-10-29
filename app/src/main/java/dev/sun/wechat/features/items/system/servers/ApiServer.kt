@@ -2290,11 +2290,11 @@ object ApiServer : ClickableFeature() {
                         MiuixCompatTextField(
                             value = authToken,
                             onValueChange = { authToken = it },
-                            label = { Text(stringResource(R.string.system_api_server_auth_token)) })
+                            label = stringResource(R.string.system_api_server_auth_token))
                         MiuixCompatTextField(
                             value = serverPortInput,
                             onValueChange = { serverPortInput = it },
-                            label = { Text(stringResource(R.string.system_api_server_port)) })
+                            label = stringResource(R.string.system_api_server_port))
                     }
                 },
                 dismissButton = {

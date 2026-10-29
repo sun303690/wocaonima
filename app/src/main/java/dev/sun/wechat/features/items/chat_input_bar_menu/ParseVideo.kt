@@ -718,7 +718,7 @@ fun showParseDialog(context: android.content.Context) {
                             value = link,
                             onValueChange = { link = it },
                             enabled = !loading,
-                            label = { Text(stringResource(R.string.parse_video_link_hint)) },
+                            label = stringResource(R.string.parse_video_link_hint),
                             placeholder = {
                                 Text(stringResource(R.string.parse_video_link_placeholder))
                             },
@@ -822,7 +822,7 @@ fun showParseDialog(context: android.content.Context) {
                                                         value = selectedLabel,
                                                         onValueChange = {},
                                                         readOnly = true,
-                                                        label = { Text(stringResource(R.string.parse_video_quality_label)) },
+                                                        label = stringResource(R.string.parse_video_quality_label),
                                                         trailingIcon = {
                                                             IconButton(onClick = { expanded = !expanded }) {
                                                                 Icon(

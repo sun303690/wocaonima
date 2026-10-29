@@ -87,7 +87,7 @@ object RedirectDownloadPath : ClickableFeature(), IResolveDex {
                             value = pathInput,
                             onValueChange = { pathInput = it },
                             modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
-                            label = { Text(stringResource(R.string.chat_redirect_save_directory)) },
+                            label = stringResource(R.string.chat_redirect_save_directory),
                             singleLine = true
                         )
                         Text(stringResource(R.string.chat_redirect_actual_directory, normalizedPath))
