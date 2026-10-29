@@ -6,10 +6,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.roundToInt
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.round
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import top.yukonga.miuix.kmp.basic.Card
@@ -23,9 +22,10 @@ fun MiuixDropdownMenu(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     if (!expanded) return
+    val density = LocalDensity.current
     Popup(
         alignment = androidx.compose.ui.Alignment.TopEnd,
-        offset = IntOffset(offset.x.roundToInt(), offset.y.roundToInt()),
+        offset = with(density) { IntOffset(offset.x.roundToPx(), offset.y.roundToPx()) },
         onDismissRequest = onDismissRequest,
         properties = PopupProperties(focusable = true),
     ) {
