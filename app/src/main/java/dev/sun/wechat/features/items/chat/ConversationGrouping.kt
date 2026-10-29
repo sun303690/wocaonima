@@ -29,12 +29,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -164,7 +166,7 @@ import kotlin.io.path.div
 import kotlin.time.Duration.Companion.milliseconds
 import java.lang.reflect.Modifier as ReflectModifier
 
-object ConversationGrouping : ClickableFeature() {
+object ConversationGrouping : ClickableFeature(), IResolveDex {
     // Dex resolution is delegated to the nested IResolveDex resolver objects below.
 
     override val technicalId = "对话分组"
@@ -1529,7 +1531,9 @@ object ConversationGrouping : ClickableFeature() {
                             }
                         }
                     }
-                    androidx.compose.foundation.horizontalScroll(rememberScrollState()).let { scroll ->
+                    androidx.compose.foundation.horizontalScroll(
+                        androidx.compose.foundation.rememberScrollState(),
+                    ).let { scroll ->
                         Row(
                             modifier = Modifier.fillMaxWidth().then(scroll),
                             horizontalArrangement = Arrangement.Center,
@@ -1833,65 +1837,6 @@ object ConversationGrouping : ClickableFeature() {
         Box(modifier.background(MiuixTheme.colorScheme.primary.copy(alpha = 0.12f), CircleShape))
     }
 
-    @Composable
-    private fun TabIndicatorScope.AnimatedGroupSelectionPill(
-        widths: List<Dp>,
-        selectedIndex: Int,
-        groupIds: List<String>,
-        pagingProgress: ConversationGroupPagingProgress?,
-    ) {
-        if (pagingProgress != null) {
-            val from = groupIds.indexOf(pagingProgress.fromGroupId)
-            val to = groupIds.indexOf(pagingProgress.toGroupId)
-            if (from >= 0 && to >= 0) {
-                val fromLeft = widths.take(from).fold(0.dp) { left, width -> left + width }
-                val toLeft = widths.take(to).fold(0.dp) { left, width -> left + width }
-                val left = fromLeft + (toLeft - fromLeft) * pagingProgress.progress
-                val width = widths[from] + (widths[to] - widths[from]) * pagingProgress.progress
-                PositionedGroupSelectionPill(selectedIndex, { left }, { width })
-                return
-            }
-        }
-        val targetLeft = widths.take(selectedIndex).fold(0.dp) { left, width -> left + width }
-        val left = animateDpAsState(
-            targetValue = targetLeft,
-            animationSpec = tween(durationMillis = 320, easing = selectionPillEasing),
-            label = "groupSelectionLeft",
-        )
-        val width = animateDpAsState(
-            targetValue = widths[selectedIndex],
-            animationSpec = tween(durationMillis = 320, easing = selectionPillEasing),
-            label = "groupSelectionWidth",
-        )
-        PositionedGroupSelectionPill(selectedIndex, { left.value }, { width.value })
-    }
-
-    @Composable
-    private fun TabIndicatorScope.PositionedGroupSelectionPill(
-        selectedIndex: Int,
-        left: () -> Dp,
-        width: () -> Dp,
-    ) {
-        GroupSelectionPill(
-            Modifier
-                .zIndex(-1f)
-                .tabIndicatorLayout { measurable, constraints, positions ->
-                    val animatedWidth = width().roundToPx()
-                    val pill = measurable.measure(
-                        constraints.copy(minWidth = animatedWidth, maxWidth = animatedWidth),
-                    )
-                    // Report the target tab width, not the animated width: ScrollableTabRow's
-                    // centering compensation must not shift the pill while its width animates.
-                    layout(positions[selectedIndex].width.roundToPx(), pill.height) {
-                        pill.placeRelative(left().roundToPx(), 0)
-                    }
-                }
-                .fillMaxHeight(),
-        )
-    }
-
-    @OptIn(ExperimentalFoundationApi::class)
-    @Composable
     private fun GroupTab(
         label: String,
         unread: ConversationUnreadState,
