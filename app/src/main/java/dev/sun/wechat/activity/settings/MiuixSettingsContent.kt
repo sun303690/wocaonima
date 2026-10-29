@@ -101,7 +101,7 @@ private fun MiuixHome(
                 MiuixAction("关于与许可", "版本、开源协议与项目链接", openAbout)
             }
             Spacer(Modifier.height(12.dp))
-            Text("功能分类", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MiuixTheme.colorScheme.onSurface)
+            Text("功能分类", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MiuixTheme.colorScheme.onBackground)
             Spacer(Modifier.height(8.dp))
             MiuixCard {
                 FEATURE_CATEGORIES.forEachIndexed { index, category ->
@@ -404,10 +404,15 @@ private fun MiuixPageFrame(title: String, back: () -> Unit, content: androidx.co
             Box(
                 Modifier
                     .fillMaxSize()
-                    .background(MiuixTheme.colorScheme.background.copy(alpha = 0.82f)),
+                    .background(MiuixTheme.colorScheme.background.copy(alpha = 0.9f)),
             )
         }
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 82.dp, bottom = 24.dp), content = content)
+        val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = topInset + 64.dp + 12.dp, bottom = 24.dp),
+            content = content,
+        )
         Surface(Modifier.fillMaxWidth(), color = MiuixTheme.colorScheme.background.copy(alpha = .95f)) {
             Row(Modifier.statusBarsPadding().height(64.dp).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("‹", fontSize = 38.sp, modifier = Modifier.clickable(onClick = back).padding(horizontal = 8.dp), color = MiuixTheme.colorScheme.onBackground)
