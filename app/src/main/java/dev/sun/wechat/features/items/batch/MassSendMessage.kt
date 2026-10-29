@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import dev.sun.wechat.R
 import dev.sun.wechat.features.api.core.WeDatabaseApi
@@ -275,8 +276,8 @@ object MassSendMessage : ClickableFeature() {
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Checkbox(
-                                    checked = tag.name in selectedTags,
-                                    onCheckedChange = null,
+                                    state = if (tag.name in selectedTags) ToggleableState.On else ToggleableState.Off,
+                                    onClick = null,
                                 )
                                 Column {
                                     Text(tag.name)

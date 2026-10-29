@@ -40,6 +40,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import top.yukonga.miuix.kmp.basic.FloatingActionButton
 import top.yukonga.miuix.kmp.basic.Icon
@@ -628,7 +629,7 @@ object AddMainScreenFab : ClickableFeature() {
     @Composable
     private fun FabMenuLabel(name: String, backgroundColor: Color, tint: Color) {
         Surface(
-            shape = MaterialTheme.shapes.large,
+            shape = RoundedCornerShape(16.dp),
             color = backgroundColor
         ) {
             Text(
@@ -775,7 +776,7 @@ object AddMainScreenFab : ClickableFeature() {
                         MiuixCompatTextField(
                             value = newName,
                             onValueChange = { newName = it },
-                            label = { Text(stringResource(R.string.fab_button_name)) },
+                            label = stringResource(R.string.fab_button_name),
                             placeholder = newBuiltInLabel?.let { builtInLabel ->
                                 { Text(stringResource(labelRes(builtInLabel))) }
                             },
@@ -789,7 +790,7 @@ object AddMainScreenFab : ClickableFeature() {
                             MiuixCompatTextField(
                                 value = newActivity,
                                 onValueChange = { newActivity = it },
-                                label = { Text(stringResource(R.string.fab_activity_class_name)) },
+                                label = stringResource(R.string.fab_activity_class_name),
                                 singleLine = true,
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -941,7 +942,7 @@ object AddMainScreenFab : ClickableFeature() {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(MaterialTheme.shapes.medium)
+                                .clip(RoundedCornerShape(12.dp))
                                 .clickable {
                                     onDismiss()
                                     enterEditMode(context, localizedContext)

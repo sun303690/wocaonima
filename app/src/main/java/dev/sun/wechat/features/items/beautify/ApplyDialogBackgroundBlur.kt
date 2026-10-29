@@ -131,7 +131,7 @@ object ApplyDialogBackgroundBlur : ClickableFeature(), IResolveDex {
                             }
                         }
                         item {
-                            BaseItemContainer {
+                            MiuixBaseItemContainer {
                                 MiuixIntNumberPickerWidget(
                                     title = stringResource(R.string.beautify_dialog_blur_radius),
                                     value = blurRadius,
