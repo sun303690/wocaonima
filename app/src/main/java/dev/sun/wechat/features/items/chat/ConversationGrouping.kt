@@ -164,7 +164,8 @@ import kotlin.io.path.div
 import kotlin.time.Duration.Companion.milliseconds
 import java.lang.reflect.Modifier as ReflectModifier
 
-object ConversationGrouping : ClickableFeature(), IResolveDex {
+object ConversationGrouping : ClickableFeature(),
+    IResolveDex {
 
     override val technicalId = "对话分组"
     override val nameRes = R.string.feature_conversation_grouping_name
