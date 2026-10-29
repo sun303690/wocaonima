@@ -1,5 +1,6 @@
 package dev.sun.wechat.features.items.system
 
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -603,7 +604,7 @@ object FeatureFlagManager : ClickableFeature(), IResolveDex {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(MaterialTheme.shapes.large)
+                        .clip(RoundedCornerShape(16.dp))
                 ) {
                     CopyInfoItem(stringResource(R.string.system_feature_flags_copy_class), className)
                     CopyInfoItem(stringResource(R.string.system_feature_flags_copy_internal_name), internalName)

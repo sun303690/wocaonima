@@ -8,6 +8,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import dev.sun.wechat.ui.content.miuix.DropdownOption
+import com.composables.icons.materialsymbols.MaterialSymbols
+import com.composables.icons.materialsymbols.outlined.Arrow_back
+import com.composables.icons.materialsymbols.outlined.Check
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -20,7 +23,7 @@ fun MiuixBackButton(
     contentDescription: String? = null,
 ) {
     IconButton(onClick = onClick, modifier = modifier) {
-        Icon(androidx.compose.material.icons.Icons.AutoMirrored.Outlined.ArrowBack, contentDescription)
+        Icon(MaterialSymbols.Outlined.Arrow_back, contentDescription)
     }
 }
 
@@ -38,7 +41,7 @@ fun <T> MiuixOptionDropdown(
                 text = { Text(option.label) },
                 onClick = { onValueChange(option.value) },
                 trailingIcon = if (option.value == value) ({
-                    Icon(androidx.compose.material.icons.Icons.Outlined.Check, null)
+                    Icon(MaterialSymbols.Outlined.Check, null)
                 }) else null,
             )
         }

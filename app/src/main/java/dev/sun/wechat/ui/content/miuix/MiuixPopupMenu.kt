@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.roundToInt
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.round
 import androidx.compose.ui.window.Popup
@@ -23,7 +25,7 @@ fun MiuixDropdownMenu(
     if (!expanded) return
     Popup(
         alignment = androidx.compose.ui.Alignment.TopEnd,
-        offset = offset.round(),
+        offset = IntOffset(offset.x.roundToInt(), offset.y.roundToInt()),
         onDismissRequest = onDismissRequest,
         properties = PopupProperties(focusable = true),
     ) {

@@ -43,7 +43,7 @@ fun MiuixSettingsPage(
 
 @Composable
 fun MiuixSettingsCard(content: @Composable ColumnScope.() -> Unit) {
-    val shape = RoundedCornerShape(ThemeSettings.cornerRadiusDp.dp)
+    val shape = RoundedCornerShape(20.dp)
     Surface(Modifier.fillMaxWidth().clip(shape), shape = shape, color = MiuixTheme.colorScheme.surfaceContainer) {
         Column(content = content)
     }

@@ -1,5 +1,6 @@
 package dev.sun.wechat.features.items.system
 
+import androidx.compose.foundation.shape.RoundedCornerShape
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
@@ -168,7 +169,7 @@ object LinkExternalAppJump : SwitchFeature(),
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(MaterialTheme.shapes.large)
+                .clip(RoundedCornerShape(16.dp))
                 .clickable(onClick = onClick)
                 .padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -200,7 +201,7 @@ object LinkExternalAppJump : SwitchFeature(),
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(MaterialTheme.shapes.large)
+                .clip(RoundedCornerShape(16.dp))
                 .clickable(onClick = onClick)
                 .padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -232,7 +233,7 @@ object LinkExternalAppJump : SwitchFeature(),
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(MaterialTheme.shapes.large)
+                .clip(RoundedCornerShape(16.dp))
                 .clickable(onClick = onClick)
                 .padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically

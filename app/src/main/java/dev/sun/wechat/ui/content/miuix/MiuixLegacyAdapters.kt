@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,6 +17,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import com.composables.icons.materialsymbols.MaterialSymbols
+import com.composables.icons.materialsymbols.outlined.Delete
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
@@ -66,7 +66,7 @@ fun MiuixBaseWidget(
             }
             if (foreContent != null) Box { foreContent() }
             if (trailingContent != null) Box { trailingContent() }
-            if (onTrailingClick != null) IconButton(onClick = onTrailingClick) { Icon(Icons.Outlined.Delete, null) }
+            if (onTrailingClick != null) IconButton(onClick = onTrailingClick) { Icon(MaterialSymbols.Outlined.Delete, null) }
         }
         if (trailingDivider) HorizontalDivider(modifier = Modifier.padding(start = 16.dp))
     }
