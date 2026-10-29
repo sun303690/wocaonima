@@ -572,7 +572,7 @@ private fun ReadReceiptsHomeScreen(
                     Button(
                         onClick = {
                             val owner = operationState.begin(ActiveOperation.DISCONNECTING)
-                                ?: return@OutlinedButton
+                                ?: return@Button
                             ReadReceipts.disconnectBuiltInStack { terminal ->
                                 owner.complete(terminalFeedback(localizedContext, terminal, R.string.read_receipts_stack_stopped))
                             }
@@ -634,10 +634,10 @@ private fun ThirdPartyScreen(
                         onClick = {
                             if (normalizeThirdPartyReadReceiptEndpoint(url) == null) {
                                 operationState.feedback = localizedContext.getString(R.string.read_receipts_invalid_third_party_url).errorFeedback()
-                                return@OutlinedButton
+                                return@Button
                             }
                             val owner = operationState.begin(ActiveOperation.TESTING)
-                                ?: return@OutlinedButton
+                                ?: return@Button
                             ReadReceipts.testThirdPartyEndpoint(url, operationCoordinator.retainedScope) { result ->
                                 val message = localizedContext.getString(
                                     if (result.isSuccess) R.string.read_receipts_server_connection_succeeded

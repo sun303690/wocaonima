@@ -151,7 +151,7 @@ private fun ChatRecordXmlGeneratorDialog(
                         value = outerDesc,
                         onValueChange = { outerDesc = it },
                         modifier = Modifier.weight(1f),
-                        label = { Text(stringResource(R.string.chat_fabricate_record_description_field)) }
+                        label = stringResource(R.string.chat_fabricate_record_description_field)
                     )
 
                     Spacer(Modifier.width(8.dp))

@@ -413,7 +413,7 @@ object EmojiGameControl : ClickableFeature(), IResolveDex {
                                         onSend(true, "")
                                         onDismiss()
                                     },
-                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                                    insideMargin = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     Text(

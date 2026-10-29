@@ -42,7 +42,7 @@ fun showOpenConversationDialog(context: Context) {
                 TextField(
                     value = wxId,
                     onValueChange = { wxId = it },
-                    label = { Text(stringResource(R.string.contacts_wechat_id)) })
+                    label = stringResource(R.string.contacts_wechat_id))
             },
             confirmButton = {
                 TextButton(onClick = {

@@ -89,7 +89,7 @@ fun selectAndSendVoice(context: Context, currentConv: String) {
                                 TextField(
                                     value = durationInput,
                                     onValueChange = { durationInput = it.filter { c -> c.isDigit() } },
-                                    label = { Text(stringResource(R.string.chat_voice_file_duration_ms)) })
+                                    label = stringResource(R.string.chat_voice_file_duration_ms))
                             },
                             dismissButton = {
                                 TextButton({

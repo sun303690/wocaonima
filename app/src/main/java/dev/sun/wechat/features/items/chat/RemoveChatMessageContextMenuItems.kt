@@ -67,7 +67,7 @@ object RemoveChatMessageContextMenuItems : ClickableFeature() {
                     TextField(
                         value = removedNames,
                         onValueChange = { removedNames = it },
-                        label = { Text(stringResource(R.string.chat_remove_menu_items_label)) })
+                        label = stringResource(R.string.chat_remove_menu_items_label))
                 },
                 dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.dialog_cancel)) } },
                 confirmButton = {

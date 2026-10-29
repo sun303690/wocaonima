@@ -63,7 +63,7 @@ object ModifyTextMessageDisplay : SwitchFeature(),
                             TextField(
                                 value = input,
                                 onValueChange = { input = it },
-                                label = { Text(stringResource(R.string.chat_modify_text_content)) })
+                                label = stringResource(R.string.chat_modify_text_content))
                         },
                         confirmButton = {
                             TextButton(onClick = {

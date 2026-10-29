@@ -159,12 +159,12 @@ object ModifyTransferWalletBalanceDisplay : ClickableFeature(), IWePacketInterce
                         TextField(
                             value = cftInput,
                             onValueChange = { cftInput = it },
-                            label = { Text(stringResource(R.string.payment_wallet_balance_optional)) })
+                            label = stringResource(R.string.payment_wallet_balance_optional))
                         TextField(
+        (
                             value = lqtInput,
                             onValueChange = { lqtInput = it },
-                            label = { Text(stringResource(R.string.payment_wealth_balance_optional)) })
-                    }
+                            label = stringResource(R.string.payment_wealth_balance_optional)            }
                 },
                 confirmButton = {
                     Button(onClick = {
