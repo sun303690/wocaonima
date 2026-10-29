@@ -1,6 +1,7 @@
 package dev.sun.wechat.activity.settings
 
 import android.content.Intent
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,6 +23,7 @@ import dev.sun.wechat.ui.utils.theme.PageTransitionAnimation
 import dev.sun.wechat.features.core.BaseFeature
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.SwitchFeature
+import dev.sun.wechat.features.core.FeaturesProvider
 import dev.sun.wechat.ui.utils.theme.ThemeSettings
 import dev.sun.wechat.utils.WeLogger
 import top.yukonga.miuix.kmp.basic.*
@@ -73,7 +75,9 @@ private fun MiuixHome(
                 HorizontalDivider()
                 MiuixAction("外观设置", "主题模式、强调色、圆角与动效", openAppearance)
                 HorizontalDivider()
-                MiuixAction("主题工坊", "完整主题、壁纸、气泡与诊断") { dev.sun.wechat.features.items.beautify.ThemeStore.onClick(context) }
+                MiuixAction("主题工坊", "完整主题、壁纸、气泡与诊断") {
+                    (context as? ComponentActivity)?.let(dev.sun.wechat.features.items.beautify.ThemeStore::onClick)
+                }
                 HorizontalDivider()
                 MiuixAction("备份与还原", "导出、导入或清空模块配置", openBackup)
                 HorizontalDivider()
@@ -88,7 +92,10 @@ private fun MiuixHome(
             Spacer(Modifier.height(8.dp))
             MiuixCard {
                 FEATURE_CATEGORIES.forEachIndexed { index, category ->
-                    MiuixAction(stringResource(category.nameRes), "${category.enabledItems().size} 项已启用") { openFeatures() }
+                    val enabledCount = FeaturesProvider.ALL_FEATURES.count {
+                        category.id in it.categoryIds && (it as? SwitchFeature)?.isEnabled == true
+                    }
+                    MiuixAction(stringResource(category.titleRes), "${enabledCount} 项已启用") { openFeatures() }
                     if (index != FEATURE_CATEGORIES.lastIndex) HorizontalDivider()
                 }
             }
@@ -107,19 +114,15 @@ private fun MiuixAppearancePage(back: () -> Unit) {
                     ThemeSettings.updateThemeMode(entries[(entries.indexOf(ThemeSettings.themeMode) + 1) % entries.size]); tick++
                 }
                 HorizontalDivider()
-                MiuixAction("页面切换动效", ThemeSettings.pageTransitionAnimation.displayName) {
+                MiuixAction("页面切换动效", ThemeSettings.pageTransitionAnimation.name) {
                     val entries = PageTransitionAnimation.entries
                     ThemeSettings.updatePageTransitionAnimation(entries[(entries.indexOf(ThemeSettings.pageTransitionAnimation) + 1) % entries.size]); tick++
                 }
                 HorizontalDivider()
                 MiuixAction("UI 组件引擎", "Miuix") { }
                 HorizontalDivider()
-                MiuixToggle("使用动态颜色", ThemeSettings.useDynamicColor) {
-                    ThemeSettings.updateUseDynamicColor(it); tick++
-                }
-                HorizontalDivider()
-                MiuixToggle("深色模式纯黑", ThemeSettings.darkModePureBlack) {
-                    ThemeSettings.updateDarkModePureBlack(it); tick++
+                MiuixToggle("使用动态壁纸颜色", ThemeSettings.dynamicWallpaper) {
+                    ThemeSettings.updateDynamicWallpaper(it); tick++
                 }
                 HorizontalDivider()
                 MiuixToggle("同时应用到微信", ThemeSettings.applyToWechat) {
@@ -135,10 +138,10 @@ private fun MiuixLogsPage(back: () -> Unit) {
     var refresh by remember { mutableIntStateOf(0) }
     val context = LocalContext.current
     val logFiles = remember(refresh) {
-        buildList {
-            WeLogger.logFile?.takeIf { it.exists() }?.let { add(it) }
-            addAll(WeLogger.listCrashLogs())
-        }.distinctBy { it.absolutePath }.sortedByDescending { it.lastModified() }
+        WeLogger.allLogFiles
+            .map { it.toFile() }
+            .distinctBy { it.absolutePath }
+            .sortedByDescending { it.lastModified() }
     }
     MiuixPageFrame("日志中心", back) {
         item {

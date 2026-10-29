@@ -62,7 +62,7 @@ private fun featureChecked(item: BaseFeature): Boolean {
 @Composable
 private fun FeatureItem(feature: BaseFeature) {
     Column(Modifier.padding(horizontal = 16.dp)) {
-        BaseItemContainer {
+        MiuixBaseItemContainer {
             FeatureRow(
                 item = feature,
                 checked = featureChecked(feature),
