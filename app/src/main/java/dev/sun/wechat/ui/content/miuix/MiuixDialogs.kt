@@ -16,6 +16,7 @@ import top.yukonga.miuix.kmp.overlay.OverlayDialog
 @Composable
 fun MiuixAlertDialog(
     onDismissRequest: () -> Unit,
+    icon: @Composable (() -> Unit)? = null,
     title: @Composable (() -> Unit)? = null,
     text: @Composable (() -> Unit)? = null,
     confirmButton: @Composable () -> Unit,
@@ -29,6 +30,7 @@ fun MiuixAlertDialog(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            icon?.invoke()
             title?.invoke()
             text?.invoke()
             Row(

@@ -16,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.sun.wechat.R
@@ -145,7 +146,7 @@ object GroupChatLabel : ClickableFeature(), WeConversationContextMenuApi.IMenuIt
                                             )
                                         },
                                         trailingContent = {
-                                            Checkbox(checked = checked, onCheckedChange = null)
+                                            Checkbox(state = if (checked) ToggleableState.On else ToggleableState.Off, onClick = null)
                                         },
                                     )
                                 }

@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Card
@@ -166,7 +165,7 @@ fun HomeSidePanelWeatherSettings(
                     .weight(1f)
                     .height(72.dp),
                 enabled = !settings.actionInProgress,
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                insideMargin = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -186,7 +185,7 @@ fun HomeSidePanelWeatherSettings(
                     .weight(1f)
                     .height(72.dp),
                 enabled = !settings.actionInProgress,
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                insideMargin = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -221,7 +220,7 @@ fun HomeSidePanelWeatherSettings(
         )
         if (settings.searchResults.isNotEmpty()) {
             Card(
-                shape = RoundedCornerShape(16.dp),
+                cornerRadius = 16.dp,
                 colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
             ) {
                 settings.searchResults.forEachIndexed { index, city ->
@@ -235,9 +234,8 @@ fun HomeSidePanelWeatherSettings(
                             .clickable(enabled = !settings.actionInProgress) {
                                 panelState.updateWeatherCity(card.id, city)
                             },
-                    ) {
-                        Text(city.city + city.district.orEmpty())
-                    }
+                        headlineContent = { Text(city.city + city.district.orEmpty()) },
+                    )
                     if (index != settings.searchResults.lastIndex) {
                         HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
                     }

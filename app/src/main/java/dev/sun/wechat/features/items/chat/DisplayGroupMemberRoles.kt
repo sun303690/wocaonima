@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import dev.sun.wechat.ui.content.miuix.MiuixChoiceChip
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
@@ -182,7 +183,7 @@ object DisplayGroupMemberRoles : ClickableFeature(), IResolveDex,
                                     selected = selectedRole == index,
                                     onClick = { selectedRole = index },
                                     modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
-                                    label = label, maxLines = 1,
+                                    text = label,
                                 )
                             }
                         }

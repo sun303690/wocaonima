@@ -621,7 +621,7 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                         }.onFailure {
                             WeLogger.w("ThemeWorkshop", "打开主题总开关失败：${it.message}")
                             showToast(context, "打开失败：${it.message}")
-                            return@TextButton
+                            return@Button
                         }
                     }
                     doApply()

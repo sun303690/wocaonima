@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
@@ -329,7 +328,7 @@ private fun HomeSidePanelActionCandidateTile(
     val spec = homeSidePanelActionSpec(kind)
     Card(
         modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
+        cornerRadius = 18.dp,
         colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
     ) {
         Column(
@@ -356,7 +355,7 @@ private fun HomeSidePanelActionCandidateList(
     onLongPressAction: (String, HomeSidePanelActionKind, HomeSidePanelCandidatePointer) -> Unit,
 ) {
     Card(
-        shape = RoundedCornerShape(22.dp),
+        cornerRadius = 22.dp,
         colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
     ) {
         HOME_SIDE_PANEL_ACTION_KINDS.forEachIndexed { index, kind ->
@@ -371,9 +370,8 @@ private fun HomeSidePanelActionCandidateList(
                         descriptionRes = R.string.home_side_panel_drag_add_action,
                     ) { pointer -> onLongPressAction(cardId, kind, pointer) }
                     .clickable { onAddAction(cardId, kind) },
-            ) {
-                Text(stringResource(spec.labelRes))
-            }
+                headlineContent = { Text(stringResource(spec.labelRes)) },
+            )
             if (index != HOME_SIDE_PANEL_ACTION_KINDS.lastIndex) {
                 HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
             }

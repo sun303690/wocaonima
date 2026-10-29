@@ -15,17 +15,46 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /** Small Miuix-native replacements for Material chips and list rows. */
 @Composable
-fun MiuixFilterChip(selected: Boolean, onClick: () -> Unit, label: @Composable () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
+fun MiuixFilterChip(
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    leadingIcon: (@Composable () -> Unit)? = null,
+    label: @Composable () -> Unit,
+) {
     Box(
         modifier.background(if (selected) MiuixTheme.colorScheme.primaryContainer else MiuixTheme.colorScheme.surfaceContainer, RoundedCornerShape(18.dp))
             .clickable(enabled = enabled, onClick = onClick).padding(horizontal = 14.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
-    ) { label() }
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (leadingIcon != null) {
+                leadingIcon()
+                Spacer(Modifier.width(6.dp))
+            }
+            label()
+        }
+    }
 }
 
 @Composable
-fun MiuixListItem(headlineContent: @Composable () -> Unit, modifier: Modifier = Modifier, supportingContent: (@Composable () -> Unit)? = null, leadingContent: (@Composable () -> Unit)? = null, trailingContent: (@Composable () -> Unit)? = null, containerColor: Color = Color.Transparent) {
-    Row(modifier.fillMaxWidth().background(containerColor).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+fun MiuixListItem(
+    modifier: Modifier = Modifier,
+    supportingContent: (@Composable () -> Unit)? = null,
+    leadingContent: (@Composable () -> Unit)? = null,
+    trailingContent: (@Composable () -> Unit)? = null,
+    containerColor: Color = Color.Transparent,
+    enabled: Boolean = true,
+    onClick: (() -> Unit)? = null,
+    headlineContent: @Composable () -> Unit,
+) {
+    Row(
+        modifier.fillMaxWidth().background(containerColor)
+            .then(if (onClick != null) Modifier.clickable(enabled = enabled, onClick = onClick) else Modifier)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         if (leadingContent != null) { leadingContent(); Spacer(Modifier.width(12.dp)) }
         Column(Modifier.weight(1f)) { headlineContent(); supportingContent?.invoke() }
         if (trailingContent != null) { Spacer(Modifier.width(12.dp)); trailingContent() }

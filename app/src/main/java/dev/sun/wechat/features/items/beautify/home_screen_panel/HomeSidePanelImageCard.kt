@@ -134,7 +134,7 @@ fun HomeSidePanelImageCard(
                 .fillMaxWidth()
                 .height(effectiveHeightDp.dp)
                 .then(bodyModifier),
-            shape = shape,
+            cornerRadius = 24.dp,
             colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
             editMode = editMode,
             onEdit = null,

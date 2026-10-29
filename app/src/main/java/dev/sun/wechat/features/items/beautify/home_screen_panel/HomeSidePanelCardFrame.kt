@@ -34,6 +34,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.composables.icons.materialsymbols.MaterialSymbols
 import com.composables.icons.materialsymbols.outlined.Close
@@ -45,7 +46,7 @@ fun HomeSidePanelCardFrame(
     cardId: String,
     modifier: Modifier = Modifier,
     cardModifier: Modifier = Modifier,
-    shape: RoundedCornerShape,
+    cornerRadius: Dp = 22.dp,
     colors: CardColors,
     editMode: Boolean,
     onEdit: (() -> Unit)?,
@@ -59,7 +60,7 @@ fun HomeSidePanelCardFrame(
         Box(modifier = modifier) {
             Card(
                 modifier = cardModifier,
-                shape = shape,
+                cornerRadius = cornerRadius,
                 colors = colors,
             ) {
                 content()

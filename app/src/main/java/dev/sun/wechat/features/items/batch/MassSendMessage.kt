@@ -212,7 +212,7 @@ object MassSendMessage : ClickableFeature() {
                             MiuixFilterChip(
                                 selected = mode == m,
                                 onClick = { mode = m },
-                                label = stringResource(label),
+                                label = { Text(stringResource(label)) },
                             )
                         }
                     }
@@ -245,7 +245,7 @@ object MassSendMessage : ClickableFeature() {
                             MiuixFilterChip(
                                 selected = false,
                                 onClick = { minutes = minutes - m },
-                                label = formatMinuteOfDay(m) + " ✕",
+                                label = { Text(formatMinuteOfDay(m) + " ✕") },
                             )
                         }
                     }

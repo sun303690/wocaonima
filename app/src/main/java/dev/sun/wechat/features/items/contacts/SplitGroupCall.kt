@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
+import dev.sun.wechat.ui.content.miuix.MiuixChoiceChip
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
@@ -394,7 +395,7 @@ object SplitGroupCall : ClickableFeature(), IContactInfoProvider, IResolveDex {
                                     selected = mode == option,
                                     onClick = { mode = option },
                                     modifier = UiModifier.weight(1f).semantics { role = Role.RadioButton },
-                                    label = stringResource(option.labelRes), maxLines = 1,
+                                    text = stringResource(option.labelRes),
                                 )
                             }
                         }

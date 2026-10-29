@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
@@ -311,7 +310,7 @@ fun HomeSidePanelAddActionItem(
                     .then(onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier)
                     .then(actionTerminalModifier)
                     .then(wholeCardDragModifier),
-                shape = RoundedCornerShape(18.dp),
+                cornerRadius = 18.dp,
                 colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
             ) {
                 Column(
@@ -355,9 +354,8 @@ fun HomeSidePanelAddActionItem(
                     .then(onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier)
                     .then(actionTerminalModifier)
                     .then(wholeCardDragModifier),
-            ) {
-                Text(stringResource(R.string.action_add))
-            }
+                headlineContent = { Text(stringResource(R.string.action_add)) },
+            )
             Box(modifier = Modifier.align(Alignment.TopEnd)) {
                 HomeSidePanelCardBadge(
                     editMode = true,
@@ -382,7 +380,7 @@ private fun HomeSidePanelActionsCardFrame(
             .fillMaxWidth()
             .animateContentSize(tween(HOME_SIDE_PANEL_REFLOW_ANIMATION_MILLIS)),
         cardModifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
+        cornerRadius = 22.dp,
         colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
         editMode = false,
         onEdit = null,
@@ -419,7 +417,7 @@ private fun HomeSidePanelActionItem(
                 modifier = Modifier
                     .fillMaxWidth()
                     .then(clickModifier),
-                shape = RoundedCornerShape(18.dp),
+                cornerRadius = 18.dp,
                 colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
             ) {
                 Column(
@@ -452,9 +450,8 @@ private fun HomeSidePanelActionItem(
                 modifier = Modifier
                     .fillMaxWidth()
                     .then(clickModifier),
-            ) {
-                Text(stringResource(spec.labelRes))
-            }
+                headlineContent = { Text(stringResource(spec.labelRes)) },
+            )
         }
         val badgeAlignment = when (placement) {
             HomeSidePanelActionPlacement.TILE -> Alignment.TopEnd

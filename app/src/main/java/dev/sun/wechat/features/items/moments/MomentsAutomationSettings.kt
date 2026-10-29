@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -645,9 +646,9 @@ class MomentsAutomationSettings private constructor(
                         },
                         trailingContent = {
                             Checkbox(
-                                checked = type.typeId in rules.contentType.typeIds,
+                                state = if (type.typeId in rules.contentType.typeIds) ToggleableState.On else ToggleableState.Off,
+                                onClick = null,
                                 enabled = editable(RuleKey.CONTENT_TYPE),
-                                onCheckedChange = null
                             )
                         },
                     )

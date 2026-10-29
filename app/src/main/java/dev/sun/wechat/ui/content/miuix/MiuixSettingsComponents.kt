@@ -18,7 +18,12 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /** Shared Miuix host and primitives for every WeKit-owned configuration page. */
 @Composable
-fun MiuixSettingsPage(title: String, onBack: () -> Unit, content: LazyListScope.() -> Unit) {
+fun MiuixSettingsPage(
+    title: String,
+    onBack: () -> Unit,
+    actions: (@Composable () -> Unit)? = null,
+    content: LazyListScope.() -> Unit,
+) {
     Box(Modifier.fillMaxSize().navigationBarsPadding()) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -29,6 +34,8 @@ fun MiuixSettingsPage(title: String, onBack: () -> Unit, content: LazyListScope.
             Row(Modifier.statusBarsPadding().height(64.dp).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("‹", fontSize = 38.sp, modifier = Modifier.clickable(onClick = onBack).padding(horizontal = 8.dp), color = MiuixTheme.colorScheme.onBackground)
                 Text(title, fontSize = 25.sp, fontWeight = FontWeight.Bold, color = MiuixTheme.colorScheme.onBackground)
+                Spacer(Modifier.weight(1f))
+                actions?.invoke()
             }
         }
     }

@@ -21,6 +21,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.SmallTitle
@@ -45,6 +46,7 @@ fun MiuixBaseWidget(
     onTrailingClick: (() -> Unit)? = null,
     leadingContent: (@Composable RowScope.() -> Unit)? = null,
     trailingContent: (@Composable BoxScope.() -> Unit)? = null,
+    trailingDivider: Boolean = false,
     foreContent: (@Composable BoxScope.() -> Unit)? = null,
 ) {
     val cardColor = when {
@@ -66,6 +68,7 @@ fun MiuixBaseWidget(
             if (trailingContent != null) Box { trailingContent() }
             if (onTrailingClick != null) IconButton(onClick = onTrailingClick) { Icon(Icons.Outlined.Delete, null) }
         }
+        if (trailingDivider) HorizontalDivider(modifier = Modifier.padding(start = 16.dp))
     }
 }
 
@@ -81,6 +84,7 @@ fun MiuixSwitchWidget(
     iconPlaceholder: Boolean = true,
     enabled: Boolean = true,
     onClick: (() -> Unit)? = null,
+    isError: Boolean = false,
     trailingDivider: Boolean = false,
 ) {
     MiuixBaseWidget(
@@ -91,6 +95,7 @@ fun MiuixSwitchWidget(
         icon = icon,
         iconPlaceholder = iconPlaceholder,
         enabled = enabled,
+        isError = isError,
         onClick = if (enabled) onClick ?: { onCheckedChange(!checked) } else null,
     )
 }
@@ -104,10 +109,10 @@ class MiuixSegmentedColumnScope {
 }
 
 @Composable
-fun MiuixSegmentedColumn(modifier: Modifier = Modifier, title: String = "", contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 8.dp), content: MiuixSegmentedColumnScope.() -> Unit) {
+fun MiuixSegmentedColumn(modifier: Modifier = Modifier, title: String = "", contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 8.dp), titlePadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 4.dp), content: MiuixSegmentedColumnScope.() -> Unit) {
     val scope = MiuixSegmentedColumnScope().apply(content)
     Column(modifier.fillMaxWidth().padding(contentPadding)) {
-        if (title.isNotEmpty()) SmallTitle(text = title)
+        if (title.isNotEmpty()) SmallTitle(text = title, modifier = Modifier.padding(titlePadding))
         scope.Render()
     }
 }

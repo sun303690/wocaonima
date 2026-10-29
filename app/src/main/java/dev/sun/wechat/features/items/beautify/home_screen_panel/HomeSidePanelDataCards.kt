@@ -1,7 +1,6 @@
 package dev.sun.wechat.features.items.beautify.home_screen_panel
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -19,8 +18,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -132,7 +133,7 @@ fun HomeSidePanelDateTimeCard(
         cardModifier = Modifier
             .fillMaxWidth()
             .then(if (editMode) cardDragModifier else Modifier),
-        shape = RoundedCornerShape(24.dp),
+        cornerRadius = 24.dp,
         colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
         editMode = editMode,
         onEdit = onEditCard?.let { edit -> { edit(card.id) } },
@@ -209,7 +210,7 @@ fun HomeSidePanelWeatherCard(
         is WeatherCardContent.Runtime -> weatherCardSnapshot(content.state)
         is WeatherCardContent.Preview -> content.snapshot
     }
-    val shape = RoundedCornerShape(24.dp)
+    val cornerRadius = 24.dp
     val clickModifier = if (interactionEnabled && !editMode && runtime != null) {
         Modifier.clickable { onRefresh(card.id) }
     } else {
@@ -222,7 +223,7 @@ fun HomeSidePanelWeatherCard(
             .fillMaxWidth()
             .then(if (editMode) cardDragModifier else Modifier)
             .then(clickModifier),
-        shape = shape,
+        cornerRadius = cornerRadius,
         colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.primaryContainer),
         editMode = editMode,
         onEdit = onEditCard?.let { edit -> { edit(card.id) } },
@@ -333,7 +334,7 @@ fun HomeSidePanelWeatherCard(
                         } else if (weather is WeatherUiState.Loading) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(28.dp),
-                                color = contentColor,
+                                colors = ProgressIndicatorDefaults.progressIndicatorColors(foregroundColor = contentColor),
                                 strokeWidth = 3.dp,
                             )
                         } else {
@@ -392,7 +393,7 @@ fun HomeSidePanelWeatherCard(
                     ) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(28.dp),
-                            color = contentColor,
+                            colors = ProgressIndicatorDefaults.progressIndicatorColors(foregroundColor = contentColor),
                             strokeWidth = 3.dp,
                         )
                     }
@@ -435,7 +436,7 @@ fun HomeSidePanelWalletCard(
             .fillMaxWidth()
             .then(if (editMode) cardDragModifier else Modifier)
             .then(clickModifier),
-        shape = RoundedCornerShape(24.dp),
+        cornerRadius = 24.dp,
         colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.primaryContainer),
         editMode = editMode,
         onEdit = onEditCard?.let { edit -> { edit(card.id) } },
@@ -480,12 +481,12 @@ fun HomeSidePanelWalletCard(
                     },
                     modifier = Modifier.weight(1f),
                     enabled = interactive,
-                    border = BorderStroke(1.dp, MiuixTheme.colorScheme.primary),
-                    colors = ButtonDefaults.outlinedButtonColors(
+                    colors = ButtonDefaults.buttonColors(
+                        color = MiuixTheme.colorScheme.surfaceContainer,
                         contentColor = MiuixTheme.colorScheme.primary,
                         disabledContentColor = MiuixTheme.colorScheme.primary,
                     ),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 12.dp),
+                    insideMargin = PaddingValues(horizontal = 10.dp, vertical = 12.dp),
                 ) {
                     Icon(MaterialSymbols.Outlined.Qr_code_scanner, contentDescription = null, modifier = Modifier.size(18.dp))
                     Text(stringResource(R.string.home_side_panel_scan), modifier = Modifier.padding(start = 7.dp), maxLines = 1)
@@ -497,10 +498,10 @@ fun HomeSidePanelWalletCard(
                     modifier = Modifier.weight(1f),
                     enabled = interactive,
                     colors = ButtonDefaults.buttonColors(
-                        disabledContainerColor = MiuixTheme.colorScheme.primary,
+                        disabledColor = MiuixTheme.colorScheme.primary,
                         disabledContentColor = MiuixTheme.colorScheme.onPrimary,
                     ),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 12.dp),
+                    insideMargin = PaddingValues(horizontal = 10.dp, vertical = 12.dp),
                 ) {
                     Icon(MaterialSymbols.Outlined.Wallet, contentDescription = null, modifier = Modifier.size(18.dp))
                     Text(stringResource(R.string.home_side_panel_payment_code), modifier = Modifier.padding(start = 7.dp), maxLines = 1)
@@ -546,7 +547,7 @@ fun HomeSidePanelHitokotoCard(
             .fillMaxWidth()
             .then(if (editMode) cardDragModifier else Modifier)
             .then(clickModifier),
-        shape = RoundedCornerShape(22.dp),
+        cornerRadius = 22.dp,
         colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainerHighest),
         editMode = editMode,
         onEdit = onEditCard?.let { edit -> { edit(card.id) } },
@@ -610,7 +611,7 @@ fun HomeSidePanelHitokotoCard(
                     ) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(28.dp),
-                            color = MiuixTheme.colorScheme.onSurface,
+                            colors = ProgressIndicatorDefaults.progressIndicatorColors(foregroundColor = MiuixTheme.colorScheme.onSurface),
                             strokeWidth = 3.dp,
                         )
                     }
