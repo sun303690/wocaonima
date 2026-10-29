@@ -121,7 +121,7 @@ private fun PackGroup(pack: ExtensionPack) {
     val context = LocalContext.current
     val localizedContext = LocalWeKitLocalizedContext.current
 
-    SegmentedColumn {
+    MiuixSegmentedColumn {
         item(key = "info") {
             MiuixBaseWidget(
                 title = stringResource(pack.nameRes),
@@ -131,7 +131,7 @@ private fun PackGroup(pack: ExtensionPack) {
         }
         when (val s = state) {
             is Downloading -> item(key = "downloading") {
-                BaseItemContainer {
+                MiuixBaseItemContainer {
                     Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                         LinearProgressIndicator(
                             progress = { s.progress },
@@ -161,7 +161,7 @@ private fun PackGroup(pack: ExtensionPack) {
                 )
             }
             else -> item(key = "actions") {
-                BaseItemContainer {
+                MiuixBaseItemContainer {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()

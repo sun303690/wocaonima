@@ -437,7 +437,7 @@ private fun OverviewHealthCard(
     else if (noFail) MiuixTheme.colorScheme.onSurface
     else MiuixTheme.colorScheme.error
 
-    BaseItemContainer {
+    MiuixBaseItemContainer {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -527,7 +527,6 @@ private fun OverviewHealthCard(
             Button(
                 onClick = onRepair,
                 modifier = Modifier.fillMaxWidth().height(40.dp),
-                shape = RoundedCornerShape(12.dp),
             ) {
                 Text(
                     text = "一键修复（重建引导链路）",
@@ -786,7 +785,7 @@ private fun DiagnosticLogCard(context: Context) {
     val preview = if (onlyProblems) buildProblemLines(d) else recent
     if (preview.isNotEmpty()) {
         Spacer(Modifier.height(8.dp))
-        BaseItemContainer {
+        MiuixBaseItemContainer {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
