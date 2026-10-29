@@ -18,9 +18,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.sun.wechat.R
-import dev.sun.wechat.i18n.WeKitLocaleController
-import java.text.Collator
-import java.util.Locale
 import dev.sun.wechat.activity.self_check.SelfCheckSettingsActivity
 import dev.sun.wechat.ui.utils.theme.AppThemeMode
 import dev.sun.wechat.ui.utils.theme.SettingsUiEngine
@@ -31,29 +28,36 @@ import dev.sun.wechat.features.core.BaseFeature
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.features.core.FeaturesProvider
-import dev.sun.wechat.features.core.featureCategoryComparator
 import dev.sun.wechat.ui.utils.theme.ThemeSettings
 import dev.sun.wechat.utils.WeLogger
 import top.yukonga.miuix.kmp.basic.*
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-private enum class MiuixPage { HOME, FEATURES, APPEARANCE, BACKUP, LOGS, ABOUT, LICENSE }
+private enum class MiuixPage { HOME, FEATURES, CATEGORY, APPEARANCE, BACKUP, LOGS, ABOUT, LICENSE }
 
 @Composable
 fun MiuixSettingsContent(onFinish: () -> Unit) {
     var page by remember { mutableStateOf(MiuixPage.HOME) }
     var query by remember { mutableStateOf("") }
+    var categoryId by remember { mutableStateOf(FEATURE_CATEGORIES.first().id) }
     when (page) {
         MiuixPage.HOME -> MiuixHome(
             onFinish,
             { page = MiuixPage.FEATURES },
+            { id -> categoryId = id; page = MiuixPage.CATEGORY },
             { query = it; page = MiuixPage.FEATURES },
             { page = MiuixPage.APPEARANCE },
             { page = MiuixPage.BACKUP },
             { page = MiuixPage.LOGS },
             { page = MiuixPage.ABOUT },
         )
-        MiuixPage.FEATURES -> MiuixFeatures(query, { query = it }, { page = MiuixPage.HOME })
+        MiuixPage.FEATURES -> MiuixFeatures(
+            query,
+            { query = it },
+            { page = MiuixPage.HOME },
+            { id -> categoryId = id; page = MiuixPage.CATEGORY },
+        )
+        MiuixPage.CATEGORY -> MiuixCategoryPage(categoryId, { page = MiuixPage.FEATURES })
         MiuixPage.APPEARANCE -> MiuixAppearancePage { page = MiuixPage.HOME }
         MiuixPage.BACKUP -> MiuixBackupPage { page = MiuixPage.HOME }
         MiuixPage.LOGS -> MiuixLogsPage { page = MiuixPage.HOME }
@@ -66,6 +70,7 @@ fun MiuixSettingsContent(onFinish: () -> Unit) {
 private fun MiuixHome(
     onFinish: () -> Unit,
     openFeatures: () -> Unit,
+    openCategory: (String) -> Unit,
     search: (String) -> Unit,
     openAppearance: () -> Unit,
     openBackup: () -> Unit,
@@ -103,7 +108,7 @@ private fun MiuixHome(
                     val enabledCount = FeaturesProvider.ALL_FEATURES.count {
                         category.id in it.categoryIds && (it as? SwitchFeature)?.isEnabled == true
                     }
-                    MiuixAction(stringResource(category.titleRes), "${enabledCount} 项已启用") { openFeatures() }
+                    MiuixAction(stringResource(category.titleRes), "${enabledCount} 项已启用") { openCategory(category.id) }
                     if (index != FEATURE_CATEGORIES.lastIndex) HorizontalDivider()
                 }
             }
@@ -245,39 +250,89 @@ private fun MiuixBackupPage(back: () -> Unit) {
 }
 
 @Composable
-private fun MiuixFeatures(query: String, update: (String) -> Unit, back: () -> Unit) {
+private fun MiuixFeatures(
+    query: String,
+    update: (String) -> Unit,
+    back: () -> Unit,
+    openCategory: (String) -> Unit,
+) {
     val context = LocalContext.current
     var tick by remember { mutableIntStateOf(0) }
-    val resolvedLocale = WeKitLocaleController.resolvedLocale
     val revision = FeatureCategoryState.revision
-    // 与 Material 3 / Nuke 共用同一份排序：分类顺序 → displayOrder → 名称（本地化 Collator）→ technicalId。
-    val ordered = remember(resolvedLocale, revision) {
-        val collator = Collator.getInstance(Locale.forLanguageTag(resolvedLocale.androidTag))
-        val comparator = featureCategoryComparator { first, second ->
-            collator.compare(first.localizedName(context), second.localizedName(context))
-        }
-        val grouped = FEATURE_CATEGORIES.flatMap { category ->
-            FeaturesProvider.ALL_FEATURES
-                .filter { category.id in it.categoryIds }
-                .sortedWith(comparator)
-        }
-        val rest = FeaturesProvider.ALL_FEATURES
-            .filter { feature -> FEATURE_CATEGORIES.none { it.id in feature.categoryIds } }
-            .sortedWith(comparator)
-        (grouped + rest).distinctBy { it.technicalId }
-    }
-    val features = remember(query, ordered) {
-        ordered.filter {
-            query.isBlank() || it.localizedName(context).contains(query, true) ||
+    // 与 wcx 一致：分类固定顺序；分类内保持功能注册顺序，不按名称/时间重排。
+    val searching = query.isNotBlank()
+    val results = remember(query, revision) {
+        if (!searching) emptyList()
+        else FeaturesProvider.ALL_FEATURES.distinctBy { it.technicalId }.filter {
+            it.localizedName(context).contains(query, true) ||
                 it.localizedDescription(context).contains(query, true)
         }
     }
     MiuixPageFrame("功能", back) {
         item { MiuixSearch(query, update, {}); Spacer(Modifier.height(12.dp)) }
-        if (features.isEmpty()) item { MiuixCard { Text(stringResource(R.string.features_no_results), modifier = Modifier.padding(18.dp), color = MiuixTheme.colorScheme.onSurfaceVariantSummary) } }
-        items(features, key = { it.technicalId }) { feature ->
-            MiuixFeatureRow(feature) { tick++ }
-            Spacer(Modifier.height(8.dp))
+        if (searching) {
+            if (results.isEmpty()) {
+                item {
+                    MiuixCard {
+                        Text(
+                            stringResource(R.string.features_no_results),
+                            modifier = Modifier.padding(18.dp),
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        )
+                    }
+                }
+            } else {
+                items(results, key = { it.technicalId }) { feature ->
+                    MiuixFeatureRow(feature) { tick++ }
+                    Spacer(Modifier.height(8.dp))
+                }
+            }
+        } else {
+            item {
+                MiuixCard {
+                    FEATURE_CATEGORIES.forEachIndexed { index, category ->
+                        val enabledCount = FeaturesProvider.ALL_FEATURES.count {
+                            category.id in it.categoryIds && (it as? SwitchFeature)?.isEnabled == true
+                        }
+                        MiuixAction(stringResource(category.titleRes), "${enabledCount} 项已启用") {
+                            openCategory(category.id)
+                        }
+                        if (index != FEATURE_CATEGORIES.lastIndex) HorizontalDivider()
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiuixCategoryPage(categoryId: String, back: () -> Unit) {
+    val context = LocalContext.current
+    var tick by remember { mutableIntStateOf(0) }
+    val revision = FeatureCategoryState.revision
+    val title = FEATURE_CATEGORIES.firstOrNull { it.id == categoryId }
+        ?.let { stringResource(it.titleRes) } ?: "功能"
+    val features = remember(categoryId, revision) {
+        FeaturesProvider.ALL_FEATURES
+            .distinctBy { it.technicalId }
+            .filter { categoryId in it.categoryIds }
+    }
+    MiuixPageFrame(title, back) {
+        if (features.isEmpty()) {
+            item {
+                MiuixCard {
+                    Text(
+                        stringResource(R.string.features_category_empty),
+                        modifier = Modifier.padding(18.dp),
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    )
+                }
+            }
+        } else {
+            items(features, key = { it.technicalId }) { feature ->
+                MiuixFeatureRow(feature) { tick++ }
+                Spacer(Modifier.height(8.dp))
+            }
         }
     }
 }
