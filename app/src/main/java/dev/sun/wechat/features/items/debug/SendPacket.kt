@@ -46,19 +46,20 @@ object SendPacket : ClickableFeature() {
                             uri, onValueChange = { uri = it },
                             label = stringResource(R.string.debug_send_packet_cgi_path))
                         TextField(
-        (
                             cmdIdStr, onValueChange = { cmdIdStr = it },
-                            label = stringResource(R.string.debug_send_packet_cmd_id)                TextField(
-                  (
+                            label = stringResource(R.string.debug_send_packet_cmd_id))
+                        TextField(
                             funcIdStr, onValueChange = { funcIdStr = it },
-                            label = stringResource(R.string.debug_send_packet_func_id)      TextField(
-                            (
+                            label = stringResource(R.string.debug_send_packet_func_id))
+                        TextField(
                             routeIdStr, onValueChange = { routeIdStr = it },
-                            label = stringResource(R.string.debug_send_packet_route_id)Field(
-                            jsonPayloa(
+                            label = stringResource(R.string.debug_send_packet_route_id))
+                        TextField(
                             jsonPayloadStr,
                             onValueChange = { jsonPayloadStr = it },
-                            label = stringResource(R.string.debug_send_packet_json_payload)},
+                            label = stringResource(R.string.debug_send_packet_json_payload))
+                    }
+                },
                 dismissButton = {
                     TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel)) }
                 },

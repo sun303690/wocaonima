@@ -43,10 +43,10 @@ object LaunchInternalUrls : ClickableFeature(), IResolveDex {
                             onValueChange = { url = it },
                             label = stringResource(R.string.debug_launch_internal_url_url))
                         TextField(
-        (
                             value = argsInput,
                             onValueChange = { argsInput = it },
-                            label = stringResource(R.string.debug_launch_internal_url_arguments)            }
+                            label = stringResource(R.string.debug_launch_internal_url_arguments))
+                    }
                 },
                 dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.dialog_cancel)) } },
                 confirmButton = {

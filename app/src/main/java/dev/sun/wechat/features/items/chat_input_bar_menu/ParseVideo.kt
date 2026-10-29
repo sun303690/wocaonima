@@ -955,7 +955,7 @@ fun showParseDialog(context: android.content.Context) {
                                         Column(modifier = Modifier.fillMaxWidth()) {
                                             val percent = (downloadProgress * 100).toInt()
                                             LinearProgressIndicator(
-                                                progress = { downloadProgress.coerceIn(0f, 1f) },
+                                                progress = downloadProgress.coerceIn(0f, 1f),
                                                 modifier = Modifier.fillMaxWidth(),
                                             )
                                             Spacer(Modifier.height(4.dp))
