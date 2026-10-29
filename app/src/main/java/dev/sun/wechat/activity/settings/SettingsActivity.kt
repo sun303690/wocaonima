@@ -94,6 +94,7 @@ import dev.sun.wechat.ui.navigation.LocalNavigator
 import dev.sun.wechat.ui.navigation.Navigator
 import dev.sun.wechat.ui.navigation.rememberM3NavEffects
 import dev.sun.wechat.ui.utils.theme.ModuleTheme
+import dev.sun.wechat.ui.utils.theme.MiuixModuleTheme
 import dev.sun.wechat.ui.utils.theme.SettingsUiEngine
 import dev.sun.wechat.ui.utils.theme.ThemeSettings
 import dev.sun.wechat.ui.animation.predictiveback.weKitNavTransition
@@ -123,6 +124,12 @@ class SettingsActivity : ComponentActivity() {
                     when (ThemeSettings.uiEngine) {
                         SettingsUiEngine.MATERIAL3 -> ModuleTheme {
                             SettingsRoot(onFinish = { finish() })
+                        }
+
+                        SettingsUiEngine.MIUIX -> MiuixModuleTheme {
+                            // Existing navigation/content remains shared; Miuix-aware controls
+                            // consume MiuixTheme while migration proceeds page by page.
+                            ModuleTheme { SettingsRoot(onFinish = { finish() }) }
                         }
 
                         SettingsUiEngine.NUKE -> NukeSettingsContent()

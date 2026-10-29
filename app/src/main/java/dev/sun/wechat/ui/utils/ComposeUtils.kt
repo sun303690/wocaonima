@@ -21,6 +21,7 @@ import dev.sun.wechat.i18n.LocaleResourceMode
 import dev.sun.wechat.i18n.WeKitLocaleProvider
 import dev.sun.wechat.ui.content.nuke.NukeModuleTheme
 import dev.sun.wechat.ui.utils.theme.ModuleTheme
+import dev.sun.wechat.ui.utils.theme.MiuixModuleTheme
 import dev.sun.wechat.ui.utils.theme.SettingsUiEngine
 import dev.sun.wechat.ui.utils.theme.ThemeSettings
 
@@ -68,10 +69,10 @@ fun showComposeDialog(
                                 }
                             }
                         }
-                        if (ThemeSettings.uiEngine == SettingsUiEngine.NUKE) {
-                            NukeModuleTheme(content = themedContent)
-                        } else {
-                            themedContent()
+                        when (ThemeSettings.uiEngine) {
+                            SettingsUiEngine.MATERIAL3 -> themedContent()
+                            SettingsUiEngine.MIUIX -> MiuixModuleTheme(content = themedContent)
+                            SettingsUiEngine.NUKE -> NukeModuleTheme(content = themedContent)
                         }
                     }
                 }

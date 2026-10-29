@@ -71,6 +71,7 @@ fun NukeAppearancePage(onBack: (Offset) -> Unit) {
     val scope = rememberCoroutineScope()
     val engineLabels = mapOf(
         SettingsUiEngine.MATERIAL3 to "Material 3",
+        SettingsUiEngine.MIUIX to "Miuix",
         SettingsUiEngine.NUKE to "Nuke",
     )
     val themeLabels = mapOf(

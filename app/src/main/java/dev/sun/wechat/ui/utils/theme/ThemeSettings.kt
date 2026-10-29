@@ -47,12 +47,12 @@ enum class PageTransitionAnimation {
 
 enum class SettingsUiEngine(val displayName: String) {
     MATERIAL3("Material 3"),
+    MIUIX("Miuix"),
     NUKE("Nuke");
 
     companion object {
         fun fromName(value: String?): SettingsUiEngine = when (value) {
-            // legacy names written by older builds
-            "MIUIX", "Miuix" -> MATERIAL3
+            MIUIX.name, "Miuix" -> MIUIX
             NUKE.name -> NUKE
             else -> MATERIAL3
         }
