@@ -206,7 +206,10 @@ object ThemeStore : ClickableFeature(), WeChatMessageViewApi.ICreateViewListener
                         hooked++
                     }.onFailure { WeLogger.w(TAG, "hook $clsName.$methodName 失败", it) }
                 }
-                listOf("onPause", "onDestroyView").forEach { methodName ->
+                // onPause 在微信 Tab/半屏转场中会比真正离开早触发，随后旧实例还可能
+                // 收到 onResume，造成撤图/重挂抖动。仅以视图销毁作为权威离开锚点，
+                // 普通返回由主页焦点监听和实时 View 识别补挂。
+                listOf("onDestroyView").forEach { methodName ->
                     runCatching {
                         val method = clazz.reflekt().firstMethodOrNull { name = methodName }
                             ?: return@runCatching

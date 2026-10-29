@@ -371,8 +371,9 @@ internal object ThemeSurface {
             noteEvent("前台 → ${activity.javaClass.simpleName}")
             // 总开关关掉时一个字节都不动，避免「关了主题还在改窗口 / 还在挂背景」
             if (!ThemeStore.wallpaperSwitchOn() || ThemeStore.activeThemeIdOrEmpty().isEmpty()) return
-            // 非主界面进前台：先把主界面遮罩藏掉（聊天页半透明时会透出后面这张壁纸）
-            if (!ThemePages.isLauncher(activity)) hideLauncherWallpapers()
+            // 独立 Activity（朋友圈/扫码/设置等）拥有自己的 Window，会自然盖住 LauncherUI，
+            // 不要撤底层遮罩；否则返回动画或 resumed 回调缺失时主页会长期无图。
+            // 聊天页浸透由 LauncherUI 内的 Fragment/View 锚点单独处理。
             // 回前台若判定「还在聊天页」（如相册 → 聊天页返回），不挂壁纸，免得闪一帧又浸透。
             // 但这个判定可能是离开后的残留状态 —— 先强制跑一次实时识别刷新，再决定挂不挂：
             // 残留误挡 = 主界面没图，绝不能发生（4 个 Tab 必须一直有图）。
@@ -533,9 +534,8 @@ internal object ThemeSurface {
             }
             ThemePages.isLauncher(activity) -> applyTabWallpapers(activity)
             else -> {
-                // 任何其它页面（设置页 / 朋友圈 / 小程序 / 扫码…）在前台时，
-                // 主界面遮罩一律隐藏：主题只允许出现在主页/通讯录/发现/我 这 4 个 Tab 上。
-                hideLauncherWallpapers()
+                // 其它 Activity 有独立 Window，本身不会显示 LauncherUI 的前景遮罩。
+                // 只清理误挂到当前 Activity 的壁纸，不动后台主页。
                 if (wallpaperAttached[activity] == true) removeWallpaper(activity)
             }
         }
