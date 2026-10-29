@@ -12,6 +12,9 @@ import dev.sun.wechat.ui.utils.theme.ModuleTheme
 
 /** WCX v344 完整主题工坊在 WeKit 中的独立宿主页。 */
 class ThemeWorkshopActivity : ComponentActivity() {
+    companion object {
+        fun createIntent(context: android.content.Context) = android.content.Intent(context, ThemeWorkshopActivity::class.java)
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

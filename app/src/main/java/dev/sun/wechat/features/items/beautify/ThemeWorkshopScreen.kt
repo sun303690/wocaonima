@@ -34,6 +34,8 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -62,9 +64,6 @@ import dev.sun.wechat.utils.HostInfo
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToast
 import dev.sun.wechat.utils.restartHost
-import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
-import top.yukonga.miuix.kmp.basic.Switch
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 import java.io.File
 
 /**
@@ -254,7 +253,7 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .background(MiuixTheme.colorScheme.primary.copy(alpha = 0.14f))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f))
                         .clickable { applySelected() }
                         .padding(horizontal = 12.dp, vertical = 6.dp),
                 ) {
@@ -262,7 +261,7 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                         text = "应用",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
-                        color = MiuixTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
                 Spacer(Modifier.width(6.dp))
@@ -271,7 +270,7 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                         text = "⋮",
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
-                        color = BasicComponentDefaults.titleColor().color,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier
                             .clickable { menuOpen = true }
                             .padding(horizontal = 10.dp, vertical = 2.dp),
@@ -401,7 +400,7 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                         Text(
                             text = "⚙",
                             fontSize = 18.sp,
-                            color = MiuixTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier
                                 .clickable {
                                     poolFiles = ThemePack.randomPoolFiles()
@@ -501,7 +500,7 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                                     Text(
                                         text = "＋ 添加描述（选填）",
                                         fontSize = 12.sp,
-                                        color = MiuixTheme.colorScheme.primary,
+                                        color = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.clickable { descVisible = true },
                                     )
                                 }
@@ -616,8 +615,7 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                     val feature = findFeature("主题工坊")
                     if (feature != null) {
                         runCatching {
-                            KvStore.putBool(feature.name, true)
-                            feature.isEnabled = true
+                            feature.applyToggle(true)
                         }.onFailure {
                             WeLogger.w("ThemeWorkshop", "打开主题总开关失败：${it.message}")
                             showToast(context, "打开失败：${it.message}")
@@ -982,10 +980,10 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
 // ══════════════════════════════════════════════════════════
 
 @Composable
-private fun summaryColor(): Color = BasicComponentDefaults.summaryColor().color
+private fun summaryColor(): Color = MaterialTheme.colorScheme.onSurfaceVariant
 
 @Composable
-private fun titleColor(): Color = BasicComponentDefaults.titleColor().color
+private fun titleColor(): Color = MaterialTheme.colorScheme.onSurface
 
 @Composable
 private fun GroupCard(title: String?, content: @Composable ColumnScope.() -> Unit) {
@@ -1005,7 +1003,7 @@ private fun GroupCard(title: String?, content: @Composable ColumnScope.() -> Uni
                 .fillMaxWidth()
                 .shadow(elevation = 2.dp, shape = shape, ambientColor = Color.Black.copy(alpha = 0.06f))
                 .clip(shape)
-                .background(MiuixTheme.colorScheme.surface),
+                .background(MaterialTheme.colorScheme.surface),
             content = content,
         )
     }
@@ -1068,7 +1066,7 @@ private fun FeatureSwitchRow(
             return@SwitchRow
         }
         runCatching {
-            KvStore.putBool(feature.name, on)
+            feature.applyToggle(on)
             feature.isEnabled = on
         }.onFailure { WeLogger.w("ThemeWorkshop", "切换 $title 失败：${it.message}") }
         checked = on
@@ -1118,8 +1116,8 @@ private fun OpacityRow(tick: Int) {
             onValueChangeFinished = { ThemeStore.setOverlayOpacity(pct) },
             valueRange = 5f..70f,
             colors = SliderDefaults.colors(
-                thumbColor = MiuixTheme.colorScheme.primary,
-                activeTrackColor = MiuixTheme.colorScheme.primary,
+                thumbColor = MaterialTheme.colorScheme.primary,
+                activeTrackColor = MaterialTheme.colorScheme.primary,
             ),
         )
         // 渲染方式（2026-10-27 重写为「DecorView 前景遮罩」，只有一种实现）：
@@ -1148,7 +1146,7 @@ private fun OpacityRow(tick: Int) {
                 text = maskState,
                 fontSize = 11.sp,
                 maxLines = 1,
-                color = MiuixTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.primary,
             )
         }
     }
@@ -1185,7 +1183,7 @@ private fun InfoRow(label: String, value: String) {
         Text(
             text = value,
             fontSize = 14.sp,
-            color = MiuixTheme.colorScheme.primary,
+            color = MaterialTheme.colorScheme.primary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -1209,9 +1207,9 @@ private fun PillButton(
     primary: Boolean = false,
     onClick: () -> Unit,
 ) {
-    val bg = if (primary) MiuixTheme.colorScheme.primary.copy(alpha = 0.14f)
+    val bg = if (primary) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
     else titleColor().copy(alpha = 0.07f)
-    val fg = if (primary) MiuixTheme.colorScheme.primary else titleColor()
+    val fg = if (primary) MaterialTheme.colorScheme.primary else titleColor()
     Box(
         modifier = modifier
             .height(46.dp)
@@ -1382,10 +1380,10 @@ private fun BuiltinGridCard(
             .shadow(elevation = 1.dp, shape = shape, ambientColor = Color.Black.copy(alpha = 0.06f))
             .clip(shape)
             .then(
-                if (selected) Modifier.border(2.dp, MiuixTheme.colorScheme.primary, shape)
+                if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, shape)
                 else Modifier
             )
-            .background(MiuixTheme.colorScheme.surface)
+            .background(MaterialTheme.colorScheme.surface)
             .pointerInput(id) {
                 detectTapGestures(
                     onTap = { onClick() },
@@ -1425,7 +1423,7 @@ private fun BuiltinGridCard(
                 else -> ""
             }
             if (badge.isNotEmpty()) {
-                Text(badge, fontSize = 10.sp, color = MiuixTheme.colorScheme.primary)
+                Text(badge, fontSize = 10.sp, color = MaterialTheme.colorScheme.primary)
             }
         }
     }
@@ -1450,10 +1448,10 @@ private fun ThemeGridCard(
             .shadow(elevation = 1.dp, shape = shape, ambientColor = Color.Black.copy(alpha = 0.06f))
             .clip(shape)
             .then(
-                if (selected) Modifier.border(2.dp, MiuixTheme.colorScheme.primary, shape)
+                if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, shape)
                 else Modifier
             )
-            .background(MiuixTheme.colorScheme.surface)
+            .background(MaterialTheme.colorScheme.surface)
             .pointerInput(pack.id) {
                 detectTapGestures(
                     onTap = { onClick() },
@@ -1494,7 +1492,7 @@ private fun ThemeGridCard(
                 else -> ""
             }
             if (badge.isNotEmpty()) {
-                Text(badge, fontSize = 10.sp, color = MiuixTheme.colorScheme.primary)
+                Text(badge, fontSize = 10.sp, color = MaterialTheme.colorScheme.primary)
             }
         }
     }
@@ -1534,7 +1532,7 @@ private fun PickerRow(name: String, selected: Boolean, active: Boolean, onClick:
             else -> ""
         }
         if (badge.isNotEmpty()) {
-            Text(badge, fontSize = 11.sp, color = MiuixTheme.colorScheme.primary)
+            Text(badge, fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
         }
     }
 }
@@ -1634,7 +1632,7 @@ private fun PageScaffold(
                         .padding(horizontal = 18.dp, vertical = 16.dp),
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Medium,
-                    color = if (onBack != null) MiuixTheme.colorScheme.primary else titleColor(),
+                    color = if (onBack != null) MaterialTheme.colorScheme.primary else titleColor(),
                 )
                 topBarActions()
             }
