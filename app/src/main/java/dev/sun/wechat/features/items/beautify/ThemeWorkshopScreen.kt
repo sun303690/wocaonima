@@ -1061,15 +1061,9 @@ private fun FeatureSwitchRow(
         return
     }
     var checked by remember(feature, tick) { mutableStateOf(feature.isEnabled) }
-    val reason = feature.unavailableReason
-    SwitchRow(title = title, summary = reason ?: summary, checked = checked) { on ->
-        if (reason != null) {
-            showToast(context, reason)
-            return@SwitchRow
-        }
+    SwitchRow(title = title, summary = summary, checked = checked) { on ->
         runCatching {
             feature.applyToggle(on)
-
         }.onFailure { WeLogger.w("ThemeWorkshop", "切换 $title 失败：${it.message}") }
         checked = on
         onChanged()
