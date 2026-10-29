@@ -77,6 +77,8 @@ fun MiuixSwitchWidget(
     modifier: Modifier = Modifier,
     summary: String? = null,
     description: String? = summary,
+    icon: ImageVector? = null,
+    iconPlaceholder: Boolean = true,
     enabled: Boolean = true,
     onClick: (() -> Unit)? = null,
     trailingDivider: Boolean = false,
@@ -86,6 +88,8 @@ fun MiuixSwitchWidget(
         modifier = modifier,
         summary = summary,
         description = description,
+        icon = icon,
+        iconPlaceholder = iconPlaceholder,
         enabled = enabled,
         onClick = if (enabled) onClick ?: { onCheckedChange(!checked) } else null,
     )
@@ -93,7 +97,9 @@ fun MiuixSwitchWidget(
 
 class MiuixSegmentedColumnScope {
     private val entries = mutableListOf<@Composable () -> Unit>()
-    fun item(key: Any? = null, content: @Composable () -> Unit) { entries += content }
+    fun item(key: Any? = null, animatedVisibility: Boolean = true, content: @Composable () -> Unit) {
+        if (animatedVisibility) entries += content
+    }
     @Composable internal fun Render() { entries.forEach { it() } }
 }
 

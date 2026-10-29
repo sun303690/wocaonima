@@ -110,7 +110,7 @@ object BatchAddLabel : ClickableFeature() {
                         value = newLabelName,
                         onValueChange = { newLabelName = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text(stringResource(R.string.batch_add_label_new_label_hint)) },
+                        label = stringResource(R.string.batch_add_label_new_label_hint),
                         singleLine = true
                     )
 

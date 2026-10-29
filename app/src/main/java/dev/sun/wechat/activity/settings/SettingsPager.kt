@@ -390,9 +390,9 @@ private fun ProfileCard() {
         }
     }
 
-    SegmentedColumn {
+    MiuixSegmentedColumn {
         item {
-            BaseItemContainer {
+            MiuixBaseItemContainer {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
