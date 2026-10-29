@@ -1536,6 +1536,7 @@ object ConversationGrouping : ClickableFeature() {
                             verticalAlignment = Alignment.CenterVertically,
                         ) { tabs() }
                     }
+                }
             }
 
             // In sort mode the trailing "+" turns into a "✓" that commits the new order. Overlaid on

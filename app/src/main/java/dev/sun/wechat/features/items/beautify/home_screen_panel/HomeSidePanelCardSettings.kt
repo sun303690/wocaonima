@@ -314,7 +314,7 @@ fun HomeSidePanelHitokotoSettings(
                             },
                         )
                     },
-                    label = stringResource(labelRes),
+                    label = { Text(stringResource(labelRes)) },
                 )
             }
         }

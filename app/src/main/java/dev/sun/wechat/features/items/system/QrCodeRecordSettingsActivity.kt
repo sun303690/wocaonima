@@ -129,6 +129,7 @@ private fun QrCodeRecordSettingsScreen(
                         },
                     )
                 }
+            }
         },
     ) {
         item {

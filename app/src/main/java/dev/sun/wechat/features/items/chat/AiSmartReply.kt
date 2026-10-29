@@ -243,7 +243,7 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
                                     selectedStyle = name
                                     lastSelectedStyle = name
                                 },
-                                label = name,
+                                label = { Text(name) },
                             )
                         }
                     }

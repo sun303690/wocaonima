@@ -360,7 +360,6 @@ private fun HomeSidePanelDragOverlay(
             .clearAndSetSemantics { },
         shape = RoundedCornerShape(20.dp),
         color = Color.Transparent,
-        shadowElevation = 0.dp,
         shadowElevation = elevation,
     ) {
         HomeSidePanelDragVisual(snapshot.payload, state, panelState)
