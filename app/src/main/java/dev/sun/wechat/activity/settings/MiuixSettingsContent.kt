@@ -404,7 +404,7 @@ private fun MiuixPageFrame(title: String, back: () -> Unit, content: androidx.co
             Box(
                 Modifier
                     .fillMaxSize()
-                    .background(MiuixTheme.colorScheme.background.copy(alpha = 0.9f)),
+                    .background(MiuixTheme.colorScheme.background.copy(alpha = 0.94f)),
             )
         }
         val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()

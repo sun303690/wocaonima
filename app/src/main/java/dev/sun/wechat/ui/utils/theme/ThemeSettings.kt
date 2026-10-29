@@ -162,7 +162,7 @@ object ThemeSettings {
         private set
 
     /** 设置页是否用当前主题包壁纸做背景图（Miuix 设置页生效）。 */
-    var settingsWallpaper by mutableStateOf(KvStore.getBoolOrDef("theme_settings_wallpaper", true))
+    var settingsWallpaper by mutableStateOf(KvStore.getBoolOrDef("theme_settings_wallpaper", false))
         private set
     var paletteStyle by mutableStateOf(
         AppPaletteStyle.fromName(KvStore.getString(Preferences.THEME_PALETTE_STYLE))
