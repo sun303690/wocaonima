@@ -640,7 +640,7 @@ object AutoAcceptFriendRequests : ClickableFeature(), IResolveDex,
                                         onValueChange = { v ->
                                             v.toIntOrNull()?.let { localFixedDelayMs = it.coerceIn(0, 60000) }
                                         },
-                                        label = { Text("自定义延迟（毫秒）") },
+                                        label = "自定义延迟（毫秒）",
                                         singleLine = true,
                                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                                     )
@@ -651,7 +651,7 @@ object AutoAcceptFriendRequests : ClickableFeature(), IResolveDex,
                                         onValueChange = { v ->
                                             v.toIntOrNull()?.let { localRandomMinMs = it.coerceIn(0, 60000) }
                                         },
-                                        label = { Text("最小延迟（毫秒）") },
+                                        label = "最小延迟（毫秒）",
                                         singleLine = true,
                                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                                     )
@@ -661,7 +661,7 @@ object AutoAcceptFriendRequests : ClickableFeature(), IResolveDex,
                                         onValueChange = { v ->
                                             v.toIntOrNull()?.let { localRandomMaxMs = it.coerceIn(0, 60000) }
                                         },
-                                        label = { Text("最大延迟（毫秒）") },
+                                        label = "最大延迟（毫秒）",
                                         singleLine = true,
                                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                                     )
@@ -684,7 +684,7 @@ object AutoAcceptFriendRequests : ClickableFeature(), IResolveDex,
                                 TextField(
                                     value = localWelcomeText,
                                     onValueChange = { localWelcomeText = it },
-                                    label = { Text("欢迎语内容") },
+                                    label = "欢迎语内容",
                                     minLines = 2,
                                     maxLines = 4,
                                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
@@ -704,7 +704,7 @@ object AutoAcceptFriendRequests : ClickableFeature(), IResolveDex,
                             TextField(
                                 value = localBlacklist,
                                 onValueChange = { localBlacklist = it },
-                                label = { Text("黑名单 wxId") },
+                                label = "黑名单 wxId",
                                 minLines = 3,
                                 maxLines = 8,
                                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)

@@ -120,7 +120,7 @@ object FingerprintPay : ClickableFeature() {
                             if (it.length > 6) return@TextField
                             plaintext = it.filter { c -> c.isDigit() }
                         },
-                        label = { Text(stringResource(R.string.payment_fingerprint_password)) },
+                        label = stringResource(R.string.payment_fingerprint_password),
                         visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                         trailingIcon = {

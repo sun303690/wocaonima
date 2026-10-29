@@ -348,7 +348,7 @@ object BruteForceGroupMemberRealNamesFirstChar : SwitchFeature(),
                                 value = amountInput,
                                 enabled = !restarting,
                                 onValueChange = { amountInput = it.filter { c -> c.isDigit() }.take(7) },
-                                label = { Text(stringResource(R.string.chat_real_name_bruteforce_amount)) },
+                                label = stringResource(R.string.chat_real_name_bruteforce_amount),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 singleLine = true
                             )

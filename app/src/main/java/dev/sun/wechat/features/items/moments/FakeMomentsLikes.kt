@@ -130,7 +130,7 @@ object FakeMomentsLikes : SwitchFeature(), WeMomentsContextMenuApi.IMenuItemsPro
                                     TextField(
                                         value = countInput,
                                         onValueChange = { countInput = it.filter(Char::isDigit) },
-                                        label = { Text(stringResource(R.string.moments_fake_likes_random_count)) },
+                                        label = stringResource(R.string.moments_fake_likes_random_count),
                                         enabled = contacts.isNotEmpty(),
                                         singleLine = true,
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),

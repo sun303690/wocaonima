@@ -217,7 +217,7 @@ fun HomeSidePanelWeatherSettings(
             modifier = Modifier.fillMaxWidth(),
             enabled = !settings.actionInProgress,
             singleLine = true,
-            label = { Text(stringResource(R.string.home_side_panel_search_city)) },
+            label = stringResource(R.string.home_side_panel_search_city),
         )
         if (settings.searchResults.isNotEmpty()) {
             Card(
@@ -316,7 +316,7 @@ fun HomeSidePanelHitokotoSettings(
                             },
                         )
                     },
-                    label = { Text(stringResource(labelRes)) },
+                    label = stringResource(labelRes),
                 )
             }
         }

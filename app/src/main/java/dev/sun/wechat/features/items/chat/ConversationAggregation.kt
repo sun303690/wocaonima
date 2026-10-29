@@ -1789,7 +1789,7 @@ object ConversationAggregation : ClickableFeature(),
                         value = name,
                         onValueChange = { name = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text(stringResource(R.string.chat_aggregation_folder_name)) },
+                        label = stringResource(R.string.chat_aggregation_folder_name),
                         singleLine = true
                     )
 
@@ -2018,7 +2018,7 @@ object ConversationAggregation : ClickableFeature(),
                                 value = selectFields,
                                 onValueChange = { selectFields = it },
                                 modifier = Modifier.fillMaxWidth(),
-                                label = { Text(stringResource(R.string.chat_aggregation_select_fields)) },
+                                label = stringResource(R.string.chat_aggregation_select_fields),
                                 singleLine = true
                             )
                             TextField(
@@ -2026,7 +2026,7 @@ object ConversationAggregation : ClickableFeature(),
                                 value = whereClause,
                                 onValueChange = { whereClause = it },
                                 modifier = Modifier.fillMaxWidth(),
-                                label = { Text(stringResource(R.string.chat_aggregation_where_clause)) },
+                                label = stringResource(R.string.chat_aggregation_where_clause),
                                 singleLine = false,
                                 maxLines = 4
                             )

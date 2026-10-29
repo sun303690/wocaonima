@@ -380,7 +380,7 @@ object SplitGroupCall : ClickableFeature(), IContactInfoProvider, IResolveDex {
                             onValueChange = { value ->
                                 repeatCount = value.filter(Char::isDigit)
                             },
-                            label = { Text(stringResource(R.string.contacts_split_call_repeat_count)) },
+                            label = stringResource(R.string.contacts_split_call_repeat_count),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
                             modifier = UiModifier.fillMaxWidth(),
@@ -394,7 +394,7 @@ object SplitGroupCall : ClickableFeature(), IContactInfoProvider, IResolveDex {
                                     selected = mode == option,
                                     onClick = { mode = option },
                                     modifier = UiModifier.weight(1f).semantics { role = Role.RadioButton },
-                                    label = { Text(stringResource(option.labelRes), maxLines = 1) },
+                                    label = stringResource(option.labelRes), maxLines = 1,
                                 )
                             }
                         }

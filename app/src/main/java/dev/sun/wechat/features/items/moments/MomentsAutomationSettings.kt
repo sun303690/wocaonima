@@ -562,7 +562,7 @@ class MomentsAutomationSettings private constructor(
                             rules.copy(interval = rules.interval.copy(milliseconds = it.filter(Char::isDigit).take(7)))
                         )
                     },
-                    label = { Text(stringResource(R.string.moments_automation_interval_ms)) },
+                    label = stringResource(R.string.moments_automation_interval_ms),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true
                 )
@@ -689,7 +689,7 @@ class MomentsAutomationSettings private constructor(
                             )
                         )
                     },
-                    label = { Text(stringResource(R.string.moments_automation_maximum_age_hours)) },
+                    label = stringResource(R.string.moments_automation_maximum_age_hours),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true
                 )

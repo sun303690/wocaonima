@@ -93,7 +93,7 @@ object CustomSourceApp : ClickableFeature(), IResolveDex {
                         TextField(
                             value = appIdInput,
                             onValueChange = { appIdInput = it },
-                            label = { Text(stringResource(R.string.moments_custom_source_app_id)) },
+                            label = stringResource(R.string.moments_custom_source_app_id),
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                         )
@@ -101,7 +101,7 @@ object CustomSourceApp : ClickableFeature(), IResolveDex {
                         TextField(
                             value = appNameInput,
                             onValueChange = { appNameInput = it },
-                            label = { Text(stringResource(R.string.moments_custom_source_app_name)) },
+                            label = stringResource(R.string.moments_custom_source_app_name),
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                         )
@@ -146,7 +146,7 @@ object CustomSourceApp : ClickableFeature(), IResolveDex {
                         TextField(
                             value = keyword,
                             onValueChange = { keyword = it },
-                            label = { Text(stringResource(R.string.moments_custom_source_search)) },
+                            label = stringResource(R.string.moments_custom_source_search),
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                         )

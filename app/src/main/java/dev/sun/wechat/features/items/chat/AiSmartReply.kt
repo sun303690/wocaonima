@@ -243,7 +243,7 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
                                     selectedStyle = name
                                     lastSelectedStyle = name
                                 },
-                                label = { Text(name) },
+                                label = name,
                             )
                         }
                     }
@@ -253,7 +253,7 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
                         value = stylePromptInput,
                         onValueChange = { stylePromptInput = it },
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                        label = { Text(stringResource(R.string.asr_style_prompt_label)) },
+                        label = stringResource(R.string.asr_style_prompt_label),
                         minLines = 2,
                         maxLines = 4,
                     )

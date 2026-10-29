@@ -202,7 +202,7 @@ object DisplayMessageTimeByAvatar : ClickableFeature(),
                                 TextField(
                                     value = timeFormatInput,
                                     onValueChange = { timeFormatInput = it },
-                                    label = { Text(stringResource(R.string.avatar_time_format)) },
+                                    label = stringResource(R.string.avatar_time_format),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(horizontal = 16.dp)
@@ -212,7 +212,7 @@ object DisplayMessageTimeByAvatar : ClickableFeature(),
                                 TextField(
                                     value = textSizeInputRaw,
                                     onValueChange = { textSizeInputRaw = it.filter { c -> c.isDigit() } },
-                                    label = { Text(stringResource(R.string.avatar_time_font_size)) },
+                                    label = stringResource(R.string.avatar_time_font_size),
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     modifier = Modifier
                                         .fillMaxWidth()

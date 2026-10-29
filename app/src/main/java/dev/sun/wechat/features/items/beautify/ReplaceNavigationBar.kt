@@ -88,6 +88,10 @@ import com.composables.icons.materialsymbols.outlined.Drag_handle
 import com.composables.icons.materialsymbols.outlined.Explore
 import com.composables.icons.materialsymbols.outlined.Home
 import com.composables.icons.materialsymbols.outlined.Person
+import com.composables.icons.materialsymbols.outlinedfilled.Contacts
+import com.composables.icons.materialsymbols.outlinedfilled.Explore
+import com.composables.icons.materialsymbols.outlinedfilled.Home
+import com.composables.icons.materialsymbols.outlinedfilled.Person
 import com.tencent.mm.ui.mogic.WxViewPager
 import dev.ujhhgtg.reflekt.firstMethod
 import dev.ujhhgtg.reflekt.reflekt

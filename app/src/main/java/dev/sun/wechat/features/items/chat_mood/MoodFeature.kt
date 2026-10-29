@@ -102,7 +102,7 @@ object MoodFeature : ClickableFeature() {
                         TextField(
                             value = jevKey,
                             onValueChange = { jevKey = it },
-                            label = { Text("API Key") },
+                            label = "API Key",
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                         )
@@ -110,14 +110,14 @@ object MoodFeature : ClickableFeature() {
                             TextField(
                                 value = jevEndpoint,
                                 onValueChange = { jevEndpoint = it },
-                                label = { Text("接口地址") },
+                                label = "接口地址",
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
                             )
                             TextField(
                                 value = jevModel,
                                 onValueChange = { jevModel = it },
-                                label = { Text("模型名") },
+                                label = "模型名",
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
                             )

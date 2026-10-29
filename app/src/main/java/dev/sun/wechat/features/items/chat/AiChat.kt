@@ -940,7 +940,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                         TextField(
                             value = personaNameInput.value,
                             onValueChange = { personaNameInput.value = it },
-                            label = { Text("设定名称（如：我的分身）") },
+                            label = "设定名称（如：我的分身）",
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                         )

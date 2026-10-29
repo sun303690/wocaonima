@@ -122,14 +122,14 @@ object QQMusicOrder : ClickableFeature(), WeDatabaseListenerApi.IInsertListener 
                             value = triggerText,
                             onValueChange = { triggerText = it },
                             modifier = Modifier.fillMaxWidth(),
-                            label = { Text(stringResource(R.string.qq_music_order_trigger_hint)) },
+                            label = stringResource(R.string.qq_music_order_trigger_hint),
                             singleLine = true,
                         )
                         TextField(
                             value = appIdText,
                             onValueChange = { appIdText = it },
                             modifier = Modifier.fillMaxWidth(),
-                            label = { Text(stringResource(R.string.qq_music_order_appid_hint)) },
+                            label = stringResource(R.string.qq_music_order_appid_hint),
                             singleLine = true,
                         )
                         MiuixSwitchWidget(
@@ -151,7 +151,7 @@ object QQMusicOrder : ClickableFeature(), WeDatabaseListenerApi.IInsertListener 
                             value = defaultSingerText,
                             onValueChange = { defaultSingerText = it },
                             modifier = Modifier.fillMaxWidth(),
-                            label = { Text(stringResource(R.string.qq_music_order_default_singer_hint)) },
+                            label = stringResource(R.string.qq_music_order_default_singer_hint),
                             singleLine = true,
                         )
                         MiuixSwitchWidget(

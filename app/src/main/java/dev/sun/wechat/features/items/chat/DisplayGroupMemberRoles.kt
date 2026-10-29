@@ -182,7 +182,7 @@ object DisplayGroupMemberRoles : ClickableFeature(), IResolveDex,
                                     selected = selectedRole == index,
                                     onClick = { selectedRole = index },
                                     modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
-                                    label = { Text(label, maxLines = 1) },
+                                    label = label, maxLines = 1,
                                 )
                             }
                         }

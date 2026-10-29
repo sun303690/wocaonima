@@ -182,7 +182,7 @@ object GroupChatLabel : ClickableFeature(), WeConversationContextMenuApi.IMenuIt
                         value = name,
                         onValueChange = { name = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text(stringResource(R.string.group_chat_label_name_hint)) },
+                        label = stringResource(R.string.group_chat_label_name_hint),
                         singleLine = true,
                     )
                 },
@@ -218,7 +218,7 @@ object GroupChatLabel : ClickableFeature(), WeConversationContextMenuApi.IMenuIt
                         value = name,
                         onValueChange = { name = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text(stringResource(R.string.group_chat_label_name_hint)) },
+                        label = stringResource(R.string.group_chat_label_name_hint),
                         singleLine = true,
                     )
                 },

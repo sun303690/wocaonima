@@ -75,7 +75,7 @@ object CustomDpi : ClickableFeature(), IResolveDex {
                     TextField(
                         value = value,
                         onValueChange = { value = it.filter { ch -> ch.isDigit() } },
-                        label = { Text(stringResource(R.string.system_custom_dpi_width)) },
+                        label = stringResource(R.string.system_custom_dpi_width),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth()
                     )

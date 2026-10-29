@@ -57,7 +57,7 @@ object LimitGroupMemberNicknameLength : ClickableFeature(), WeChatMessageViewApi
                         TextField(
                             value = value,
                             onValueChange = { value = it.filter { ch -> ch.isDigit() } },
-                            label = { Text(stringResource(R.string.contacts_nickname_max_characters)) },
+                            label = stringResource(R.string.contacts_nickname_max_characters),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth()
                         )

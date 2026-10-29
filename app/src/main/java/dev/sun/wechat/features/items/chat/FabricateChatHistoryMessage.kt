@@ -137,7 +137,7 @@ private fun ChatRecordXmlGeneratorDialog(
                     value = outerTitle,
                     onValueChange = { outerTitle = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.chat_fabricate_record_title_field)) },
+                    label = stringResource(R.string.chat_fabricate_record_title_field),
                     singleLine = true
                 )
 
@@ -434,7 +434,7 @@ private fun MessageRowEditor(
                 value = row.text,
                 onValueChange = { row.text = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.chat_fabricate_record_message_content)) },
+                label = stringResource(R.string.chat_fabricate_record_message_content),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default)
             )
 

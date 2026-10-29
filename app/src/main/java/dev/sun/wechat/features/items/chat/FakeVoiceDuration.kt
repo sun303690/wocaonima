@@ -72,7 +72,7 @@ object FakeVoiceDuration : ClickableFeature(), IResolveDex {
                     TextField(
                         value = secondsInput,
                         onValueChange = { secondsInput = it.filter { c -> c.isDigit() } },
-                        label = { Text(stringResource(R.string.chat_fake_voice_duration_seconds)) },
+                        label = stringResource(R.string.chat_fake_voice_duration_seconds),
                     )
                     Text(
                         stringResource(R.string.chat_fake_voice_duration_hint),

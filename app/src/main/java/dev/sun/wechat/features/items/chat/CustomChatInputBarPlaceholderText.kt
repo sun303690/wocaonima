@@ -162,7 +162,7 @@ object CustomChatInputBarPlaceholderText : ClickableFeature(), IResolveDex, WeDa
                         TextField(
                             value = textInput,
                             onValueChange = { textInput = it },
-                            label = { Text(stringResource(R.string.chat_placeholder_content)) },
+                            label = stringResource(R.string.chat_placeholder_content),
                             minLines = 3,
                             modifier = Modifier
                                 .fillMaxWidth()

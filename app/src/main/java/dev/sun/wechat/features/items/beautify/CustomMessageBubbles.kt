@@ -710,10 +710,6 @@ object CustomMessageBubbles : ClickableFeature(), WeChatMessageViewApi.ICreateVi
                                     pendingDeletion = null
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MiuixTheme.colorScheme.error,
-                                contentColor = MiuixTheme.colorScheme.onError,
-                            ),
                         ) {
                             Text(stringResource(R.string.action_delete))
                         }
@@ -738,7 +734,7 @@ object CustomMessageBubbles : ClickableFeature(), WeChatMessageViewApi.ICreateVi
                                         selected = selectedSide == side,
                                         onClick = { selectedSide = side },
                                         modifier = Modifier.weight(1f),
-                                        label = { Text(stringResource(side.titleRes)) },
+                                        text = stringResource(side.titleRes),
                                     )
                                 }
                             }

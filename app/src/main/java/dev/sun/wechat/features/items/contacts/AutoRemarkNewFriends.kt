@@ -76,7 +76,7 @@ object AutoRemarkNewFriends : ClickableFeature() {
                         TextField(
                             value = displayFormatInput,
                             onValueChange = { displayFormatInput = it },
-                            label = { Text(stringResource(R.string.contacts_auto_remark_format)) },
+                            label = stringResource(R.string.contacts_auto_remark_format),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .onFocusChanged { isFocused = it.isFocused }
@@ -94,7 +94,7 @@ object AutoRemarkNewFriends : ClickableFeature() {
                         TextField(
                             value = timeFormat,
                             onValueChange = { timeFormat = it },
-                            label = { Text(stringResource(R.string.contacts_auto_remark_time_format)) },
+                            label = stringResource(R.string.contacts_auto_remark_time_format),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }

@@ -258,7 +258,7 @@ internal object AiVoiceSettingsDialog {
                                 value = ttsText,
                                 onValueChange = { ttsText = it },
                                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                                label = { Text(stringResource(R.string.aivoice_tts_input)) },
+                                label = stringResource(R.string.aivoice_tts_input),
                                 singleLine = false,
                                 minLines = 3,
                                 maxLines = 6,

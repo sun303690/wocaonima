@@ -337,7 +337,7 @@ object AiReplyMoments : ClickableFeature(),
             value = value,
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-            label = { Text(label) },
+            label = label,
             singleLine = true,
         )
     }

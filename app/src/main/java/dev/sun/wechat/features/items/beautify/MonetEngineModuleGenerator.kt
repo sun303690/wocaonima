@@ -280,7 +280,7 @@ private fun RunningContent(progress: MonetGenerationEvent.Progress) {
         val total = progress.total
         if (completed != null && total != null) {
             LinearProgressIndicator(
-                progress = { completed.toFloat() / total.coerceAtLeast(1) },
+                progress = completed.toFloat() / total.coerceAtLeast(1),
                 modifier = Modifier.fillMaxWidth(),
             )
             Text(

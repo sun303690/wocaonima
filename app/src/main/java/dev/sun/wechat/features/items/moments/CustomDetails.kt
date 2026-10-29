@@ -99,7 +99,7 @@ object CustomDetails : SwitchFeature(), WeMomentsContextMenuApi.IMenuItemsProvid
                         TextField(
                             value = textInput,
                             onValueChange = { textInput = it },
-                            label = { Text(stringResource(R.string.moments_custom_details_content)) },
+                            label = stringResource(R.string.moments_custom_details_content),
                             minLines = 3,
                             modifier = Modifier
                                 .fillMaxWidth()

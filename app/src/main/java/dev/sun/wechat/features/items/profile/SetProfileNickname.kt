@@ -38,7 +38,7 @@ object SetProfileNickname : ClickableFeature() {
                 title = { Text(stringResource(R.string.feature_set_profile_nickname_name)) },
                 text = {
                     TextField(
-                        label = { Text(stringResource(R.string.profile_new_nickname)) },
+                        label = stringResource(R.string.profile_new_nickname),
                         value = nickname, onValueChange = { nickname = it }, singleLine = false
                     )
                 },

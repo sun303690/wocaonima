@@ -484,7 +484,7 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                                 TextField(
                                     value = draftName,
                                     onValueChange = { draftName = it },
-                                    label = { Text("主题名称") },
+                                    label = "主题名称",
                                     singleLine = true,
                                     modifier = Modifier.fillMaxWidth(),
                                 )
@@ -493,7 +493,7 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                                     TextField(
                                         value = draftDesc,
                                         onValueChange = { draftDesc = it },
-                                        label = { Text("主题描述") },
+                                        label = "主题描述",
                                         modifier = Modifier.fillMaxWidth(),
                                     )
                                 } else {
@@ -716,7 +716,7 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                 TextField(
                     value = createName,
                     onValueChange = { createName = it },
-                    label = { Text("主题名称") },
+                    label = "主题名称",
                     singleLine = true,
                 )
             },
@@ -854,7 +854,7 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                 TextField(
                     value = builtinRenameText,
                     onValueChange = { builtinRenameText = it },
-                    label = { Text("名称") },
+                    label = "名称",
                     singleLine = true,
                 )
             },
@@ -878,7 +878,7 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                 TextField(
                     value = builtinDescText,
                     onValueChange = { builtinDescText = it },
-                    label = { Text("描述（可留空）") },
+                    label = "描述（可留空）",
                 )
             },
             confirmButton = {
@@ -901,7 +901,7 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                 TextField(
                     value = renameText,
                     onValueChange = { renameText = it },
-                    label = { Text("主题名称") },
+                    label = "主题名称",
                     singleLine = true,
                 )
             },
@@ -926,7 +926,7 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                 TextField(
                     value = descText,
                     onValueChange = { descText = it },
-                    label = { Text("描述（可留空）") },
+                    label = "描述（可留空）",
                 )
             },
             confirmButton = {
