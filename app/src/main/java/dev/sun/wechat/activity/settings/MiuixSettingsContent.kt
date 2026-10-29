@@ -225,11 +225,16 @@ private fun MiuixBackupPage(back: () -> Unit) {
 private fun MiuixFeatures(query: String, update: (String) -> Unit, back: () -> Unit) {
     val context = LocalContext.current
     var tick by remember { mutableIntStateOf(0) }
-    val features = remember(query, tick) { FEATURE_CATEGORIES.flatMap { it.items }.distinct().filter { query.isBlank() || it.localizedName(context).contains(query, true) || it.localizedDescription(context).contains(query, true) } }
+    val features = remember(query, tick) {
+        FeaturesProvider.ALL_FEATURES.distinct().filter {
+            query.isBlank() || it.localizedName(context).contains(query, true) ||
+                it.localizedDescription(context).contains(query, true)
+        }
+    }
     MiuixPageFrame("功能", back) {
         item { MiuixSearch(query, update, {}); Spacer(Modifier.height(12.dp)) }
         if (features.isEmpty()) item { MiuixCard { Text(stringResource(R.string.features_no_results), modifier = Modifier.padding(18.dp), color = MiuixTheme.colorScheme.onSurfaceVariantSummary) } }
-        items(features, key = { it.id }) { feature ->
+        items(features, key = { it.technicalId }) { feature ->
             MiuixFeatureRow(feature) { tick++ }
             Spacer(Modifier.height(8.dp))
         }
@@ -241,7 +246,7 @@ private fun MiuixFeatureRow(feature: BaseFeature, changed: () -> Unit) {
     val context = LocalContext.current
     MiuixCard {
         Row(Modifier.fillMaxWidth().clickable {
-            if (feature is ClickableFeature) feature.onClick(context)
+            if (feature is ClickableFeature) (context as? ComponentActivity)?.let(feature::onClick)
         }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(feature.localizedName(context), fontSize = 17.sp, fontWeight = FontWeight.Medium, color = MiuixTheme.colorScheme.onSurface)
@@ -260,7 +265,11 @@ private fun MiuixSearch(value: String, changed: (String) -> Unit, search: () -> 
 
 @Composable
 private fun MiuixCard(content: @Composable ColumnScope.() -> Unit) {
-    Surface(Modifier.fillMaxWidth().clip(RoundedCornerShape(ThemeSettings.cornerRadiusDp.dp)), shape = RoundedCornerShape(ThemeSettings.cornerRadiusDp.dp), color = MiuixTheme.colorScheme.surfaceContainer) { Column(content = content) }
+    Surface(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)),
+        shape = RoundedCornerShape(18.dp),
+        color = MiuixTheme.colorScheme.surfaceContainer,
+    ) { Column(content = content) }
 }
 
 @Composable

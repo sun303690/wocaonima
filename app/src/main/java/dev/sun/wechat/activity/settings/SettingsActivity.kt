@@ -328,8 +328,8 @@ private data class NavItem(
 )
 
 private val TAB_ITEMS = listOf(
-    NavItem(R.string.nav_home, MaterialSymbols.Outlined.Home, MaterialSymbols.OutlinedFilled.Home),
-    NavItem(R.string.nav_features, MaterialSymbols.Outlined.Tune, MaterialSymbols.OutlinedFilled.Tune),
+    NavItem(R.string.nav_home, MaterialSymbols.Outlined.Home, MaterialSymbols.Outlined.Home),
+    NavItem(R.string.nav_features, MaterialSymbols.Outlined.Tune, MaterialSymbols.Outlined.Tune),
     NavItem(R.string.nav_logs, MaterialSymbols.Outlined.Article, MaterialSymbols.OutlinedFilled.Article),
     NavItem(R.string.nav_settings, MaterialSymbols.Outlined.Settings, MaterialSymbols.OutlinedFilled.Settings),
 )
