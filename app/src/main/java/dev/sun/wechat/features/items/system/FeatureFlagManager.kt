@@ -14,14 +14,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.CircularWavyProgressIndicator
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
+import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
+import top.yukonga.miuix.kmp.basic.HorizontalDivider
+import top.yukonga.miuix.kmp.basic.Icon
 import dev.sun.wechat.ui.utils.ListItem
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import dev.sun.wechat.ui.content.miuix.MiuixCompatTextField
+import top.yukonga.miuix.kmp.basic.Text
+import dev.sun.wechat.ui.content.miuix.MiuixCompatTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -55,8 +55,8 @@ import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.IconButton
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.DropDownMenuWidget
-import dev.sun.wechat.ui.content.m3.DropdownOption
+import dev.sun.wechat.ui.content.miuix.MiuixDropDownMenuWidget
+import dev.sun.wechat.ui.content.miuix.DropdownOption
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.copyToClipboard
@@ -450,7 +450,7 @@ object FeatureFlagManager : ClickableFeature(), IResolveDex {
                 .weight(1f), contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                CircularWavyProgressIndicator()
+                InfiniteProgressIndicator()
                 Spacer(Modifier.height(8.dp))
                 Text(stringResource(R.string.system_feature_flags_scanning))
             }
@@ -464,7 +464,7 @@ object FeatureFlagManager : ClickableFeature(), IResolveDex {
                 .fillMaxWidth()
                 .weight(1f), contentAlignment = Alignment.Center
         ) {
-            Text(stringResource(R.string.system_feature_flags_empty), style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.system_feature_flags_empty), style = MiuixTheme.textStyles.body2)
         }
     }
 
@@ -475,7 +475,7 @@ object FeatureFlagManager : ClickableFeature(), IResolveDex {
                 .fillMaxWidth()
                 .weight(1f), contentAlignment = Alignment.Center
         ) {
-            Text(stringResource(R.string.system_feature_flags_no_match), style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.system_feature_flags_no_match), style = MiuixTheme.textStyles.body2)
         }
     }
 
@@ -485,7 +485,7 @@ object FeatureFlagManager : ClickableFeature(), IResolveDex {
         onQueryChange: (String) -> Unit,
         onClear: () -> Unit
     ) {
-        OutlinedTextField(
+        MiuixCompatTextField(
             value = query,
             onValueChange = onQueryChange,
             modifier = Modifier
@@ -544,7 +544,7 @@ object FeatureFlagManager : ClickableFeature(), IResolveDex {
             content = {
                 Text(
                     text = className.substringAfterLast('.'),
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MiuixTheme.textStyles.body1
                 )
             },
             supportingContent = {
@@ -552,8 +552,8 @@ object FeatureFlagManager : ClickableFeature(), IResolveDex {
                     text = details?.description?.ifBlank {
                         stringResource(R.string.system_none)
                     } ?: stringResource(R.string.system_loading),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary
                 )
             }
         )
@@ -596,7 +596,7 @@ object FeatureFlagManager : ClickableFeature(), IResolveDex {
             title = {
                 Text(
                     text = className.substringAfterLast('.'),
-                    style = MaterialTheme.typography.titleMedium
+                    style = MiuixTheme.textStyles.title2
                 )
             },
             text = {
@@ -620,7 +620,7 @@ object FeatureFlagManager : ClickableFeature(), IResolveDex {
                         },
                         supportingContent = { Text(stringResource(R.string.system_feature_flags_override_summary)) },
                         content = {
-                            Text(stringResource(R.string.system_feature_flags_override), style = MaterialTheme.typography.bodyLarge)
+                            Text(stringResource(R.string.system_feature_flags_override), style = MiuixTheme.textStyles.body1)
                         },
                     )
                 }
@@ -638,7 +638,7 @@ object FeatureFlagManager : ClickableFeature(), IResolveDex {
         ListItem(
             modifier = Modifier.clickable { copyToClipboard(context, value) },
             supportingContent = { Text(value) },
-            content = { Text(label, style = MaterialTheme.typography.bodyLarge) },
+            content = { Text(label, style = MiuixTheme.textStyles.body1) },
         )
     }
 
@@ -670,7 +670,7 @@ object FeatureFlagManager : ClickableFeature(), IResolveDex {
             title = { Text(stringResource(R.string.system_feature_flags_set_override)) },
             text = {
                 Column {
-                    DropDownMenuWidget(
+                    MiuixDropDownMenuWidget(
                         title = stringResource(R.string.system_feature_flags_type),
                         description = null,
                         value = type,
@@ -683,7 +683,7 @@ object FeatureFlagManager : ClickableFeature(), IResolveDex {
                         onValueChange = { type = it },
                     )
                     Spacer(Modifier.height(8.dp))
-                    TextField(
+                    MiuixCompatTextField(
                         value = rawValue,
                         onValueChange = { rawValue = it },
                         singleLine = true,

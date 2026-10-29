@@ -26,10 +26,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.HorizontalDivider
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -159,8 +159,8 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
                 ) {
                     Text(
                         text = groupName,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        style = MiuixTheme.textStyles.title3,
+                        color = MiuixTheme.colorScheme.primary,
                     )
 
                     Spacer(Modifier.height(8.dp))
@@ -168,25 +168,25 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
                     // 分析上下文条数
                     Text(
                         text = stringResource(R.string.ui_group_analyse_context_count),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     )
                     Spacer(Modifier.height(2.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         TextButton(onClick = { messageCount = 200 }, enabled = !isLoading) {
-                            Text("200条", color = if (messageCount == 200) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                            Text("200条", color = if (messageCount == 200) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurface)
                         }
                         TextButton(onClick = { messageCount = 500 }, enabled = !isLoading) {
-                            Text("500条", color = if (messageCount == 500) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                            Text("500条", color = if (messageCount == 500) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurface)
                         }
                         TextButton(onClick = { messageCount = 1000 }, enabled = !isLoading) {
-                            Text("1000条", color = if (messageCount == 1000) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                            Text("1000条", color = if (messageCount == 1000) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurface)
                         }
                     }
                     Text(
                         text = stringResource(R.string.ui_group_analyse_context_tip),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     )
 
                     Spacer(Modifier.height(8.dp))
@@ -194,8 +194,8 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
                     // 分析深度
                     Text(
                         text = stringResource(R.string.ui_group_analyse_deep),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     )
                     Spacer(Modifier.height(2.dp))
                     Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(2.dp)) {
@@ -211,7 +211,7 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
                             ) {
                                 Text(
                                     stringResource(res),
-                                    color = if (depth == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                    color = if (depth == index) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurface,
                                 )
                             }
                         }
@@ -235,8 +235,8 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
                     errorMessage?.let { err ->
                         Text(
                             text = err,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
+                            color = MiuixTheme.colorScheme.error,
+                            style = MiuixTheme.textStyles.footnote1,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 8.dp),
@@ -252,8 +252,8 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
                         InsightPanel(data.aiInsight)
                         Text(
                             text = stringResource(R.string.ui_tip_ai_only),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            style = MiuixTheme.textStyles.footnote1,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary.copy(alpha = 0.6f),
                             modifier = Modifier.padding(top = 4.dp),
                         )
                     }
@@ -349,14 +349,14 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
                 modifier = Modifier
                     .size(width = 4.dp, height = 14.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(MaterialTheme.colorScheme.primary),
+                    .background(MiuixTheme.colorScheme.primary),
             )
             Spacer(Modifier.width(8.dp))
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleSmall,
+                style = MiuixTheme.textStyles.title3,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = MiuixTheme.colorScheme.onSurface,
             )
         }
     }
@@ -370,8 +370,8 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
                 .background(
                     Brush.linearGradient(
                         listOf(
-                            MaterialTheme.colorScheme.primary,
-                            MaterialTheme.colorScheme.tertiary,
+                            MiuixTheme.colorScheme.primary,
+                            MiuixTheme.colorScheme.secondary,
                         ),
                     ),
                 )
@@ -380,21 +380,21 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
             Column {
                 Text(
                     text = "分析报告",
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = MiuixTheme.textStyles.headline2,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimary,
+                    color = MiuixTheme.colorScheme.onPrimary,
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = data.groupName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f),
+                    style = MiuixTheme.textStyles.body2,
+                    color = MiuixTheme.colorScheme.onPrimary.copy(alpha = 0.9f),
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text = "今日 · ${data.totalCount} 条消息",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f),
+                    style = MiuixTheme.textStyles.footnote2,
+                    color = MiuixTheme.colorScheme.onPrimary.copy(alpha = 0.7f),
                 )
             }
         }
@@ -403,11 +403,11 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
     @Composable
     private fun DonutPanel(typeCounts: Map<String, Int>) {
         val palette = listOf(
-            MaterialTheme.colorScheme.primary,
-            MaterialTheme.colorScheme.tertiary,
-            MaterialTheme.colorScheme.secondary,
-            MaterialTheme.colorScheme.error,
-            MaterialTheme.colorScheme.surfaceVariant,
+            MiuixTheme.colorScheme.primary,
+            MiuixTheme.colorScheme.secondary,
+            MiuixTheme.colorScheme.secondary,
+            MiuixTheme.colorScheme.error,
+            MiuixTheme.colorScheme.surfaceVariant,
         )
         val ordered = listOf("文本", "图片", "语音", "视频", "表情", "文件/链接")
             .mapNotNull { key -> typeCounts[key]?.let { key to it } }
@@ -457,14 +457,14 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = total.toString(),
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MiuixTheme.textStyles.title1,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = MiuixTheme.colorScheme.onSurface,
                     )
                     Text(
                         text = "总消息",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MiuixTheme.textStyles.footnote2,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     )
                 }
             }
@@ -486,13 +486,13 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
                         Spacer(Modifier.width(8.dp))
                         Text(
                             text = key,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MiuixTheme.textStyles.footnote1,
                             modifier = Modifier.weight(1f),
                         )
                         Text(
                             text = "$count 条",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MiuixTheme.textStyles.footnote1,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
                     }
                 }
@@ -507,7 +507,7 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
                 .fillMaxWidth()
                 .padding(top = 10.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                .background(MiuixTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
                 .padding(vertical = 12.dp),
         ) {
             MetricCell(Modifier.weight(1f), data.totalCount, "消息")
@@ -530,14 +530,14 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
         ) {
             Text(
                 text = value.toString(),
-                style = MaterialTheme.typography.headlineSmall,
+                style = MiuixTheme.textStyles.headline2,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
+                color = MiuixTheme.colorScheme.primary,
             )
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MiuixTheme.textStyles.footnote2,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             )
         }
     }
@@ -548,7 +548,7 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
             modifier = Modifier
                 .width(1.dp)
                 .height(28.dp)
-                .background(MaterialTheme.colorScheme.outlineVariant),
+                .background(MiuixTheme.colorScheme.outline),
         )
     }
 
@@ -567,14 +567,14 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
                     Column(modifier = Modifier.width(96.dp)) {
                         Text(
                             text = slot.tag,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MiuixTheme.textStyles.footnote1,
                             fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = MiuixTheme.colorScheme.onSurface,
                         )
                         Text(
                             text = slot.label,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MiuixTheme.textStyles.footnote2,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
                     }
                     Box(
@@ -582,7 +582,7 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
                             .weight(1f)
                             .height(10.dp)
                             .clip(RoundedCornerShape(5.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                            .background(MiuixTheme.colorScheme.surfaceVariant),
                     ) {
                         Box(
                             modifier = Modifier
@@ -592,8 +592,8 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
                                 .background(
                                     Brush.horizontalGradient(
                                         listOf(
-                                            MaterialTheme.colorScheme.primary,
-                                            MaterialTheme.colorScheme.tertiary,
+                                            MiuixTheme.colorScheme.primary,
+                                            MiuixTheme.colorScheme.secondary,
                                         ),
                                     ),
                                 ),
@@ -602,8 +602,8 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = "${slot.count}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         modifier = Modifier.width(28.dp),
                         textAlign = androidx.compose.ui.text.style.TextAlign.End,
                     )
@@ -625,7 +625,7 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
                 ) {
                     Text(
                         text = emotion.name,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MiuixTheme.textStyles.footnote1,
                         modifier = Modifier.width(64.dp),
                     )
                     Box(
@@ -633,7 +633,7 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
                             .weight(1f)
                             .height(8.dp)
                             .clip(RoundedCornerShape(4.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                            .background(MiuixTheme.colorScheme.surfaceVariant),
                     ) {
                         Box(
                             modifier = Modifier
@@ -643,8 +643,8 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
                                 .background(
                                     Brush.horizontalGradient(
                                         listOf(
-                                            MaterialTheme.colorScheme.primary,
-                                            MaterialTheme.colorScheme.tertiary,
+                                            MiuixTheme.colorScheme.primary,
+                                            MiuixTheme.colorScheme.secondary,
                                         ),
                                     ),
                                 ),
@@ -653,8 +653,8 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = "${emotion.percent}%",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         modifier = Modifier.width(40.dp),
                         textAlign = androidx.compose.ui.text.style.TextAlign.End,
                     )
@@ -670,20 +670,20 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                .background(MiuixTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
                 .padding(14.dp),
         ) {
             if (aiInsight != null) {
                 Text(
                     text = aiInsight,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MiuixTheme.textStyles.footnote1,
                     modifier = Modifier.fillMaxWidth(),
                 )
             } else {
                 Text(
                     text = "未配置 AI 模型，仅显示本地统计",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 )
             }
         }

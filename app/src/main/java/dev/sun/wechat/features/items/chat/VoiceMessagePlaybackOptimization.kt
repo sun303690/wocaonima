@@ -2,7 +2,7 @@ package dev.sun.wechat.features.items.chat
 
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -21,8 +21,8 @@ import dev.sun.wechat.features.items.chat.VoiceMessagePlaybackOptimization.MODE_
 import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.RadioButtonWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixRadioButtonWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.reflection.bool
 
@@ -154,9 +154,9 @@ object VoiceMessagePlaybackOptimization : ClickableFeature(), IResolveDex {
             AlertDialogContent(
                 title = { Text(stringResource(R.string.feature_voice_message_playback_optimization_name)) },
                 text = {
-                    SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                    MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                         item {
-                            RadioButtonWidget(
+                            MiuixRadioButtonWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.chat_voice_playback_keep_progress),
                                 description = stringResource(R.string.chat_voice_playback_keep_progress_description),
@@ -168,7 +168,7 @@ object VoiceMessagePlaybackOptimization : ClickableFeature(), IResolveDex {
                             )
                         }
                         item {
-                            RadioButtonWidget(
+                            MiuixRadioButtonWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.chat_voice_playback_disable_switch),
                                 description = stringResource(R.string.chat_voice_playback_disable_switch_description),

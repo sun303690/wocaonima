@@ -23,13 +23,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import dev.sun.wechat.ui.content.miuix.MiuixAlertDialog
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.Surface
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -59,14 +58,13 @@ import dev.sun.wechat.R
 import dev.sun.wechat.features.items.self_check.ModuleSelfCheck
 import dev.sun.wechat.i18n.LocaleResourceMode
 import dev.sun.wechat.i18n.WeKitLocaleProvider
-import dev.sun.wechat.activity.settings.M3ListScaffold
+import dev.sun.wechat.ui.content.miuix.MiuixSettingsPage
 import dev.sun.wechat.ui.agent.settings.AgentConfirmDialog
 import dev.sun.wechat.ui.agent.settings.AgentListActionButton
-import dev.sun.wechat.ui.content.m3.BaseItemContainer
-import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.ExpressiveBackButton
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.utils.theme.ModuleTheme
+import dev.sun.wechat.ui.content.miuix.MiuixBaseItemContainer
+import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.utils.theme.MiuixModuleTheme
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToast
 import kotlinx.coroutines.Dispatchers
@@ -98,7 +96,7 @@ class SelfCheckSettingsActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             WeKitLocaleProvider(mode = LocaleResourceMode.InjectedHost) {
-                ModuleTheme {
+                MiuixModuleTheme {
                     SelfCheckRoot(onFinish = ::finish)
                 }
             }
@@ -189,15 +187,15 @@ private fun SelfCheckRoot(onFinish: () -> Unit) {
 
     LaunchedEffect(Unit) { rescan() }
 
-    M3ListScaffold(
+    MiuixSettingsPage(
         title = stringResource(R.string.self_check_screen_title),
-        navigationIcon = { ExpressiveBackButton(onClick = onFinish) },
+        onBack = onFinish,
     ) {
         item(key = "overview_hint") {
             Text(
                 text = "最后检测：$lastScan　·　点击任意一项可看详情，可修复的项会带动作按钮",
                 fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             )
         }
@@ -242,7 +240,7 @@ private fun SelfCheckRoot(onFinish: () -> Unit) {
         val grouped = items.groupBy { it.section }
         grouped.forEach { (section, list) ->
             item(key = "sec_$section") {
-                SegmentedColumn(title = section) {
+                MiuixSegmentedColumn(title = section) {
                     for (h in list) {
                         item(key = h.label) { HealthRow(h) { detail = h } }
                     }
@@ -255,14 +253,14 @@ private fun SelfCheckRoot(onFinish: () -> Unit) {
                 text = "一键自检与修复",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
+                color = MiuixTheme.colorScheme.primary,
                 modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp),
             )
         }
         item(key = "actions") {
             SegmentedColumn {
                 item(key = "scan") {
-                    BaseWidget(
+                    MiuixBaseWidget(
                         title = "一键自检",
                         description = "逐项扫描全部公共依赖（微信 API / 脚本 / Hook 任务 / 锚点 / 密友 / 运行状态），带进度条，跑完弹报告",
                         onClick = {
@@ -278,13 +276,13 @@ private fun SelfCheckRoot(onFinish: () -> Unit) {
                             Icon(
                                 imageVector = MaterialSymbols.Outlined.Chevron_right,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                             )
                         },
                     )
                 }
                 item(key = "repair") {
-                    BaseWidget(
+                    MiuixBaseWidget(
                         title = "一键修复",
                         description = "补脚本目录 / 开总开关 / 重置 Dex 缓存 / 推进阶段重排 Hook / 密友对账；修复后自动重新自检刷新列表",
                         onClick = {
@@ -301,13 +299,13 @@ private fun SelfCheckRoot(onFinish: () -> Unit) {
                             Icon(
                                 imageVector = MaterialSymbols.Outlined.Chevron_right,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                             )
                         },
                     )
                 }
                 item(key = "refresh") {
-                    BaseWidget(
+                    MiuixBaseWidget(
                         title = "刷新检测结果",
                         description = "重新逐项扫描并刷新上面的列表（不改动任何配置）",
                         onClick = {
@@ -317,7 +315,7 @@ private fun SelfCheckRoot(onFinish: () -> Unit) {
                     )
                 }
                 item(key = "copy") {
-                    BaseWidget(
+                    MiuixBaseWidget(
                         title = "复制检测结果",
                         description = "复制到剪贴板，便于反馈",
                         onClick = {
@@ -343,7 +341,7 @@ private fun SelfCheckRoot(onFinish: () -> Unit) {
                 text = "说明：本页是「全量自检」——覆盖微信公共 API、脚本运行时、Hook 安装任务、关键类锚点、密友状态、运行状态与各分类启用情况。" +
                     "标红或标 ❌ 的项通常就是对应功能失效的原因；点开可看含义、恢复建议与可直接执行的动作。",
                 fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
             )
         }
@@ -389,12 +387,12 @@ private fun SelfCheckRoot(onFinish: () -> Unit) {
                     .append("\t").append(it.value).append("\n")
             }
         }
-        AlertDialog(
+        MiuixAlertDialog(
             onDismissRequest = { filteredList = null },
             title = { Text(title) },
             text = { Text(text, fontSize = 13.sp) },
             confirmButton = {
-                TextButton(onClick = {
+                Button(onClick = {
                     runCatching {
                         val cb = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
                         cb?.setPrimaryClip(ClipData.newPlainText(title, text))
@@ -402,7 +400,7 @@ private fun SelfCheckRoot(onFinish: () -> Unit) {
                     showToast(context, "已复制")
                 }) { Text("复制") }
             },
-            dismissButton = { TextButton(onClick = { filteredList = null }) { Text("关闭") } },
+            dismissButton = { Button(onClick = { filteredList = null }) { Text("关闭") } },
         )
     }
 
@@ -435,9 +433,9 @@ private fun OverviewHealthCard(
         fail > 0 -> "存在缺失项"
         else -> "适配检查完成"
     }
-    val statusColor = if (total == 0) MaterialTheme.colorScheme.onSurfaceVariant
-    else if (noFail) MaterialTheme.colorScheme.onSurface
-    else MaterialTheme.colorScheme.error
+    val statusColor = if (total == 0) MiuixTheme.colorScheme.onSurfaceVariantSummary
+    else if (noFail) MiuixTheme.colorScheme.onSurface
+    else MiuixTheme.colorScheme.error
 
     BaseItemContainer {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
@@ -445,13 +443,13 @@ private fun OverviewHealthCard(
                 Text(
                     text = "模块自检",
                     fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     modifier = Modifier.weight(1f),
                 )
                 Text(
                     text = "DEX 适配",
                     fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MiuixTheme.colorScheme.primary,
                 )
             }
             Spacer(Modifier.height(8.dp))
@@ -466,23 +464,23 @@ private fun OverviewHealthCard(
                         if (off > 0) "，未启用 $off。" else "。"
                 },
                 fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             )
             Spacer(Modifier.height(10.dp))
             Text(
                 text = "模块版本：${ModuleSelfCheck.moduleVersionDisplay()}",
                 fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             )
             Text(
                 text = "当前微信：${ModuleSelfCheck.wechatVersionDisplay()}",
                 fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             )
             Text(
                 text = "内部版本：${ModuleSelfCheck.moduleVersionDisplay().substringAfter("(").substringBefore(")")}",
                 fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             )
             Spacer(Modifier.height(16.dp))
             // 蓝色分隔线
@@ -490,7 +488,7 @@ private fun OverviewHealthCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(2.dp)
-                    .background(MaterialTheme.colorScheme.primary),
+                    .background(MiuixTheme.colorScheme.primary),
             )
             Spacer(Modifier.height(16.dp))
             // 4 格统计
@@ -504,7 +502,7 @@ private fun OverviewHealthCard(
             Text(
                 text = "通过表示公共能力可用，不等于所有使用场景已验证。",
                 fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             )
             Spacer(Modifier.height(16.dp))
             // 主按钮：立即重新自检
@@ -513,7 +511,7 @@ private fun OverviewHealthCard(
                     .fillMaxWidth()
                     .height(48.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.primary)
+                    .background(MiuixTheme.colorScheme.primary)
                     .clickable { onRescan() },
                 contentAlignment = Alignment.Center,
             ) {
@@ -521,12 +519,12 @@ private fun OverviewHealthCard(
                     text = "立即重新自检",
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onPrimary,
+                    color = MiuixTheme.colorScheme.onPrimary,
                 )
             }
             Spacer(Modifier.height(8.dp))
             // 次按钮：一键修复（描边式）
-            OutlinedButton(
+            Button(
                 onClick = onRepair,
                 modifier = Modifier.fillMaxWidth().height(40.dp),
                 shape = RoundedCornerShape(12.dp),
@@ -534,7 +532,7 @@ private fun OverviewHealthCard(
                 Text(
                     text = "一键修复（重建引导链路）",
                     fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MiuixTheme.colorScheme.primary,
                 )
             }
         }
@@ -556,7 +554,7 @@ private fun StatCell(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
 ) {
-    val bg = MaterialTheme.colorScheme.surfaceVariant
+    val bg = MiuixTheme.colorScheme.surfaceContainer
     Box(
         modifier = modifier
             .height(64.dp)
@@ -566,9 +564,9 @@ private fun StatCell(
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = value, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+            Text(text = value, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MiuixTheme.colorScheme.onSurface)
             Spacer(Modifier.height(2.dp))
-            Text(text = label, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(text = label, fontSize = 13.sp, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
         }
     }
 }
@@ -591,14 +589,14 @@ private fun ProgressOverlay(
         Surface(
             modifier = Modifier.fillMaxWidth(0.88f).padding(16.dp),
             shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.surface,
+            color = MiuixTheme.colorScheme.surface,
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
                     text = title,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = MiuixTheme.colorScheme.onSurface,
                 )
                 Spacer(Modifier.height(14.dp))
                 Box(
@@ -606,21 +604,21 @@ private fun ProgressOverlay(
                         .fillMaxWidth()
                         .height(8.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)),
+                        .background(MiuixTheme.colorScheme.onSurface.copy(alpha = 0.12f)),
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth(progress.coerceIn(0f, 1f))
                             .fillMaxHeight()
                             .clip(RoundedCornerShape(4.dp))
-                            .background(MaterialTheme.colorScheme.primary),
+                            .background(MiuixTheme.colorScheme.primary),
                     )
                 }
                 Spacer(Modifier.height(10.dp))
                 Text(
                     text = "${(progress * 100).toInt()}%  $subtitle",
                     fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 )
                 Spacer(Modifier.height(12.dp))
                 log.takeLast(6).forEach { entry ->
@@ -629,8 +627,8 @@ private fun ProgressOverlay(
                         Text(
                             text = entry.first,
                             fontSize = 12.sp,
-                            color = if (entry.second) MaterialTheme.colorScheme.onSurfaceVariant
-                            else MaterialTheme.colorScheme.error,
+                            color = if (entry.second) MiuixTheme.colorScheme.onSurfaceVariantSummary
+                            else MiuixTheme.colorScheme.error,
                         )
                     }
                 }
@@ -647,11 +645,11 @@ private fun ProgressOverlay(
 private fun HealthRow(h: ModuleSelfCheck.HealthItem, onShowDetail: () -> Unit) {
     val icon = if (h.ok) MaterialSymbols.Outlined.Check_circle else MaterialSymbols.Outlined.Error
     val iconColor = when {
-        h.ok -> MaterialTheme.colorScheme.primary
+        h.ok -> MiuixTheme.colorScheme.primary
         h.inactive -> Color(0xFFB26A00)
-        else -> MaterialTheme.colorScheme.error
+        else -> MiuixTheme.colorScheme.error
     }
-    BaseWidget(
+    MiuixBaseWidget(
         title = h.label,
         description = h.value,
         icon = icon,
@@ -662,7 +660,7 @@ private fun HealthRow(h: ModuleSelfCheck.HealthItem, onShowDetail: () -> Unit) {
                 Icon(
                     imageVector = MaterialSymbols.Outlined.Chevron_right,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 )
             }
         },
@@ -699,12 +697,12 @@ private fun ReportDialog(
         if (failItems.isEmpty() && offItems.isEmpty()) append("全部通过。\n")
     }.let { if (it.length > MAX_REPORT_CHARS) it.take(MAX_REPORT_CHARS) + "\n…（报告过长已截断，可在列表里逐项查看）" else it }
 
-    AlertDialog(
+    MiuixAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = { Text(body, fontSize = 13.sp) },
         confirmButton = {
-            TextButton(onClick = {
+            Button(onClick = {
                 runCatching {
                     val cb = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
                     cb?.setPrimaryClip(ClipData.newPlainText(title, body))
@@ -712,7 +710,7 @@ private fun ReportDialog(
                 showToast(context, "已复制")
             }) { Text("复制") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("知道了") } },
+        dismissButton = { Button(onClick = onDismiss) { Text("知道了") } },
     )
 }
 
@@ -752,26 +750,26 @@ private fun DiagnosticLogCard(context: Context) {
             if (d.droppedCount > 0L) "｜丢弃 ${d.droppedCount}" else ""
     }
 
-    SegmentedColumn(title = "运行日志") {
+    MiuixSegmentedColumn(title = "运行日志") {
         item(key = "refresh") {
-            BaseWidget(title = "刷新日志", description = summary, onClick = { refreshKey++ })
+            MiuixBaseWidget(title = "刷新日志", description = summary, onClick = { refreshKey++ })
         }
         item(key = "toggle") {
-            BaseWidget(
+            MiuixBaseWidget(
                 title = "显示内容",
                 description = if (onlyProblems) "仅问题（错误/警告）· 默认，最简洁" else "全部（最近 300 行原始日志）",
                 onClick = { onlyProblems = !onlyProblems },
             )
         }
         item(key = "copy_prob") {
-            BaseWidget(
+            MiuixBaseWidget(
                 title = "复制问题摘要",
                 description = "只复制错误/警告 + 计数（紧凑、可读），适合直接粘贴反馈",
                 onClick = { copyLogToClipboard(context, d?.toShareText() ?: "（暂无日志）", "问题摘要") },
             )
         }
         item(key = "copy_full") {
-            BaseWidget(
+            MiuixBaseWidget(
                 title = "复制完整日志",
                 description = "复制最近 ${recent.size} 行原始运行日志（超长自动截断）",
                 onClick = {
@@ -800,7 +798,7 @@ private fun DiagnosticLogCard(context: Context) {
                     text = preview.joinToString("\n"),
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 )
             }
         }

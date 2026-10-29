@@ -22,13 +22,13 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.LinearProgressIndicator
+import dev.sun.wechat.ui.content.miuix.MiuixDropdownMenu
+import dev.sun.wechat.ui.content.miuix.MiuixDropdownMenuItem
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Switch
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -1563,7 +1563,7 @@ object ConversationAggregation : ClickableFeature(),
                                 Text(stringResource(R.string.chat_aggregation_auto_group_chats))
                                 Text(
                                     stringResource(R.string.chat_aggregation_auto_group_chats_description),
-                                    style = MaterialTheme.typography.bodySmall,
+                                    style = MiuixTheme.textStyles.footnote1,
                                 )
                             }
                             Switch(checked = autoGroupChats, onCheckedChange = null)
@@ -1779,12 +1779,12 @@ object ConversationAggregation : ClickableFeature(),
                 Column {
                     Text(title)
                     if (saving) LinearProgressIndicator(Modifier.fillMaxWidth())
-                    if (failed) Text(stringResource(R.string.logs_save_failed), color = MaterialTheme.colorScheme.error)
+                    if (failed) Text(stringResource(R.string.logs_save_failed), color = MiuixTheme.colorScheme.error)
                 }
             },
             text = {
                 DefaultColumn {
-                    OutlinedTextField(
+                    TextField(
                         enabled = !saving,
                         value = name,
                         onValueChange = { name = it },
@@ -1797,7 +1797,7 @@ object ConversationAggregation : ClickableFeature(),
                     Column {
                         Text(
                             stringResource(R.string.chat_aggregation_mode),
-                            style = MaterialTheme.typography.labelSmall,
+                            style = MiuixTheme.textStyles.footnote2,
                         )
                         Box(
                             modifier = Modifier
@@ -1807,14 +1807,14 @@ object ConversationAggregation : ClickableFeature(),
                         ) {
                             Text(
                                 text = folderTypeLabel(type),
-                                style = MaterialTheme.typography.bodyLarge
+                                style = MiuixTheme.textStyles.body1
                             )
                         }
-                        DropdownMenu(
+                        MiuixDropdownMenu(
                             expanded = typeExpanded,
                             onDismissRequest = { typeExpanded = false }
                         ) {
-                            DropdownMenuItem(
+                            MiuixDropdownMenuItem(
                                 enabled = !saving,
                                 text = { Text(stringResource(R.string.chat_aggregation_mode_manual)) },
                                 onClick = {
@@ -1822,7 +1822,7 @@ object ConversationAggregation : ClickableFeature(),
                                     typeExpanded = false
                                 }
                             )
-                            DropdownMenuItem(
+                            MiuixDropdownMenuItem(
                                 enabled = !saving,
                                 text = { Text(stringResource(R.string.chat_aggregation_mode_all_groups)) },
                                 onClick = {
@@ -1830,7 +1830,7 @@ object ConversationAggregation : ClickableFeature(),
                                     typeExpanded = false
                                 }
                             )
-                            DropdownMenuItem(
+                            MiuixDropdownMenuItem(
                                 enabled = !saving,
                                 text = { Text(stringResource(R.string.chat_aggregation_mode_all_officials)) },
                                 onClick = {
@@ -1838,7 +1838,7 @@ object ConversationAggregation : ClickableFeature(),
                                     typeExpanded = false
                                 }
                             )
-                            DropdownMenuItem(
+                            MiuixDropdownMenuItem(
                                 enabled = !saving,
                                 text = { Text(stringResource(R.string.chat_aggregation_mode_sql)) },
                                 onClick = {
@@ -2013,7 +2013,7 @@ object ConversationAggregation : ClickableFeature(),
                         }
 
                         FolderType.SQL -> {
-                            OutlinedTextField(
+                            TextField(
                                 enabled = !saving,
                                 value = selectFields,
                                 onValueChange = { selectFields = it },
@@ -2021,7 +2021,7 @@ object ConversationAggregation : ClickableFeature(),
                                 label = { Text(stringResource(R.string.chat_aggregation_select_fields)) },
                                 singleLine = true
                             )
-                            OutlinedTextField(
+                            TextField(
                                 enabled = !saving,
                                 value = whereClause,
                                 onValueChange = { whereClause = it },
@@ -2036,12 +2036,12 @@ object ConversationAggregation : ClickableFeature(),
                                     matchedCount,
                                     matchedCount,
                                 ),
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MiuixTheme.textStyles.body2
                             )
                             Text(
                                 text = stringResource(R.string.chat_aggregation_sql_help),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                style = MiuixTheme.textStyles.footnote1,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary
                             )
                             Row(
                                 modifier = Modifier.fillMaxWidth(),

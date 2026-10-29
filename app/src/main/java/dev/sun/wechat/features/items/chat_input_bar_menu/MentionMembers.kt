@@ -1,7 +1,7 @@
 package dev.sun.wechat.features.items.chat_input_bar_menu
 
 import android.content.Context
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,7 +31,7 @@ import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.ContactsSelector
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.android.runOnUiThread
 import dev.sun.wechat.utils.android.showToast
@@ -89,7 +89,7 @@ object MentionMembers : SwitchFeature(), IResolveDex {
             AlertDialogContent(
                 title = { Text(stringResource(R.string.mention_members_settings_title)) },
                 text = {
-                    SwitchWidget(
+                    MiuixSwitchWidget(
                         title = stringResource(R.string.mention_members_stealth_label),
                         description = stringResource(R.string.mention_members_stealth_description),
                         checked = stealthState,

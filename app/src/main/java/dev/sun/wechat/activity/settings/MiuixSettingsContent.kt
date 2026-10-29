@@ -17,27 +17,51 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.sun.wechat.R
 import dev.sun.wechat.activity.self_check.SelfCheckSettingsActivity
+import dev.sun.wechat.ui.utils.theme.AppThemeMode
+import dev.sun.wechat.ui.utils.theme.PageTransitionAnimation
 import dev.sun.wechat.features.core.BaseFeature
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.ui.utils.theme.ThemeSettings
+import dev.sun.wechat.utils.WeLogger
 import top.yukonga.miuix.kmp.basic.*
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-private enum class MiuixPage { HOME, FEATURES }
+private enum class MiuixPage { HOME, FEATURES, APPEARANCE, BACKUP, LOGS, ABOUT, LICENSE }
 
 @Composable
 fun MiuixSettingsContent(onFinish: () -> Unit) {
     var page by remember { mutableStateOf(MiuixPage.HOME) }
     var query by remember { mutableStateOf("") }
     when (page) {
-        MiuixPage.HOME -> MiuixHome(onFinish, { page = MiuixPage.FEATURES }, { query = it; page = MiuixPage.FEATURES })
+        MiuixPage.HOME -> MiuixHome(
+            onFinish,
+            { page = MiuixPage.FEATURES },
+            { query = it; page = MiuixPage.FEATURES },
+            { page = MiuixPage.APPEARANCE },
+            { page = MiuixPage.BACKUP },
+            { page = MiuixPage.LOGS },
+            { page = MiuixPage.ABOUT },
+        )
         MiuixPage.FEATURES -> MiuixFeatures(query, { query = it }, { page = MiuixPage.HOME })
+        MiuixPage.APPEARANCE -> MiuixAppearancePage { page = MiuixPage.HOME }
+        MiuixPage.BACKUP -> MiuixBackupPage { page = MiuixPage.HOME }
+        MiuixPage.LOGS -> MiuixLogsPage { page = MiuixPage.HOME }
+        MiuixPage.ABOUT -> MiuixAboutPage({ page = MiuixPage.HOME }, { page = MiuixPage.LICENSE })
+        MiuixPage.LICENSE -> MiuixLicensePage { page = MiuixPage.ABOUT }
     }
 }
 
 @Composable
-private fun MiuixHome(onFinish: () -> Unit, openFeatures: () -> Unit, search: (String) -> Unit) {
+private fun MiuixHome(
+    onFinish: () -> Unit,
+    openFeatures: () -> Unit,
+    search: (String) -> Unit,
+    openAppearance: () -> Unit,
+    openBackup: () -> Unit,
+    openLogs: () -> Unit,
+    openAbout: () -> Unit,
+) {
     val context = LocalContext.current
     var query by remember { mutableStateOf("") }
     MiuixPageFrame("WeKit · Miuix", onFinish) {
@@ -47,9 +71,17 @@ private fun MiuixHome(onFinish: () -> Unit, openFeatures: () -> Unit, search: (S
             MiuixCard {
                 MiuixAction("全部功能", "浏览分类、搜索与配置所有功能", openFeatures)
                 HorizontalDivider()
+                MiuixAction("外观设置", "主题模式、强调色、圆角与动效", openAppearance)
+                HorizontalDivider()
                 MiuixAction("主题工坊", "完整主题、壁纸、气泡与诊断") { dev.sun.wechat.features.items.beautify.ThemeStore.onClick(context) }
                 HorizontalDivider()
+                MiuixAction("备份与还原", "导出、导入或清空模块配置", openBackup)
+                HorizontalDivider()
+                MiuixAction("日志中心", "模块日志、崩溃日志与主题诊断", openLogs)
+                HorizontalDivider()
                 MiuixAction("自检与诊断", "检查 Hook、权限与运行环境") { context.startActivity(Intent(context, SelfCheckSettingsActivity::class.java)) }
+                HorizontalDivider()
+                MiuixAction("关于与许可", "版本、开源协议与项目链接", openAbout)
             }
             Spacer(Modifier.height(12.dp))
             Text("功能分类", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MiuixTheme.colorScheme.onSurface)
@@ -58,6 +90,128 @@ private fun MiuixHome(onFinish: () -> Unit, openFeatures: () -> Unit, search: (S
                 FEATURE_CATEGORIES.forEachIndexed { index, category ->
                     MiuixAction(stringResource(category.nameRes), "${category.enabledItems().size} 项已启用") { openFeatures() }
                     if (index != FEATURE_CATEGORIES.lastIndex) HorizontalDivider()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiuixAppearancePage(back: () -> Unit) {
+    var tick by remember { mutableIntStateOf(0) }
+    MiuixPageFrame("外观设置", back) {
+        item {
+            MiuixCard {
+                MiuixAction("主题模式", ThemeSettings.themeMode.displayName) {
+                    val entries = AppThemeMode.entries
+                    ThemeSettings.updateThemeMode(entries[(entries.indexOf(ThemeSettings.themeMode) + 1) % entries.size]); tick++
+                }
+                HorizontalDivider()
+                MiuixAction("页面切换动效", ThemeSettings.pageTransitionAnimation.displayName) {
+                    val entries = PageTransitionAnimation.entries
+                    ThemeSettings.updatePageTransitionAnimation(entries[(entries.indexOf(ThemeSettings.pageTransitionAnimation) + 1) % entries.size]); tick++
+                }
+                HorizontalDivider()
+                MiuixAction("UI 组件引擎", "Miuix") { }
+                HorizontalDivider()
+                MiuixToggle("使用动态颜色", ThemeSettings.useDynamicColor) {
+                    ThemeSettings.updateUseDynamicColor(it); tick++
+                }
+                HorizontalDivider()
+                MiuixToggle("深色模式纯黑", ThemeSettings.darkModePureBlack) {
+                    ThemeSettings.updateDarkModePureBlack(it); tick++
+                }
+                HorizontalDivider()
+                MiuixToggle("同时应用到微信", ThemeSettings.applyToWechat) {
+                    ThemeSettings.updateApplyToWechat(it); tick++
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiuixLogsPage(back: () -> Unit) {
+    var refresh by remember { mutableIntStateOf(0) }
+    val context = LocalContext.current
+    val logFiles = remember(refresh) {
+        buildList {
+            WeLogger.logFile?.takeIf { it.exists() }?.let { add(it) }
+            addAll(WeLogger.listCrashLogs())
+        }.distinctBy { it.absolutePath }.sortedByDescending { it.lastModified() }
+    }
+    MiuixPageFrame("日志中心", back) {
+        item {
+            MiuixCard {
+                MiuixAction("主题诊断", "复制当前主题渲染与页面判定状态") {
+                    val text = dev.sun.wechat.features.items.beautify.ThemeStore.diagnose()
+                    context.getSystemService(android.content.ClipboardManager::class.java)
+                        .setPrimaryClip(android.content.ClipData.newPlainText("WeKit Theme Diagnostics", text))
+                }
+                HorizontalDivider()
+                MiuixAction("刷新日志", "当前共 ${logFiles.size} 个日志文件") { refresh++ }
+            }
+        }
+        items(logFiles, key = { it.absolutePath }) { file ->
+            MiuixCard {
+                MiuixAction(file.name, "${file.length() / 1024} KB · ${java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date(file.lastModified()))}") {
+                    val text = runCatching { file.readText().takeLast(200_000) }.getOrDefault("读取失败")
+                    context.getSystemService(android.content.ClipboardManager::class.java)
+                        .setPrimaryClip(android.content.ClipData.newPlainText(file.name, text))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiuixAboutPage(back: () -> Unit, openLicense: () -> Unit) {
+    val context = LocalContext.current
+    MiuixPageFrame("关于", back) {
+        item {
+            MiuixCard {
+                MiuixAction("WeKit", "版本 ${dev.sun.wechat.BuildConfig.VERSION_NAME}") { }
+                HorizontalDivider()
+                MiuixAction("开源许可", "查看第三方组件与许可证", openLicense)
+                HorizontalDivider()
+                MiuixAction("项目主页", "GitHub · sun303690/wocaonima") {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/sun303690/wocaonima")))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiuixLicensePage(back: () -> Unit) {
+    val licenses = listOf(
+        "Miuix · Compose Multiplatform UI components",
+        "AndroidX · Android Jetpack libraries",
+        "Kotlin · Kotlin standard library and coroutines",
+        "YukiHookAPI / LSPosed APIs · Xposed integration",
+        "MMKV · Tencent key-value storage",
+    )
+    MiuixPageFrame("开源许可", back) {
+        item { MiuixCard { licenses.forEachIndexed { i, text -> if (i > 0) HorizontalDivider(); MiuixAction(text, "详见项目内许可证与上游仓库") { } } } }
+    }
+}
+
+@Composable
+private fun MiuixBackupPage(back: () -> Unit) {
+    MiuixPageFrame("备份与还原", back) {
+        item {
+            val context = LocalContext.current
+            MiuixCard {
+                MiuixAction("导出配置", "保存完整 WeKit 配置备份") {
+                    SettingsConfigActions.export(context) { context }
+                }
+                HorizontalDivider()
+                MiuixAction("导入配置", "从备份文件恢复并重启微信") {
+                    SettingsConfigActions.importFromDocument(context) { context }
+                }
+                HorizontalDivider()
+                MiuixAction("清空配置", "删除所有模块设置并重启微信") {
+                    SettingsConfigActions.clearAndRestart()
                 }
             }
         }
@@ -104,6 +258,15 @@ private fun MiuixSearch(value: String, changed: (String) -> Unit, search: () -> 
 @Composable
 private fun MiuixCard(content: @Composable ColumnScope.() -> Unit) {
     Surface(Modifier.fillMaxWidth().clip(RoundedCornerShape(ThemeSettings.cornerRadiusDp.dp)), shape = RoundedCornerShape(ThemeSettings.cornerRadiusDp.dp), color = MiuixTheme.colorScheme.surfaceContainer) { Column(content = content) }
+}
+
+@Composable
+private fun MiuixToggle(title: String, checked: Boolean, change: (Boolean) -> Unit) {
+    BasicComponent(
+        title = title,
+        endActions = { Switch(checked = checked, onCheckedChange = change) },
+        onClick = { change(!checked) },
+    )
 }
 
 @Composable

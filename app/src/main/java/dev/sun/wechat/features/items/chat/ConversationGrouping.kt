@@ -45,17 +45,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Badge
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.PrimaryScrollableTabRow
-import androidx.compose.material3.TabIndicatorScope
-import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.Text
-import androidx.compose.material3.LinearProgressIndicator
+import top.yukonga.miuix.kmp.basic.Badge
+import dev.sun.wechat.ui.content.miuix.MiuixDropdownMenu
+import dev.sun.wechat.ui.content.miuix.MiuixDropdownMenuItem
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import dev.sun.wechat.ui.content.miuix.MiuixCompatTextField
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -128,9 +125,9 @@ import dev.sun.wechat.ui.content.ContactsSelector
 import dev.sun.wechat.ui.content.DefaultColumn
 import dev.sun.wechat.ui.content.IconButton
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.RadioButtonWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixRadioButtonWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.content.rememberViewBackdrop
 import dev.sun.wechat.ui.utils.LifecycleOwnerProvider
 import dev.sun.wechat.ui.utils.setLifecycleOwner
@@ -911,27 +908,27 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                 text = {
                     LazyColumn(Modifier.fillMaxWidth()) {
                         item {
-                            SegmentedColumn(
+                            MiuixSegmentedColumn(
                                 title = stringResource(R.string.conversation_grouping_tab_layout_title),
                                 contentPadding = PaddingValues(0.dp),
                                 titlePadding = PaddingValues(start = 16.dp, top = 8.dp, bottom = 8.dp),
                             ) {
                                 item {
-                                    RadioButtonWidget(
+                                    MiuixRadioButtonWidget(
                                         title = stringResource(R.string.conversation_grouping_tab_style_full_width),
                                         selected = tabStyleState.value == TAB_STYLE_FULL_WIDTH,
                                         onSelect = { updateTabStyle(TAB_STYLE_FULL_WIDTH) },
                                     )
                                 }
                                 item {
-                                    RadioButtonWidget(
+                                    MiuixRadioButtonWidget(
                                         title = stringResource(R.string.conversation_grouping_tab_style_floating),
                                         selected = tabStyleState.value == TAB_STYLE_FLOATING,
                                         onSelect = { updateTabStyle(TAB_STYLE_FLOATING) },
                                     )
                                 }
                                 item {
-                                    SwitchWidget(
+                                    MiuixSwitchWidget(
                                         title = stringResource(R.string.conversation_grouping_pin_tabs),
                                         description = stringResource(R.string.conversation_grouping_pin_tabs_description),
                                         checked = pinTabsEnabled,
@@ -943,7 +940,7 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                                     )
                                 }
                                 item {
-                                    SwitchWidget(
+                                    MiuixSwitchWidget(
                                         title = stringResource(R.string.conversation_grouping_take_over_horizontal_scroll),
                                         description = stringResource(R.string.conversation_grouping_take_over_horizontal_scroll_description),
                                         checked = takeOverScroll,
@@ -956,7 +953,7 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                                     )
                                 }
                                 item {
-                                    SwitchWidget(
+                                    MiuixSwitchWidget(
                                         title = stringResource(R.string.conversation_grouping_remember_scroll_state),
                                         description = stringResource(R.string.conversation_grouping_remember_scroll_state_description),
                                         checked = rememberScrollStateEnabled,
@@ -972,13 +969,13 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                             }
                         }
                         item {
-                            SegmentedColumn(
+                            MiuixSegmentedColumn(
                                 title = stringResource(R.string.conversation_grouping_unread_title),
                                 contentPadding = PaddingValues(0.dp),
                                 titlePadding = PaddingValues(start = 16.dp, top = 8.dp, bottom = 8.dp),
                             ) {
                                 item {
-                                    SwitchWidget(
+                                    MiuixSwitchWidget(
                                         title = stringResource(R.string.conversation_grouping_show_unread),
                                         description = stringResource(R.string.conversation_grouping_show_unread_description),
                                         checked = showUnreadState.value,
@@ -989,7 +986,7 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                                     )
                                 }
                                 item(animatedVisibility = showUnreadState.value) {
-                                    SwitchWidget(
+                                    MiuixSwitchWidget(
                                         title = stringResource(R.string.conversation_grouping_include_official_unread),
                                         description = stringResource(R.string.conversation_grouping_include_official_unread_description),
                                         enabled = showUnreadState.value,
@@ -1463,11 +1460,11 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                                         onLongClick = { menuForGroupId = group.id }
                                     )
 
-                                    DropdownMenu(
+                                    MiuixDropdownMenu(
                                         expanded = menuForGroupId == group.id,
                                         onDismissRequest = { menuForGroupId = null }
                                     ) {
-                                        DropdownMenuItem(
+                                        MiuixDropdownMenuItem(
                                             text = { Text(stringResource(R.string.conversation_group_action_new)) },
                                             leadingIcon = {
                                                 Icon(
@@ -1481,7 +1478,7 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                                                 onCreateGroup()
                                             }
                                         )
-                                        DropdownMenuItem(
+                                        MiuixDropdownMenuItem(
                                             text = { Text(stringResource(R.string.conversation_group_action_edit)) },
                                             leadingIcon = {
                                                 Icon(
@@ -1495,7 +1492,7 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                                                 onEditGroup(group)
                                             }
                                         )
-                                        DropdownMenuItem(
+                                        MiuixDropdownMenuItem(
                                             text = { Text(stringResource(R.string.conversation_group_action_reorder)) },
                                             leadingIcon = {
                                                 Icon(
@@ -1511,7 +1508,7 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                                             }
                                         )
                                         if (!allTab) {
-                                            DropdownMenuItem(
+                                            MiuixDropdownMenuItem(
                                                 text = { Text(stringResource(R.string.conversation_group_action_delete)) },
                                                 leadingIcon = {
                                                     Icon(
@@ -1531,33 +1528,13 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                             }
                         }
                     }
-                    val selectedTabIndex = orderedGroups.indexOfFirst { it.id == selectedGroupId }
-                        .coerceAtLeast(0)
-                    val indicator: @Composable TabIndicatorScope.() -> Unit = {
-                        if (capsuleStyle) {
-                            AnimatedGroupSelectionPill(tabWidths, selectedTabIndex, orderedGroups.map { it.id }, pagingProgress)
-                        } else {
-                            TabRowDefaults.PrimaryIndicator(
-                                modifier = Modifier.tabIndicatorOffset(selectedTabIndex, matchContentSize = true),
-                                width = Dp.Unspecified,
-                            )
-                        }
+                    androidx.compose.foundation.horizontalScroll(rememberScrollState()).let { scroll ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().then(scroll),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) { tabs() }
                     }
-                    // Plain tabs keep their natural width. Capsules use the assigned proportional
-                    // widths when they fit, and retain natural widths with scrolling when they overflow.
-                    PrimaryScrollableTabRow(
-                        selectedTabIndex = selectedTabIndex,
-                        containerColor = tabContainerColor,
-                        edgePadding = if (capsuleStyle) 0.dp else {
-                            ((maxWidth - tabWidths.fold(0.dp) { total, width -> total + width }) / 2)
-                                .coerceAtLeast(12.dp)
-                        },
-                        minTabWidth = 48.dp,
-                        indicator = indicator,
-                        divider = {},
-                        tabs = tabs,
-                    )
-                }
             }
 
             // In sort mode the trailing "+" turns into a "✓" that commits the new order. Overlaid on
@@ -1586,9 +1563,9 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                                 } finally { savingOrder = false }
                             }
                         },
-                        colors = androidx.compose.material3.IconButtonDefaults.filledTonalIconButtonColors()
+
                     ) {
-                        if (savingOrder) androidx.compose.material3.CircularProgressIndicator(Modifier.size(22.dp))
+                        if (savingOrder) top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator(Modifier.size(22.dp))
                         else Icon(
                             imageVector = MaterialSymbols.Outlined.Check,
                             contentDescription = stringResource(R.string.conversation_group_save_order_description),
@@ -1643,7 +1620,7 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
     ): List<Dp> {
         val textMeasurer = rememberTextMeasurer()
         val density = LocalDensity.current
-        val textStyle = MaterialTheme.typography.titleSmall
+        val textStyle = MiuixTheme.textStyles.title3
         val naturalWidths = groups.map { group ->
             val textWidth = textMeasurer.measure(
                 text = groupDisplayName(group),
@@ -1851,7 +1828,7 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
 
     @Composable
     private fun GroupSelectionPill(modifier: Modifier) {
-        Box(modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), CircleShape))
+        Box(modifier.background(MiuixTheme.colorScheme.primary.copy(alpha = 0.12f), CircleShape))
     }
 
     @Composable
@@ -1961,9 +1938,9 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                 content = {
                     Text(
                         text = label,
-                        color = if (selected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.titleSmall,
+                        color = if (selected) MiuixTheme.colorScheme.primary
+                            else MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        style = MiuixTheme.textStyles.title3,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -2108,7 +2085,7 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                     Column {
                         Text(stringResource(R.string.conversation_group_delete_message, groupName))
                         if (saving) LinearProgressIndicator(Modifier.fillMaxWidth())
-                        if (failed) Text(stringResource(R.string.logs_save_failed), color = MaterialTheme.colorScheme.error)
+                        if (failed) Text(stringResource(R.string.logs_save_failed), color = MiuixTheme.colorScheme.error)
                     }
                 },
                 dismissButton = { TextButton(onDismiss, enabled = !saving) { Text(stringResource(R.string.dialog_cancel)) } },
@@ -2171,11 +2148,11 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                     Column {
                         Text(stringResource(titleRes))
                         if (saving) LinearProgressIndicator(Modifier.fillMaxWidth())
-                        if (failed) Text(stringResource(R.string.logs_save_failed), color = MaterialTheme.colorScheme.error)
+                        if (failed) Text(stringResource(R.string.logs_save_failed), color = MiuixTheme.colorScheme.error)
                     }
                 },
                 text = {
-                    OutlinedTextField(
+                    MiuixCompatTextField(
                         enabled = !saving,
                         value = name,
                         onValueChange = { name = it },
@@ -2227,12 +2204,12 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                 Column {
                     Text(stringResource(titleRes))
                     if (saving) LinearProgressIndicator(Modifier.fillMaxWidth())
-                    if (failed) Text(stringResource(R.string.logs_save_failed), color = MaterialTheme.colorScheme.error)
+                    if (failed) Text(stringResource(R.string.logs_save_failed), color = MiuixTheme.colorScheme.error)
                 }
             },
             text = {
                 DefaultColumn {
-                    OutlinedTextField(
+                    MiuixCompatTextField(
                         enabled = !saving,
                         value = name,
                         onValueChange = { name = it },
@@ -2246,7 +2223,7 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
 
                     var typeExpanded by remember { mutableStateOf(false) }
                     Column {
-                        Text(stringResource(R.string.conversation_group_mode), style = MaterialTheme.typography.labelSmall)
+                        Text(stringResource(R.string.conversation_group_mode), style = MiuixTheme.textStyles.footnote2)
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -2262,14 +2239,14 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                                     GroupType.PRESET_OFFICIALS -> stringResource(R.string.conversation_group_mode_officials)
                                     GroupType.SQL -> stringResource(R.string.conversation_group_mode_sql)
                                 },
-                                style = MaterialTheme.typography.bodyLarge
+                                style = MiuixTheme.textStyles.body1
                             )
                         }
-                        DropdownMenu(
+                        MiuixDropdownMenu(
                             expanded = typeExpanded,
                             onDismissRequest = { typeExpanded = false }
                         ) {
-                            DropdownMenuItem(
+                            MiuixDropdownMenuItem(
                                 enabled = !saving,
                                 text = { Text(stringResource(R.string.conversation_group_mode_manual)) },
                                 onClick = {
@@ -2277,7 +2254,7 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                                     typeExpanded = false
                                 }
                             )
-                            DropdownMenuItem(
+                            MiuixDropdownMenuItem(
                                 enabled = !saving,
                                 text = { Text(stringResource(R.string.conversation_group_mode_unread)) },
                                 onClick = {
@@ -2285,7 +2262,7 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                                     typeExpanded = false
                                 }
                             )
-                            DropdownMenuItem(
+                            MiuixDropdownMenuItem(
                                 enabled = !saving,
                                 text = { Text(stringResource(R.string.conversation_group_mode_groups)) },
                                 onClick = {
@@ -2293,7 +2270,7 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                                     typeExpanded = false
                                 }
                             )
-                            DropdownMenuItem(
+                            MiuixDropdownMenuItem(
                                 enabled = !saving,
                                 text = { Text(stringResource(R.string.conversation_group_mode_friends)) },
                                 onClick = {
@@ -2301,7 +2278,7 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                                     typeExpanded = false
                                 }
                             )
-                            DropdownMenuItem(
+                            MiuixDropdownMenuItem(
                                 enabled = !saving,
                                 text = { Text(stringResource(R.string.conversation_group_mode_officials)) },
                                 onClick = {
@@ -2309,7 +2286,7 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                                     typeExpanded = false
                                 }
                             )
-                            DropdownMenuItem(
+                            MiuixDropdownMenuItem(
                                 enabled = !saving,
                                 text = { Text(stringResource(R.string.conversation_group_mode_sql)) },
                                 onClick = {
@@ -2363,7 +2340,7 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                         }
 
                         GroupType.SQL -> {
-                            OutlinedTextField(
+                            MiuixCompatTextField(
                                 enabled = !saving,
                                 value = selectFields,
                                 onValueChange = { selectFields = it },
@@ -2371,7 +2348,7 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                                 label = { Text(stringResource(R.string.conversation_group_select_fields)) },
                                 singleLine = true
                             )
-                            OutlinedTextField(
+                            MiuixCompatTextField(
                                 enabled = !saving,
                                 value = whereClause,
                                 onValueChange = { whereClause = it },
@@ -2382,12 +2359,12 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                             )
                             Text(
                                 text = stringResource(R.string.conversation_group_match_count, matchedCount),
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MiuixTheme.textStyles.body2
                             )
                             Text(
                                 text = stringResource(R.string.conversation_group_sql_help),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                style = MiuixTheme.textStyles.footnote1,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary
                             )
                         }
                     }

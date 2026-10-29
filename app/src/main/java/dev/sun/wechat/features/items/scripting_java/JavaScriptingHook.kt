@@ -5,7 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,8 +30,8 @@ import dev.sun.wechat.extensions.ExtensionPackDialogs
 import dev.sun.wechat.extensions.ScriptDepsPack
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.SwitchWidget
-import dev.sun.wechat.ui.content.m3.lazySegmentedItems
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
+import dev.sun.wechat.ui.content.miuix.miuixLazySegmentedItems
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.getTopMostActivity
@@ -181,7 +181,7 @@ object JavaScriptingHook : ClickableFeature(), IResolveDex, WeDatabaseListenerAp
                                 .fillMaxWidth()
                                 .heightIn(max = 480.dp),
                         ) {
-                            lazySegmentedItems(entries, key = { it.dir.name }) { entry ->
+                            miuixLazySegmentedItems(entries, key = { it.dir.name }) { entry ->
                                 var enabled by remember(entry.dir) { mutableStateOf(entry.enabled) }
                                 val statusText = stringResource(
                                     if (enabled) R.string.java_script_status_enabled
@@ -192,7 +192,7 @@ object JavaScriptingHook : ClickableFeature(), IResolveDex, WeDatabaseListenerAp
                                 val authorText =
                                     entry.info.author?.let { stringResource(R.string.java_script_author, it) }
 
-                                SwitchWidget(
+                                MiuixSwitchWidget(
                                     iconPlaceholder = false,
                                     title = if (entry.info.name == "unnamed") {
                                         stringResource(R.string.java_script_unnamed)

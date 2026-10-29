@@ -8,8 +8,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Slider
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -33,7 +33,7 @@ import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.BaseSupportingWidget
+import dev.sun.wechat.ui.content.miuix.MiuixBaseSupportingWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToast
@@ -249,7 +249,7 @@ object AutoRefresh : ClickableFeature(), IResolveDex {
             AlertDialogContent(
                 title = { Text(stringResource(R.string.moments_auto_refresh_title)) },
                 text = {
-                    BaseSupportingWidget(
+                    MiuixBaseSupportingWidget(
                         title = stringResource(R.string.moments_auto_refresh_interval),
                         description = stringResource(R.string.moments_auto_refresh_interval_summary),
                     ) {

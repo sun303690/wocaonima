@@ -9,10 +9,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.LinearWavyProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -148,7 +148,7 @@ object Experiments : ClickableFeature() {
 
                             Spacer(Modifier.height(8.dp))
 
-                            OutlinedCard(
+                            Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
@@ -176,9 +176,9 @@ object Experiments : ClickableFeature() {
                                         text = selectedWxId
                                             ?: stringResource(R.string.debug_experiments_tap_to_select_contact),
                                         color = if (selectedWxId != null) {
-                                            MaterialTheme.colorScheme.onSurface
+                                            MiuixTheme.colorScheme.onSurface
                                         } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                            MiuixTheme.colorScheme.onSurfaceVariantSummary
                                         }
                                     )
                                 }
@@ -187,7 +187,7 @@ object Experiments : ClickableFeature() {
 
                         is Phase.Running -> {
                             Text(stringResource(R.string.debug_experiments_sending))
-                            LinearWavyProgressIndicator()
+                            LinearProgressIndicator()
                         }
 
                         is Phase.Done -> {

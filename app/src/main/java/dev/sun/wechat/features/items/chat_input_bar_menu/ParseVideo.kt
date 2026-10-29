@@ -11,18 +11,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import dev.sun.wechat.ui.content.miuix.MiuixDropdownMenu
+import dev.sun.wechat.ui.content.miuix.MiuixDropdownMenuItem
+import top.yukonga.miuix.kmp.basic.HorizontalDivider
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.Button as MiuixButton
+import dev.sun.wechat.ui.content.miuix.MiuixCompatTextField
+import top.yukonga.miuix.kmp.basic.Surface
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -56,7 +56,7 @@ import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.AndroidAudioDecoder
 import dev.sun.wechat.utils.AudioUtils
@@ -166,7 +166,7 @@ object ParseVideo : ClickableFeature() {
                             .fillMaxWidth()
                             .padding(vertical = 4.dp),
                     ) {
-                        SwitchWidget(
+                        MiuixSwitchWidget(
                             title = stringResource(R.string.parse_video_auto_reply),
                             description = stringResource(R.string.parse_video_auto_reply_description),
                             checked = autoReplyChecked,
@@ -714,7 +714,7 @@ fun showParseDialog(context: android.content.Context) {
                             .fillMaxWidth()
                             .padding(vertical = 4.dp),
                     ) {
-                        OutlinedTextField(
+                        MiuixCompatTextField(
                             value = link,
                             onValueChange = { link = it },
                             enabled = !loading,
@@ -733,14 +733,14 @@ fun showParseDialog(context: android.content.Context) {
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            Button(
+                            MiuixButton(
                                 onClick = { doConvert() },
                                 modifier = Modifier.weight(1f),
                                 enabled = !loading && !downloading && !sending,
                             ) {
                                 Text(stringResource(R.string.parse_video_convert))
                             }
-                            Button(
+                            MiuixButton(
                                 onClick = { doSendNow() },
                                 modifier = Modifier.weight(1f),
                                 enabled = !loading && !downloading && !sending,
@@ -765,8 +765,8 @@ fun showParseDialog(context: android.content.Context) {
                             Spacer(Modifier.height(8.dp))
                             Text(
                                 text = err,
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodySmall,
+                                color = MiuixTheme.colorScheme.error,
+                                style = MiuixTheme.textStyles.footnote1,
                             )
                         }
 
@@ -776,7 +776,7 @@ fun showParseDialog(context: android.content.Context) {
                             Spacer(Modifier.height(8.dp))
                             Surface(
                                 shape = RoundedCornerShape(16.dp),
-                                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                                color = MiuixTheme.colorScheme.surfaceContainer,
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
                                 Column(Modifier.padding(12.dp)) {
@@ -796,7 +796,7 @@ fun showParseDialog(context: android.content.Context) {
                                             if (data.video_title.isNotBlank()) {
                                                 Text(
                                                     text = data.video_title,
-                                                    style = MaterialTheme.typography.titleSmall,
+                                                    style = MiuixTheme.textStyles.title3,
                                                     fontWeight = FontWeight.SemiBold,
                                                     maxLines = 4,
                                                     overflow = TextOverflow.Ellipsis,
@@ -806,8 +806,8 @@ fun showParseDialog(context: android.content.Context) {
                                                 Spacer(Modifier.height(4.dp))
                                                 Text(
                                                     text = author.name,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    style = MiuixTheme.textStyles.footnote1,
+                                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                                 )
                                             }
                                             if (qualityList.size > 1) {
@@ -818,7 +818,7 @@ fun showParseDialog(context: android.content.Context) {
                                                     ?: qualityList.firstOrNull()?.first
                                                     ?: "选择清晰度"
                                                 Box {
-                                                    OutlinedTextField(
+                                                    MiuixCompatTextField(
                                                         value = selectedLabel,
                                                         onValueChange = {},
                                                         readOnly = true,
@@ -834,12 +834,12 @@ fun showParseDialog(context: android.content.Context) {
                                                         },
                                                         modifier = Modifier.fillMaxWidth(),
                                                     )
-                                                    DropdownMenu(
+                                                    MiuixDropdownMenu(
                                                         expanded = expanded,
                                                         onDismissRequest = { expanded = false },
                                                     ) {
                                                         qualityList.forEach { (label, url) ->
-                                                            DropdownMenuItem(
+                                                            MiuixDropdownMenuItem(
                                                                 text = { Text(label) },
                                                                 onClick = {
                                                                     selectedQualityUrl = url
@@ -858,7 +858,7 @@ fun showParseDialog(context: android.content.Context) {
                                     if (directCoverUrl.isNotBlank() || directMusicUrl.isNotBlank()) {
                                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                             if (directCoverUrl.isNotBlank()) {
-                                                OutlinedButton(
+                                                MiuixButton(
                                                     onClick = {
                                                         savingCover = true
                                                         scope.launch {
@@ -901,7 +901,7 @@ fun showParseDialog(context: android.content.Context) {
                                                 }
                                             }
                                             if (directMusicUrl.isNotBlank()) {
-                                                OutlinedButton(
+                                                MiuixButton(
                                                     onClick = {
                                                         downloadingMusic = true
                                                         scope.launch {
@@ -968,7 +968,7 @@ fun showParseDialog(context: android.content.Context) {
                                                     localizedChatInputString(R.string.parse_video_downloading) +
                                                         " $percent%"
                                                 },
-                                                style = MaterialTheme.typography.bodySmall,
+                                                style = MiuixTheme.textStyles.footnote1,
                                             )
                                         }
                                     }
@@ -980,8 +980,8 @@ fun showParseDialog(context: android.content.Context) {
                                                 append("%.1f".format(downloadedFile!!.length() / 1024.0 / 1024.0))
                                                 append("MB)")
                                             },
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary,
+                                            style = MiuixTheme.textStyles.footnote1,
+                                            color = MiuixTheme.colorScheme.primary,
                                         )
                                     }
                                 }
@@ -1000,13 +1000,13 @@ fun showParseDialog(context: android.content.Context) {
                     val data = parseResult?.parsedData()
                     if (data != null && downloadedFile == null) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(
+                            MiuixButton(
                                 onClick = { doDownload() },
                                 enabled = !downloading && !sending,
                             ) {
                                 Text(stringResource(R.string.parse_video_download))
                             }
-                            Button(
+                            MiuixButton(
                                 onClick = { extractMusic() },
                                 enabled = !extractingMusic && !sending,
                             ) {
@@ -1019,7 +1019,7 @@ fun showParseDialog(context: android.content.Context) {
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
-                                Button(
+                                MiuixButton(
                                     onClick = { sendDownloadedVideo() },
                                     modifier = Modifier.weight(1f),
                                 ) {

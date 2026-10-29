@@ -1,7 +1,7 @@
 package dev.sun.wechat.features.items.contacts
 
 import androidx.activity.ComponentActivity
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import dev.sun.wechat.R

@@ -18,12 +18,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.Surface
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -52,8 +52,8 @@ import com.composables.icons.materialsymbols.outlined.Close
 import com.composables.icons.materialsymbols.outlined.Drag_handle
 import dev.sun.wechat.R
 import dev.sun.wechat.ui.content.GlobalImageLoader
-import dev.sun.wechat.ui.content.m3.DropdownOption
-import dev.sun.wechat.ui.content.m3.ExpressiveOptionDropdown
+import dev.sun.wechat.ui.content.miuix.DropdownOption
+import dev.sun.wechat.ui.content.miuix.MiuixOptionDropdown
 import java.nio.file.Path
 import kotlin.math.roundToInt
 
@@ -135,7 +135,7 @@ fun HomeSidePanelImageCard(
                 .height(effectiveHeightDp.dp)
                 .then(bodyModifier),
             shape = shape,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+            colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
             editMode = editMode,
             onEdit = null,
             onDelete = null,
@@ -156,7 +156,7 @@ fun HomeSidePanelImageCard(
                 modifier = Modifier
                     .fillMaxSize()
                     .clip(shape)
-                    .background(MaterialTheme.colorScheme.surfaceContainerLow),
+                    .background(MiuixTheme.colorScheme.surfaceContainer),
             ) {
                 if (
                     card.imageAssetId != null &&
@@ -215,7 +215,7 @@ fun HomeSidePanelImageCard(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.28f)),
+                            .background(MiuixTheme.colorScheme.windowDimming.copy(alpha = 0.28f)),
                         contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator()
@@ -239,12 +239,12 @@ private fun HomeSidePanelImagePlaceholder(message: Int) {
             MaterialSymbols.Outlined.Add,
             contentDescription = null,
             modifier = Modifier.size(34.dp),
-            tint = MaterialTheme.colorScheme.primary,
+            tint = MiuixTheme.colorScheme.primary,
         )
         Text(
             text = stringResource(message),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MiuixTheme.textStyles.body2,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             modifier = Modifier.padding(top = 8.dp),
         )
     }
@@ -277,9 +277,8 @@ private fun HomeSidePanelImageBadge(
     ) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHighest,
-            tonalElevation = 6.dp,
-            shadowElevation = 2.dp,
+            color = MiuixTheme.colorScheme.surfaceContainerHighest,
+            shadowElevation = 6.dp,
         ) {
             Row {
                 Box {
@@ -288,7 +287,7 @@ private fun HomeSidePanelImageBadge(
                         contentDescription = stringResource(R.string.home_side_panel_image_scale_mode),
                         icon = MaterialSymbols.Outlined.Aspect_ratio,
                     )
-                    ExpressiveOptionDropdown(
+                    MiuixOptionDropdown(
                         expanded = expanded,
                         value = card.scaleMode,
                         options = options,
@@ -303,7 +302,7 @@ private fun HomeSidePanelImageBadge(
                     onClick = { onDeleteCard(card.id) }.takeIf { enabled },
                     contentDescription = stringResource(R.string.home_side_panel_delete_card),
                     icon = MaterialSymbols.Outlined.Close,
-                    tint = MaterialTheme.colorScheme.error,
+                    tint = MiuixTheme.colorScheme.error,
                 )
             }
         }
@@ -381,15 +380,15 @@ private fun HomeSidePanelImageResizeHandle(
                 }
             },
         shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.92f),
-        tonalElevation = 4.dp,
+        color = MiuixTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.92f),
+        shadowElevation = 4.dp,
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(
                 MaterialSymbols.Outlined.Drag_handle,
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             )
         }
     }

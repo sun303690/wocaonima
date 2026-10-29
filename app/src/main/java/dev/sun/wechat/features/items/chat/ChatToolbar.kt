@@ -28,18 +28,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.DropdownMenuGroup
-import androidx.compose.material3.DropdownMenuPopup
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuDefaults
-import androidx.compose.material3.SelectableDropdownMenuItem
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.Switch
+import top.yukonga.miuix.kmp.basic.Text
+import dev.sun.wechat.ui.content.miuix.MiuixCompatTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -122,6 +116,9 @@ import java.util.UUID
 import java.util.WeakHashMap
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
+import dev.sun.wechat.ui.content.miuix.MiuixDropdownMenu
+import dev.sun.wechat.ui.content.miuix.MiuixDropdownMenuItem
+import dev.sun.wechat.ui.content.miuix.MiuixFilterChip
 
 private enum class ToolbarDisplayMode(
     val preferenceValue: String,
@@ -652,32 +649,26 @@ object ChatToolbar : ClickableFeature(), IResolveDex {
                                 },
                             )
                             Box(Modifier.align(Alignment.CenterStart)) {
-                                DropdownMenuPopup(
+                                MiuixDropdownMenu(
                                     expanded = displayModeMenuExpanded,
                                     onDismissRequest = { displayModeMenuExpanded = false },
                                 ) {
-                                    DropdownMenuGroup(shapes = MenuDefaults.groupShapes()) {
-                                        ToolbarDisplayMode.entries.forEachIndexed { index, mode ->
-                                            SelectableDropdownMenuItem(
-                                                selected = mode == currentDisplayMode,
-                                                onClick = {
-                                                    currentDisplayMode = mode
-                                                    displayModeMenuExpanded = false
-                                                },
-                                                text = { Text(stringResource(mode.labelRes)) },
-                                                shapes = MenuDefaults.itemShape(index, ToolbarDisplayMode.entries.size),
-                                            )
-                                        }
+                                    ToolbarDisplayMode.entries.forEach { mode ->
+                                        MiuixDropdownMenuItem(
+                                            text = { Text(stringResource(mode.labelRes)) },
+                                            onClick = { currentDisplayMode = mode; displayModeMenuExpanded = false },
+                                            trailingIcon = if (mode == currentDisplayMode) ({ Icon(MaterialSymbols.Outlined.Check, null) }) else null,
+                                        )
                                     }
                                 }
                             }
                         }
                         Column {
-                            Text(stringResource(R.string.chat_toolbar_display_order), style = MaterialTheme.typography.titleSmall)
+                            Text(stringResource(R.string.chat_toolbar_display_order), style = MiuixTheme.textStyles.title3)
                             Text(
                                 stringResource(R.string.chat_toolbar_reorder_hint),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MiuixTheme.textStyles.footnote1,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                             )
                         }
                         ReorderableList(
@@ -706,7 +697,7 @@ object ChatToolbar : ClickableFeature(), IResolveDex {
                                     Icon(
                                         MaterialSymbols.Outlined.Drag_handle,
                                         contentDescription = stringResource(R.string.chat_toolbar_drag_item_description, label),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                     )
                                 }
                                 Box(
@@ -717,7 +708,7 @@ object ChatToolbar : ClickableFeature(), IResolveDex {
                                         iconFor(name),
                                         contentDescription = null,
                                         modifier = Modifier.size(24.dp),
-                                        tint = MaterialTheme.colorScheme.primary,
+                                        tint = MiuixTheme.colorScheme.primary,
                                     )
                                 }
                                 Text(
@@ -728,7 +719,7 @@ object ChatToolbar : ClickableFeature(), IResolveDex {
                                     maxLines = 1,
                                     softWrap = false,
                                     overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.bodyLarge,
+                                    style = MiuixTheme.textStyles.body1,
                                 )
                                 if (name == QUICK_REPLY_NAME) {
                                     IconButton(onClick = { showQuickReplyConfig(context) }) {
@@ -821,7 +812,7 @@ object ChatToolbar : ClickableFeature(), IResolveDex {
             AlertDialogContent(
                 title = { Text(stringResource(titleRes)) },
                 text = {
-                    TextField(
+                    MiuixCompatTextField(
                         value = value,
                         onValueChange = { value = it },
                         modifier = Modifier.fillMaxWidth(),
@@ -863,11 +854,11 @@ object ChatToolbar : ClickableFeature(), IResolveDex {
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(stringResource(R.string.chat_toolbar_reply_contents), style = MaterialTheme.typography.titleSmall)
+                                Text(stringResource(R.string.chat_toolbar_reply_contents), style = MiuixTheme.textStyles.title3)
                                 Text(
                                     stringResource(R.string.chat_toolbar_reply_reorder_hint),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MiuixTheme.textStyles.footnote1,
+                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                 )
                             }
                             TextButton(
@@ -885,7 +876,7 @@ object ChatToolbar : ClickableFeature(), IResolveDex {
                         if (replies.isEmpty()) {
                             Text(
                                 stringResource(R.string.chat_toolbar_quick_reply_empty_config),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                 modifier = Modifier.padding(vertical = 28.dp),
                             )
                         } else {
@@ -925,7 +916,7 @@ object ChatToolbar : ClickableFeature(), IResolveDex {
                                         Icon(
                                             MaterialSymbols.Outlined.Drag_handle,
                                             contentDescription = stringResource(R.string.chat_toolbar_drag_quick_reply_description),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                         )
                                     }
                                     Text(
@@ -947,7 +938,7 @@ object ChatToolbar : ClickableFeature(), IResolveDex {
                                         Icon(
                                             MaterialSymbols.Outlined.Delete,
                                             contentDescription = stringResource(R.string.chat_toolbar_delete_quick_reply_description),
-                                            tint = MaterialTheme.colorScheme.error,
+                                            tint = MiuixTheme.colorScheme.error,
                                         )
                                     }
                                 }
@@ -980,15 +971,16 @@ private fun FeatureChip(
     displayMode: ToolbarDisplayMode,
     onClick: () -> Unit,
 ) {
-    AssistChip(
+    MiuixFilterChip(
+        selected = false,
         onClick = onClick,
         label = {
             when (displayMode) {
                 ToolbarDisplayMode.ICON_ONLY -> Icon(
                     icon,
                     contentDescription = text,
-                    modifier = Modifier.size(AssistChipDefaults.IconSize),
-                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp),
+                    tint = MiuixTheme.colorScheme.primary,
                 )
 
                 ToolbarDisplayMode.ICON_AND_TEXT,
@@ -999,7 +991,7 @@ private fun FeatureChip(
             Icon(
                 icon,
                 contentDescription = null,
-                modifier = Modifier.size(AssistChipDefaults.IconSize),
+                modifier = Modifier.size(18.dp),
             )
         }) else null,
     )

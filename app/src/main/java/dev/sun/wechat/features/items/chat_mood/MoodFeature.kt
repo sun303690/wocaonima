@@ -4,11 +4,11 @@ import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import top.yukonga.miuix.kmp.basic.HorizontalDivider
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.Button
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,8 +26,8 @@ import dev.sun.wechat.features.api.ui.WeChatMessageContextMenuApi
 import dev.sun.wechat.features.api.ui.WeCurrentConversationApi
 import dev.sun.wechat.features.items.chat.AiSmartReply
 import dev.sun.wechat.ui.content.AlertDialogContent
-import dev.sun.wechat.ui.content.m3.DropdownOption
-import dev.sun.wechat.ui.content.m3.DropDownMenuWidget
+import dev.sun.wechat.ui.content.miuix.DropdownOption
+import dev.sun.wechat.ui.content.miuix.MiuixDropDownMenuWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
 
@@ -78,9 +78,9 @@ object MoodFeature : ClickableFeature() {
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         // ===== Jev 情绪分析 =====
-                        Text("情绪分析（Jev）", style = MaterialTheme.typography.titleSmall)
+                        Text("情绪分析（Jev）", style = MiuixTheme.textStyles.title3)
                         val jevOpts = JevProvider.entries.map { DropdownOption(it.id, it.label) }
-                        DropDownMenuWidget(
+                        MiuixDropDownMenuWidget(
                             title = "渠道",
                             description = JevProvider.entries.firstOrNull { it.id == jevProvider }?.label ?: jevProvider,
                             value = jevProvider,
@@ -92,14 +92,14 @@ object MoodFeature : ClickableFeature() {
                         val currentProvider = JevProvider.entries.firstOrNull { it.id == jevProvider }
                         if (currentProvider != null && currentProvider.website.isNotBlank()) {
                             val url = currentProvider.website
-                            TextButton(onClick = {
+                            Button(onClick = {
                                 val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
                                 context.startActivity(intent)
                             }) {
-                                Text("👉 去 ${currentProvider.label} 注册获取 API Key", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                                Text("👉 去 ${currentProvider.label} 注册获取 API Key", style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.primary)
                             }
                         }
-                        OutlinedTextField(
+                        TextField(
                             value = jevKey,
                             onValueChange = { jevKey = it },
                             label = { Text("API Key") },
@@ -107,14 +107,14 @@ object MoodFeature : ClickableFeature() {
                             singleLine = true,
                         )
                         if (jevProvider == "custom") {
-                            OutlinedTextField(
+                            TextField(
                                 value = jevEndpoint,
                                 onValueChange = { jevEndpoint = it },
                                 label = { Text("接口地址") },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
                             )
-                            OutlinedTextField(
+                            TextField(
                                 value = jevModel,
                                 onValueChange = { jevModel = it },
                                 label = { Text("模型名") },
@@ -125,8 +125,8 @@ object MoodFeature : ClickableFeature() {
                         HorizontalDivider()
 
                         // ===== 帮我回 · 找话题 =====
-                        Text("帮我回 · 找话题", style = MaterialTheme.typography.titleSmall)
-                        Text("回复和话题生成使用 WeAgent 已配置的聊天模型", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("帮我回 · 找话题", style = MiuixTheme.textStyles.title3)
+                        Text("回复和话题生成使用 WeAgent 已配置的聊天模型", style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
                         if (models.isNotEmpty()) {
                             val replyOpts = listOf(DropdownOption("", "（未选择）")) +
                                 models.map { DropdownOption(it.id, "${it.displayName.ifBlank { it.modelIdRemote }} (${it.providerId})") }
@@ -134,7 +134,7 @@ object MoodFeature : ClickableFeature() {
                             val effectiveId = if (replyOpts.any { it.value == replyModelId }) replyModelId else ""
                             if (effectiveId != replyModelId) replyModelId = effectiveId
                             val selectedLabel = replyOpts.firstOrNull { it.value == effectiveId }?.label ?: "（未选择）"
-                            DropDownMenuWidget(
+                            MiuixDropDownMenuWidget(
                                 title = "回复模型",
                                 description = selectedLabel,
                                 value = effectiveId,
@@ -143,9 +143,9 @@ object MoodFeature : ClickableFeature() {
                                 onValueChange = { replyModelId = it },
                             )
                         } else {
-                            Text("暂无已配置的模型，请先在 WeAgent 设置中添加", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                            Text("暂无已配置的模型，请先在 WeAgent 设置中添加", style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.error)
                         }
-                        TextButton(onClick = {
+                        Button(onClick = {
                             AiSmartReply.openSmartReply(context, WeCurrentConversationApi.value)
                         }, modifier = Modifier.fillMaxWidth()) {
                             Text("打开帮我回")
@@ -153,7 +153,7 @@ object MoodFeature : ClickableFeature() {
                     }
                 },
                 confirmButton = {
-                    TextButton(onClick = {
+                    Button(onClick = {
                         MoodTransport.jevProviderId = jevProvider
                         MoodTransport.jevKey = jevKey.trim()
                         MoodTransport.jevEndpoint = jevEndpoint.trim()
@@ -162,7 +162,7 @@ object MoodFeature : ClickableFeature() {
                         onDismiss()
                     }) { Text(stringResource(R.string.dialog_confirm)) }
                 },
-                dismissButton = { TextButton(onClick = { onDismiss() }) { Text(stringResource(R.string.dialog_cancel)) } },
+                dismissButton = { Button(onClick = { onDismiss() }) { Text(stringResource(R.string.dialog_cancel)) } },
             )
         }
     }

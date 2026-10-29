@@ -10,9 +10,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,7 +30,7 @@ import dev.sun.wechat.features.items.chat.ConversationAggregation.FolderChoice
 import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.utils.FolderAddIcon
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
@@ -60,7 +60,7 @@ object AddToAggregationFolder : ClickableFeature(), WeConversationContextMenuApi
             AlertDialogContent(
                 title = { Text(stringResource(R.string.feature_add_to_aggregation_folder_name)) },
                 text = {
-                    SwitchWidget(
+                    MiuixSwitchWidget(
                         title = stringResource(R.string.chat_add_folder_open_config),
                         description = stringResource(R.string.chat_add_folder_open_config_description),
                         checked = showConfigInput,
@@ -118,7 +118,7 @@ object AddToAggregationFolder : ClickableFeature(), WeConversationContextMenuApi
                 text = {
                     Column {
                         if (saving) LinearProgressIndicator(Modifier.fillMaxWidth())
-                        if (failed) Text(stringResource(R.string.logs_save_failed), color = MaterialTheme.colorScheme.error)
+                        if (failed) Text(stringResource(R.string.logs_save_failed), color = MiuixTheme.colorScheme.error)
                         LazyColumn(
                             modifier = Modifier.heightIn(max = 420.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -177,8 +177,8 @@ object AddToAggregationFolder : ClickableFeature(), WeConversationContextMenuApi
                     if (folder.isAuto) R.string.chat_add_folder_automatic_summary
                     else R.string.chat_add_folder_manual_summary,
                 ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MiuixTheme.textStyles.footnote1,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary
             )
         }
     }

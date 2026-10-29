@@ -6,3 +6,8 @@ plugins {
     alias(libs.plugins.aboutlibraries) apply false
     alias(libs.plugins.aboutlibraries.android) apply false
 }
+
+tasks.register<CheckMiuixPurityTask>("checkMiuixPurity") {
+    group = "verification"
+    description = "Reject Material3 imports in migrated Miuix screens"
+}

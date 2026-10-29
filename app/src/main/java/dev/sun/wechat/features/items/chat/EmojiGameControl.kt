@@ -15,12 +15,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Button as MiuixButton
+import dev.sun.wechat.ui.content.miuix.MiuixFilterChip
+import top.yukonga.miuix.kmp.basic.HorizontalDivider
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import dev.sun.wechat.ui.content.miuix.MiuixCompatTextField
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,7 +46,7 @@ import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.DefaultColumn
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.HookParam
 import dev.sun.wechat.utils.HostInfo
@@ -285,7 +285,7 @@ object EmojiGameControl : ClickableFeature(), IResolveDex {
                 text = {
                     var stealthInput by remember { mutableStateOf(stealthMode) }
 
-                    SwitchWidget(
+                    MiuixSwitchWidget(
                         title = stringResource(R.string.chat_emoji_game_stealth),
                         description = stringResource(R.string.chat_emoji_game_stealth_description),
                         checked = stealthInput,
@@ -382,14 +382,14 @@ object EmojiGameControl : ClickableFeature(), IResolveDex {
                     ) {
                         Text(
                             stringResource(R.string.chat_emoji_game_send_mode),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MiuixTheme.textStyles.footnote1,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary
                         )
                         listOf(
                             stringResource(R.string.chat_emoji_game_single) to true,
                             stringResource(R.string.chat_emoji_game_multiple) to false,
                         ).forEach { (label, single) ->
-                            FilterChip(
+                            MiuixFilterChip(
                                 selected = isSingleMode == single,
                                 onClick = { isSingleMode = single },
                                 label = { Text(label) }
@@ -407,7 +407,7 @@ object EmojiGameControl : ClickableFeature(), IResolveDex {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             options.forEachIndexed { index, label ->
-                                FilledTonalButton(
+                                MiuixButton(
                                     onClick = {
                                         if (isDice) valDice = index else valMorra = index
                                         onSend(true, "")
@@ -419,14 +419,14 @@ object EmojiGameControl : ClickableFeature(), IResolveDex {
                                     Text(
                                         label,
                                         maxLines = 1,
-                                        style = MaterialTheme.typography.bodyMedium
+                                        style = MiuixTheme.textStyles.body2
                                     )
                                 }
                             }
                         }
                     } else {
                         // --- Multiple Mode: Text field ---
-                        OutlinedTextField(
+                        MiuixCompatTextField(
                             value = inputText,
                             onValueChange = { inputText = it.filter { c -> c.isDigit() } },
                             placeholder = { Text(stringResource(if (isDice) R.string.chat_emoji_game_dice_input else R.string.chat_emoji_game_morra_input)) },
@@ -446,7 +446,7 @@ object EmojiGameControl : ClickableFeature(), IResolveDex {
             confirmButton = {
                 // In single mode the option buttons send directly; only show confirm in multimode
                 if (!isSingleMode) {
-                    Button(onClick = {
+                    MiuixButton(onClick = {
                         onSend(false, inputText)
                         onDismiss()
                     }) { Text(stringResource(R.string.chat_emoji_game_send)) }

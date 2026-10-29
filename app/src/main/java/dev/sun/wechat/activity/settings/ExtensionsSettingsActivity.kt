@@ -47,11 +47,11 @@ import dev.sun.wechat.i18n.LocalWeKitLocalizedContext
 import dev.sun.wechat.i18n.WeKitLocaleProvider
 import dev.sun.wechat.ui.agent.settings.AgentConfirmDialog
 import dev.sun.wechat.ui.agent.settings.AgentListActionButton
-import dev.sun.wechat.ui.content.m3.BaseItemContainer
-import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.ExpressiveBackButton
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.utils.theme.ModuleTheme
+import dev.sun.wechat.ui.content.miuix.MiuixBaseItemContainer
+import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
+import dev.sun.wechat.ui.content.miuix.MiuixBackButton
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.utils.theme.MiuixModuleTheme
 import java.util.Locale
 
 /**
@@ -73,7 +73,7 @@ class ExtensionsSettingsActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             WeKitLocaleProvider(mode = LocaleResourceMode.InjectedHost) {
-                ModuleTheme {
+                MiuixModuleTheme {
                     ExtensionsRoot(
                         autoPackId = intent.getStringExtra(EXTRA_PACK_ID),
                         autoDownload = intent.getBooleanExtra(EXTRA_AUTO_DOWNLOAD, false),
@@ -106,7 +106,7 @@ private fun ExtensionsRoot(autoPackId: String?, autoDownload: Boolean, onFinish:
 
     M3ListScaffold(
         title = stringResource(R.string.extensions_screen_title),
-        navigationIcon = { ExpressiveBackButton(onClick = onFinish) },
+        navigationIcon = { MiuixBackButton(onClick = onFinish) },
     ) {
         for (pack in ExtensionPacks.packs.filter(ExtensionPack::isSupported)) {
             item(key = pack.id) { PackGroup(pack) }
@@ -123,7 +123,7 @@ private fun PackGroup(pack: ExtensionPack) {
 
     SegmentedColumn {
         item(key = "info") {
-            BaseWidget(
+            MiuixBaseWidget(
                 title = stringResource(pack.nameRes),
                 description = descriptionLine(pack, state),
                 icon = pack.icon,
@@ -155,7 +155,7 @@ private fun PackGroup(pack: ExtensionPack) {
                 }
             }
             is Verifying -> item(key = "verifying") {
-                BaseWidget(
+                MiuixBaseWidget(
                     title = stringResource(R.string.extensions_pack_verifying),
                     description = stringResource(R.string.extensions_pack_downloading),
                 )

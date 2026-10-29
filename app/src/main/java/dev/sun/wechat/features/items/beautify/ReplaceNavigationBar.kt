@@ -20,6 +20,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
@@ -30,6 +32,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
@@ -37,15 +41,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Badge
+import top.yukonga.miuix.kmp.basic.BadgedBox
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.Switch
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -87,10 +88,6 @@ import com.composables.icons.materialsymbols.outlined.Drag_handle
 import com.composables.icons.materialsymbols.outlined.Explore
 import com.composables.icons.materialsymbols.outlined.Home
 import com.composables.icons.materialsymbols.outlined.Person
-import com.composables.icons.materialsymbols.outlinedfilled.Contacts
-import com.composables.icons.materialsymbols.outlinedfilled.Explore
-import com.composables.icons.materialsymbols.outlinedfilled.Home
-import com.composables.icons.materialsymbols.outlinedfilled.Person
 import com.tencent.mm.ui.mogic.WxViewPager
 import dev.ujhhgtg.reflekt.firstMethod
 import dev.ujhhgtg.reflekt.reflekt
@@ -110,11 +107,11 @@ import dev.sun.wechat.ui.content.FloatingBottomBar
 import dev.sun.wechat.ui.content.FloatingBottomBarDefaults
 import dev.sun.wechat.ui.content.FloatingBottomBarMode
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.BaseItemContainer
-import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.IntNumberPickerWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixBaseItemContainer
+import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
+import dev.sun.wechat.ui.content.miuix.MiuixIntNumberPickerWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.content.rememberViewBackdrop
 import dev.sun.wechat.ui.utils.LifecycleOwnerProvider
 import dev.sun.wechat.ui.utils.ReorderableList
@@ -246,7 +243,7 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
         label: String,
         nativeIcons: Map<Int, WechatTabIcons>,
         useNativeIcons: Boolean,
-        tint: Color = androidx.compose.material3.LocalContentColor.current,
+        tint: Color = MiuixTheme.colorScheme.onSurface,
     ) {
         if (useNativeIcons) {
             val icons = nativeIcons.getValue(item.wechatIndex)
@@ -636,7 +633,7 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
                         val activeColor = if (appearance.wechatIcons) {
                             nativeIcons.getValue(visibleTabItems.first().wechatIndex).activeColor
                         } else {
-                            MaterialTheme.colorScheme.primary
+                            MiuixTheme.colorScheme.primary
                         }
                         val inactiveColor = if (isSystemInDarkTheme()) Color(0xFF999999) else Color(0xFF181818)
 
@@ -653,11 +650,13 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
                         if (!useFloating) {
                             val offset by scrollOffsetState
                             CompositionLocalProvider(LocalDensity provides scaledDensity) {
-                                NavigationBar(
+                                Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(BASE_BAR_HEIGHT_DP.dp),
-                                    containerColor = backgroundColor
+                                        .height(BASE_BAR_HEIGHT_DP.dp)
+                                        .background(backgroundColor),
+                                    horizontalArrangement = Arrangement.SpaceEvenly,
+                                    verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     visibleTabItems.forEachIndexed { index, item ->
                                         val label = stringResource(item.labelRes)
@@ -682,63 +681,28 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
 
                                         val showFilled = if (offset < 0.5f) isSelected else isNext
 
-                                        NavigationBarItem(
-                                            selected = isSelected && offset < 0.5f,
-                                            onClick = {
-                                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                                onTabClicked(index)
-                                            },
-                                            modifier = if (item.wechatIndex == 2) Modifier.onLongPress(openImproveSnsTimeline) else Modifier,
-                                            icon = {
-                                                BadgedBox(
-                                                    badge = {
-                                                        if (item.wechatIndex == 0 && unreadCount > 0) {
-                                                            Badge(containerColor = Color(0xFFFF3B30)) {
-                                                                Text(
-                                                                    if (unreadCount <= 99) unreadCount.toString() else stringResource(R.string.badge_count_overflow),
-                                                                    color = Color.White, fontSize = 10.sp
-                                                                )
-                                                            }
-                                                        } else if (item.wechatIndex == 1 && contactUnreadCount > 0) {
-                                                            Badge(containerColor = Color(0xFFFF3B30)) {
-                                                                Text(
-                                                                    if (contactUnreadCount <= 99) contactUnreadCount.toString() else stringResource(R.string.badge_count_overflow),
-                                                                    color = Color.White, fontSize = 10.sp
-                                                                )
-                                                            }
-                                                        } else if (item.wechatIndex == 2 && showFinderBadge) {
-                                                            if (finderUnreadCount > 0) {
-                                                                Badge(containerColor = Color(0xFFFF3B30)) {
-                                                                    Text(
-                                                                        if (finderUnreadCount <= 99) finderUnreadCount.toString() else stringResource(R.string.badge_count_overflow),
-                                                                        color = Color.White, fontSize = 10.sp
-                                                                    )
-                                                                }
-                                                            } else if (showFinderDot) {
-                                                                Badge(containerColor = Color(0xFFFF3B30))
-                                                            }
-                                                        }
-                                                    }
-                                                ) {
-                                                    Crossfade(
-                                                        targetState = showFilled,
-                                                        animationSpec = tween(200),
-                                                        label = "navIcon"
-                                                    ) { filled ->
-                                                        TabIcon(item, filled, label, nativeIcons, appearance.wechatIcons, tint)
-                                                    }
+                                        Box(
+                                            modifier = (if (item.wechatIndex == 2) Modifier.onLongPress(openImproveSnsTimeline) else Modifier)
+                                                .weight(1f)
+                                                .fillMaxHeight()
+                                                .clickable {
+                                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                                    onTabClicked(index)
+                                                },
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            BadgedBox(
+                                                badge = {
+                                                    val count = when (item.wechatIndex) { 0 -> unreadCount; 1 -> contactUnreadCount; 2 -> finderUnreadCount; else -> 0 }
+                                                    if (count > 0) Badge(containerColor = Color(0xFFFF3B30)) { Text(if (count <= 99) count.toString() else stringResource(R.string.badge_count_overflow), color = Color.White, fontSize = 10.sp) }
+                                                    else if (item.wechatIndex == 2 && showFinderBadge && showFinderDot) Badge(containerColor = Color(0xFFFF3B30))
+                                                },
+                                            ) {
+                                                Crossfade(targetState = showFilled, animationSpec = tween(200), label = "navIcon") { filled ->
+                                                    TabIcon(item, filled, label, nativeIcons, appearance.wechatIcons, tint)
                                                 }
-                                            },
-                                            label = null,
-                                            alwaysShowLabel = false,
-                                            colors = NavigationBarItemDefaults.colors(
-                                                indicatorColor = activeColor.copy(alpha = 0.15f),
-                                                selectedIconColor = activeColor,
-                                                unselectedIconColor = inactiveColor,
-                                                selectedTextColor = activeColor,
-                                                unselectedTextColor = inactiveColor
-                                            )
-                                        )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -1077,9 +1041,9 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
                 title = { Text(stringResource(R.string.feature_replace_navigation_bar_name)) },
                 text = {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
-                        SegmentedColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)) {
+                        MiuixSegmentedColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)) {
                             item {
-                                BaseWidget(
+                                MiuixBaseWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.nav_page_management),
                                     description = stringResource(R.string.nav_page_management_summary),
@@ -1088,13 +1052,13 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
                                         Icon(
                                             MaterialSymbols.Outlined.Chevron_right,
                                             contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                         )
                                     },
                                 )
                             }
                             item {
-                                SwitchWidget(
+                                MiuixSwitchWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.nav_page_animation),
                                     description = stringResource(R.string.nav_page_animation_summary),
@@ -1106,7 +1070,7 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
                                 )
                             }
                             item {
-                                SwitchWidget(
+                                MiuixSwitchWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.nav_use_floating_bar),
                                     checked = useFloatingInput,
@@ -1118,7 +1082,7 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
                                 )
                             }
                             item(animatedVisibility = useFloatingInput) {
-                                SwitchWidget(
+                                MiuixSwitchWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.nav_auto_hide_bar),
                                     description = stringResource(R.string.nav_auto_hide_bar_summary),
@@ -1132,7 +1096,7 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
                                 )
                             }
                             item(animatedVisibility = useFloatingInput) {
-                                SwitchWidget(
+                                MiuixSwitchWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.nav_use_liquid_glass),
                                     checked = useBackdropInput,
@@ -1144,7 +1108,7 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
                                 )
                             }
                             item(animatedVisibility = useFloatingInput && useBackdropInput) {
-                                SwitchWidget(
+                                MiuixSwitchWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.nav_dynamic_gravity_highlight),
                                     description = stringResource(R.string.nav_dynamic_gravity_highlight_summary),
@@ -1159,7 +1123,7 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
                             item(animatedVisibility = useFloatingInput && useBackdropInput) {
                                 BaseItemContainer {
                                     val radius = blurRadiusInput.roundToInt()
-                                    IntNumberPickerWidget(
+                                    MiuixIntNumberPickerWidget(
                                         title = stringResource(R.string.nav_blur_radius),
                                         value = radius,
                                         startInt = MIN_BLUR_RADIUS,
@@ -1175,7 +1139,7 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
                                 }
                             }
                             item {
-                                SwitchWidget(
+                                MiuixSwitchWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.nav_use_wechat_icons),
                                     checked = useWechatIconsInput,
@@ -1187,7 +1151,7 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
                                 )
                             }
                             item(animatedVisibility = useFloatingInput) {
-                                SwitchWidget(
+                                MiuixSwitchWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.nav_hide_labels),
                                     checked = hideLabelsInput,
@@ -1200,7 +1164,7 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
                             }
                             item {
                                 BaseItemContainer {
-                                    IntNumberPickerWidget(
+                                    MiuixIntNumberPickerWidget(
                                         title = stringResource(R.string.nav_bar_scale),
                                         value = barScaleInput.roundToInt(),
                                         startInt = MIN_BAR_SCALE,
@@ -1216,7 +1180,7 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
                                 }
                             }
                             item {
-                                SwitchWidget(
+                                MiuixSwitchWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.nav_show_discover_badge),
                                     description = stringResource(R.string.nav_discover_badge_summary),
@@ -1250,11 +1214,11 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
                 text = {
                     DefaultColumn {
                         Column {
-                            Text(stringResource(R.string.nav_display_and_order), style = MaterialTheme.typography.titleSmall)
+                            Text(stringResource(R.string.nav_display_and_order), style = MiuixTheme.textStyles.title3)
                             Text(
                                 stringResource(R.string.nav_reorder_hint),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MiuixTheme.textStyles.footnote1,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                             )
                         }
                         ReorderableList(
@@ -1284,21 +1248,21 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
                                     Icon(
                                         imageVector = MaterialSymbols.Outlined.Drag_handle,
                                         contentDescription = stringResource(R.string.nav_drag_tab_description, label),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                     )
                                 }
                                 Icon(
                                     imageVector = item.outlined,
                                     contentDescription = null,
                                     modifier = Modifier.size(24.dp),
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    tint = MiuixTheme.colorScheme.primary,
                                 )
                                 Text(
                                     text = label,
                                     modifier = Modifier
                                         .weight(1f)
                                         .padding(horizontal = 12.dp),
-                                    style = MaterialTheme.typography.bodyLarge,
+                                    style = MiuixTheme.textStyles.body1,
                                 )
                                 Switch(
                                     checked = checked,

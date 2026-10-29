@@ -11,8 +11,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,10 +38,10 @@ import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.BaseSupportingWidget
-import dev.sun.wechat.ui.content.m3.PlaceholderChips
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixBaseSupportingWidget
+import dev.sun.wechat.ui.content.miuix.MiuixPlaceholderChips
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.utils.findViewWhich
 import dev.sun.wechat.ui.utils.findViewsWhich
 import dev.sun.wechat.ui.utils.rootView
@@ -116,13 +116,13 @@ object DisplayDetails : ClickableFeature(), IResolveDex {
             AlertDialogContent(
                 title = { Text(stringResource(R.string.moments_display_details_title)) },
                 text = {
-                    SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                    MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                         item {
-                            BaseSupportingWidget(
+                            MiuixBaseSupportingWidget(
                                 title = stringResource(R.string.moments_display_details_text_format),
                             ) {
                                 Column {
-                                    OutlinedTextField(
+                                    TextField(
                                         value = textFormatValue,
                                         onValueChange = {
                                             textFormatValue = it
@@ -138,7 +138,7 @@ object DisplayDetails : ClickableFeature(), IResolveDex {
                                         stringResource(R.string.moments_custom_details_insert_placeholder),
                                         modifier = Modifier.padding(start = 16.dp, top = 8.dp),
                                     )
-                                    PlaceholderChips(
+                                    MiuixPlaceholderChips(
                                         placeholders = listOf(PH_ORIGINAL, PH_TIME, PH_TYPE, PH_SNS_ID, PH_USER_NAME),
                                         value = textFormatValue,
                                         isFieldFocused = isTextFormatFocused,
@@ -152,10 +152,10 @@ object DisplayDetails : ClickableFeature(), IResolveDex {
                             }
                         }
                         item {
-                            BaseSupportingWidget(
+                            MiuixBaseSupportingWidget(
                                 title = stringResource(R.string.moments_display_details_time_format),
                             ) {
-                                OutlinedTextField(
+                                TextField(
                                     value = timeFormatValue,
                                     onValueChange = {
                                         timeFormatValue = it
@@ -169,7 +169,7 @@ object DisplayDetails : ClickableFeature(), IResolveDex {
                             }
                         }
                         item {
-                            SwitchWidget(
+                            MiuixSwitchWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.moments_display_details_hide_visibility_icon),
                                 checked = hideIcon,

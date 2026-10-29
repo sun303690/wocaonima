@@ -10,8 +10,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import dev.sun.wechat.ui.utils.ListItem
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -90,7 +90,7 @@ object CustomSourceApp : ClickableFeature(), IResolveDex {
                 title = { Text(stringResource(R.string.moments_custom_source_title)) },
                 text = {
                     DefaultColumn {
-                        OutlinedTextField(
+                        TextField(
                             value = appIdInput,
                             onValueChange = { appIdInput = it },
                             label = { Text(stringResource(R.string.moments_custom_source_app_id)) },
@@ -98,7 +98,7 @@ object CustomSourceApp : ClickableFeature(), IResolveDex {
                             modifier = Modifier.fillMaxWidth(),
                         )
 
-                        OutlinedTextField(
+                        TextField(
                             value = appNameInput,
                             onValueChange = { appNameInput = it },
                             label = { Text(stringResource(R.string.moments_custom_source_app_name)) },
@@ -143,7 +143,7 @@ object CustomSourceApp : ClickableFeature(), IResolveDex {
                 title = { Text(stringResource(R.string.moments_custom_source_preset_title)) },
                 text = {
                     DefaultColumn {
-                        OutlinedTextField(
+                        TextField(
                             value = keyword,
                             onValueChange = { keyword = it },
                             label = { Text(stringResource(R.string.moments_custom_source_search)) },

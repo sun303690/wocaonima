@@ -36,7 +36,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -60,12 +60,12 @@ import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.BaseItemContainer
-import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.DropDownMenuWidget
-import dev.sun.wechat.ui.content.m3.DropdownOption
-import dev.sun.wechat.ui.content.m3.IntNumberPickerWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixBaseItemContainer
+import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
+import dev.sun.wechat.ui.content.miuix.MiuixDropDownMenuWidget
+import dev.sun.wechat.ui.content.miuix.DropdownOption
+import dev.sun.wechat.ui.content.miuix.MiuixIntNumberPickerWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
 import dev.sun.wechat.ui.utils.allViews
 import dev.sun.wechat.ui.utils.findViewWhich
 import dev.sun.wechat.ui.utils.findViewsWhich
@@ -2868,16 +2868,16 @@ object FloatingChatHeader : ClickableFeature(), IResolveDex {
                 title = { Text(stringResource(R.string.chat_floating_header_title)) },
                 text = {
                     Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                        SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                        MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                             item {
-                                BaseWidget(
+                                MiuixBaseWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.chat_floating_header_restart_hint),
                                     description = stringResource(R.string.chat_floating_header_summary),
                                 )
                             }
                             item(key = "layout_style") {
-                                DropDownMenuWidget(
+                                MiuixDropDownMenuWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.chat_floating_header_style_label),
                                     description = null,
@@ -2904,7 +2904,7 @@ object FloatingChatHeader : ClickableFeature(), IResolveDex {
                                 animatedVisibility = layoutStyle == HeaderLayoutStyle.SEPARATED,
                             ) {
                                 BaseItemContainer {
-                                    IntNumberPickerWidget(
+                                    MiuixIntNumberPickerWidget(
                                         title = stringResource(R.string.chat_floating_component_gap_label),
                                         value = componentGap,
                                         startInt = MIN_COMPONENT_GAP,
@@ -2921,7 +2921,7 @@ object FloatingChatHeader : ClickableFeature(), IResolveDex {
                             }
                             item {
                                 BaseItemContainer {
-                                    IntNumberPickerWidget(
+                                    MiuixIntNumberPickerWidget(
                                         title = stringResource(R.string.chat_floating_corner_radius_label),
                                         value = corner,
                                         startInt = MIN_CORNER_RADIUS,
@@ -2938,7 +2938,7 @@ object FloatingChatHeader : ClickableFeature(), IResolveDex {
                             }
                             item {
                                 BaseItemContainer {
-                                    IntNumberPickerWidget(
+                                    MiuixIntNumberPickerWidget(
                                         title = stringResource(R.string.chat_floating_side_margin_label),
                                         value = side,
                                         startInt = MIN_SIDE_MARGIN,
@@ -2955,7 +2955,7 @@ object FloatingChatHeader : ClickableFeature(), IResolveDex {
                             }
                             item {
                                 BaseItemContainer {
-                                    IntNumberPickerWidget(
+                                    MiuixIntNumberPickerWidget(
                                         title = stringResource(R.string.chat_floating_top_gap_label),
                                         value = topGap,
                                         startInt = MIN_TOP_GAP,
@@ -2972,7 +2972,7 @@ object FloatingChatHeader : ClickableFeature(), IResolveDex {
                             }
                             item {
                                 BaseItemContainer {
-                                    IntNumberPickerWidget(
+                                    MiuixIntNumberPickerWidget(
                                         title = stringResource(R.string.chat_floating_card_gap_label),
                                         value = extraGap,
                                         startInt = MIN_EXTRA_GAP,
@@ -2989,7 +2989,7 @@ object FloatingChatHeader : ClickableFeature(), IResolveDex {
                             }
                             item {
                                 BaseItemContainer {
-                                    IntNumberPickerWidget(
+                                    MiuixIntNumberPickerWidget(
                                         title = stringResource(R.string.chat_floating_elevation_label),
                                         value = elevation,
                                         startInt = MIN_ELEVATION,

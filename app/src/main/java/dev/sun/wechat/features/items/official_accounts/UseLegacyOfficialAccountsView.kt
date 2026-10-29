@@ -3,7 +3,7 @@ package dev.sun.wechat.features.items.official_accounts
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.ui.res.stringResource
 import dev.ujhhgtg.reflekt.utils.toClassOrNull
 import dev.sun.wechat.R

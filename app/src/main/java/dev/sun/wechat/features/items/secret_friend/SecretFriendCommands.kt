@@ -6,7 +6,7 @@ import androidx.compose.runtime.Composable
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.data.KvStore.prefOption
-import dev.sun.wechat.ui.content.m3.TextFieldDialogWidget
+import dev.sun.wechat.ui.content.miuix.MiuixTextFieldDialogWidget
 import dev.sun.wechat.utils.WeLogger
 import dev.ujhhgtg.reflekt.reflekt
 import dev.ujhhgtg.reflekt.utils.toClass
@@ -79,7 +79,7 @@ object SearchCommandTempUnhide : SwitchFeature() {
 
     @Composable
     override fun Ui() {
-        TextFieldDialogWidget(
+        MiuixTextFieldDialogWidget(
             title = "临时解除指令",
             value = tempUnhideCommand,
             onValueChange = { tempUnhideCommand = it },
@@ -87,7 +87,7 @@ object SearchCommandTempUnhide : SwitchFeature() {
             confirmLabel = "确定",
             dismissLabel = "取消",
         )
-        TextFieldDialogWidget(
+        MiuixTextFieldDialogWidget(
             title = "临时显示时长(分钟)",
             value = SecretFriendState.tempShowMinutes.toString(),
             onValueChange = { raw ->

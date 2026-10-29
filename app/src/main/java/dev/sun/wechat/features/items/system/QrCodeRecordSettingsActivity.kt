@@ -17,14 +17,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CheckableDropdownMenuItem
-import androidx.compose.material3.DropdownMenuGroup
-import androidx.compose.material3.DropdownMenuPopup
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuDefaults
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,18 +50,19 @@ import dev.sun.wechat.i18n.WeKitLocaleProvider
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.IconButton
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.BaseItemContainer
-import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.SETTINGS_CONTENT_BOTTOM_INSET
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SettingsConfirmDialog
-import dev.sun.wechat.ui.content.m3.SettingsScaffold
-import dev.sun.wechat.ui.utils.theme.ModuleTheme
+import dev.sun.wechat.ui.content.miuix.MiuixBaseItemContainer
+import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixAlertDialog
+import dev.sun.wechat.ui.content.miuix.MiuixSettingsPage
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.copyToClipboard
 import dev.sun.wechat.utils.android.showToast
 import dev.sun.wechat.utils.formatEpoch
 import dev.sun.wechat.utils.openInSystem
+import dev.sun.wechat.ui.content.miuix.MiuixDropdownMenu
+import dev.sun.wechat.ui.content.miuix.MiuixDropdownMenuItem
+import dev.sun.wechat.ui.utils.theme.MiuixModuleTheme
 
 @Keep
 class QrCodeRecordSettingsActivity : ComponentActivity() {
@@ -77,7 +73,7 @@ class QrCodeRecordSettingsActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             WeKitLocaleProvider(mode = LocaleResourceMode.InjectedHost) {
-                ModuleTheme {
+                MiuixModuleTheme {
                     QrCodeRecordSettingsScreen(
                         records = records,
                         onFinish = ::finish,
@@ -107,7 +103,7 @@ private fun QrCodeRecordSettingsScreen(
     var confirmClear by rememberSaveable { mutableStateOf(false) }
     var homeMenuEnabled by remember { mutableStateOf(QrCodeRecord.showInHomeMenu) }
 
-    SettingsScaffold(
+    MiuixSettingsPage(
         title = stringResource(R.string.feature_qr_code_record_name),
         onBack = onFinish,
         actions = {
@@ -119,38 +115,26 @@ private fun QrCodeRecordSettingsScreen(
                     )
                 }
                 // Share DropDownMenuWidget's expressive popup and grouped menu shapes.
-                DropdownMenuPopup(
+                MiuixDropdownMenu(
                     expanded = menuExpanded,
                     onDismissRequest = { menuExpanded = false },
                 ) {
-                    DropdownMenuGroup(shapes = MenuDefaults.groupShapes()) {
-                        CheckableDropdownMenuItem(
-                            checked = homeMenuEnabled,
-                            onCheckedChange = { enabled ->
-                                menuExpanded = false
-                                homeMenuEnabled = enabled
-                                QrCodeRecord.showInHomeMenu = enabled
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    if (homeMenuEnabled) MaterialSymbols.Outlined.Check
-                                    else MaterialSymbols.Outlined.Home,
-                                    contentDescription = null,
-                                )
-                            },
-                            text = { Text(stringResource(R.string.qr_code_record_home_menu_enabled)) },
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            shapes = MenuDefaults.itemShape(0, 1),
-                        )
-                    }
+                    MiuixDropdownMenuItem(
+                        text = { Text(stringResource(R.string.qr_code_record_home_menu_enabled)) },
+                        leadingIcon = { Icon(if (homeMenuEnabled) MaterialSymbols.Outlined.Check else MaterialSymbols.Outlined.Home, null) },
+                        onClick = {
+                            menuExpanded = false
+                            homeMenuEnabled = !homeMenuEnabled
+                            QrCodeRecord.showInHomeMenu = homeMenuEnabled
+                        },
+                    )
                 }
-            }
         },
     ) {
         item {
-            SegmentedColumn {
+            MiuixSegmentedColumn {
                 item {
-                    BaseWidget(
+                    MiuixBaseWidget(
                         icon = MaterialSymbols.Outlined.History,
                         title = stringResource(R.string.qr_code_record_count, records.size),
                         description = stringResource(R.string.qr_code_record_native_open_description),
@@ -163,7 +147,7 @@ private fun QrCodeRecordSettingsScreen(
                                 Icon(
                                     MaterialSymbols.Outlined.Delete_sweep,
                                     contentDescription = stringResource(R.string.action_clear),
-                                    tint = MaterialTheme.colorScheme.error,
+                                    tint = MiuixTheme.colorScheme.error,
                                 )
                             }
                         },
@@ -173,9 +157,9 @@ private fun QrCodeRecordSettingsScreen(
         }
         if (records.isEmpty()) {
             item {
-                SegmentedColumn {
+                MiuixSegmentedColumn {
                     item {
-                        BaseItemContainer {
+                        MiuixBaseItemContainer {
                             Column(
                                 modifier = Modifier.fillMaxWidth().padding(32.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -185,16 +169,16 @@ private fun QrCodeRecordSettingsScreen(
                                     MaterialSymbols.Outlined.History,
                                     contentDescription = null,
                                     modifier = Modifier.size(48.dp),
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    tint = MiuixTheme.colorScheme.primary,
                                 )
                                 Text(
                                     stringResource(R.string.system_qr_code_record_empty),
-                                    style = MaterialTheme.typography.titleLarge,
+                                    style = MiuixTheme.textStyles.title1,
                                 )
                                 Text(
                                     stringResource(R.string.qr_code_record_empty_description),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MiuixTheme.textStyles.body2,
+                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                 )
                             }
                         }
@@ -206,21 +190,15 @@ private fun QrCodeRecordSettingsScreen(
                 QrRecordCard(record)
             }
         }
-        item { Spacer(Modifier.size(SETTINGS_CONTENT_BOTTOM_INSET)) }
+        item { Spacer(Modifier.size(32.dp)) }
     }
 
-    SettingsConfirmDialog(
-        show = confirmClear,
-        title = stringResource(R.string.action_clear),
-        message = stringResource(R.string.system_qr_code_record_clear_description),
-        confirmLabel = stringResource(R.string.action_clear),
-        dismissLabel = stringResource(R.string.dialog_cancel),
-        destructive = true,
-        onConfirm = {
-            onClear()
-            confirmClear = false
-        },
-        onDismiss = { confirmClear = false },
+    if (confirmClear) MiuixAlertDialog(
+        onDismissRequest = { confirmClear = false },
+        title = { Text(stringResource(R.string.action_clear)) },
+        text = { Text(stringResource(R.string.system_qr_code_record_clear_description)) },
+        confirmButton = { Button(onClick = { onClear(); confirmClear = false }) { Text(stringResource(R.string.action_clear)) } },
+        dismissButton = { TextButton(onClick = { confirmClear = false }) { Text(stringResource(R.string.dialog_cancel)) } },
     )
 }
 
@@ -241,11 +219,11 @@ private fun QrRecordCard(record: QrCodeRecord.QrRecord) {
         else -> MaterialSymbols.Outlined.Info to R.string.qr_code_record_type_other
     }
 
-    SegmentedColumn {
+    MiuixSegmentedColumn {
         item {
-            BaseWidget(
+            MiuixBaseWidget(
                 icon = icon,
-                iconColor = MaterialTheme.colorScheme.primary,
+                iconColor = MiuixTheme.colorScheme.primary,
                 title = stringResource(typeRes),
                 description = formatEpoch(record.time, true),
                 trailingContent = {
@@ -261,7 +239,7 @@ private fun QrRecordCard(record: QrCodeRecord.QrRecord) {
             )
         }
         item {
-            BaseItemContainer {
+            MiuixBaseItemContainer {
                 Column(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -270,8 +248,8 @@ private fun QrRecordCard(record: QrCodeRecord.QrRecord) {
                         Text(
                             record.url,
                             modifier = Modifier.fillMaxWidth(),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MiuixTheme.textStyles.body2,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                             maxLines = if (expanded) Int.MAX_VALUE else 4,
                             overflow = TextOverflow.Ellipsis,
                             onTextLayout = { if (!expanded) truncated = it.hasVisualOverflow },
@@ -288,7 +266,6 @@ private fun QrRecordCard(record: QrCodeRecord.QrRecord) {
                     ) {
                         Button(
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.filledTonalButtonColors(),
                             onClick = {
                                 runCatching { QrCodeRecord.openInWeChat(activity, record) }
                                     .onFailure {

@@ -2,8 +2,8 @@ package dev.sun.wechat.features.items.contacts
 
 import android.content.Context
 import androidx.activity.ComponentActivity
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextField
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember

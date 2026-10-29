@@ -52,9 +52,10 @@ enum class SettingsUiEngine(val displayName: String) {
 
     companion object {
         fun fromName(value: String?): SettingsUiEngine = when (value) {
-            MIUIX.name, "Miuix" -> MIUIX
+            MATERIAL3.name -> MATERIAL3
             NUKE.name -> NUKE
-            else -> MATERIAL3
+            MIUIX.name, "Miuix" -> MIUIX
+            else -> MIUIX
         }
     }
 }

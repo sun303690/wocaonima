@@ -4,7 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.DialogInterface
 import android.view.View
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.ui.res.stringResource
 import dev.ujhhgtg.reflekt.reflekt
 import dev.ujhhgtg.reflekt.utils.Modifiers

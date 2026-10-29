@@ -9,11 +9,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
+import dev.sun.wechat.ui.content.miuix.MiuixFilterChip
+import top.yukonga.miuix.kmp.basic.HorizontalDivider
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Switch
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,6 +55,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
  * AI 回复朋友圈（独立功能，移植 Nuke 完整版，不挂到 WeKit 朋友圈自动化框架）：
@@ -332,7 +333,7 @@ object AiReplyMoments : ClickableFeature(),
         label: String,
         allowedFilter: (Char) -> Boolean = { true },
     ) {
-        OutlinedTextField(
+        TextField(
             value = value,
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -394,7 +395,7 @@ object AiReplyMoments : ClickableFeature(),
                                 LIST_WHITELIST to localizedContext.getString(R.string.aim_list_mode_whitelist),
                                 LIST_BLACKLIST to localizedContext.getString(R.string.aim_list_mode_blacklist),
                             ).forEach { (mode, label) ->
-                                FilterChip(selected = listModeInput == mode, onClick = { listModeInput = mode }, label = { Text(label) })
+                                MiuixFilterChip(selected = listModeInput == mode, onClick = { listModeInput = mode }, label = { Text(label) })
                             }
                         }
                         if (listModeInput == LIST_WHITELIST) {
@@ -421,7 +422,7 @@ object AiReplyMoments : ClickableFeature(),
                                 MODE_WHEN_SEEN to localizedContext.getString(R.string.aim_process_mode_seen),
                                 MODE_ALL_LOADED to localizedContext.getString(R.string.aim_process_mode_all_loaded),
                             ).forEach { (mode, label) ->
-                                FilterChip(selected = processModeInput == mode, onClick = { processModeInput = mode }, label = { Text(label) })
+                                MiuixFilterChip(selected = processModeInput == mode, onClick = { processModeInput = mode }, label = { Text(label) })
                             }
                         }
 
@@ -448,7 +449,7 @@ object AiReplyMoments : ClickableFeature(),
                         ) { it.isDigit() }
                         Text(
                             localizedContext.getString(R.string.aim_max_age_days_desc),
-                            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                            style = MiuixTheme.textStyles.footnote1,
                         )
                     }
                 },

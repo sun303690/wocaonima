@@ -2,8 +2,8 @@ package dev.sun.wechat.features.items.system.servers
 
 import android.content.ContentValues
 import androidx.activity.ComponentActivity
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
+import top.yukonga.miuix.kmp.basic.Text
+import dev.sun.wechat.ui.content.miuix.MiuixCompatTextField
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -2287,11 +2287,11 @@ object ApiServer : ClickableFeature() {
                 title = { Text(stringResource(R.string.feature_api_server_name)) },
                 text = {
                     DefaultColumn {
-                        TextField(
+                        MiuixCompatTextField(
                             value = authToken,
                             onValueChange = { authToken = it },
                             label = { Text(stringResource(R.string.system_api_server_auth_token)) })
-                        TextField(
+                        MiuixCompatTextField(
                             value = serverPortInput,
                             onValueChange = { serverPortInput = it },
                             label = { Text(stringResource(R.string.system_api_server_port)) })

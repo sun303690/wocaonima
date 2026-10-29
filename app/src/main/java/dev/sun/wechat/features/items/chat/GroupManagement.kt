@@ -12,9 +12,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,11 +41,11 @@ import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.ContactsSelector
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.DropDownMenuWidget
-import dev.sun.wechat.ui.content.m3.DropdownOption
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
+import dev.sun.wechat.ui.content.miuix.MiuixDropDownMenuWidget
+import dev.sun.wechat.ui.content.miuix.DropdownOption
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToast
@@ -720,7 +720,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                     Column(Modifier.verticalScroll(rememberScrollState())) {
                         SegmentedColumn {
                             item {
-                                BaseWidget(
+                                MiuixBaseWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.glg_whitelisted_groups),
                                     description = localizedContext.getString(R.string.glg_groups_desc, groupIds.size),
@@ -728,7 +728,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                                 )
                             }
                             item {
-                                DropDownMenuWidget(
+                                MiuixDropDownMenuWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.glg_action),
                                     description = null,
@@ -900,7 +900,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                             item { SwitchRow(R.string.glg_ladder_title, R.string.glg_ladder_desc, ladder) { ladder = it } }
 
                             item {
-                                BaseWidget(
+                                MiuixBaseWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.glg_configure_exempt),
                                     description = localizedContext.getString(R.string.glg_exempt_desc, exemptIds.size),
@@ -908,7 +908,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                                 )
                             }
                             item {
-                                BaseWidget(
+                                MiuixBaseWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.glg_banned_title),
                                     description = localizedContext.getString(R.string.glg_banned_desc2, bannedKeys.size),
@@ -916,7 +916,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                                 )
                             }
                             item {
-                                BaseWidget(
+                                MiuixBaseWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.glg_logs_title),
                                     description = localizedContext.getString(R.string.glg_logs_desc, logSnapshot().size),
@@ -984,10 +984,10 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                     Column(Modifier.verticalScroll(rememberScrollState())) {
                         val items = bannedKeys
                         if (items.isEmpty()) {
-                            Text(stringResource(R.string.glg_banned_empty), style = MaterialTheme.typography.bodyMedium)
+                            Text(stringResource(R.string.glg_banned_empty), style = MiuixTheme.textStyles.body2)
                         }
                         items.forEach { ban ->
-                            BaseWidget(
+                            MiuixBaseWidget(
                                 iconPlaceholder = false,
                                 title = groupName(ban.groupId),
                                 description = memberName(ban.groupId, ban.memberId),
@@ -1015,10 +1015,10 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                     Column(Modifier.verticalScroll(rememberScrollState())) {
                         val items = logSnapshot()
                         if (items.isEmpty()) {
-                            Text(stringResource(R.string.glg_logs_empty), style = MaterialTheme.typography.bodyMedium)
+                            Text(stringResource(R.string.glg_logs_empty), style = MiuixTheme.textStyles.body2)
                         }
                         items.forEach { entry ->
-                            BaseWidget(
+                            MiuixBaseWidget(
                                 iconPlaceholder = false,
                                 title = "${timeFormat.format(Date(entry.time))}  ${memberName(entry.groupId, entry.memberId)}",
                                 description = "${groupName(entry.groupId)} · ${entry.reason} · ${actionLabel(entry.actionTaken)}",
@@ -1059,12 +1059,12 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
 
     @Composable
     private fun SectionLabel(text: String) {
-        Text(text, Modifier.padding(top = 10.dp, bottom = 2.dp), style = MaterialTheme.typography.labelLarge)
+        Text(text, Modifier.padding(top = 10.dp, bottom = 2.dp), style = MiuixTheme.textStyles.button)
     }
 
     @Composable
     private fun SwitchRow(titleRes: Int, descRes: Int?, checked: Boolean, onChange: (Boolean) -> Unit) {
-        SwitchWidget(
+        MiuixSwitchWidget(
             iconPlaceholder = false,
             title = stringResource(titleRes),
             description = descRes?.let { stringResource(it) },
@@ -1083,7 +1083,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
         onClear: () -> Unit,
     ) {
         Column(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
-            DropDownMenuWidget(
+            MiuixDropDownMenuWidget(
                 iconPlaceholder = false,
                 title = title,
                 description = path.takeIf { it.isNotBlank() }?.let { File(it).name }
@@ -1116,8 +1116,8 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
         singleLine: Boolean = true,
     ) {
         Column(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
-            Text(label, style = MaterialTheme.typography.labelMedium)
-            OutlinedTextField(
+            Text(label, style = MiuixTheme.textStyles.footnote1)
+            TextField(
                 value = value,
                 onValueChange = onValueChange,
                 modifier = Modifier.fillMaxWidth(),
@@ -1126,8 +1126,8 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
             if (description != null) {
                 Text(
                     description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 )
             }
         }

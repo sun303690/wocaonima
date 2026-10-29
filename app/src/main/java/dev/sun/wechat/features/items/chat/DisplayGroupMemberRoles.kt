@@ -16,10 +16,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ButtonGroupDefaults
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.ToggleButton
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -45,10 +43,10 @@ import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.BaseSupportingWidget
-import dev.sun.wechat.ui.content.m3.ColorPickerWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixBaseSupportingWidget
+import dev.sun.wechat.ui.content.miuix.MiuixColorPickerWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.HookParam
 import dev.sun.wechat.utils.collections.LruCache
@@ -177,34 +175,24 @@ object DisplayGroupMemberRoles : ClickableFeature(), IResolveDex,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(16.dp),
-                            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(
-                                ButtonGroupDefaults.ConnectedSpaceBetween
-                            ),
+                            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
                         ) {
                             roleLabels.forEachIndexed { index, label ->
-                                ToggleButton(
-                                    checked = selectedRole == index,
-                                    onCheckedChange = { selectedRole = index },
-                                    shapes = when (index) {
-                                        0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                                        roleLabels.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
-                                        else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-                                    },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .semantics { role = Role.RadioButton },
-                                ) {
-                                    Text(label, maxLines = 1)
-                                }
+                                MiuixChoiceChip(
+                                    selected = selectedRole == index,
+                                    onClick = { selectedRole = index },
+                                    modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
+                                    label = { Text(label, maxLines = 1) },
+                                )
                             }
                         }
 
-                        SegmentedColumn(
+                        MiuixSegmentedColumn(
                             title = roleLabels[selectedRole],
                             contentPadding = PaddingValues(0.dp),
                         ) {
                             item {
-                                SwitchWidget(
+                                MiuixSwitchWidget(
                                     title = stringResource(R.string.chat_group_role_show_label),
                                     checked = selectedShow,
                                     onCheckedChange = {
@@ -217,7 +205,7 @@ object DisplayGroupMemberRoles : ClickableFeature(), IResolveDex,
                                 )
                             }
                             item(animatedVisibility = selectedShow) {
-                                ColorPickerWidget(
+                                MiuixColorPickerWidget(
                                     title = backgroundTitle,
                                     value = selectedBackground,
                                     onValueChange = {
@@ -230,7 +218,7 @@ object DisplayGroupMemberRoles : ClickableFeature(), IResolveDex,
                                 )
                             }
                             item(animatedVisibility = selectedShow) {
-                                ColorPickerWidget(
+                                MiuixColorPickerWidget(
                                     title = foregroundTitle,
                                     value = selectedForeground,
                                     onValueChange = {
@@ -243,7 +231,7 @@ object DisplayGroupMemberRoles : ClickableFeature(), IResolveDex,
                                 )
                             }
                             item(animatedVisibility = selectedShow) {
-                                BaseSupportingWidget(title = textTitle) {
+                                MiuixBaseSupportingWidget(title = textTitle) {
                                     InlineRoleTextField(
                                         value = selectedText,
                                         onValueChange = {
@@ -370,7 +358,7 @@ object DisplayGroupMemberRoles : ClickableFeature(), IResolveDex,
 /** Single-line inline text field filling a [BaseSupportingWidget] supporting slot. */
 @Composable
 private fun InlineRoleTextField(value: String, onValueChange: (String) -> Unit) {
-    OutlinedTextField(
+    TextField(
         value = value,
         onValueChange = onValueChange,
         singleLine = true,

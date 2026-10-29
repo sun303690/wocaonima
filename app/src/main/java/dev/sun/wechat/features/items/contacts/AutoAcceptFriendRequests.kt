@@ -15,14 +15,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
+import dev.sun.wechat.ui.content.miuix.MiuixFilterChip
+import top.yukonga.miuix.kmp.basic.HorizontalDivider
+import dev.sun.wechat.ui.content.miuix.MiuixListItem
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Switch
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -596,7 +595,7 @@ object AutoAcceptFriendRequests : ClickableFeature(), IResolveDex,
                         modifier = Modifier.verticalScroll(rememberScrollState())
                     ) {
                         // 总开关
-                        ListItem(
+                        MiuixListItem(
                             modifier = Modifier.clickable { localMasterEnabled = !localMasterEnabled },
                             trailingContent = {
                                 Switch(checked = localMasterEnabled, onCheckedChange = null)
@@ -609,10 +608,10 @@ object AutoAcceptFriendRequests : ClickableFeature(), IResolveDex,
                             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                             // 延迟设置
-                            Text("延迟设置", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                            Text("延迟设置", style = MiuixTheme.textStyles.title3, fontWeight = FontWeight.SemiBold)
 
                             DelayMode.values().forEach { mode ->
-                                ListItem(
+                                MiuixListItem(
                                     modifier = Modifier.clickable { localDelayMode = mode.value },
                                     trailingContent = {
                                         Text(if (localDelayMode == mode.value) "✓" else "")
@@ -629,14 +628,14 @@ object AutoAcceptFriendRequests : ClickableFeature(), IResolveDex,
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         presets.forEach { (ms, label) ->
-                                            FilterChip(
+                                            MiuixFilterChip(
                                                 selected = localFixedDelayMs == ms,
                                                 onClick = { localFixedDelayMs = ms },
                                                 label = { Text(label) }
                                             )
                                         }
                                     }
-                                    OutlinedTextField(
+                                    TextField(
                                         value = localFixedDelayMs.toString(),
                                         onValueChange = { v ->
                                             v.toIntOrNull()?.let { localFixedDelayMs = it.coerceIn(0, 60000) }
@@ -647,7 +646,7 @@ object AutoAcceptFriendRequests : ClickableFeature(), IResolveDex,
                                     )
                                 }
                                 DelayMode.RANDOM.value -> {
-                                    OutlinedTextField(
+                                    TextField(
                                         value = localRandomMinMs.toString(),
                                         onValueChange = { v ->
                                             v.toIntOrNull()?.let { localRandomMinMs = it.coerceIn(0, 60000) }
@@ -657,7 +656,7 @@ object AutoAcceptFriendRequests : ClickableFeature(), IResolveDex,
                                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                                     )
                                     Spacer(Modifier.padding(top = 4.dp))
-                                    OutlinedTextField(
+                                    TextField(
                                         value = localRandomMaxMs.toString(),
                                         onValueChange = { v ->
                                             v.toIntOrNull()?.let { localRandomMaxMs = it.coerceIn(0, 60000) }
@@ -672,7 +671,7 @@ object AutoAcceptFriendRequests : ClickableFeature(), IResolveDex,
                             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                             // 欢迎语
-                            ListItem(
+                            MiuixListItem(
                                 modifier = Modifier.clickable { localSendWelcome = !localSendWelcome },
                                 trailingContent = {
                                     Switch(checked = localSendWelcome, onCheckedChange = null)
@@ -682,7 +681,7 @@ object AutoAcceptFriendRequests : ClickableFeature(), IResolveDex,
                             )
 
                             if (localSendWelcome) {
-                                OutlinedTextField(
+                                TextField(
                                     value = localWelcomeText,
                                     onValueChange = { localWelcomeText = it },
                                     label = { Text("欢迎语内容") },
@@ -695,14 +694,14 @@ object AutoAcceptFriendRequests : ClickableFeature(), IResolveDex,
                             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                             // 黑名单
-                            Text("黑名单管理", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                            Text("黑名单管理", style = MiuixTheme.textStyles.title3, fontWeight = FontWeight.SemiBold)
                             Text(
                                 "黑名单中的用户不会自动同意（每行一个 wxId）",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MiuixTheme.textStyles.footnote1,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                 modifier = Modifier.padding(horizontal = 16.dp)
                             )
-                            OutlinedTextField(
+                            TextField(
                                 value = localBlacklist,
                                 onValueChange = { localBlacklist = it },
                                 label = { Text("黑名单 wxId") },

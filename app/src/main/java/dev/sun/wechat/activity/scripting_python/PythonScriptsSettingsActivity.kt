@@ -83,19 +83,19 @@ import dev.sun.wechat.ui.agent.settings.AgentListActionButton
 import dev.sun.wechat.ui.agent.settings.AgentSettingsScaffold
 import dev.sun.wechat.ui.agent.settings.rememberCreationBackGuard
 import dev.sun.wechat.ui.animation.predictiveback.weKitNavTransition
-import dev.sun.wechat.ui.content.m3.ExpressiveBackButton
-import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
-import dev.sun.wechat.ui.content.m3.TextFieldDialogWidget
-import dev.sun.wechat.ui.content.m3AppBarBlur
-import dev.sun.wechat.ui.content.m3AppBarColor
-import dev.sun.wechat.ui.content.m3BackdropLayer
-import dev.sun.wechat.ui.content.rememberMaterial3BlurBackdrop
+import dev.sun.wechat.ui.content.miuix.MiuixBackButton
+import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixTextFieldDialogWidget
+import dev.sun.wechat.ui.content.miuix.miuixAppBarBlur
+import dev.sun.wechat.ui.content.miuix.miuixAppBarColor
+import dev.sun.wechat.ui.content.miuix.miuixBackdropLayer
+import dev.sun.wechat.ui.content.miuix.rememberMiuixBlurBackdrop
 import dev.sun.wechat.ui.navigation.LocalNavigator
 import dev.sun.wechat.ui.navigation.Navigator
 import dev.sun.wechat.ui.navigation.rememberM3NavEffects
-import dev.sun.wechat.ui.utils.theme.ModuleTheme
+import dev.sun.wechat.ui.utils.theme.MiuixModuleTheme
 import dev.sun.wechat.ui.utils.theme.ThemeSettings
 import dev.sun.wechat.utils.fs.KnownPaths
 import dev.sun.wechat.utils.TargetProcesses
@@ -119,7 +119,7 @@ class PythonScriptsSettingsActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             WeKitLocaleProvider(mode = LocaleResourceMode.InjectedHost) {
-                ModuleTheme { PythonSettingsRoot(this@PythonScriptsSettingsActivity, ::finish) }
+                MiuixModuleTheme { PythonSettingsRoot(this@PythonScriptsSettingsActivity, ::finish) }
             }
         }
     }
@@ -222,9 +222,9 @@ private fun PythonHomeScreen(
 
     AgentSettingsScaffold(stringResource(R.string.python_scripts_title), onBack) {
         item {
-            SegmentedColumn(title = stringResource(R.string.python_runtime_section)) {
+            MiuixSegmentedColumn(title = stringResource(R.string.python_runtime_section)) {
                 item {
-                    BaseWidget(
+                    MiuixBaseWidget(
                         title = stringResource(R.string.extensions_pack_python_runtime_name),
                         description = runtime.state.name + (runtime.version?.let { " · $it" } ?: ""),
                         onClick = { ExtensionPackDialogs.openExtensions(activity, PythonRuntimePack, false) },
@@ -233,9 +233,9 @@ private fun PythonHomeScreen(
             }
         }
         item {
-            SegmentedColumn(title = stringResource(R.string.python_plugins_section)) {
+            MiuixSegmentedColumn(title = stringResource(R.string.python_plugins_section)) {
                 item {
-                    BaseWidget(
+                    MiuixBaseWidget(
                         title = stringResource(R.string.python_new_plugin),
                         icon = MaterialSymbols.Outlined.Add,
                         enabled = !importing,
@@ -243,7 +243,7 @@ private fun PythonHomeScreen(
                     )
                 }
                 item {
-                    BaseWidget(
+                    MiuixBaseWidget(
                         title = stringResource(R.string.python_import_plugin),
                         icon = MaterialSymbols.Outlined.Archive,
                         enabled = !importing,
@@ -251,11 +251,11 @@ private fun PythonHomeScreen(
                     )
                 }
                 if (records.isEmpty()) {
-                    item { BaseWidget(title = stringResource(R.string.python_plugins_empty)) }
+                    item { MiuixBaseWidget(title = stringResource(R.string.python_plugins_empty)) }
                 } else {
                     records.values.forEach { record ->
                         item(key = record.id) {
-                            SwitchWidget(
+                            MiuixSwitchWidget(
                                 title = record.manifest?.name ?: record.id,
                                 description = "${record.id} · ${record.status.name}" +
                                     (record.lastError?.let { "\n$it" } ?: ""),
@@ -281,9 +281,9 @@ private fun PythonHomeScreen(
             }
         }
         item {
-            SegmentedColumn(title = stringResource(R.string.python_security_section)) {
+            MiuixSegmentedColumn(title = stringResource(R.string.python_security_section)) {
                 item {
-                    BaseWidget(
+                    MiuixBaseWidget(
                         title = stringResource(R.string.python_security_warning_title),
                         description = stringResource(R.string.python_security_warning),
                         isError = true,
@@ -370,10 +370,10 @@ private fun PythonPluginInfoScreen(pluginId: String?, onBack: () -> Unit) {
         onBack = guardedBack,
     ) {
         item {
-            SegmentedColumn(title = stringResource(R.string.python_plugin_info_section)) {
+            MiuixSegmentedColumn(title = stringResource(R.string.python_plugin_info_section)) {
                 if (creating) {
                     item {
-                        TextFieldDialogWidget(
+                        MiuixTextFieldDialogWidget(
                             title = stringResource(R.string.python_plugin_id_label),
                             value = draftId,
                             onValueChange = { draftId = it },
@@ -385,7 +385,7 @@ private fun PythonPluginInfoScreen(pluginId: String?, onBack: () -> Unit) {
                         )
                     }
                     item {
-                        TextFieldDialogWidget(
+                        MiuixTextFieldDialogWidget(
                             title = stringResource(R.string.python_plugin_name_label),
                             value = draftName,
                             onValueChange = { draftName = it },
@@ -395,7 +395,7 @@ private fun PythonPluginInfoScreen(pluginId: String?, onBack: () -> Unit) {
                         )
                     }
                     item {
-                        TextFieldDialogWidget(
+                        MiuixTextFieldDialogWidget(
                             title = stringResource(R.string.python_plugin_version_label),
                             value = draftVersion,
                             onValueChange = { draftVersion = it },
@@ -405,7 +405,7 @@ private fun PythonPluginInfoScreen(pluginId: String?, onBack: () -> Unit) {
                         )
                     }
                     item {
-                        TextFieldDialogWidget(
+                        MiuixTextFieldDialogWidget(
                             title = stringResource(R.string.python_plugin_author_label),
                             value = draftAuthor,
                             onValueChange = { draftAuthor = it },
@@ -415,7 +415,7 @@ private fun PythonPluginInfoScreen(pluginId: String?, onBack: () -> Unit) {
                         )
                     }
                     item {
-                        TextFieldDialogWidget(
+                        MiuixTextFieldDialogWidget(
                             title = stringResource(R.string.python_plugin_description_label),
                             value = draftDescription,
                             onValueChange = { draftDescription = it },
@@ -427,9 +427,9 @@ private fun PythonPluginInfoScreen(pluginId: String?, onBack: () -> Unit) {
                     }
                 } else {
                     val m = manifest!!
-                    item { BaseWidget(title = stringResource(R.string.python_plugin_id_label), description = pluginId) }
+                    item { MiuixBaseWidget(title = stringResource(R.string.python_plugin_id_label), description = pluginId) }
                     item {
-                        TextFieldDialogWidget(
+                        MiuixTextFieldDialogWidget(
                             title = stringResource(R.string.python_plugin_name_label),
                             value = m.name,
                             onValueChange = { value -> commitInfo { info -> info.copy(name = value.trim()) } },
@@ -439,7 +439,7 @@ private fun PythonPluginInfoScreen(pluginId: String?, onBack: () -> Unit) {
                         )
                     }
                     item {
-                        TextFieldDialogWidget(
+                        MiuixTextFieldDialogWidget(
                             title = stringResource(R.string.python_plugin_version_label),
                             value = m.version,
                             onValueChange = { value -> commitInfo { info -> info.copy(version = value.trim()) } },
@@ -449,7 +449,7 @@ private fun PythonPluginInfoScreen(pluginId: String?, onBack: () -> Unit) {
                         )
                     }
                     item {
-                        TextFieldDialogWidget(
+                        MiuixTextFieldDialogWidget(
                             title = stringResource(R.string.python_plugin_author_label),
                             value = m.author,
                             onValueChange = { value -> commitInfo { info -> info.copy(author = value.trim()) } },
@@ -459,7 +459,7 @@ private fun PythonPluginInfoScreen(pluginId: String?, onBack: () -> Unit) {
                         )
                     }
                     item {
-                        TextFieldDialogWidget(
+                        MiuixTextFieldDialogWidget(
                             title = stringResource(R.string.python_plugin_description_label),
                             value = m.description,
                             onValueChange = { value -> commitInfo { info -> info.copy(description = value.trim()) } },
@@ -558,9 +558,9 @@ private fun PythonDetailScreen(
     val infoEditable = !inFlight && record.status != PythonPluginStatus.ACTIVE
     AgentSettingsScaffold(record.manifest?.name ?: pluginId, onBack) {
         item {
-            SegmentedColumn(title = stringResource(R.string.python_plugin_info_section)) {
+            MiuixSegmentedColumn(title = stringResource(R.string.python_plugin_info_section)) {
                 item {
-                    SwitchWidget(
+                    MiuixSwitchWidget(
                         title = record.manifest?.name ?: record.id,
                         description = record.description(),
                         checked = record.desiredEnabled,
@@ -588,7 +588,7 @@ private fun PythonDetailScreen(
                     )
                 }
                 item {
-                    BaseWidget(
+                    MiuixBaseWidget(
                         title = stringResource(R.string.python_edit_entry),
                         icon = MaterialSymbols.Outlined.Edit,
                         enabled = !inFlight,
@@ -596,7 +596,7 @@ private fun PythonDetailScreen(
                     )
                 }
                 item {
-                    BaseWidget(
+                    MiuixBaseWidget(
                         title = stringResource(R.string.python_open_directory),
                         icon = MaterialSymbols.Outlined.Folder,
                         onClick = {
@@ -615,9 +615,9 @@ private fun PythonDetailScreen(
             }
         }
         item {
-            SegmentedColumn(title = stringResource(R.string.python_plugin_actions_section)) {
+            MiuixSegmentedColumn(title = stringResource(R.string.python_plugin_actions_section)) {
                 item {
-                    BaseWidget(
+                    MiuixBaseWidget(
                         title = stringResource(R.string.python_reload_plugin),
                         icon = MaterialSymbols.Outlined.Refresh,
                         enabled = record.desiredEnabled && !inFlight,
@@ -625,21 +625,21 @@ private fun PythonDetailScreen(
                     )
                 }
                 item {
-                    BaseWidget(
+                    MiuixBaseWidget(
                         title = stringResource(R.string.python_view_diagnostics),
                         icon = MaterialSymbols.Outlined.Bug_report,
                         onClick = openDiagnostics,
                     )
                 }
                 item {
-                    BaseWidget(
+                    MiuixBaseWidget(
                         title = stringResource(R.string.python_export_plugin),
                         icon = MaterialSymbols.Outlined.Upload,
                         onClick = { exportZipLauncher.launch("$pluginId.zip") },
                     )
                 }
                 item {
-                    BaseWidget(
+                    MiuixBaseWidget(
                         title = stringResource(R.string.python_clear_data),
                         icon = MaterialSymbols.Outlined.Delete,
                         isError = true,
@@ -648,7 +648,7 @@ private fun PythonDetailScreen(
                     )
                 }
                 item {
-                    BaseWidget(
+                    MiuixBaseWidget(
                         title = stringResource(R.string.python_delete_plugin),
                         icon = MaterialSymbols.Outlined.Delete_forever,
                         isError = true,
@@ -657,7 +657,7 @@ private fun PythonDetailScreen(
                     )
                 }
                 item {
-                    BaseWidget(
+                    MiuixBaseWidget(
                         title = stringResource(R.string.python_restart_wechat),
                         icon = MaterialSymbols.Outlined.Restart_alt,
                         onClick = { Process.killProcess(Process.myPid()) },
@@ -757,17 +757,17 @@ private fun PythonEditorScreen(pluginId: String, onBack: () -> Unit) {
     // 编辑器内部自行滚动并消费底部系统栏 / IME insets：只给顶部留出固定顶栏，底部不加 padding。
     // backdrop 捕获层必须只包内容——若连顶栏一起捕获，顶栏模糊会采样到自己的输出，
     // AGSL 着色器无限嵌套，渲染线程栈溢出（SIGSEGV）。
-    val barBackdrop = rememberMaterial3BlurBackdrop()
+    val barBackdrop = rememberMiuixBlurBackdrop()
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             TopAppBar(
-                modifier = Modifier.m3AppBarBlur(barBackdrop),
+                modifier = Modifier.miuixAppBarBlur(barBackdrop),
                 title = { Text(stringResource(R.string.python_edit_entry)) },
                 navigationIcon = {
                     Row {
-                        ExpressiveBackButton(onClick = guardedBack)
+                        MiuixBackButton(onClick = guardedBack)
                         Spacer(modifier = Modifier.size(16.dp))
                     }
                 },
@@ -826,8 +826,8 @@ private fun PythonEditorScreen(pluginId: String, onBack: () -> Unit) {
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = barBackdrop.m3AppBarColor(),
-                    scrolledContainerColor = barBackdrop.m3AppBarColor(),
+                    containerColor = barBackdrop.miuixAppBarColor(),
+                    scrolledContainerColor = barBackdrop.miuixAppBarColor(),
                 ),
             )
         },
@@ -840,7 +840,7 @@ private fun PythonEditorScreen(pluginId: String, onBack: () -> Unit) {
             softWrap = softWrap,
             modifier = Modifier
                 .fillMaxSize()
-                .m3BackdropLayer(barBackdrop)
+                .miuixBackdropLayer(barBackdrop)
                 .padding(top = innerPadding.calculateTopPadding()),
         )
     }
@@ -904,22 +904,22 @@ private fun PythonDiagnosticsScreen(pluginId: String, onBack: () -> Unit) {
     ) {
         item {
             SegmentedColumn {
-                item { BaseWidget(title = stringResource(R.string.python_diag_runtime), description = runtime.toString()) }
+                item { MiuixBaseWidget(title = stringResource(R.string.python_diag_runtime), description = runtime.toString()) }
                 item {
-                    BaseWidget(
+                    MiuixBaseWidget(
                         title = stringResource(R.string.python_diag_runtime_pack),
                         description = mountedRuntime?.let {
                             "version=${it.manifest.version}\nsha256=${it.manifest.sha256}\napk=${it.runtimeApk}\nnative=${it.nativeDirectory}"
                         } ?: stringResource(R.string.python_diag_not_mounted),
                     )
                 }
-                item { BaseWidget(title = stringResource(R.string.python_diag_environment), description = environment) }
-                item { BaseWidget(title = stringResource(R.string.python_diag_plugin), description = record.status.name) }
+                item { MiuixBaseWidget(title = stringResource(R.string.python_diag_environment), description = environment) }
+                item { MiuixBaseWidget(title = stringResource(R.string.python_diag_plugin), description = record.status.name) }
                 crashMarker?.let { marker ->
-                    item { BaseWidget(title = "CrashGuard", description = marker.toString(), isError = true) }
+                    item { MiuixBaseWidget(title = "CrashGuard", description = marker.toString(), isError = true) }
                 }
                 record.traceback?.let { traceback ->
-                    item { BaseWidget(title = stringResource(R.string.python_traceback), description = traceback, isError = true) }
+                    item { MiuixBaseWidget(title = stringResource(R.string.python_traceback), description = traceback, isError = true) }
                 }
             }
         }

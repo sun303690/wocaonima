@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Surface
+import top.yukonga.miuix.kmp.basic.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -360,7 +360,7 @@ private fun HomeSidePanelDragOverlay(
             .clearAndSetSemantics { },
         shape = RoundedCornerShape(20.dp),
         color = Color.Transparent,
-        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
         shadowElevation = elevation,
     ) {
         HomeSidePanelDragVisual(snapshot.payload, state, panelState)

@@ -17,7 +17,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,11 +36,11 @@ import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.DropDownMenuWidget
-import dev.sun.wechat.ui.content.m3.DropdownOption
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.TextFieldDialogWidget
+import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
+import dev.sun.wechat.ui.content.miuix.MiuixDropDownMenuWidget
+import dev.sun.wechat.ui.content.miuix.DropdownOption
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixTextFieldDialogWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.HookParam
 import dev.sun.wechat.utils.WeLogger
@@ -290,9 +290,9 @@ object VirtualVoipVideo : ClickableFeature(), IResolveDex {
             AlertDialogContent(
                     title = { Text(stringResource(R.string.voip_virtual_video_title)) },
                     text = {
-                        SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                        MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                             item(key = "source") {
-                                DropDownMenuWidget(
+                                MiuixDropDownMenuWidget(
                                     title = stringResource(R.string.voip_virtual_video_source),
                                     description = null,
                                     value = currentType,
@@ -315,7 +315,7 @@ object VirtualVoipVideo : ClickableFeature(), IResolveDex {
                                 )
                             }
                             item(key = "select_video", animatedVisibility = currentType == "file") {
-                                BaseWidget(
+                                MiuixBaseWidget(
                                     title = stringResource(R.string.voip_virtual_video_select),
                                     description = stringResource(
                                         if (fileExists) {
@@ -362,7 +362,7 @@ object VirtualVoipVideo : ClickableFeature(), IResolveDex {
                                 )
                             }
                             item(key = "stream_url", animatedVisibility = currentType == "stream") {
-                                TextFieldDialogWidget(
+                                MiuixTextFieldDialogWidget(
                                     title = stringResource(R.string.voip_virtual_video_url),
                                     value = urlValue,
                                     onValueChange = {
@@ -375,7 +375,7 @@ object VirtualVoipVideo : ClickableFeature(), IResolveDex {
                                 )
                             }
                             item(key = "orientation") {
-                                DropDownMenuWidget(
+                                MiuixDropDownMenuWidget(
                                     title = stringResource(R.string.voip_virtual_video_orientation),
                                     description = null,
                                     value = orientationText,

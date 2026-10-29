@@ -111,6 +111,7 @@ jobs:
           cargo test -p xtask --bin xtask
           cargo test -p wekit-zygisk --lib
           ./x i18n-check
+          ./gradlew checkMiuixPurity
 
       - name: Decode keystore
         if: github.event_name != 'pull_request'

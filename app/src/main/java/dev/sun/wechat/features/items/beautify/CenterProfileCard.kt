@@ -19,8 +19,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -45,12 +45,12 @@ import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.BaseItemContainer
-import dev.sun.wechat.ui.content.m3.BaseSupportingWidget
-import dev.sun.wechat.ui.content.m3.ColorPickerWidget
-import dev.sun.wechat.ui.content.m3.IntNumberPickerWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixBaseItemContainer
+import dev.sun.wechat.ui.content.miuix.MiuixBaseSupportingWidget
+import dev.sun.wechat.ui.content.miuix.MiuixColorPickerWidget
+import dev.sun.wechat.ui.content.miuix.MiuixIntNumberPickerWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.utils.findViewsWhich
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
@@ -161,12 +161,12 @@ object CenterProfileCard : ClickableFeature(), IResolveDex {
                             .fillMaxWidth()
                             .verticalScroll(rememberScrollState()),
                     ) {
-                        SegmentedColumn(
+                        MiuixSegmentedColumn(
                             title = stringResource(R.string.beautify_profile_card_visibility),
                             contentPadding = PaddingValues(0.dp),
                         ) {
                             item {
-                                SwitchWidget(
+                                MiuixSwitchWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.beautify_profile_card_show_nickname),
                                     checked = showName,
@@ -174,7 +174,7 @@ object CenterProfileCard : ClickableFeature(), IResolveDex {
                                 )
                             }
                             item {
-                                SwitchWidget(
+                                MiuixSwitchWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.beautify_profile_card_show_wechat_id),
                                     checked = showAlias,
@@ -182,7 +182,7 @@ object CenterProfileCard : ClickableFeature(), IResolveDex {
                                 )
                             }
                             item {
-                                SwitchWidget(
+                                MiuixSwitchWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.beautify_profile_card_show_signature),
                                     checked = showSignature,
@@ -191,26 +191,26 @@ object CenterProfileCard : ClickableFeature(), IResolveDex {
                             }
                         }
 
-                        SegmentedColumn(
+                        MiuixSegmentedColumn(
                             title = stringResource(R.string.beautify_profile_card_text_replacements),
                             contentPadding = PaddingValues(0.dp),
                         ) {
                             item {
-                                BaseSupportingWidget(
+                                MiuixBaseSupportingWidget(
                                     title = stringResource(R.string.beautify_profile_card_custom_nickname),
                                 ) {
                                     InlineTextField(value = nameText, onValueChange = { nameText = it })
                                 }
                             }
                             item {
-                                BaseSupportingWidget(
+                                MiuixBaseSupportingWidget(
                                     title = stringResource(R.string.beautify_profile_card_custom_wechat_id),
                                 ) {
                                     InlineTextField(value = aliasText, onValueChange = { aliasText = it })
                                 }
                             }
                             item {
-                                BaseSupportingWidget(
+                                MiuixBaseSupportingWidget(
                                     title = stringResource(R.string.beautify_profile_card_custom_signature),
                                 ) {
                                     InlineTextField(value = signatureText, onValueChange = { signatureText = it })
@@ -218,13 +218,13 @@ object CenterProfileCard : ClickableFeature(), IResolveDex {
                             }
                         }
 
-                        SegmentedColumn(
+                        MiuixSegmentedColumn(
                             title = stringResource(R.string.beautify_profile_card_layout),
                             contentPadding = PaddingValues(0.dp),
                         ) {
                             item {
                                 BaseItemContainer {
-                                    IntNumberPickerWidget(
+                                    MiuixIntNumberPickerWidget(
                                         title = stringResource(R.string.beautify_profile_card_avatar_top_margin),
                                         value = avatarTopMargin,
                                         startInt = MIN_LAYOUT_DP,
@@ -240,7 +240,7 @@ object CenterProfileCard : ClickableFeature(), IResolveDex {
                             }
                             item {
                                 BaseItemContainer {
-                                    IntNumberPickerWidget(
+                                    MiuixIntNumberPickerWidget(
                                         title = stringResource(R.string.beautify_profile_card_avatar_size),
                                         value = avatarSize,
                                         startInt = MIN_LAYOUT_DP,
@@ -256,7 +256,7 @@ object CenterProfileCard : ClickableFeature(), IResolveDex {
                             }
                             item {
                                 BaseItemContainer {
-                                    IntNumberPickerWidget(
+                                    MiuixIntNumberPickerWidget(
                                         title = stringResource(R.string.beautify_profile_card_nickname_top_margin),
                                         value = nameTopMargin,
                                         startInt = MIN_LAYOUT_DP,
@@ -272,7 +272,7 @@ object CenterProfileCard : ClickableFeature(), IResolveDex {
                             }
                             item {
                                 BaseItemContainer {
-                                    IntNumberPickerWidget(
+                                    MiuixIntNumberPickerWidget(
                                         title = stringResource(R.string.beautify_profile_card_wechat_id_top_margin),
                                         value = aliasTopMargin,
                                         startInt = MIN_LAYOUT_DP,
@@ -288,7 +288,7 @@ object CenterProfileCard : ClickableFeature(), IResolveDex {
                             }
                             item {
                                 BaseItemContainer {
-                                    IntNumberPickerWidget(
+                                    MiuixIntNumberPickerWidget(
                                         title = stringResource(R.string.beautify_profile_card_signature_top_margin),
                                         value = signatureTopMargin,
                                         startInt = MIN_LAYOUT_DP,
@@ -304,19 +304,19 @@ object CenterProfileCard : ClickableFeature(), IResolveDex {
                             }
                         }
 
-                        SegmentedColumn(
+                        MiuixSegmentedColumn(
                             title = stringResource(R.string.beautify_profile_card_background_colors),
                             contentPadding = PaddingValues(0.dp),
                         ) {
                             item {
-                                ColorPickerWidget(
+                                MiuixColorPickerWidget(
                                     title = stringResource(R.string.beautify_profile_card_light_background),
                                     value = lightBg,
                                     onValueChange = { lightBg = it },
                                 )
                             }
                             item {
-                                ColorPickerWidget(
+                                MiuixColorPickerWidget(
                                     title = stringResource(R.string.beautify_profile_card_dark_background),
                                     value = darkBg,
                                     onValueChange = { darkBg = it },
@@ -355,7 +355,7 @@ object CenterProfileCard : ClickableFeature(), IResolveDex {
     /** Single-line inline text field filling a [BaseSupportingWidget] supporting slot. */
     @Composable
     private fun InlineTextField(value: String, onValueChange: (String) -> Unit) {
-        OutlinedTextField(
+        TextField(
             value = value,
             onValueChange = onValueChange,
             singleLine = true,

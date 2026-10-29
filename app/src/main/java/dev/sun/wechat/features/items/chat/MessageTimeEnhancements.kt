@@ -15,8 +15,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,11 +40,11 @@ import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.BaseSupportingWidget
-import dev.sun.wechat.ui.content.m3.ColorPickerWidget
-import dev.sun.wechat.ui.content.m3.PlaceholderChips
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixBaseSupportingWidget
+import dev.sun.wechat.ui.content.miuix.MiuixColorPickerWidget
+import dev.sun.wechat.ui.content.miuix.MiuixPlaceholderChips
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.HookParam
 import dev.sun.wechat.utils.android.isDarkMode
@@ -313,13 +313,13 @@ object MessageTimeEnhancements : ClickableFeature(),
                 title = { Text(stringResource(R.string.chat_message_time_title)) },
                 text = {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
-                        SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                        MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                             item {
-                                BaseSupportingWidget(
+                                MiuixBaseSupportingWidget(
                                     title = stringResource(R.string.chat_message_time_display_template),
                                 ) {
                                     Column {
-                                        OutlinedTextField(
+                                        TextField(
                                             value = displayFormatInput,
                                             onValueChange = { displayFormatInput = it },
                                             modifier = Modifier
@@ -343,7 +343,7 @@ object MessageTimeEnhancements : ClickableFeature(),
                                             $$"$mentionedUsers",
                                             READ_RECEIPTS_PLACEHOLDER,
                                         )
-                                        PlaceholderChips(
+                                        MiuixPlaceholderChips(
                                             placeholders = placeholders,
                                             value = displayFormatInput,
                                             isFieldFocused = isFocused,
@@ -355,10 +355,10 @@ object MessageTimeEnhancements : ClickableFeature(),
                                 }
                             }
                             item {
-                                BaseSupportingWidget(
+                                MiuixBaseSupportingWidget(
                                     title = stringResource(R.string.chat_message_time_format),
                                 ) {
-                                    OutlinedTextField(
+                                    TextField(
                                         value = timeFormatInput,
                                         onValueChange = { timeFormatInput = it },
                                         modifier = Modifier
@@ -368,10 +368,10 @@ object MessageTimeEnhancements : ClickableFeature(),
                                 }
                             }
                             item {
-                                BaseSupportingWidget(
+                                MiuixBaseSupportingWidget(
                                     title = stringResource(R.string.chat_message_time_font_size),
                                 ) {
-                                    OutlinedTextField(
+                                    TextField(
                                         value = textSizeInputRaw,
                                         onValueChange = { textSizeInputRaw = it.filter { c -> c.isDigit() } },
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -382,21 +382,21 @@ object MessageTimeEnhancements : ClickableFeature(),
                                 }
                             }
                             item {
-                                ColorPickerWidget(
+                                MiuixColorPickerWidget(
                                     title = stringResource(R.string.chat_message_time_color_light),
                                     value = textColorLightInput,
                                     onValueChange = { textColorLightInput = it },
                                 )
                             }
                             item {
-                                ColorPickerWidget(
+                                MiuixColorPickerWidget(
                                     title = stringResource(R.string.chat_message_time_color_dark),
                                     value = textColorDarkInput,
                                     onValueChange = { textColorDarkInput = it },
                                 )
                             }
                             item {
-                                SwitchWidget(
+                                MiuixSwitchWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.chat_message_time_center),
                                     description = stringResource(R.string.chat_message_time_center_summary),
@@ -405,7 +405,7 @@ object MessageTimeEnhancements : ClickableFeature(),
                                 )
                             }
                             item {
-                                SwitchWidget(
+                                MiuixSwitchWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.chat_message_time_always_show),
                                     description = stringResource(R.string.chat_message_time_always_show_summary),

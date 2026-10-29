@@ -29,7 +29,7 @@ import dev.sun.wechat.ui.navigation.LocalNavigator
 import dev.sun.wechat.ui.navigation.Navigator
 import dev.sun.wechat.ui.navigation.rememberM3NavEffects
 import dev.sun.wechat.ui.animation.predictiveback.weKitNavTransition
-import dev.sun.wechat.ui.utils.theme.ModuleTheme
+import dev.sun.wechat.ui.utils.theme.MiuixModuleTheme
 import dev.sun.wechat.ui.utils.theme.ThemeSettings
 import kotlinx.serialization.Serializable
 import top.yukonga.miuix.kmp.nav.core.NavDisplay
@@ -59,7 +59,7 @@ class WeAgentSettingsActivity : ComponentActivity() {
         setContent {
             WeKitLocaleProvider(mode = LocaleResourceMode.InjectedHost) {
                 val dark = ThemeSettings.themeMode.resolve()
-                ModuleTheme(darkTheme = dark) {
+                MiuixModuleTheme(darkTheme = dark) {
                     WeAgentSettingsRoot(onFinish = { finish() })
                 }
             }

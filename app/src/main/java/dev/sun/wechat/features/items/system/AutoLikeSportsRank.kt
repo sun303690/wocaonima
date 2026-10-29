@@ -6,10 +6,10 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,10 +33,10 @@ import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.ContactsSelector
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.BaseSupportingWidget
-import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixBaseSupportingWidget
+import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToast
@@ -175,12 +175,12 @@ object AutoLikeSportsRank : ClickableFeature(), IResolveDex,
             AlertDialogContent(
                 title = { Text(stringResource(R.string.feature_auto_like_sports_rank_name)) },
                 text = {
-                    SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                    MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                         item {
-                            BaseSupportingWidget(
+                            MiuixBaseSupportingWidget(
                                 title = stringResource(R.string.sports_rank_min_score),
                             ) {
-                                OutlinedTextField(
+                                TextField(
                                     value = minScoreInput,
                                     onValueChange = { value ->
                                         minScoreInput = value.filter(Char::isDigit).take(9)
@@ -195,7 +195,7 @@ object AutoLikeSportsRank : ClickableFeature(), IResolveDex,
                             }
                         }
                         item {
-                            SwitchWidget(
+                            MiuixSwitchWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(
                                     if (useWhitelistState) R.string.filter_list_whitelist_selected
@@ -213,7 +213,7 @@ object AutoLikeSportsRank : ClickableFeature(), IResolveDex,
                             )
                         }
                         item {
-                            BaseWidget(
+                            MiuixBaseWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(
                                     if (useWhitelistState) R.string.filter_list_configure_whitelist
@@ -251,7 +251,7 @@ object AutoLikeSportsRank : ClickableFeature(), IResolveDex,
                                     Icon(
                                         MaterialSymbols.Outlined.Chevron_right,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                     )
                                 },
                             )

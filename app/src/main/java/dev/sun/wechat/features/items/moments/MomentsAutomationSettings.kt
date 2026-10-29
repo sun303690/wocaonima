@@ -12,9 +12,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Checkbox
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -53,10 +53,10 @@ import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.BaseSupportingWidget
-import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.RadioButtonWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixBaseSupportingWidget
+import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
+import dev.sun.wechat.ui.content.miuix.MiuixRadioButtonWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToast
@@ -237,7 +237,7 @@ class MomentsAutomationSettings private constructor(
             AlertDialogContent(
                 title = { Text(stringResource(featureNameRes)) },
                 text = {
-                    SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                    MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                         item {
                             PaymentNavigationRow(
                                 title = stringResource(R.string.moments_automation_global_settings),
@@ -423,7 +423,7 @@ class MomentsAutomationSettings private constructor(
         Column(
             modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
         ) {
-            SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+            MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
             item(key = "process") { PaymentRuleRow(
                 title = stringResource(
                     if (includeAction) R.string.moments_automation_default_auto_like
@@ -463,7 +463,7 @@ class MomentsAutomationSettings private constructor(
                     }
                 ) }
                 item(key = "action_like", animatedVisibility = rules.action.enabled) {
-                        RadioButtonWidget(iconPlaceholder = false,
+                        MiuixRadioButtonWidget(iconPlaceholder = false,
                             title = stringResource(R.string.moments_automation_like),
                             selected = rules.action.action == MomentAutomationAction.LIKE,
                             enabled = editable(RuleKey.ACTION),
@@ -476,7 +476,7 @@ class MomentsAutomationSettings private constructor(
                         )
                 }
                 item(key = "action_unlike", animatedVisibility = rules.action.enabled) {
-                        RadioButtonWidget(iconPlaceholder = false,
+                        MiuixRadioButtonWidget(iconPlaceholder = false,
                             title = stringResource(R.string.moments_automation_unlike),
                             selected = rules.action.action == MomentAutomationAction.UNLIKE,
                             enabled = editable(RuleKey.ACTION),
@@ -507,7 +507,7 @@ class MomentsAutomationSettings private constructor(
                 }
             ) }
             item(key = "mode_seen", animatedVisibility = rules.mode.enabled) {
-                    RadioButtonWidget(iconPlaceholder = false,
+                    MiuixRadioButtonWidget(iconPlaceholder = false,
                         title = stringResource(R.string.moments_automation_when_seen),
                         selected = rules.mode.mode == MomentAutomationMode.WHEN_SEEN,
                         enabled = editable(RuleKey.MODE),
@@ -520,7 +520,7 @@ class MomentsAutomationSettings private constructor(
                     )
             }
             item(key = "mode_all", animatedVisibility = rules.mode.enabled) {
-                    RadioButtonWidget(iconPlaceholder = false,
+                    MiuixRadioButtonWidget(iconPlaceholder = false,
                         title = stringResource(R.string.moments_automation_all_cached),
                         description = stringResource(R.string.moments_automation_all_cached_requires_refresh),
                         selected = rules.mode.mode == MomentAutomationMode.ALL_LOADED,
@@ -549,8 +549,8 @@ class MomentsAutomationSettings private constructor(
                 }
             ) }
             item(key = "interval_value", animatedVisibility = rules.interval.enabled) {
-                BaseSupportingWidget(title = stringResource(R.string.moments_automation_interval_ms)) {
-                OutlinedTextField(
+                MiuixBaseSupportingWidget(title = stringResource(R.string.moments_automation_interval_ms)) {
+                TextField(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
@@ -631,7 +631,7 @@ class MomentsAutomationSettings private constructor(
             ) }
             MomentsContentType.entries.forEach { type ->
                 item(key = "content_type_${type.typeId}", animatedVisibility = rules.contentType.enabled) {
-                    BaseWidget(
+                    MiuixBaseWidget(
                         iconPlaceholder = false,
                         title = stringResource(type.nameRes),
                         enabled = editable(RuleKey.CONTENT_TYPE),
@@ -672,8 +672,8 @@ class MomentsAutomationSettings private constructor(
                 }
             ) }
             item(key = "maximum_age_value", animatedVisibility = rules.maximumAge.enabled) {
-                BaseSupportingWidget(title = stringResource(R.string.moments_automation_maximum_age_hours)) {
-                OutlinedTextField(
+                MiuixBaseSupportingWidget(title = stringResource(R.string.moments_automation_maximum_age_hours)) {
+                TextField(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),

@@ -7,10 +7,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Checkbox
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -178,7 +178,7 @@ object GroupChatLabel : ClickableFeature(), WeConversationContextMenuApi.IMenuIt
             AlertDialogContent(
                 title = { Text(stringResource(R.string.group_chat_label_new)) },
                 text = {
-                    OutlinedTextField(
+                    TextField(
                         value = name,
                         onValueChange = { name = it },
                         modifier = Modifier.fillMaxWidth(),
@@ -214,7 +214,7 @@ object GroupChatLabel : ClickableFeature(), WeConversationContextMenuApi.IMenuIt
             AlertDialogContent(
                 title = { Text(stringResource(R.string.group_chat_label_edit)) },
                 text = {
-                    OutlinedTextField(
+                    TextField(
                         value = name,
                         onValueChange = { name = it },
                         modifier = Modifier.fillMaxWidth(),
@@ -244,7 +244,7 @@ object GroupChatLabel : ClickableFeature(), WeConversationContextMenuApi.IMenuIt
                     }) {
                         Text(
                             text = stringResource(R.string.group_chat_label_delete),
-                            color = MaterialTheme.colorScheme.error,
+                            color = MiuixTheme.colorScheme.error,
                         )
                     }
                 },

@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -40,7 +40,7 @@ import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToast
@@ -179,7 +179,7 @@ object TransferSettings {
             AlertDialogContent(
                 title = { Text(stringResource(R.string.feature_auto_accept_transfers_name)) },
                 text = {
-                    SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                    MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                         item {
                             PaymentNavigationRow(
                                 title = stringResource(R.string.automation_global_settings),
@@ -310,7 +310,7 @@ object TransferSettings {
             AlertDialogContent(
                 title = { Text(groupName) },
                 text = {
-                    SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                    MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                         item {
                             PaymentNavigationRow(
                                 title = stringResource(R.string.automation_group_global_settings),
@@ -492,7 +492,7 @@ object TransferSettings {
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState()),
         ) {
-            SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+            MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                 item(key = "accept") {
                     PaymentRuleRow(
                         title = stringResource(R.string.payment_transfer_default_accept),

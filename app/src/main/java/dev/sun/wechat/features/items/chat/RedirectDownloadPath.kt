@@ -3,8 +3,8 @@ package dev.sun.wechat.features.items.chat
 import android.annotation.SuppressLint
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import dev.sun.wechat.ui.content.miuix.MiuixCompatTextField
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -83,7 +83,7 @@ object RedirectDownloadPath : ClickableFeature(), IResolveDex {
                 title = { Text(stringResource(R.string.feature_redirect_download_path_name)) },
                 text = {
                     DefaultColumn {
-                        OutlinedTextField(
+                        MiuixCompatTextField(
                             value = pathInput,
                             onValueChange = { pathInput = it },
                             modifier = androidx.compose.ui.Modifier.fillMaxWidth(),

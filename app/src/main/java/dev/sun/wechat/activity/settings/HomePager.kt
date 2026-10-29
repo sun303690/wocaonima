@@ -36,8 +36,8 @@ import dev.sun.wechat.activity.openLsposedManager
 import dev.sun.wechat.activity.openRootManager
 import dev.sun.wechat.loader.entry.zygisk.ZygiskLoaderService
 import dev.sun.wechat.loader.startup.StartupInfo
-import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
 import dev.sun.wechat.utils.HostInfo
 import dev.sun.wechat.utils.formatEpoch
 
@@ -159,16 +159,16 @@ private fun StatusTag(label: String, backgroundColor: Color, contentColor: Color
 @Composable
 private fun DeviceInformation() {
     val loaderName = StartupInfo.loaderService.loaderName
-    SegmentedColumn(title = stringResource(R.string.home_device_info_title)) {
+    MiuixSegmentedColumn(title = stringResource(R.string.home_device_info_title)) {
         item {
-            BaseWidget(
+            MiuixBaseWidget(
                 iconPlaceholder = false,
                 title = stringResource(R.string.home_wechat_version),
                 description = stringResource(R.string.home_version_value, HostInfo.versionName, HostInfo.versionCode),
             )
         }
         item {
-            BaseWidget(
+            MiuixBaseWidget(
                 iconPlaceholder = false,
                 title = stringResource(R.string.home_module_version),
                 description = stringResource(
@@ -179,21 +179,21 @@ private fun DeviceInformation() {
             )
         }
         item {
-            BaseWidget(
+            MiuixBaseWidget(
                 iconPlaceholder = false,
                 title = stringResource(R.string.home_build_time),
                 description = formatEpoch(BuildConfig.BUILD_TIMESTAMP, true),
             )
         }
         item {
-            BaseWidget(
+            MiuixBaseWidget(
                 iconPlaceholder = false,
                 title = stringResource(R.string.home_device_model),
                 description = stringResource(R.string.home_device_model_value, Build.MANUFACTURER, Build.MODEL),
             )
         }
         item {
-            BaseWidget(
+            MiuixBaseWidget(
                 iconPlaceholder = false,
                 title = stringResource(R.string.home_android_version),
                 description = stringResource(
@@ -204,7 +204,7 @@ private fun DeviceInformation() {
             )
         }
         item {
-            BaseWidget(
+            MiuixBaseWidget(
                 iconPlaceholder = false,
                 title = stringResource(R.string.home_loading_environment),
                 description = stringResource(
@@ -220,9 +220,9 @@ private fun DeviceInformation() {
 @Composable
 private fun LearnMore() {
     val uriHandler = LocalUriHandler.current
-    SegmentedColumn(title = stringResource(R.string.home_learn_more_title)) {
+    MiuixSegmentedColumn(title = stringResource(R.string.home_learn_more_title)) {
         item {
-            BaseWidget(
+            MiuixBaseWidget(
                 iconPlaceholder = false,
                 title = stringResource(R.string.home_learn_more_item_title),
                 description = stringResource(R.string.home_learn_more_item_summary),

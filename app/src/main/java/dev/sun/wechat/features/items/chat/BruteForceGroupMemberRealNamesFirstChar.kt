@@ -5,10 +5,10 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.LinearWavyProgressIndicator
-import androidx.compose.material3.Text
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.TextField
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableIntState
@@ -325,11 +325,11 @@ object BruteForceGroupMemberRealNamesFirstChar : SwitchFeature(),
             text = {
                 DefaultColumn(Modifier.verticalScroll(rememberScrollState())) {
                     if (restarting) {
-                        LinearWavyProgressIndicator()
+                        LinearProgressIndicator()
                         Text(stringResource(R.string.structured_storage_saving))
                     }
                     if (saveFailed) {
-                        Text(stringResource(R.string.structured_storage_save_failed), color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.structured_storage_save_failed), color = MiuixTheme.colorScheme.error)
                     }
                     when (val current = phase) {
                         is Phase.Idle -> {
@@ -358,7 +358,7 @@ object BruteForceGroupMemberRealNamesFirstChar : SwitchFeature(),
                             val tried by current.state.tried
                             val total = current.state.total
                             Text(stringResource(R.string.chat_real_name_bruteforce_running, tried, total))
-                            LinearWavyProgressIndicator(progress = { if (total == 0) 0f else tried.toFloat() / total })
+                            LinearProgressIndicator(progress = if (total == 0) 0f else tried.toFloat() / total)
                         }
 
                         is Phase.Done -> when (val r = current.result) {

@@ -5,8 +5,8 @@ import android.content.Context
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,7 +25,7 @@ import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.DefaultColumn
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.HostInfo
 import dev.sun.wechat.utils.WeLogger
@@ -113,58 +113,58 @@ object QQMusicOrder : ClickableFeature(), WeDatabaseListenerApi.IInsertListener 
                 title = { Text(stringResource(R.string.feature_qq_music_order_name)) },
                 text = {
                     DefaultColumn {
-                        SwitchWidget(
+                        MiuixSwitchWidget(
                             title = stringResource(R.string.qq_music_order_enable),
                             checked = enabled,
                             onCheckedChange = { enabled = it },
                         )
-                        OutlinedTextField(
+                        TextField(
                             value = triggerText,
                             onValueChange = { triggerText = it },
                             modifier = Modifier.fillMaxWidth(),
                             label = { Text(stringResource(R.string.qq_music_order_trigger_hint)) },
                             singleLine = true,
                         )
-                        OutlinedTextField(
+                        TextField(
                             value = appIdText,
                             onValueChange = { appIdText = it },
                             modifier = Modifier.fillMaxWidth(),
                             label = { Text(stringResource(R.string.qq_music_order_appid_hint)) },
                             singleLine = true,
                         )
-                        SwitchWidget(
+                        MiuixSwitchWidget(
                             title = stringResource(R.string.qq_music_order_send_card),
                             checked = sendCard,
                             onCheckedChange = { sendCard = it },
                         )
-                        SwitchWidget(
+                        MiuixSwitchWidget(
                             title = stringResource(R.string.qq_music_order_send_voice),
                             checked = sendVoice,
                             onCheckedChange = { sendVoice = it },
                         )
-                        SwitchWidget(
+                        MiuixSwitchWidget(
                             title = stringResource(R.string.qq_music_order_custom_singer),
                             checked = customSinger,
                             onCheckedChange = { customSinger = it },
                         )
-                        OutlinedTextField(
+                        TextField(
                             value = defaultSingerText,
                             onValueChange = { defaultSingerText = it },
                             modifier = Modifier.fillMaxWidth(),
                             label = { Text(stringResource(R.string.qq_music_order_default_singer_hint)) },
                             singleLine = true,
                         )
-                        SwitchWidget(
+                        MiuixSwitchWidget(
                             title = stringResource(R.string.qq_music_order_replace_singer_nickname),
                             checked = replaceSingerNick,
                             onCheckedChange = { replaceSingerNick = it },
                         )
-                        SwitchWidget(
+                        MiuixSwitchWidget(
                             title = stringResource(R.string.qq_music_order_replace_cover_avatar),
                             checked = replaceCoverAvatar,
                             onCheckedChange = { replaceCoverAvatar = it },
                         )
-                        SwitchWidget(
+                        MiuixSwitchWidget(
                             title = stringResource(R.string.qq_music_order_intercept_own_command),
                             checked = interceptOwn,
                             onCheckedChange = { interceptOwn = it },

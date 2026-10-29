@@ -12,7 +12,16 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import dev.sun.wechat.ui.content.miuix.MiuixAlertDialog
+import dev.sun.wechat.ui.utils.theme.MiuixModuleTheme
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.RadioButton
+import top.yukonga.miuix.kmp.basic.Switch
+import top.yukonga.miuix.kmp.basic.TabRow
+import top.yukonga.miuix.kmp.basic.Text
+import dev.sun.wechat.ui.content.miuix.MiuixCompatTextField
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -28,7 +37,7 @@ import kotlinx.coroutines.withContext
 class AiChatSettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { MaterialTheme { AiSettingsScreen() } }
+        setContent { MiuixModuleTheme { AiSettingsScreen() } }
     }
 
     @Composable
@@ -37,13 +46,11 @@ class AiChatSettingsActivity : ComponentActivity() {
         val tabs = listOf("回复", "人设", "记忆", "诊断")
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().padding(start = 6.dp, end = 8.dp, top = 20.dp)) {
-                TextButton(onClick = { finish() }) { Text("‹", style = MaterialTheme.typography.headlineMedium) }
+                Button(onClick = { finish() }) { Text("‹", style = MiuixTheme.textStyles.headline1) }
                 Spacer(Modifier.weight(1f))
-                TextButton(onClick = { AiChat.clearContext(); Toast.makeText(this@AiChatSettingsActivity, "AI 上下文已清除", Toast.LENGTH_SHORT).show() }) { Text("•••") }
+                Button(onClick = { AiChat.clearContext(); Toast.makeText(this@AiChatSettingsActivity, "AI 上下文已清除", Toast.LENGTH_SHORT).show() }) { Text("•••") }
             }
-            TabRow(selectedTabIndex = tab) {
-                tabs.forEachIndexed { i, name -> Tab(tab == i, { tab = i }, text = { Text(name) }) }
-            }
+            TabRow(tabs = tabs, selectedTabIndex = tab, onTabSelected = { tab = it })
             when (tab) {
                 0 -> ReplyPage()
                 1 -> PersonaPage()
@@ -58,15 +65,15 @@ class AiChatSettingsActivity : ComponentActivity() {
 
     @Composable private fun Block(title: String, subtitle: String = "", content: @Composable ColumnScope.() -> Unit = {}) {
         Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            if (subtitle.isNotBlank()) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(title, style = MiuixTheme.textStyles.title3)
+            if (subtitle.isNotBlank()) Text(subtitle, style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
             content()
         }}
     }
 
     @Composable private fun ToggleRow(title: String, subtitle: String, checked: Boolean, onChange: (Boolean) -> Unit) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(Modifier.weight(1f)) { Text(title); Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            Column(Modifier.weight(1f)) { Text(title); Text(subtitle, style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary) }
             Switch(checked, onChange)
         }
     }
@@ -99,12 +106,12 @@ class AiChatSettingsActivity : ComponentActivity() {
             Edit("冷却秒数", cooldown) { cooldown = it; it.toIntOrNull()?.let { n -> AiChat.cooldownSeconds = n.coerceIn(0, 3600) } }
             Edit("单会话每日上限，0 不限制", daily) { daily = it; it.toIntOrNull()?.let { n -> AiChat.dailyLimit = n.coerceIn(0, 10000) } }
             Edit("上下文字符上限", chars) { chars = it; it.toIntOrNull()?.let { n -> AiChat.maxContextChars = n.coerceIn(1000, 100000) } }
-            OutlinedButton({ AiChat.clearContext() }, Modifier.fillMaxWidth()) { Text("清除全部上下文") }
+            Button({ AiChat.clearContext() }, Modifier.fillMaxWidth()) { Text("清除全部上下文") }
         }
     }
 
     @Composable private fun Edit(label: String, value: String, onChange: (String) -> Unit) =
-        OutlinedTextField(value, onChange, Modifier.fillMaxWidth(), label = { Text(label) })
+        MiuixCompatTextField(value, onChange, Modifier.fillMaxWidth(), label = label)
 
     @Composable private fun PersonaPage() = Page {
         var refresh by remember { mutableIntStateOf(0) }
@@ -139,8 +146,8 @@ class AiChatSettingsActivity : ComponentActivity() {
             }, Modifier.fillMaxWidth()) { Text(if (editingId == null) "保存人设" else "保存修改") }
         }
         personas.forEach { persona -> Block(persona.name, listOf(persona.scene, if (persona.shareMemory) "共用记忆" else "独立记忆").filter { it.isNotBlank() }.joinToString(" · ")) {
-            Text(persona.prompt, style = MaterialTheme.typography.bodySmall)
-            Row { TextButton({ editingId = persona.id; name = persona.name; prompt = persona.prompt; scene = persona.scene; boundaries = persona.boundaries; shareMemory = persona.shareMemory }) { Text("编辑") }; TextButton({ deleteCustomPersonaById(persona.id); refresh++ }) { Text("删除") } }
+            Text(persona.prompt, style = MiuixTheme.textStyles.footnote1)
+            Row { Button({ editingId = persona.id; name = persona.name; prompt = persona.prompt; scene = persona.scene; boundaries = persona.boundaries; shareMemory = persona.shareMemory }) { Text("编辑") }; Button({ deleteCustomPersonaById(persona.id); refresh++ }) { Text("删除") } }
         }}
         Block("联系人 / 群聊专属人设", "选择人设后绑定微信 ID 或群聊 ID") {
             Edit("微信 ID / 群聊 ID", bindTalker) { bindTalker = it }
@@ -150,11 +157,11 @@ class AiChatSettingsActivity : ComponentActivity() {
         }
         scoped.forEach { binding -> Block(binding.talker, if (binding.isGroup) "群聊" else "联系人") {
             Text(personas.firstOrNull { it.id == binding.personaId }?.name ?: "旧版专属人设")
-            TextButton({ deleteScopedPersona(binding.talker); refresh++ }) { Text("删除绑定") }
+            Button({ deleteScopedPersona(binding.talker); refresh++ }) { Text("删除绑定") }
         }}
         Block("导入与导出", "导出文件包含完整人设原文，请妥善保管") {
             Button({ exportLauncher.launch("wekit-ai-personas.json") }, Modifier.fillMaxWidth()) { Text("导出人设 JSON") }
-            OutlinedButton({ importLauncher.launch(arrayOf("application/json", "text/plain")) }, Modifier.fillMaxWidth()) { Text("导入人设 JSON") }
+            Button({ importLauncher.launch(arrayOf("application/json", "text/plain")) }, Modifier.fillMaxWidth()) { Text("导入人设 JSON") }
         }
     }
 
@@ -188,11 +195,11 @@ class AiChatSettingsActivity : ComponentActivity() {
             }
             memories.forEach { m -> Block(if (m.talker == "*") "全局记忆" else m.talker, listOf(m.scope, personas.firstOrNull { it.id == m.personaId }?.name, m.source).filterNotNull().joinToString(" · ")) {
                 Text(m.content)
-                Row { TextButton({ editing = m; content = m.content; talker = if (m.talker == "*") "" else m.talker; personaId = m.personaId; groupOk = m.scope == "group_ok" }) { Text("编辑") }; TextButton({ lifecycleScope.launch { withContext(Dispatchers.IO) { WeKitDatabase.instance.aiChatMemoryDao().delete(m) }; reload() } }) { Text("删除") } }
+                Row { Button({ editing = m; content = m.content; talker = if (m.talker == "*") "" else m.talker; personaId = m.personaId; groupOk = m.scope == "group_ok" }) { Text("编辑") }; Button({ lifecycleScope.launch { withContext(Dispatchers.IO) { WeKitDatabase.instance.aiChatMemoryDao().delete(m) }; reload() } }) { Text("删除") } }
             }}
-            OutlinedButton({ confirmClear = true }, Modifier.fillMaxWidth()) { Text("清空全部记忆") }
+            Button({ confirmClear = true }, Modifier.fillMaxWidth()) { Text("清空全部记忆") }
         }
-        if (confirmClear) AlertDialog(onDismissRequest = { confirmClear = false }, title = { Text("确认清空全部记忆？") }, text = { Text("此操作不可撤销。") }, confirmButton = { TextButton({ lifecycleScope.launch { withContext(Dispatchers.IO) { WeKitDatabase.instance.aiChatMemoryDao().clearAll() }; confirmClear = false; reload() } }) { Text("清空") } }, dismissButton = { TextButton({ confirmClear = false }) { Text("取消") } })
+        if (confirmClear) MiuixAlertDialog(onDismissRequest = { confirmClear = false }, title = { Text("确认清空全部记忆？") }, text = { Text("此操作不可撤销。") }, confirmButton = { Button({ lifecycleScope.launch { withContext(Dispatchers.IO) { WeKitDatabase.instance.aiChatMemoryDao().clearAll() }; confirmClear = false; reload() } }) { Text("清空") } }, dismissButton = { Button({ confirmClear = false }) { Text("取消") } })
     }
 
     @Composable private fun DiagnosticPage() = Page {
@@ -213,6 +220,6 @@ class AiChatSettingsActivity : ComponentActivity() {
         Block("最近失败", d.lastFailure ?: "暂无失败记录")
     }
 
-    @Composable private fun Status(name: String, ok: Boolean) = Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) { Text(name); Text(if (ok) "正常" else "不可用", color = if (ok) Color(0xff15803d) else MaterialTheme.colorScheme.error) }
+    @Composable private fun Status(name: String, ok: Boolean) = Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) { Text(name); Text(if (ok) "正常" else "不可用", color = if (ok) Color(0xff15803d) else MiuixTheme.colorScheme.error) }
     private fun stamp(value: Long) = if (value == 0L) "暂无" else DateFormat.getDateTimeInstance().format(Date(value))
 }

@@ -18,16 +18,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
-import androidx.compose.material3.VerticalDivider
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.HorizontalDivider
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -134,7 +133,7 @@ fun HomeSidePanelDateTimeCard(
             .fillMaxWidth()
             .then(if (editMode) cardDragModifier else Modifier),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
         editMode = editMode,
         onEdit = onEditCard?.let { edit -> { edit(card.id) } },
         onDelete = onDeleteCard?.let { delete -> { delete(card.id) } },
@@ -143,7 +142,7 @@ fun HomeSidePanelDateTimeCard(
             Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.fillMaxWidth()) {
                 Text(
                     now.format(HOME_SIDE_PANEL_TIME_FORMATTER),
-                    style = MaterialTheme.typography.displaySmall,
+                    style = MiuixTheme.textStyles.title2,
                     fontWeight = FontWeight.Bold,
                 )
                 BoxWithConstraints(
@@ -160,7 +159,7 @@ fun HomeSidePanelDateTimeCard(
                     } else {
                         val combinedFitsOneLine = rememberTextMeasurer().measure(
                             text = AnnotatedString(combinedText),
-                            style = MaterialTheme.typography.labelMedium,
+                            style = MiuixTheme.textStyles.footnote1,
                             maxLines = 1,
                             softWrap = false,
                         ).size.width <= constraints.maxWidth
@@ -175,7 +174,7 @@ fun HomeSidePanelDateTimeCard(
                     }
                 }
             }
-            Text(stringResource(greetingResForHour(now.hour)), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(greetingResForHour(now.hour)), style = MiuixTheme.textStyles.title2)
         }
     }
 }
@@ -184,8 +183,8 @@ fun HomeSidePanelDateTimeCard(
 private fun HomeSidePanelDateText(text: String) {
     Text(
         text,
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MiuixTheme.textStyles.footnote1,
+        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
     )
@@ -224,12 +223,12 @@ fun HomeSidePanelWeatherCard(
             .then(if (editMode) cardDragModifier else Modifier)
             .then(clickModifier),
         shape = shape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.primaryContainer),
         editMode = editMode,
         onEdit = onEditCard?.let { edit -> { edit(card.id) } },
         onDelete = onDeleteCard?.let { delete -> { delete(card.id) } },
     ) {
-        val contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+        val contentColor = MiuixTheme.colorScheme.onPrimaryContainer
         val location = snapshot?.city?.let { city ->
             listOfNotNull(city.city, city.district?.takeIf(String::isNotBlank))
                 .distinct()
@@ -253,7 +252,7 @@ fun HomeSidePanelWeatherCard(
                     modifier = Modifier
                         .weight(1f)
                         .padding(start = 5.dp),
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MiuixTheme.textStyles.title3,
                     fontWeight = FontWeight.SemiBold,
                     color = contentColor,
                     maxLines = 1,
@@ -265,7 +264,7 @@ fun HomeSidePanelWeatherCard(
                         modifier = Modifier
                             .padding(start = 10.dp)
                             .widthIn(max = 112.dp),
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MiuixTheme.textStyles.footnote2,
                         color = contentColor.copy(alpha = 0.65f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -276,8 +275,8 @@ fun HomeSidePanelWeatherCard(
                 Text(
                     text = localizedContext.resolveBeautifyText(weather.message),
                     modifier = Modifier.padding(start = 18.dp, top = 5.dp, end = 18.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.error,
+                    style = MiuixTheme.textStyles.footnote2,
+                    color = MiuixTheme.colorScheme.error,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -299,14 +298,14 @@ fun HomeSidePanelWeatherCard(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         "${snapshot.temperature}°",
-                                        style = MaterialTheme.typography.displayLarge,
+                                        style = MiuixTheme.textStyles.title1,
                                         fontWeight = FontWeight.SemiBold,
                                         color = contentColor,
                                         maxLines = 1,
                                     )
                                     Text(
                                         stringResource(R.string.home_side_panel_feels_like, snapshot.feelsLike),
-                                        style = MaterialTheme.typography.bodySmall,
+                                        style = MiuixTheme.textStyles.footnote1,
                                         color = contentColor.copy(alpha = 0.72f),
                                     )
                                 }
@@ -322,7 +321,7 @@ fun HomeSidePanelWeatherCard(
                                     )
                                     Text(
                                         stringResource(weatherDescriptionRes(snapshot.weatherCode)),
-                                        style = MaterialTheme.typography.titleSmall,
+                                        style = MiuixTheme.textStyles.title3,
                                         fontWeight = FontWeight.Medium,
                                         color = contentColor,
                                         textAlign = TextAlign.Center,
@@ -340,7 +339,7 @@ fun HomeSidePanelWeatherCard(
                         } else {
                             Text(
                                 stringResource(R.string.home_side_panel_no_weather_data),
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MiuixTheme.textStyles.body2,
                                 color = contentColor,
                             )
                         }
@@ -388,7 +387,7 @@ fun HomeSidePanelWeatherCard(
                     Box(
                         modifier = Modifier
                             .matchParentSize()
-                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.82f)),
+                            .background(MiuixTheme.colorScheme.primaryContainer.copy(alpha = 0.82f)),
                         contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator(
@@ -437,12 +436,12 @@ fun HomeSidePanelWalletCard(
             .then(if (editMode) cardDragModifier else Modifier)
             .then(clickModifier),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.primaryContainer),
         editMode = editMode,
         onEdit = onEditCard?.let { edit -> { edit(card.id) } },
         onDelete = onDeleteCard?.let { delete -> { delete(card.id) } },
     ) {
-        val contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+        val contentColor = MiuixTheme.colorScheme.onPrimaryContainer
         Column(
             modifier = Modifier.padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -459,14 +458,14 @@ fun HomeSidePanelWalletCard(
                 )
                 Text(
                     stringResource(R.string.home_side_panel_current_balance),
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MiuixTheme.textStyles.title3,
                     fontWeight = FontWeight.SemiBold,
                     color = contentColor,
                 )
             }
             Text(
                 text = displayBalance,
-                style = MaterialTheme.typography.displaySmall,
+                style = MiuixTheme.textStyles.title2,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = if (isMasked) 4.sp else 0.sp,
                 color = contentColor,
@@ -475,16 +474,16 @@ fun HomeSidePanelWalletCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                OutlinedButton(
+                Button(
                     onClick = {
                         if (interactive) onRunAction(HomeSidePanelActionKind.SCAN)
                     },
                     modifier = Modifier.weight(1f),
                     enabled = interactive,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+                    border = BorderStroke(1.dp, MiuixTheme.colorScheme.primary),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.primary,
-                        disabledContentColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MiuixTheme.colorScheme.primary,
+                        disabledContentColor = MiuixTheme.colorScheme.primary,
                     ),
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 12.dp),
                 ) {
@@ -498,8 +497,8 @@ fun HomeSidePanelWalletCard(
                     modifier = Modifier.weight(1f),
                     enabled = interactive,
                     colors = ButtonDefaults.buttonColors(
-                        disabledContainerColor = MaterialTheme.colorScheme.primary,
-                        disabledContentColor = MaterialTheme.colorScheme.onPrimary,
+                        disabledContainerColor = MiuixTheme.colorScheme.primary,
+                        disabledContentColor = MiuixTheme.colorScheme.onPrimary,
                     ),
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 12.dp),
                 ) {
@@ -548,18 +547,18 @@ fun HomeSidePanelHitokotoCard(
             .then(if (editMode) cardDragModifier else Modifier)
             .then(clickModifier),
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
+        colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainerHighest),
         editMode = editMode,
         onEdit = onEditCard?.let { edit -> { edit(card.id) } },
         onDelete = onDeleteCard?.let { delete -> { delete(card.id) } },
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(MaterialSymbols.Outlined.Format_quote, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Icon(MaterialSymbols.Outlined.Format_quote, contentDescription = null, tint = MiuixTheme.colorScheme.primary)
                 Text(
                     stringResource(R.string.home_side_panel_hitokoto),
                     modifier = Modifier.padding(start = 8.dp),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MiuixTheme.textStyles.title2,
                     fontWeight = FontWeight.SemiBold,
                 )
             }
@@ -573,7 +572,7 @@ fun HomeSidePanelHitokotoCard(
                                 R.string.home_side_panel_hitokoto_tap
                             }
                         ),
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MiuixTheme.textStyles.body1,
                     )
                     if (snapshot != null && (card.settings.showSource || card.settings.showAuthor)) {
                         val author = snapshot.author?.trim()?.takeIf { card.settings.showAuthor && it.isNotEmpty() }
@@ -593,8 +592,8 @@ fun HomeSidePanelHitokotoCard(
                             Text(
                                 text = it,
                                 modifier = Modifier.fillMaxWidth(),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MiuixTheme.textStyles.footnote2,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                 textAlign = TextAlign.End,
                             )
                         }
@@ -606,12 +605,12 @@ fun HomeSidePanelHitokotoCard(
                     Box(
                         modifier = Modifier
                             .matchParentSize()
-                            .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.82f)),
+                            .background(MiuixTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.82f)),
                         contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(28.dp),
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = MiuixTheme.colorScheme.onSurface,
                             strokeWidth = 3.dp,
                         )
                     }
@@ -620,8 +619,8 @@ fun HomeSidePanelHitokotoCard(
             if (hitokoto is HitokotoUiState.Error) {
                 Text(
                     text = localizedContext.resolveBeautifyText(hitokoto.message),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.error,
+                    style = MiuixTheme.textStyles.footnote2,
+                    color = MiuixTheme.colorScheme.error,
                 )
             }
         }
@@ -635,7 +634,7 @@ private fun HomeSidePanelWeatherMetric(
     label: String,
     modifier: Modifier = Modifier,
 ) {
-    val contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+    val contentColor = MiuixTheme.colorScheme.onPrimaryContainer
     Row(
         modifier = modifier.padding(horizontal = 6.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.Center,
@@ -645,7 +644,7 @@ private fun HomeSidePanelWeatherMetric(
         Column(modifier = Modifier.padding(start = 6.dp)) {
             Text(
                 value,
-                style = MaterialTheme.typography.labelLarge,
+                style = MiuixTheme.textStyles.button,
                 fontWeight = FontWeight.SemiBold,
                 color = contentColor,
                 maxLines = 1,
@@ -653,7 +652,7 @@ private fun HomeSidePanelWeatherMetric(
             )
             Text(
                 label,
-                style = MaterialTheme.typography.labelSmall,
+                style = MiuixTheme.textStyles.footnote2,
                 color = contentColor.copy(alpha = 0.68f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

@@ -5,8 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -19,7 +19,7 @@ import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.TextFieldDialogWidget
+import dev.sun.wechat.ui.content.miuix.MiuixTextFieldDialogWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 
 /**
@@ -55,7 +55,7 @@ object SecretFriendToastToggle : SwitchFeature() {
     override fun Ui() {
         Column {
             Spacer(Modifier.height(4.dp))
-            TextFieldDialogWidget(
+            MiuixTextFieldDialogWidget(
                 title = "临时解除提示",
                 value = SecretFriendState.toastTempShown,
                 onValueChange = { SecretFriendState.toastTempShown = it },
@@ -63,7 +63,7 @@ object SecretFriendToastToggle : SwitchFeature() {
                 confirmLabel = "确定",
                 dismissLabel = "取消",
             )
-            TextFieldDialogWidget(
+            MiuixTextFieldDialogWidget(
                 title = "恢复隐藏提示",
                 value = SecretFriendState.toastTempOff,
                 onValueChange = { SecretFriendState.toastTempOff = it },
@@ -71,7 +71,7 @@ object SecretFriendToastToggle : SwitchFeature() {
                 confirmLabel = "确定",
                 dismissLabel = "取消",
             )
-            TextFieldDialogWidget(
+            MiuixTextFieldDialogWidget(
                 title = "加入密友提示",
                 value = SecretFriendState.toastAdded,
                 onValueChange = { SecretFriendState.toastAdded = it },
@@ -79,7 +79,7 @@ object SecretFriendToastToggle : SwitchFeature() {
                 confirmLabel = "确定",
                 dismissLabel = "取消",
             )
-            TextFieldDialogWidget(
+            MiuixTextFieldDialogWidget(
                 title = "取消密友提示",
                 value = SecretFriendState.toastRemoved,
                 onValueChange = { SecretFriendState.toastRemoved = it },
@@ -87,7 +87,7 @@ object SecretFriendToastToggle : SwitchFeature() {
                 confirmLabel = "确定",
                 dismissLabel = "取消",
             )
-            TextFieldDialogWidget(
+            MiuixTextFieldDialogWidget(
                 title = "朋友圈隐藏提示",
                 value = SecretFriendState.toastMomentHidden,
                 onValueChange = { SecretFriendState.toastMomentHidden = it },
@@ -123,7 +123,7 @@ object SecretFriendMenuTextConfig : ClickableFeature() {
             AlertDialogContent(
                 title = { Text("菜单显示文字") },
                 text = {
-                    OutlinedTextField(
+                    TextField(
                         value = draft,
                         onValueChange = { draft = it.take(12) },
                         singleLine = true,

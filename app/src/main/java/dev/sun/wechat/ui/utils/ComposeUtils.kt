@@ -33,6 +33,7 @@ import dev.sun.wechat.ui.utils.theme.ThemeSettings
 fun showComposeDialog(
     context: Context,
     directlyDismissable: Boolean = true,
+    forceMiuix: Boolean = true,
     content: @Composable ShowComposeDialogScope.() -> Unit
 ) {
     val context = CommonContextWrapper(context)
@@ -69,10 +70,14 @@ fun showComposeDialog(
                                 }
                             }
                         }
-                        when (ThemeSettings.uiEngine) {
-                            SettingsUiEngine.MATERIAL3 -> themedContent()
-                            SettingsUiEngine.MIUIX -> MiuixModuleTheme(content = themedContent)
-                            SettingsUiEngine.NUKE -> NukeModuleTheme(content = themedContent)
+                        if (forceMiuix) {
+                            MiuixModuleTheme(content = themedContent)
+                        } else {
+                            when (ThemeSettings.uiEngine) {
+                                SettingsUiEngine.MATERIAL3 -> themedContent()
+                                SettingsUiEngine.MIUIX -> MiuixModuleTheme(content = themedContent)
+                                SettingsUiEngine.NUKE -> NukeModuleTheme(content = themedContent)
+                            }
                         }
                     }
                 }

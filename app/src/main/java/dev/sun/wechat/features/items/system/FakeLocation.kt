@@ -10,7 +10,7 @@ import android.widget.GridView
 import android.widget.AdapterView
 import android.widget.ImageView
 import androidx.activity.ComponentActivity
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.ui.res.stringResource
 import androidx.core.view.children
 import dev.ujhhgtg.reflekt.reflekt
@@ -26,8 +26,8 @@ import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.OsmLocationPicker
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.getTopMostActivity
@@ -175,7 +175,7 @@ object FakeLocation : ClickableFeature(), IResolveDex {
                 text = {
                     SegmentedColumn {
                         item {
-                            BaseWidget(
+                            MiuixBaseWidget(
                                 title = stringResource(R.string.system_fake_location_wechat),
                                 description = stringResource(R.string.system_fake_location_wechat_summary),
                                 onClick = {
@@ -185,7 +185,7 @@ object FakeLocation : ClickableFeature(), IResolveDex {
                             )
                         }
                         item {
-                            BaseWidget(
+                            MiuixBaseWidget(
                                 title = stringResource(R.string.system_fake_location_osm),
                                 description = stringResource(R.string.system_fake_location_osm_summary),
                                 onClick = {

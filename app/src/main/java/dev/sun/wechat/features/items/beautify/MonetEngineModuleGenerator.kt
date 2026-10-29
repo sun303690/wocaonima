@@ -11,11 +11,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.RadioButton
+import top.yukonga.miuix.kmp.basic.Switch
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -89,7 +89,7 @@ object MonetEngineModuleGenerator : ClickableFeature() {
                 title = { Text(stringResource(R.string.monet_options_title)) },
                 text = {
                     Column {
-                        Text(stringResource(R.string.monet_bubble_style), style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.monet_bubble_style), style = MiuixTheme.textStyles.title3)
                         RadioOption(stringResource(R.string.monet_bubble_modern), bubbleStyle == MonetBubbleStyle.MODERN) { bubbleStyle = MonetBubbleStyle.MODERN }
                         RadioOption(stringResource(R.string.monet_bubble_classic), bubbleStyle == MonetBubbleStyle.CLASSIC) { bubbleStyle = MonetBubbleStyle.CLASSIC }
                         RadioOption(stringResource(R.string.monet_bubble_pro), bubbleStyle == MonetBubbleStyle.PRO) { bubbleStyle = MonetBubbleStyle.PRO }
@@ -100,10 +100,10 @@ object MonetEngineModuleGenerator : ClickableFeature() {
                             Text(stringResource(R.string.monet_multi_scene_corners), Modifier.weight(1f))
                             Switch(corners, { corners = it })
                         }
-                        Text(stringResource(R.string.monet_tab_style), style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.monet_tab_style), style = MiuixTheme.textStyles.title3)
                         RadioOption(stringResource(R.string.monet_tab_solid), tabStyle == MonetTabStyle.SOLID) { tabStyle = MonetTabStyle.SOLID }
                         RadioOption(stringResource(R.string.monet_tab_blur), tabStyle == MonetTabStyle.BLUR) { tabStyle = MonetTabStyle.BLUR }
-                        Text(stringResource(R.string.monet_user_scope), style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.monet_user_scope), style = MiuixTheme.textStyles.title3)
                         RadioOption(stringResource(R.string.monet_user_current), userScope == MonetUserScope.CURRENT) { userScope = MonetUserScope.CURRENT }
                         RadioOption(stringResource(R.string.monet_user_all), userScope == MonetUserScope.ALL) { userScope = MonetUserScope.ALL }
                     }
@@ -285,7 +285,7 @@ private fun RunningContent(progress: MonetGenerationEvent.Progress) {
             )
             Text(
                 "$completed/$total",
-                style = MaterialTheme.typography.bodySmall,
+                style = MiuixTheme.textStyles.footnote1,
                 modifier = Modifier.align(Alignment.End).padding(top = 4.dp),
             )
         } else {
@@ -307,12 +307,12 @@ private fun DoneContent(result: MonetGenerationResult) {
                 result.added,
                 result.pruned,
             ),
-            style = MaterialTheme.typography.bodySmall,
+            style = MiuixTheme.textStyles.footnote1,
         )
         Spacer(Modifier.height(12.dp))
         Text(
             stringResource(R.string.monet_generator_install_hint),
-            style = MaterialTheme.typography.bodySmall,
+            style = MiuixTheme.textStyles.footnote1,
         )
     }
 }

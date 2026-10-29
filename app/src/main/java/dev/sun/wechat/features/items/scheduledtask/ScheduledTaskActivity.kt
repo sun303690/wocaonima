@@ -13,8 +13,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Text
+import dev.sun.wechat.ui.content.miuix.MiuixFilterChip
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -45,17 +45,17 @@ import dev.sun.wechat.ui.content.ContactsSelector
 import dev.sun.wechat.ui.content.WeDateTimeField
 import dev.sun.wechat.ui.content.WeDateTimeMode
 import dev.sun.wechat.ui.content.formatDateTime
-import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.IntNumberPickerWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
-import dev.sun.wechat.ui.content.m3.TextFieldDialogWidget
+import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
+import dev.sun.wechat.ui.content.miuix.MiuixIntNumberPickerWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixTextFieldDialogWidget
 import dev.sun.wechat.ui.content.parseDateTime
 import dev.sun.wechat.ui.navigation.LocalNavigator
 import dev.sun.wechat.ui.navigation.Navigator
 import dev.sun.wechat.ui.navigation.rememberM3NavEffects
 import dev.sun.wechat.ui.utils.showComposeDialog
-import dev.sun.wechat.ui.utils.theme.ModuleTheme
+import dev.sun.wechat.ui.utils.theme.MiuixModuleTheme
 import dev.sun.wechat.ui.utils.theme.ThemeSettings
 import dev.sun.wechat.utils.android.showToast
 import dev.sun.wechat.utils.fs.KnownPaths
@@ -79,7 +79,7 @@ class ScheduledTaskActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             WeKitLocaleProvider(mode = LocaleResourceMode.InjectedHost) {
-                ModuleTheme { ScheduledTaskRoot(::finish) }
+                MiuixModuleTheme { ScheduledTaskRoot(::finish) }
             }
         }
     }
@@ -121,20 +121,20 @@ private fun ScheduledTaskHomeScreen(onBack: () -> Unit, onEdit: (String?) -> Uni
     LaunchedEffect(Unit) { ScheduledTaskStore.reload() }
     AgentSettingsScaffold(stringResource(R.string.feature_scheduled_task_name), onBack) {
         item {
-            SegmentedColumn(title = stringResource(R.string.scheduled_task_section_tasks)) {
+            MiuixSegmentedColumn(title = stringResource(R.string.scheduled_task_section_tasks)) {
                 item {
-                    BaseWidget(
+                    MiuixBaseWidget(
                         title = stringResource(R.string.scheduled_task_new),
                         icon = MaterialSymbols.Outlined.Add,
                         onClick = { onEdit(null) },
                     )
                 }
                 if (tasks.isEmpty()) {
-                    item { BaseWidget(title = stringResource(R.string.scheduled_task_empty)) }
+                    item { MiuixBaseWidget(title = stringResource(R.string.scheduled_task_empty)) }
                 } else {
                     tasks.forEach { task ->
                         item(key = task.id) {
-                            SwitchWidget(
+                            MiuixSwitchWidget(
                                 title = taskTitle(task),
                                 description = taskDescription(task),
                                 checked = task.enabled,
@@ -324,9 +324,9 @@ private fun ScheduledTaskEditorScreen(taskId: String?, onBack: () -> Unit) {
         onBack = onBack,
     ) {
         item {
-            SegmentedColumn(title = stringResource(R.string.scheduled_task_section_basic)) {
+            MiuixSegmentedColumn(title = stringResource(R.string.scheduled_task_section_basic)) {
                 item {
-                    TextFieldDialogWidget(
+                    MiuixTextFieldDialogWidget(
                         title = stringResource(R.string.scheduled_task_remark),
                         value = remark,
                         onValueChange = { remark = it },
@@ -337,7 +337,7 @@ private fun ScheduledTaskEditorScreen(taskId: String?, onBack: () -> Unit) {
                     )
                 }
                 item {
-                    SwitchWidget(
+                    MiuixSwitchWidget(
                         title = stringResource(R.string.scheduled_task_enabled),
                         checked = enabled,
                         onCheckedChange = { enabled = it },
@@ -347,7 +347,7 @@ private fun ScheduledTaskEditorScreen(taskId: String?, onBack: () -> Unit) {
         }
 
         item {
-            SegmentedColumn(title = stringResource(R.string.scheduled_task_section_target)) {
+            MiuixSegmentedColumn(title = stringResource(R.string.scheduled_task_section_target)) {
                 item {
                     ChipRow(
                         selected = targetType,
@@ -361,7 +361,7 @@ private fun ScheduledTaskEditorScreen(taskId: String?, onBack: () -> Unit) {
                 if (targetType == ScheduledTaskStore.TARGET_CHAT) {
                     item {
                         val pickLabel = stringResource(R.string.scheduled_task_pick_targets)
-                        BaseWidget(
+                        MiuixBaseWidget(
                             title = pickLabel,
                             description = stringResource(R.string.scheduled_task_targets_count, targetIds.size),
                             onClick = {
@@ -386,7 +386,7 @@ private fun ScheduledTaskEditorScreen(taskId: String?, onBack: () -> Unit) {
         }
 
         item {
-            SegmentedColumn(title = stringResource(R.string.scheduled_task_section_content)) {
+            MiuixSegmentedColumn(title = stringResource(R.string.scheduled_task_section_content)) {
                 if (targetType == ScheduledTaskStore.TARGET_CHAT) {
                     item {
                         ChipRow(
@@ -400,7 +400,7 @@ private fun ScheduledTaskEditorScreen(taskId: String?, onBack: () -> Unit) {
                     }
                     if (ScheduledTaskStore.scheduledTypeUsesText(contentType)) {
                         item {
-                            TextFieldDialogWidget(
+                            MiuixTextFieldDialogWidget(
                                 title = stringResource(R.string.scheduled_task_content),
                                 value = text,
                                 onValueChange = { text = it },
@@ -413,7 +413,7 @@ private fun ScheduledTaskEditorScreen(taskId: String?, onBack: () -> Unit) {
                         }
                     } else {
                         item {
-                            BaseWidget(
+                            MiuixBaseWidget(
                                 title = stringResource(R.string.scheduled_task_add_media),
                                 icon = MaterialSymbols.Outlined.Add,
                                 onClick = { mediaPicker.launch(arrayOf(mediaMime())) },
@@ -421,7 +421,7 @@ private fun ScheduledTaskEditorScreen(taskId: String?, onBack: () -> Unit) {
                         }
                         mediaPaths.forEachIndexed { index, path ->
                             item(key = "$index:$path") {
-                                BaseWidget(
+                                MiuixBaseWidget(
                                     title = File(path).name,
                                     description = path,
                                     onClick = { mediaPaths = mediaPaths.filterIndexed { i, _ -> i != index } },
@@ -447,7 +447,7 @@ private fun ScheduledTaskEditorScreen(taskId: String?, onBack: () -> Unit) {
                         )
                     ) {
                         item {
-                            TextFieldDialogWidget(
+                            MiuixTextFieldDialogWidget(
                                 title = stringResource(R.string.scheduled_task_content),
                                 value = text,
                                 onValueChange = { text = it },
@@ -465,7 +465,7 @@ private fun ScheduledTaskEditorScreen(taskId: String?, onBack: () -> Unit) {
                         momentsType == ScheduledTaskStore.MOMENTS_VIDEO
                     if (wantsImage || wantsVideo) {
                         item {
-                            BaseWidget(
+                            MiuixBaseWidget(
                                 title = stringResource(
                                     if (wantsVideo) R.string.scheduled_task_add_video else R.string.scheduled_task_add_images,
                                 ),
@@ -475,7 +475,7 @@ private fun ScheduledTaskEditorScreen(taskId: String?, onBack: () -> Unit) {
                         }
                         mediaPaths.forEachIndexed { index, path ->
                             item(key = "$index:$path") {
-                                BaseWidget(
+                                MiuixBaseWidget(
                                     title = File(path).name,
                                     description = path,
                                     onClick = { mediaPaths = mediaPaths.filterIndexed { i, _ -> i != index } },
@@ -488,7 +488,7 @@ private fun ScheduledTaskEditorScreen(taskId: String?, onBack: () -> Unit) {
         }
 
         item {
-            SegmentedColumn(title = stringResource(R.string.scheduled_task_section_schedule)) {
+            MiuixSegmentedColumn(title = stringResource(R.string.scheduled_task_section_schedule)) {
                 item {
                     ChipRow(selected = repeatType, options = repeatTypes, onSelect = { repeatType = it })
                 }
@@ -519,7 +519,7 @@ private fun ScheduledTaskEditorScreen(taskId: String?, onBack: () -> Unit) {
                     }
                     if (planTexts.size > 1) {
                         item(key = "plan_del:$index") {
-                            BaseWidget(
+                            MiuixBaseWidget(
                                 title = stringResource(R.string.scheduled_task_remove_time),
                                 icon = MaterialSymbols.Outlined.Delete,
                                 onClick = { planTexts = planTexts.filterIndexed { i, _ -> i != index } },
@@ -528,7 +528,7 @@ private fun ScheduledTaskEditorScreen(taskId: String?, onBack: () -> Unit) {
                     }
                 }
                 item {
-                    BaseWidget(
+                    MiuixBaseWidget(
                         title = stringResource(R.string.scheduled_task_add_time),
                         icon = MaterialSymbols.Outlined.Add,
                         onClick = {
@@ -537,7 +537,7 @@ private fun ScheduledTaskEditorScreen(taskId: String?, onBack: () -> Unit) {
                     )
                 }
                 item {
-                    IntNumberPickerWidget(
+                    MiuixIntNumberPickerWidget(
                         title = stringResource(R.string.scheduled_task_interval),
                         value = intervalSeconds,
                         startInt = 0,
@@ -548,7 +548,7 @@ private fun ScheduledTaskEditorScreen(taskId: String?, onBack: () -> Unit) {
                     )
                 }
                 item {
-                    IntNumberPickerWidget(
+                    MiuixIntNumberPickerWidget(
                         title = stringResource(R.string.scheduled_task_media_interval),
                         value = mediaIntervalSeconds,
                         startInt = 0,
@@ -559,7 +559,7 @@ private fun ScheduledTaskEditorScreen(taskId: String?, onBack: () -> Unit) {
                     )
                 }
                 item {
-                    SwitchWidget(
+                    MiuixSwitchWidget(
                         title = stringResource(R.string.scheduled_task_send_on_timeout),
                         checked = sendOnTimeout,
                         onCheckedChange = { sendOnTimeout = it },
@@ -567,7 +567,7 @@ private fun ScheduledTaskEditorScreen(taskId: String?, onBack: () -> Unit) {
                 }
                 if (!creating) {
                     item {
-                        BaseWidget(
+                        MiuixBaseWidget(
                             title = stringResource(R.string.scheduled_task_run_now),
                             onClick = {
                                 if (save()) scope.launch { ScheduledTaskRuntime.runNow(initial.id) }
@@ -580,9 +580,9 @@ private fun ScheduledTaskEditorScreen(taskId: String?, onBack: () -> Unit) {
 
         if (!creating) {
             item {
-                SegmentedColumn(title = stringResource(R.string.scheduled_task_section_danger)) {
+                MiuixSegmentedColumn(title = stringResource(R.string.scheduled_task_section_danger)) {
                     item {
-                        BaseWidget(
+                        MiuixBaseWidget(
                             title = stringResource(R.string.scheduled_task_delete),
                             icon = MaterialSymbols.Outlined.Delete,
                             isError = true,
@@ -633,7 +633,7 @@ private fun ChipRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         options.forEach { (value, label) ->
-            FilterChip(
+            MiuixFilterChip(
                 selected = value == selected,
                 onClick = { onSelect(value) },
                 label = { Text(label) },

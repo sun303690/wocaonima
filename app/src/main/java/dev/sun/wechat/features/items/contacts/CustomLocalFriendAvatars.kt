@@ -24,8 +24,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -65,9 +65,9 @@ import dev.sun.wechat.ui.content.BaseContactSelector
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.DefaultColumn
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.HostInfo
 import dev.sun.wechat.utils.TargetProcess
@@ -459,9 +459,9 @@ object CustomLocalFriendAvatars : ClickableFeature(), IContactInfoProvider, IRes
                 text = {
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         item {
-                            SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                            MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                                 item {
-                                    BaseWidget(
+                                    MiuixBaseWidget(
                                         title = stringResource(R.string.contacts_custom_avatar_manage),
                                         onClick = { showAvatarManager(context) },
                                     )
@@ -469,14 +469,14 @@ object CustomLocalFriendAvatars : ClickableFeature(), IContactInfoProvider, IRes
                             }
                         }
                         item {
-                            SegmentedColumn(
+                            MiuixSegmentedColumn(
                                 title = stringResource(R.string.contacts_custom_avatar_scopes),
                                 contentPadding = PaddingValues(0.dp),
                             ) {
                                 AvatarScope.entries.forEach { scope ->
                                     item(key = scope.key) {
                                         var enabled by remember { mutableStateOf(scope.enabled) }
-                                        SwitchWidget(
+                                        MiuixSwitchWidget(
                                             title = stringResource(scope.titleRes),
                                             description = if (scope == AvatarScope.SHORTCUTS) {
                                                 stringResource(R.string.contacts_custom_avatar_shortcut_hint)
@@ -736,7 +736,7 @@ object CustomLocalFriendAvatars : ClickableFeature(), IContactInfoProvider, IRes
                 text = {
                     DefaultColumn {
                         Text(displayName)
-                        Text(text = wxId, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(text = wxId, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
                     }
                 },
                 dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.dialog_cancel)) } },

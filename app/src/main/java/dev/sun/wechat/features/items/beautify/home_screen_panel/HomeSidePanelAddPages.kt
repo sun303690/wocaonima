@@ -21,13 +21,13 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.HorizontalDivider
+import top.yukonga.miuix.kmp.basic.Icon
+import dev.sun.wechat.ui.content.miuix.MiuixListItem
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -188,9 +188,9 @@ fun HomeSidePanelCardCandidateVisual(
     ) {
         Text(
             text = stringResource(homeSidePanelCardNameRes(type)),
-            style = MaterialTheme.typography.titleSmall,
+            style = MiuixTheme.textStyles.title3,
             fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             modifier = Modifier.padding(horizontal = 4.dp),
         )
         when (type) {
@@ -330,7 +330,7 @@ private fun HomeSidePanelActionCandidateTile(
     Card(
         modifier = modifier.clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
     ) {
         Column(
             modifier = Modifier
@@ -339,10 +339,10 @@ private fun HomeSidePanelActionCandidateTile(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(7.dp),
         ) {
-            Icon(spec.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Icon(spec.icon, contentDescription = null, tint = MiuixTheme.colorScheme.primary)
             Text(
                 text = stringResource(spec.labelRes),
-                style = MaterialTheme.typography.labelMedium,
+                style = MiuixTheme.textStyles.footnote1,
                 fontWeight = FontWeight.Medium,
             )
         }
@@ -357,13 +357,13 @@ private fun HomeSidePanelActionCandidateList(
 ) {
     Card(
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
     ) {
         HOME_SIDE_PANEL_ACTION_KINDS.forEachIndexed { index, kind ->
             val spec = homeSidePanelActionSpec(kind)
-            ListItem(
+            MiuixListItem(
                 leadingContent = {
-                    Icon(spec.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Icon(spec.icon, contentDescription = null, tint = MiuixTheme.colorScheme.primary)
                 },
                 modifier = Modifier
                     .fillMaxWidth()

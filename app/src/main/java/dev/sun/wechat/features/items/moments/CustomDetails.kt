@@ -4,8 +4,8 @@ import android.content.Context
 import dev.sun.wechat.R
 import dev.sun.wechat.i18n.LocalWeKitLocalizedContext
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -23,7 +23,7 @@ import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.DefaultColumn
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.PlaceholderChips
+import dev.sun.wechat.ui.content.miuix.MiuixPlaceholderChips
 import dev.sun.wechat.ui.utils.EditIcon
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
@@ -96,7 +96,7 @@ object CustomDetails : SwitchFeature(), WeMomentsContextMenuApi.IMenuItemsProvid
                 text = {
                     DefaultColumn {
                         Text(stringResource(R.string.moments_custom_details_empty_hint))
-                        OutlinedTextField(
+                        TextField(
                             value = textInput,
                             onValueChange = { textInput = it },
                             label = { Text(stringResource(R.string.moments_custom_details_content)) },
@@ -108,7 +108,7 @@ object CustomDetails : SwitchFeature(), WeMomentsContextMenuApi.IMenuItemsProvid
 
                         Text(stringResource(R.string.moments_custom_details_insert_placeholder))
 
-                        PlaceholderChips(
+                        MiuixPlaceholderChips(
                             placeholders = PLACEHOLDERS,
                             value = textInput,
                             isFieldFocused = isFocused,

@@ -15,11 +15,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import dev.sun.wechat.ui.content.miuix.MiuixFilterChip
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,7 +50,7 @@ import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
 import dev.sun.wechat.ui.utils.VectorPathDrawable
 import dev.sun.wechat.ui.utils.ShowComposeDialogScope
 import dev.sun.wechat.ui.utils.showComposeDialog
@@ -117,11 +117,11 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
             title = { Text(stringResource(R.string.feature_ai_smart_reply_name)) },
             text = {
                 Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-                    SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                    MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                         item {
                             Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
-                                Text(stringResource(R.string.smart_reply_context_limit), style = MaterialTheme.typography.bodySmall)
-                                OutlinedTextField(
+                                Text(stringResource(R.string.smart_reply_context_limit), style = MiuixTheme.textStyles.footnote1)
+                                TextField(
                                     value = contextInput,
                                     onValueChange = { contextInput = it.filter(Char::isDigit) },
                                     modifier = Modifier.fillMaxWidth(),
@@ -132,8 +132,8 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
                         }
                         item {
                             Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
-                                Text(stringResource(R.string.smart_reply_count), style = MaterialTheme.typography.bodySmall)
-                                OutlinedTextField(
+                                Text(stringResource(R.string.smart_reply_count), style = MiuixTheme.textStyles.footnote1)
+                                TextField(
                                     value = countInput,
                                     onValueChange = { countInput = it.filter(Char::isDigit) },
                                     modifier = Modifier.fillMaxWidth(),
@@ -230,14 +230,14 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
             text = {
                 Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).imePadding()) {
                     // 快捷选择语气预设
-                    Text(stringResource(R.string.smart_reply_style), style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.smart_reply_style), style = MiuixTheme.textStyles.title3)
                     FlowRow(
                         Modifier.fillMaxWidth().padding(vertical = 2.dp),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         STYLES.forEach { (name, _) ->
-                            FilterChip(
+                            MiuixFilterChip(
                                 selected = selectedStyle == name,
                                 onClick = {
                                     selectedStyle = name
@@ -249,7 +249,7 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
                     }
 
                     // 选中风格的介绍(提示词), 可直接编辑, 生成时生效
-                    OutlinedTextField(
+                    TextField(
                         value = stylePromptInput,
                         onValueChange = { stylePromptInput = it },
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -263,12 +263,12 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
                             CircularProgressIndicator(Modifier.padding(end = 8.dp))
                             Text(stringResource(R.string.asr_thinking))
                         }
-                        error != null -> Text(error!!, color = MaterialTheme.colorScheme.error)
-                        candidates.isEmpty() -> Text(stringResource(R.string.smart_reply_tap_generate), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        error != null -> Text(error!!, color = MiuixTheme.colorScheme.error)
+                        candidates.isEmpty() -> Text(stringResource(R.string.smart_reply_tap_generate), color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
                         else -> candidates.forEach { cand ->
                             var editable by remember(cand) { mutableStateOf(cand) }
                             Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-                                OutlinedTextField(
+                                TextField(
                                     value = editable,
                                     onValueChange = { editable = it },
                                     modifier = Modifier.fillMaxWidth(),

@@ -4,9 +4,9 @@ import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearWavyProgressIndicator
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.getValue
@@ -39,12 +39,12 @@ import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.DefaultColumn
 import dev.sun.wechat.ui.content.IconButton
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.DropDownMenuWidget
-import dev.sun.wechat.ui.content.m3.DropdownOption
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.TextFieldDialogWidget
-import dev.sun.wechat.ui.content.m3.lazySegmentedItems
+import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
+import dev.sun.wechat.ui.content.miuix.MiuixDropDownMenuWidget
+import dev.sun.wechat.ui.content.miuix.DropdownOption
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixTextFieldDialogWidget
+import dev.sun.wechat.ui.content.miuix.miuixLazySegmentedItems
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.copyToClipboard
@@ -418,9 +418,9 @@ object DetectDeletedFriends : ClickableFeature() {
                     when (phase) {
                         is DialogPhase.Idle -> DefaultColumn {
                             Text(text = stringResource(R.string.contacts_detect_warning_message))
-                            SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                            MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                                 item(key = "detection_mode") {
-                                    DropDownMenuWidget(
+                                    MiuixDropDownMenuWidget(
                                         title = stringResource(R.string.contacts_detect_mode),
                                         description = null,
                                         value = selectedMode,
@@ -434,7 +434,7 @@ object DetectDeletedFriends : ClickableFeature() {
                                     )
                                 }
                                 item(key = "request_delay") {
-                                    TextFieldDialogWidget(
+                                    MiuixTextFieldDialogWidget(
                                         title = stringResource(R.string.contacts_detect_request_delay),
                                         value = requestDelayInput,
                                         onValueChange = { input ->
@@ -466,7 +466,7 @@ object DetectDeletedFriends : ClickableFeature() {
                                         total,
                                     ),
                                 )
-                                LinearWavyProgressIndicator(progress = { completed.toFloat() / total })
+                                LinearProgressIndicator(progress = completed.toFloat() / total)
                             }
                         }
 
@@ -491,12 +491,12 @@ object DetectDeletedFriends : ClickableFeature() {
                                 }
                             }
                             LazyColumn {
-                                lazySegmentedItems(
+                                miuixLazySegmentedItems(
                                     abnormalFriends,
                                     key = { it.contact.wxId },
                                 ) { abnormalFriend ->
                                     val friend = abnormalFriend.contact
-                                    BaseWidget(
+                                    MiuixBaseWidget(
                                         title = friend.displayName,
                                         description = listOf(
                                             stringResource(abnormalFriend.status.labelRes),
@@ -550,7 +550,7 @@ object DetectDeletedFriends : ClickableFeature() {
                                         total,
                                     ),
                                 )
-                                LinearWavyProgressIndicator(progress = { completed.toFloat() / total })
+                                LinearProgressIndicator(progress = completed.toFloat() / total)
                             }
                         }
 
@@ -566,13 +566,13 @@ object DetectDeletedFriends : ClickableFeature() {
                                     ),
                                 )
                                 if (labels == null) {
-                                    LinearWavyProgressIndicator()
+                                    LinearProgressIndicator()
                                 } else {
                                     LazyColumn {
                                         val choices = listOf(
                                             LabelChoice.Suggested(selectPhase.suggestedLabelName),
                                         ) + labels.map { LabelChoice.Existing(it) }
-                                        lazySegmentedItems(
+                                        miuixLazySegmentedItems(
                                             choices,
                                             key = { choice ->
                                                 when (choice) {
@@ -586,7 +586,7 @@ object DetectDeletedFriends : ClickableFeature() {
                                                 is LabelChoice.Suggested -> choice.labelName
                                                 is LabelChoice.Existing -> choice.label.labelName
                                             }
-                                            BaseWidget(
+                                            MiuixBaseWidget(
                                                 icon = MaterialSymbols.Outlined.Add.takeIf { suggested },
                                                 title = labelName,
                                                 description = stringResource(R.string.contacts_detect_new_label)
@@ -619,7 +619,7 @@ object DetectDeletedFriends : ClickableFeature() {
                                         total,
                                     ),
                                 )
-                                LinearWavyProgressIndicator(progress = { completed.toFloat() / total })
+                                LinearProgressIndicator(progress = completed.toFloat() / total)
                             }
                         }
                     }

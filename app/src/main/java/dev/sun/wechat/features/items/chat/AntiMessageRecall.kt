@@ -14,8 +14,8 @@ import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,11 +42,11 @@ import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.DropDownMenuWidget
-import dev.sun.wechat.ui.content.m3.DropdownOption
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
+import dev.sun.wechat.ui.content.miuix.MiuixDropDownMenuWidget
+import dev.sun.wechat.ui.content.miuix.DropdownOption
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.utils.DeleteIcon
 import dev.sun.wechat.ui.utils.dpToPx
 import dev.sun.wechat.ui.utils.findViewWhich
@@ -554,9 +554,9 @@ object AntiMessageRecall : ClickableFeature(), IResolveDex, WeXmlParserApi.IAfte
             AlertDialogContent(
                     title = { Text(stringResource(R.string.feature_anti_message_recall_name)) },
                     text = {
-                        SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                        MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                             item {
-                                SwitchWidget(
+                                MiuixSwitchWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.chat_anti_recall_outgoing),
                                     description = stringResource(R.string.chat_anti_recall_outgoing_description),
@@ -568,7 +568,7 @@ object AntiMessageRecall : ClickableFeature(), IResolveDex, WeXmlParserApi.IAfte
                                 )
                             }
                             item {
-                                DropDownMenuWidget(
+                                MiuixDropDownMenuWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.chat_anti_recall_badge_type),
                                     description = null,
@@ -585,7 +585,7 @@ object AntiMessageRecall : ClickableFeature(), IResolveDex, WeXmlParserApi.IAfte
                             }
                             item {
                                 val migrating = migrationState == MigrationState.Running
-                                BaseWidget(
+                                MiuixBaseWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.chat_anti_recall_migrate),
                                     description = when (val state = migrationState) {

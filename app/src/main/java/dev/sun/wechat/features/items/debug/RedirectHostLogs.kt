@@ -2,7 +2,7 @@ package dev.sun.wechat.features.items.debug
 
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -20,8 +20,8 @@ import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.data.KvStore.getBoolOrFalse
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
 
@@ -132,9 +132,9 @@ object RedirectHostLogs : ClickableFeature() {
             AlertDialogContent(
                 title = { Text(stringResource(R.string.debug_redirect_host_logs_title)) },
                 text = {
-                    SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                    MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                         item {
-                            SwitchWidget(
+                            MiuixSwitchWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.debug_log_level_verbose),
                                 checked = v,
@@ -146,7 +146,7 @@ object RedirectHostLogs : ClickableFeature() {
                             )
                         }
                         item {
-                            SwitchWidget(
+                            MiuixSwitchWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.debug_log_level_debug),
                                 checked = d,
@@ -158,7 +158,7 @@ object RedirectHostLogs : ClickableFeature() {
                             )
                         }
                         item {
-                            SwitchWidget(
+                            MiuixSwitchWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.debug_log_level_info),
                                 checked = i,
@@ -170,7 +170,7 @@ object RedirectHostLogs : ClickableFeature() {
                             )
                         }
                         item {
-                            SwitchWidget(
+                            MiuixSwitchWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.debug_log_level_warning),
                                 checked = w,
@@ -182,7 +182,7 @@ object RedirectHostLogs : ClickableFeature() {
                             )
                         }
                         item {
-                            SwitchWidget(
+                            MiuixSwitchWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.debug_log_level_error),
                                 checked = e,

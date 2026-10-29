@@ -12,7 +12,7 @@ import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,8 +31,8 @@ import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.utils.dpToPx
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
@@ -68,9 +68,9 @@ object SwipeConversationOperations : ClickableFeature(), IResolveDex {
             AlertDialogContent(
                 title = { Text(stringResource(R.string.chat_swipe_conversation_config)) },
                 text = {
-                    SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                    MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                         item {
-                            SwitchWidget(
+                            MiuixSwitchWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.chat_swipe_conversation_pin_toggle),
                                 description = stringResource(R.string.chat_swipe_conversation_pin_description),
@@ -82,7 +82,7 @@ object SwipeConversationOperations : ClickableFeature(), IResolveDex {
                             )
                         }
                         item {
-                            SwitchWidget(
+                            MiuixSwitchWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.chat_swipe_conversation_mute_toggle),
                                 description = stringResource(R.string.chat_swipe_conversation_mute_description),

@@ -21,9 +21,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -56,12 +56,12 @@ import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.BaseItemContainer
-import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.ColorPickerWidget
-import dev.sun.wechat.ui.content.m3.IntNumberPickerWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixBaseItemContainer
+import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
+import dev.sun.wechat.ui.content.miuix.MiuixColorPickerWidget
+import dev.sun.wechat.ui.content.miuix.MiuixIntNumberPickerWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.HostInfo
 import dev.sun.wechat.utils.WeLogger
@@ -427,9 +427,9 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
             AlertDialogContent(
                 title = { Text(stringResource(R.string.beautify_global_background_title)) },
                 text = {
-                    SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                    MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                         item {
-                            BaseWidget(
+                            MiuixBaseWidget(
                                 title = stringResource(R.string.action_select_image),
                                 description = stringResource(
                                     if (hasImage) {
@@ -465,7 +465,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                         }
                         item {
                             BaseItemContainer {
-                                IntNumberPickerWidget(
+                                MiuixIntNumberPickerWidget(
                                     icon = MaterialSymbols.Outlined.Opacity,
                                     title = stringResource(R.string.opacity_percent),
                                     value = opacityPercent,
@@ -485,7 +485,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                             }
                         }
                         item {
-                            SwitchWidget(
+                            MiuixSwitchWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.beautify_global_background_status_bar),
                                 description = stringResource(R.string.beautify_global_background_status_bar_summary),
@@ -499,7 +499,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                             )
                         }
                         item {
-                            SwitchWidget(
+                            MiuixSwitchWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.beautify_global_background_text_color),
                                 description = stringResource(R.string.beautify_global_background_text_color_summary),
@@ -512,7 +512,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                         }
                         if (globalTextColorEnabled) {
                             item {
-                                ColorPickerWidget(
+                                MiuixColorPickerWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.beautify_global_background_text_color_picker),
                                     value = globalTextColor,
@@ -524,7 +524,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                             }
                         }
                         item {
-                            SwitchWidget(
+                            MiuixSwitchWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.beautify_global_background_list_cards),
                                 description = stringResource(R.string.beautify_global_background_list_cards_summary),
@@ -546,7 +546,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                         if (cardsInput) {
                             item {
                                 BaseItemContainer {
-                                    IntNumberPickerWidget(
+                                    MiuixIntNumberPickerWidget(
                                         iconPlaceholder = false,
                                         title = stringResource(R.string.beautify_global_background_list_radius),
                                         value = radiusInput,
@@ -564,7 +564,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                             }
                             item {
                                 BaseItemContainer {
-                                    IntNumberPickerWidget(
+                                    MiuixIntNumberPickerWidget(
                                         iconPlaceholder = false,
                                         title = stringResource(R.string.beautify_global_background_list_horizontal_inset),
                                         value = horizontalInput,
@@ -582,7 +582,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                             }
                             item {
                                 BaseItemContainer {
-                                    IntNumberPickerWidget(
+                                    MiuixIntNumberPickerWidget(
                                         iconPlaceholder = false,
                                         title = stringResource(R.string.beautify_global_background_list_spacing),
                                         value = spacingInput,
@@ -600,7 +600,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                             }
                             item {
                                 BaseItemContainer {
-                                    IntNumberPickerWidget(
+                                    MiuixIntNumberPickerWidget(
                                         iconPlaceholder = false,
                                         title = stringResource(R.string.beautify_global_background_list_height),
                                         value = heightInput,

@@ -26,8 +26,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -68,10 +66,6 @@ import com.composables.icons.materialsymbols.outlined.Terminal
 import com.composables.icons.materialsymbols.outlined.Tune
 import com.composables.icons.materialsymbols.outlined.Visibility_off
 import com.composables.icons.materialsymbols.outlined.Wand_stars
-import com.composables.icons.materialsymbols.outlinedfilled.Article
-import com.composables.icons.materialsymbols.outlinedfilled.Home
-import com.composables.icons.materialsymbols.outlinedfilled.Settings
-import com.composables.icons.materialsymbols.outlinedfilled.Tune
 import dev.sun.wechat.R
 import dev.sun.wechat.activity.nuke.NukeSettingsContent
 import dev.sun.wechat.features.core.BaseFeature
@@ -84,12 +78,15 @@ import dev.sun.wechat.i18n.WeKitLocaleProvider
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.ui.content.FloatingBottomBar
 import dev.sun.wechat.ui.content.FloatingBottomBarDefaults
-import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.ExpressiveCollapsingTopAppBar
-import dev.sun.wechat.ui.content.m3.SwitchWidget
-import dev.sun.wechat.ui.content.m3AppBarBlur
-import dev.sun.wechat.ui.content.m3AppBarColor
-import dev.sun.wechat.ui.content.rememberMaterial3BlurBackdrop
+import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
+import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
+import dev.sun.wechat.ui.content.miuix.miuixAppBarBlur
+import dev.sun.wechat.ui.content.miuix.miuixAppBarColor
+import dev.sun.wechat.ui.content.miuix.rememberMiuixBlurBackdrop
 import dev.sun.wechat.ui.navigation.LocalNavigator
 import dev.sun.wechat.ui.navigation.Navigator
 import dev.sun.wechat.ui.navigation.rememberM3NavEffects
@@ -293,7 +290,7 @@ private fun MainPagerScreen(
             onSelected = { scope.launch { pagerState.animateScrollToPage(it) } },
             backdrop = backdrop,
             colors = FloatingBottomBarDefaults.colors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                containerColor = MiuixTheme.colorScheme.surfaceContainer,
                 indicatorColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 activeContentColor = MaterialTheme.colorScheme.primary,
@@ -350,23 +347,20 @@ fun M3ListScaffold(
     navigationIcon: @Composable (() -> Unit)? = null,
     content: LazyListScope.() -> Unit,
 ) {
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
-    val barBackdrop = rememberMaterial3BlurBackdrop()
+    val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
+    val barBackdrop = rememberMiuixBlurBackdrop()
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
             .nestedScroll(scrollBehavior.nestedScrollConnection),
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        containerColor = MiuixTheme.colorScheme.surfaceContainer,
         topBar = {
-            ExpressiveCollapsingTopAppBar(
-                modifier = Modifier.m3AppBarBlur(barBackdrop),
+            TopAppBar(
+                modifier = Modifier.miuixAppBarBlur(barBackdrop),
                 title = title,
                 navigationIcon = { navigationIcon?.invoke() },
                 scrollBehavior = scrollBehavior,
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = barBackdrop.m3AppBarColor(),
-                    scrolledContainerColor = barBackdrop.m3AppBarColor(),
-                ),
+                color = barBackdrop.miuixAppBarColor(),
             )
         },
     ) { innerPadding ->
@@ -423,7 +417,7 @@ fun FeatureRow(
 
             if (item.noSwitchWidget) {
                 // Pure action row: the whole row triggers the feature's action.
-                BaseWidget(
+                MiuixBaseWidget(
                     iconPlaceholder = false,
                     title = localizedName,
                     description = localizedDescription,
@@ -439,7 +433,7 @@ fun FeatureRow(
             } else {
                 // Dual click areas: the main area opens the feature's config, the
                 // switch past the divider toggles it (WeAgent "Memory" row pattern).
-                SwitchWidget(
+                MiuixSwitchWidget(
                     iconPlaceholder = false,
                     title = localizedName,
                     description = localizedDescription,
@@ -451,7 +445,7 @@ fun FeatureRow(
             }
         }
 
-        is SwitchFeature -> SwitchWidget(
+        is SwitchFeature -> MiuixSwitchWidget(
             iconPlaceholder = false,
             title = localizedName,
             description = localizedDescription,

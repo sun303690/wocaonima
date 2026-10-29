@@ -13,11 +13,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
@@ -133,7 +133,7 @@ private fun ChatRecordXmlGeneratorDialog(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
-                OutlinedTextField(
+                TextField(
                     value = outerTitle,
                     onValueChange = { outerTitle = it },
                     modifier = Modifier.fillMaxWidth(),
@@ -147,7 +147,7 @@ private fun ChatRecordXmlGeneratorDialog(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    OutlinedTextField(
+                    TextField(
                         value = outerDesc,
                         onValueChange = { outerDesc = it },
                         modifier = Modifier.weight(1f),
@@ -274,7 +274,7 @@ private fun ChatRecordXmlGeneratorDialog(
                 ) {
                     Text(
                         text = stringResource(R.string.chat_fabricate_record_message_list),
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MiuixTheme.textStyles.title2,
                         modifier = Modifier.weight(1f)
                     )
 
@@ -401,13 +401,13 @@ private fun MessageRowEditor(
                     Text(
                         text = selectedContact?.displayName
                             ?: stringResource(R.string.chat_fabricate_record_choose_sender),
-                        style = MaterialTheme.typography.titleSmall
+                        style = MiuixTheme.textStyles.title3
                     )
                     if (selectedContact != null) {
                         Text(
                             text = selectedContact.wxId,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MiuixTheme.textStyles.footnote1,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary
                         )
                     }
                 }
@@ -430,7 +430,7 @@ private fun MessageRowEditor(
                 }
             }
 
-            OutlinedTextField(
+            TextField(
                 value = row.text,
                 onValueChange = { row.text = it },
                 modifier = Modifier.fillMaxWidth(),

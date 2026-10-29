@@ -2,7 +2,7 @@ package dev.sun.wechat.features.items.moments
 
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -20,8 +20,8 @@ import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.RadioButtonWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixRadioButtonWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.fs.asPath
 import dev.sun.wechat.utils.reflection.BString
@@ -110,9 +110,9 @@ object NoCompressUploadedImages : ClickableFeature(), IResolveDex {
             AlertDialogContent(
                 title = { Text(stringResource(R.string.moments_upload_original_title)) },
                 text = {
-                    SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                    MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                         item(key = MODE_CONVERT) {
-                            RadioButtonWidget(
+                            MiuixRadioButtonWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.moments_upload_original_convert),
                                 description = stringResource(R.string.moments_upload_original_convert_summary),
@@ -124,7 +124,7 @@ object NoCompressUploadedImages : ClickableFeature(), IResolveDex {
                             )
                         }
                         item(key = MODE_COPY) {
-                            RadioButtonWidget(
+                            MiuixRadioButtonWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.moments_upload_original_copy),
                                 description = stringResource(R.string.moments_upload_original_copy_summary),

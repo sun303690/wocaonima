@@ -26,13 +26,10 @@
 //import androidx.compose.foundation.layout.width
 //import androidx.compose.foundation.lazy.LazyColumn
 //import androidx.compose.foundation.lazy.items
-//import androidx.compose.material3.HorizontalDivider
-//import androidx.compose.material3.Icon
-//import androidx.compose.material3.MaterialTheme
-//import androidx.compose.material3.SegmentedButton
-//import androidx.compose.material3.SegmentedButtonDefaults
-//import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-//import androidx.compose.material3.Text
+//import top.yukonga.miuix.kmp.basic.HorizontalDivider
+//import top.yukonga.miuix.kmp.basic.Icon
+//import top.yukonga.miuix.kmp.theme.MiuixTheme
+//import top.yukonga.miuix.kmp.basic.Text
 //import androidx.compose.runtime.Composable
 //import androidx.compose.runtime.LaunchedEffect
 //import androidx.compose.runtime.getValue
@@ -460,8 +457,8 @@
 //                item {
 //                    Text(
 //                        "全局设置",
-//                        style = MaterialTheme.typography.titleSmall,
-//                        color = MaterialTheme.colorScheme.primary
+//                        style = MiuixTheme.textStyles.title3,
+//                        color = MiuixTheme.colorScheme.primary
 //                    )
 //                }
 //                item {
@@ -521,8 +518,8 @@
 //                    ) {
 //                        Text(
 //                            "对话覆盖",
-//                            style = MaterialTheme.typography.titleSmall,
-//                            color = MaterialTheme.colorScheme.primary
+//                            style = MiuixTheme.textStyles.title3,
+//                            color = MiuixTheme.colorScheme.primary
 //                        )
 //                        IconButton(onClick = { showContactPicker = true }) {
 //                            Icon(MaterialSymbols.Outlined.Add, contentDescription = "添加覆盖")
@@ -534,8 +531,8 @@
 //                    item {
 //                        Text(
 //                            "暂无对话覆盖，点击右上角 + 添加",
-//                            style = MaterialTheme.typography.bodySmall,
-//                            color = MaterialTheme.colorScheme.onSurfaceVariant
+//                            style = MiuixTheme.textStyles.footnote1,
+//                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary
 //                        )
 //                    }
 //                } else {
@@ -551,11 +548,11 @@
 //                            horizontalArrangement = Arrangement.SpaceBetween
 //                        ) {
 //                            androidx.compose.foundation.layout.Column(modifier = Modifier.weight(1f)) {
-//                                Text(name, style = MaterialTheme.typography.bodyMedium)
+//                                Text(name, style = MiuixTheme.textStyles.body2)
 //                                Text(
 //                                    prefs.summaryText(),
-//                                    style = MaterialTheme.typography.bodySmall,
-//                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+//                                    style = MiuixTheme.textStyles.footnote1,
+//                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary
 //                                )
 //                            }
 //                            IconButton(onClick = {
@@ -565,7 +562,7 @@
 //                                Icon(
 //                                    MaterialSymbols.Outlined.Delete,
 //                                    contentDescription = "删除覆盖",
-//                                    tint = MaterialTheme.colorScheme.error
+//                                    tint = MiuixTheme.colorScheme.error
 //                                )
 //                            }
 //                        }
@@ -725,8 +722,8 @@
 //                                ?: soundUri
 //                        }.getOrDefault(soundUri)
 //                    } else "未选择",
-//                    style = MaterialTheme.typography.bodySmall,
-//                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+//                    style = MiuixTheme.textStyles.footnote1,
+//                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
 //                    modifier = Modifier.weight(1f)
 //                )
 //                Button(onClick = onPickRingtone) {

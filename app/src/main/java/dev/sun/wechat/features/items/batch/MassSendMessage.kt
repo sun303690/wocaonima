@@ -10,13 +10,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.Checkbox
+import dev.sun.wechat.ui.content.miuix.MiuixFilterChip
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -91,28 +91,28 @@ object MassSendMessage : ClickableFeature() {
                     if (tags.isEmpty() && tasks.isEmpty()) {
                         Text(
                             stringResource(R.string.mass_task_empty_hint),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
                     }
 
                     if (tags.isNotEmpty()) {
-                        Text(stringResource(R.string.mass_task_tags_section), style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.mass_task_tags_section), style = MiuixTheme.textStyles.title3)
                         tags.forEach { tag ->
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
-                                    Text(tag.name, style = MaterialTheme.typography.bodyMedium)
+                                    Text(tag.name, style = MiuixTheme.textStyles.body2)
                                     Text(
                                         stringResource(R.string.mass_task_tag_group_count, tag.wxids.size),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        style = MiuixTheme.textStyles.footnote1,
+                                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                     )
                                 }
-                                TextButton(onClick = {
+                                Button(onClick = {
                                     showComposeDialog(context) {
                                         TagEditorPage(context, tag, onDismiss) { MassTaskStore.reload() }
                                     }
                                 }) { Text(stringResource(R.string.mass_task_edit)) }
-                                TextButton(onClick = {
+                                Button(onClick = {
                                     MassTaskStore.removeTag(tag.name)
                                     onChanged()
                                 }) { Text(stringResource(R.string.mass_task_delete)) }
@@ -121,35 +121,35 @@ object MassSendMessage : ClickableFeature() {
                     }
 
                     if (tasks.isNotEmpty()) {
-                        Text(stringResource(R.string.mass_task_tasks_section), style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.mass_task_tasks_section), style = MiuixTheme.textStyles.title3)
                         tasks.forEach { task ->
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
                                     Text(
                                         task.sortedMinutes.joinToString(" ") { formatMinuteOfDay(it) } +
                                             " · " + task.content.take(20) + if (task.content.length > 20) "…" else "",
-                                        style = MaterialTheme.typography.bodyMedium,
+                                        style = MiuixTheme.textStyles.body2,
                                     )
                                     Text(
                                         stringResource(R.string.mass_task_targets_count, MassTaskStore.resolveTargets(task).size) +
                                             (if (!task.enabled) " · " + stringResource(R.string.mass_task_paused) else ""),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        style = MiuixTheme.textStyles.footnote1,
+                                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                     )
                                 }
-                                TextButton(onClick = {
+                                Button(onClick = {
                                     task.enabled = !task.enabled
                                     MassTaskStore.saveTasks()
                                     MassTaskStore.reload()
                                 }) {
                                     Text(if (task.enabled) stringResource(R.string.mass_task_pause) else stringResource(R.string.mass_task_resume))
                                 }
-                                TextButton(onClick = {
+                                Button(onClick = {
                                     showComposeDialog(context) {
                                         TaskEditorPage(context, task, onDismiss) { MassTaskStore.reload() }
                                     }
                                 }) { Text(stringResource(R.string.mass_task_edit)) }
-                                TextButton(onClick = {
+                                Button(onClick = {
                                     MassTaskStore.removeTask(task.id)
                                     onChanged()
                                 }) { Text(stringResource(R.string.mass_task_delete)) }
@@ -171,7 +171,7 @@ object MassSendMessage : ClickableFeature() {
                     }
                 }
             },
-            dismissButton = { WeTextButton(onDismiss) { Text(stringResource(R.string.dialog_cancel)) } },
+            dismissButton = { WeButton(onDismiss) { Text(stringResource(R.string.dialog_cancel)) } },
             confirmButton = {},
         )
     }
@@ -207,7 +207,7 @@ object MassSendMessage : ClickableFeature() {
                             MassTaskStore.MODE_TEXT to R.string.batch_mass_send_text_mode,
                             MassTaskStore.MODE_CARD to R.string.batch_mass_send_card_mode,
                         ).forEach { (m, label) ->
-                            FilterChip(
+                            MiuixFilterChip(
                                 selected = mode == m,
                                 onClick = { mode = m },
                                 label = { Text(stringResource(label)) },
@@ -215,7 +215,7 @@ object MassSendMessage : ClickableFeature() {
                         }
                     }
 
-                    OutlinedTextField(
+                    TextField(
                         value = content,
                         onValueChange = { content = it },
                         modifier = Modifier.fillMaxWidth(),
@@ -226,7 +226,7 @@ object MassSendMessage : ClickableFeature() {
                     )
 
                     // 每天多个发送时间点：选时间 → 添加；chip 显示，可删
-                    Text(stringResource(R.string.mass_task_daily_time_label), style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.mass_task_daily_time_label), style = MiuixTheme.textStyles.title3)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         WeTimeOfDayField(
                             minuteOfDay = pendingMinute,
@@ -240,7 +240,7 @@ object MassSendMessage : ClickableFeature() {
                     }
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         minutes.sorted().forEach { m ->
-                            FilterChip(
+                            MiuixFilterChip(
                                 selected = false,
                                 onClick = { minutes = minutes - m },
                                 label = { Text(formatMinuteOfDay(m) + " ✕") },
@@ -249,17 +249,17 @@ object MassSendMessage : ClickableFeature() {
                     }
                     Text(
                         stringResource(R.string.mass_task_times_count, minutes.size),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     )
 
                     // 标签选择
-                    Text(stringResource(R.string.mass_task_pick_tags), style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.mass_task_pick_tags), style = MiuixTheme.textStyles.title3)
                     if (MassTaskStore.tags.isEmpty()) {
                         Text(
                             stringResource(R.string.mass_task_no_tags_hint),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MiuixTheme.textStyles.footnote1,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
                     } else {
                         MassTaskStore.tags.forEach { tag ->
@@ -274,8 +274,8 @@ object MassSendMessage : ClickableFeature() {
                                     Text(tag.name)
                                     Text(
                                         stringResource(R.string.mass_task_tag_group_count, tag.wxids.size),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        style = MiuixTheme.textStyles.footnote1,
+                                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                     )
                                 }
                             }
@@ -283,7 +283,7 @@ object MassSendMessage : ClickableFeature() {
                     }
 
                     // 手选群/好友
-                    Text(stringResource(R.string.mass_task_pick_groups), style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.mass_task_pick_groups), style = MiuixTheme.textStyles.title3)
                     WeButton(onClick = {
                         val contacts = WeDatabaseApi.getFriends() + WeDatabaseApi.getGroups()
                         showComposeDialog(context) {
@@ -303,7 +303,7 @@ object MassSendMessage : ClickableFeature() {
                     }
                 }
             },
-            dismissButton = { WeTextButton(onDismiss) { Text(stringResource(R.string.dialog_cancel)) } },
+            dismissButton = { WeButton(onDismiss) { Text(stringResource(R.string.dialog_cancel)) } },
             confirmButton = {
                 WeButton(onClick = {
                     if (content.isBlank()) {
@@ -353,7 +353,7 @@ object MassSendMessage : ClickableFeature() {
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    OutlinedTextField(
+                    TextField(
                         value = name,
                         onValueChange = { name = it },
                         modifier = Modifier.fillMaxWidth(),
@@ -379,7 +379,7 @@ object MassSendMessage : ClickableFeature() {
                     }
                 }
             },
-            dismissButton = { WeTextButton(onDismiss) { Text(stringResource(R.string.dialog_cancel)) } },
+            dismissButton = { WeButton(onDismiss) { Text(stringResource(R.string.dialog_cancel)) } },
             confirmButton = {
                 WeButton(onClick = {
                     if (name.isBlank()) {

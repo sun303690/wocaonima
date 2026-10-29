@@ -6,7 +6,7 @@ import android.widget.ListView
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,8 +22,8 @@ import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.utils.findViewsWhich
 import dev.sun.wechat.ui.utils.showComposeDialog
 import java.util.Collections
@@ -87,9 +87,9 @@ object HideMeTabPageItems : ClickableFeature(), IResolveDex {
             AlertDialogContent(
                 title = { Text(stringResource(R.string.beautify_me_page_title)) },
                 text = {
-                    SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                    MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                         item {
-                            SwitchWidget(
+                            MiuixSwitchWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.beautify_me_page_hide_moments),
                                 checked = hideMomentsInput,
@@ -100,7 +100,7 @@ object HideMeTabPageItems : ClickableFeature(), IResolveDex {
                             )
                         }
                         item {
-                            SwitchWidget(
+                            MiuixSwitchWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.beautify_me_page_hide_works),
                                 description = stringResource(R.string.beautify_me_page_hide_works_summary),
@@ -112,7 +112,7 @@ object HideMeTabPageItems : ClickableFeature(), IResolveDex {
                             )
                         }
                         item {
-                            SwitchWidget(
+                            MiuixSwitchWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.beautify_me_page_hide_cards),
                                 description = stringResource(R.string.beautify_me_page_hide_cards_summary),
@@ -124,7 +124,7 @@ object HideMeTabPageItems : ClickableFeature(), IResolveDex {
                             )
                         }
                         item {
-                            SwitchWidget(
+                            MiuixSwitchWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.beautify_me_page_hide_stickers),
                                 checked = hideEmojiInput,

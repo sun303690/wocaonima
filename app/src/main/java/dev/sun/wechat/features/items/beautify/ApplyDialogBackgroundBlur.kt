@@ -7,7 +7,7 @@ import android.view.Window
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -24,10 +24,10 @@ import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.BaseItemContainer
-import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.IntNumberPickerWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixBaseItemContainer
+import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
+import dev.sun.wechat.ui.content.miuix.MiuixIntNumberPickerWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
 import java.lang.reflect.Modifier
@@ -121,10 +121,10 @@ object ApplyDialogBackgroundBlur : ClickableFeature(), IResolveDex {
             AlertDialogContent(
                 title = { Text(stringResource(R.string.beautify_dialog_blur_title)) },
                 text = {
-                    SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                    MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
                             item {
-                                BaseWidget(
+                                MiuixBaseWidget(
                                     iconPlaceholder = false,
                                     title = stringResource(R.string.beautify_dialog_blur_unsupported_hint),
                                 )
@@ -132,7 +132,7 @@ object ApplyDialogBackgroundBlur : ClickableFeature(), IResolveDex {
                         }
                         item {
                             BaseItemContainer {
-                                IntNumberPickerWidget(
+                                MiuixIntNumberPickerWidget(
                                     title = stringResource(R.string.beautify_dialog_blur_radius),
                                     value = blurRadius,
                                     startInt = 5,

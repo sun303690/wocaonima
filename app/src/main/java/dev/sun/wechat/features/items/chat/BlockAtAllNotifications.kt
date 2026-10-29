@@ -2,9 +2,9 @@ package dev.sun.wechat.features.items.chat
 
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,9 +26,9 @@ import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.ContactsSelector
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.TargetProcess
 import dev.sun.wechat.utils.WeLogger
@@ -53,9 +53,9 @@ object BlockAtAllNotifications : ClickableFeature() {
             AlertDialogContent(
                 title = { Text(stringResource(R.string.feature_block_at_all_notifications_name)) },
                 text = {
-                    SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                    MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                         item {
-                            SwitchWidget(
+                            MiuixSwitchWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(
                                     if (useWhitelistState) R.string.filter_list_whitelist_selected
@@ -73,7 +73,7 @@ object BlockAtAllNotifications : ClickableFeature() {
                             )
                         }
                         item {
-                            BaseWidget(
+                            MiuixBaseWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(
                                     if (useWhitelistState) R.string.filter_list_configure_whitelist
@@ -113,7 +113,7 @@ object BlockAtAllNotifications : ClickableFeature() {
                                     Icon(
                                         MaterialSymbols.Outlined.Chevron_right,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                     )
                                 },
                             )

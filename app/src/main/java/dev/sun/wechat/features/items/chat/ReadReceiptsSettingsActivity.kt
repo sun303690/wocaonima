@@ -23,16 +23,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import dev.sun.wechat.ui.content.miuix.MiuixAlertDialog
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -67,20 +66,20 @@ import dev.sun.wechat.extensions.ExtensionPacks
 import dev.sun.wechat.i18n.LocaleResourceMode
 import dev.sun.wechat.i18n.LocalWeKitLocalizedContext
 import dev.sun.wechat.i18n.WeKitLocaleProvider
-import dev.sun.wechat.ui.content.m3.BaseItemContainer
-import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.ExpressiveBackButton
-import dev.sun.wechat.ui.content.m3.IntNumberPickerWidget
-import dev.sun.wechat.ui.content.m3.RadioButtonWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
-import dev.sun.wechat.ui.content.m3.TextFieldDialogWidget
-import dev.sun.wechat.ui.content.m3.lazySegmentedItems
+import dev.sun.wechat.ui.content.miuix.MiuixBaseItemContainer
+import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
+import dev.sun.wechat.ui.content.miuix.MiuixBackButton
+import dev.sun.wechat.ui.content.miuix.MiuixIntNumberPickerWidget
+import dev.sun.wechat.ui.content.miuix.MiuixRadioButtonWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixTextFieldDialogWidget
+import dev.sun.wechat.ui.content.miuix.miuixLazySegmentedItems
 import dev.sun.wechat.ui.navigation.LocalNavigator
 import dev.sun.wechat.ui.navigation.Navigator
 import dev.sun.wechat.ui.navigation.rememberM3NavEffects
 import dev.sun.wechat.ui.animation.predictiveback.weKitNavTransition
-import dev.sun.wechat.ui.utils.theme.ModuleTheme
+import dev.sun.wechat.ui.utils.theme.MiuixModuleTheme
 import dev.sun.wechat.ui.utils.theme.ThemeSettings
 import dev.sun.wechat.utils.android.copyToClipboard
 import kotlinx.coroutines.Dispatchers
@@ -104,7 +103,7 @@ class ReadReceiptsSettingsActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             WeKitLocaleProvider(mode = LocaleResourceMode.InjectedHost) {
-                ModuleTheme {
+                MiuixModuleTheme {
                     ReadReceiptsSettingsRoot(
                         activity = this@ReadReceiptsSettingsActivity,
                         onFinish = ::finish,
@@ -377,10 +376,10 @@ private fun ReadReceiptsHomeScreen(
 
     M3ListScaffold(
         title = stringResource(R.string.feature_read_receipts_name),
-        navigationIcon = { ExpressiveBackButton(onClick = onFinish) },
+        navigationIcon = { MiuixBackButton(onClick = onFinish) },
     ) {
         item {
-            SegmentedColumn(title = stringResource(R.string.read_receipts_section_runtime)) {
+            MiuixSegmentedColumn(title = stringResource(R.string.read_receipts_section_runtime)) {
                 item {
                     StatusWidget(
                         title = stringResource(R.string.read_receipts_built_in_server),
@@ -400,7 +399,7 @@ private fun ReadReceiptsHomeScreen(
                 }
                 runtime.tunnel.publicUrl?.let { url ->
                     item {
-                        BaseWidget(
+                        MiuixBaseWidget(
                             iconPlaceholder = false,
                             title = stringResource(R.string.read_receipts_verified_public_url, url),
                             description = stringResource(R.string.read_receipts_copy_or_share_url),
@@ -422,9 +421,9 @@ private fun ReadReceiptsHomeScreen(
             }
         }
         item {
-            SegmentedColumn(title = stringResource(R.string.chat_read_receipts_server)) {
+            MiuixSegmentedColumn(title = stringResource(R.string.chat_read_receipts_server)) {
                 item {
-                    RadioButtonWidget(
+                    MiuixRadioButtonWidget(
                         iconPlaceholder = false,
                         title = stringResource(R.string.read_receipts_third_party_server),
                         description = stringResource(R.string.read_receipts_third_party_description),
@@ -436,7 +435,7 @@ private fun ReadReceiptsHomeScreen(
                     )
                 }
                 item {
-                    RadioButtonWidget(
+                    MiuixRadioButtonWidget(
                         iconPlaceholder = false,
                         title = stringResource(R.string.read_receipts_quick_tunnel),
                         description = stringResource(R.string.read_receipts_quick_tunnel_description),
@@ -451,7 +450,7 @@ private fun ReadReceiptsHomeScreen(
                     )
                 }
                 item {
-                    RadioButtonWidget(
+                    MiuixRadioButtonWidget(
                         iconPlaceholder = false,
                         title = stringResource(R.string.read_receipts_tunnel_token),
                         description = stringResource(R.string.read_receipts_tunnel_token_description),
@@ -466,7 +465,7 @@ private fun ReadReceiptsHomeScreen(
                     )
                 }
                 item {
-                    RadioButtonWidget(
+                    MiuixRadioButtonWidget(
                         iconPlaceholder = false,
                         title = stringResource(R.string.read_receipts_browser_login),
                         description = stringResource(R.string.read_receipts_browser_login_description),
@@ -483,9 +482,9 @@ private fun ReadReceiptsHomeScreen(
             }
         }
         item {
-            SegmentedColumn(title = stringResource(R.string.read_receipts_section_send_mode)) {
+            MiuixSegmentedColumn(title = stringResource(R.string.read_receipts_section_send_mode)) {
                 item {
-                    RadioButtonWidget(
+                    MiuixRadioButtonWidget(
                         iconPlaceholder = false,
                         title = stringResource(R.string.read_receipts_mode_passive),
                         description = stringResource(R.string.read_receipts_mode_passive_description),
@@ -497,7 +496,7 @@ private fun ReadReceiptsHomeScreen(
                     )
                 }
                 item {
-                    RadioButtonWidget(
+                    MiuixRadioButtonWidget(
                         iconPlaceholder = false,
                         title = stringResource(R.string.read_receipts_mode_active_menu),
                         description = stringResource(R.string.read_receipts_mode_active_menu_description),
@@ -509,7 +508,7 @@ private fun ReadReceiptsHomeScreen(
                     )
                 }
                 item {
-                    RadioButtonWidget(
+                    MiuixRadioButtonWidget(
                         iconPlaceholder = false,
                         title = stringResource(R.string.read_receipts_mode_active_prefix),
                         description = stringResource(R.string.read_receipts_mode_active_prefix_description),
@@ -521,7 +520,7 @@ private fun ReadReceiptsHomeScreen(
                     )
                 }
                 item(key = "trigger_prefix", animatedVisibility = sendMode == ReadReceipts.MODE_ACTIVE_PREFIX) {
-                    TextFieldDialogWidget(
+                    MiuixTextFieldDialogWidget(
                         title = stringResource(R.string.chat_read_receipts_prefix),
                         value = triggerPrefix,
                         onValueChange = {
@@ -536,9 +535,9 @@ private fun ReadReceiptsHomeScreen(
             }
         }
         item {
-            SegmentedColumn(title = stringResource(R.string.settings_section_configuration)) {
+            MiuixSegmentedColumn(title = stringResource(R.string.settings_section_configuration)) {
                 item {
-                    SwitchWidget(
+                    MiuixSwitchWidget(
                         iconPlaceholder = false,
                         title = stringResource(R.string.read_receipts_automatic_lifecycle),
                         description = stringResource(R.string.read_receipts_automatic_lifecycle_description),
@@ -549,7 +548,7 @@ private fun ReadReceiptsHomeScreen(
                 }
                 item {
                     BaseItemContainer {
-                        IntNumberPickerWidget(
+                        MiuixIntNumberPickerWidget(
                             title = stringResource(R.string.chat_read_receipts_poll_interval),
                             value = intervalSecs,
                             startInt = 1,
@@ -567,10 +566,10 @@ private fun ReadReceiptsHomeScreen(
         item {
             ActionColumn {
                 ActionRow {
-                    OutlinedButton(onClick = ::saveGeneral, enabled = activeOperation == null, modifier = Modifier.weight(1f)) {
+                    Button(onClick = ::saveGeneral, enabled = activeOperation == null, modifier = Modifier.weight(1f)) {
                         ActionLabel(R.string.action_save, activeOperation == ActiveOperation.SAVING)
                     }
-                    OutlinedButton(
+                    Button(
                         onClick = {
                             val owner = operationState.begin(ActiveOperation.DISCONNECTING)
                                 ?: return@OutlinedButton
@@ -579,7 +578,6 @@ private fun ReadReceiptsHomeScreen(
                             }
                         },
                         enabled = activeOperation == null && (runtime.originActive || runtime.tunnel.state != ReadReceiptsTunnelState.STOPPED),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                         modifier = Modifier.weight(1f),
                     ) { ActionLabel(R.string.read_receipts_disconnect, activeOperation == ActiveOperation.DISCONNECTING) }
                 }
@@ -612,9 +610,9 @@ private fun ThirdPartyScreen(
 
     DetailScaffold(R.string.read_receipts_third_party_server, onBack) {
         item {
-            SegmentedColumn(title = stringResource(R.string.read_receipts_section_connection)) {
+            MiuixSegmentedColumn(title = stringResource(R.string.read_receipts_section_connection)) {
                 item {
-                    TextFieldDialogWidget(
+                    MiuixTextFieldDialogWidget(
                         title = stringResource(R.string.read_receipts_server_url),
                         value = url,
                         onValueChange = { url = it },
@@ -632,7 +630,7 @@ private fun ThirdPartyScreen(
         item {
             ActionColumn {
                 ActionRow {
-                    OutlinedButton(
+                    Button(
                         onClick = {
                             if (normalizeThirdPartyReadReceiptEndpoint(url) == null) {
                                 operationState.feedback = localizedContext.getString(R.string.read_receipts_invalid_third_party_url).errorFeedback()
@@ -728,12 +726,12 @@ private fun TokenTunnelScreen(
         ReadReceiptsTunnelController.committedCredentialMetadata?.source == TunnelCredentialSource.TOKEN
 
     if (confirmDelete) {
-        AlertDialog(
+        MiuixAlertDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text(stringResource(R.string.read_receipts_delete_token_confirm_title)) },
             text = { Text(stringResource(R.string.read_receipts_delete_token_confirm_message)) },
             dismissButton = {
-                TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.dialog_cancel)) }
+                Button(onClick = { confirmDelete = false }) { Text(stringResource(R.string.dialog_cancel)) }
             },
             confirmButton = {
                 Button(
@@ -751,7 +749,6 @@ private fun TokenTunnelScreen(
                             }
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                 ) { Text(stringResource(R.string.dialog_confirm)) }
             },
         )
@@ -763,7 +760,7 @@ private fun TokenTunnelScreen(
 
     DetailScaffold(R.string.read_receipts_tunnel_token, onBack) {
         item {
-            SegmentedColumn(title = stringResource(R.string.read_receipts_section_credential)) {
+            MiuixSegmentedColumn(title = stringResource(R.string.read_receipts_section_credential)) {
                 item {
                     StatusWidget(
                         title = if (runtime.metadataLoading) stringResource(R.string.common_loading) else stringResource(if (tokenSaved) R.string.read_receipts_tunnel_token_saved else R.string.read_receipts_no_saved_token),
@@ -776,7 +773,7 @@ private fun TokenTunnelScreen(
                     )
                 }
                 item {
-                    TextFieldDialogWidget(
+                    MiuixTextFieldDialogWidget(
                         title = stringResource(R.string.read_receipts_tunnel_token),
                         value = token,
                         onValueChange = { token = it },
@@ -792,7 +789,7 @@ private fun TokenTunnelScreen(
                     )
                 }
                 item {
-                    TextFieldDialogWidget(
+                    MiuixTextFieldDialogWidget(
                         title = stringResource(R.string.read_receipts_public_hostname),
                         value = hostname,
                         onValueChange = { hostname = it },
@@ -829,24 +826,22 @@ private fun TokenTunnelScreen(
                         enabled = activeOperation == null && (!runtime.metadataLoading || token.isNotBlank()),
                         modifier = Modifier.weight(1f),
                     ) { ActionLabel(if (runtime.tunnel.state == ReadReceiptsTunnelState.CONNECTED) R.string.read_receipts_reconnect else R.string.read_receipts_verify_and_connect, activeOperation == ActiveOperation.CONNECTING) }
-                    OutlinedButton(
+                    Button(
                         onClick = { disconnect(localizedContext, operationState) },
                         enabled = activeOperation == null && (runtime.originActive || runtime.tunnel.state != ReadReceiptsTunnelState.STOPPED),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                         modifier = Modifier.weight(1f),
                     ) { ActionLabel(R.string.read_receipts_disconnect, activeOperation == ActiveOperation.DISCONNECTING) }
                 }
                 ActionRow {
-                    OutlinedButton(
+                    Button(
                         onClick = { candidate()?.let { saveOnly(localizedContext, it, operationState) } },
                         enabled = activeOperation == null,
                         modifier = Modifier.weight(1f),
                     ) { ActionLabel(R.string.action_save, activeOperation == ActiveOperation.SAVING) }
                     if (tokenSaved) {
-                        OutlinedButton(
+                        Button(
                             onClick = { confirmDelete = true },
                             enabled = activeOperation == null,
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                             modifier = Modifier.weight(1f),
                         ) {
                             if (activeOperation == ActiveOperation.DELETING) LoadingIcon() else Icon(MaterialSymbols.Outlined.Delete, null)
@@ -922,12 +917,12 @@ private fun BrowserTunnelScreen(
     }
 
     if (confirmLogout) {
-        AlertDialog(
+        MiuixAlertDialog(
             onDismissRequest = { confirmLogout = false },
             title = { Text(stringResource(R.string.read_receipts_logout_confirm_title)) },
             text = { Text(stringResource(R.string.read_receipts_logout_confirm_message)) },
             dismissButton = {
-                TextButton(onClick = { confirmLogout = false }) { Text(stringResource(R.string.dialog_cancel)) }
+                Button(onClick = { confirmLogout = false }) { Text(stringResource(R.string.dialog_cancel)) }
             },
             confirmButton = {
                 Button(
@@ -935,7 +930,6 @@ private fun BrowserTunnelScreen(
                         confirmLogout = false
                         runBrowserAction(ActiveOperation.LOGGING_OUT) { ReadReceiptsTunnelController.logoutBrowserLogin() }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                 ) { Text(stringResource(R.string.dialog_confirm)) }
             },
         )
@@ -943,7 +937,7 @@ private fun BrowserTunnelScreen(
 
     DetailScaffold(R.string.read_receipts_browser_login, onBack) {
         item {
-            SegmentedColumn(title = stringResource(R.string.read_receipts_section_account)) {
+            MiuixSegmentedColumn(title = stringResource(R.string.read_receipts_section_account)) {
                 item {
                     StatusWidget(
                         title = stringResource(R.string.read_receipts_cloudflare_login),
@@ -961,7 +955,7 @@ private fun BrowserTunnelScreen(
                     item { StatusWidget(stringResource(R.string.read_receipts_authoritative_metadata), stringResource(R.string.common_loading), false, true) }
                 }
                 item {
-                    BaseWidget(
+                    MiuixBaseWidget(
                         iconPlaceholder = false,
                         title = stringResource(if (ReadReceiptsTunnelController.browserLoginRestartRequired) R.string.read_receipts_restart_login else R.string.read_receipts_login),
                         description = stringResource(R.string.read_receipts_browser_login_description),
@@ -1000,7 +994,7 @@ private fun BrowserTunnelScreen(
                 }
                 login.authorizationUrl?.let { authorizationUrl ->
                     item {
-                        BaseWidget(
+                        MiuixBaseWidget(
                             iconPlaceholder = false,
                             title = stringResource(R.string.read_receipts_open_authorization_page),
                             description = authorizationUrl,
@@ -1030,7 +1024,7 @@ private fun BrowserTunnelScreen(
         item {
             ActionColumn(bottomPadding = 8.dp) {
                 ActionRow {
-                    OutlinedButton(
+                    Button(
                         onClick = {
                             operationCoordinator.launch(ReadReceiptsRoute.Browser, ActiveOperation.REFRESHING) {
                                 runCatching { ReadReceiptsTunnelController.listExistingTunnels() }.fold(
@@ -1053,17 +1047,16 @@ private fun BrowserTunnelScreen(
                         Text(stringResource(R.string.read_receipts_refresh_tunnels))
                     }
                     if (login.state == ReadReceiptsTunnelState.STARTING) {
-                        TextButton(
+                        Button(
                             onClick = { runBrowserAction(ActiveOperation.CANCELLING_LOGIN) { ReadReceiptsTunnelController.cancelBrowserLogin() } },
                             enabled = activeOperation == null,
                             modifier = Modifier.weight(1f),
                         ) { ActionLabel(R.string.read_receipts_cancel_login, activeOperation == ActiveOperation.CANCELLING_LOGIN) }
                     }
                     if (login.state == ReadReceiptsTunnelState.CONNECTED) {
-                        TextButton(
+                        Button(
                             onClick = { confirmLogout = true },
                             enabled = !actionsBusy,
-                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                             modifier = Modifier.weight(1f),
                         ) { ActionLabel(R.string.read_receipts_logout, activeOperation == ActiveOperation.LOGGING_OUT) }
                     }
@@ -1074,9 +1067,9 @@ private fun BrowserTunnelScreen(
             item { EmptyState(stringResource(R.string.read_receipts_tunnel_list_empty)) }
         } else {
             item { SectionTitle(stringResource(R.string.read_receipts_section_tunnels)) }
-            lazySegmentedItems(tunnels, key = ExistingTunnel::id) { tunnel ->
+            miuixLazySegmentedItems(tunnels, key = ExistingTunnel::id) { tunnel ->
                 Box(Modifier.padding(horizontal = 16.dp)) {
-                    RadioButtonWidget(
+                    MiuixRadioButtonWidget(
                         iconPlaceholder = false,
                         title = tunnel.name,
                         description = stringResource(R.string.read_receipts_tunnel_id, tunnel.id),
@@ -1093,11 +1086,11 @@ private fun BrowserTunnelScreen(
         }
         selectedTunnel?.let { tunnel ->
             item {
-                SegmentedColumn(title = stringResource(R.string.read_receipts_section_hostname)) {
+                MiuixSegmentedColumn(title = stringResource(R.string.read_receipts_section_hostname)) {
                     tunnel.hostnames.forEach { host ->
                         val root = "https://$host"
                         item(key = host) {
-                            RadioButtonWidget(
+                            MiuixRadioButtonWidget(
                                 iconPlaceholder = false,
                                 title = host,
                                 selected = !manualHostname && selectedHostname == root,
@@ -1107,7 +1100,7 @@ private fun BrowserTunnelScreen(
                         }
                     }
                     item {
-                        RadioButtonWidget(
+                        MiuixRadioButtonWidget(
                             iconPlaceholder = false,
                             title = stringResource(R.string.read_receipts_manual_hostname),
                             description = stringResource(R.string.read_receipts_manual_hostname_description),
@@ -1118,7 +1111,7 @@ private fun BrowserTunnelScreen(
                     }
                     if (manualHostname || !selectedHostnameListed) {
                         item {
-                            TextFieldDialogWidget(
+                            MiuixTextFieldDialogWidget(
                                 title = stringResource(R.string.read_receipts_public_hostname),
                                 value = selectedHostname,
                                 onValueChange = { selectedHostname = it },
@@ -1134,16 +1127,16 @@ private fun BrowserTunnelScreen(
             }
         }
         item {
-            SegmentedColumn(title = stringResource(R.string.read_receipts_section_port)) {
+            MiuixSegmentedColumn(title = stringResource(R.string.read_receipts_section_port)) {
                 item {
-                    BaseWidget(
+                    MiuixBaseWidget(
                         iconPlaceholder = false,
                         title = stringResource(R.string.read_receipts_automatic_port),
                         description = stringResource(R.string.read_receipts_browser_fixed_port_description),
                     )
                 }
                 item {
-                    TextFieldDialogWidget(
+                    MiuixTextFieldDialogWidget(
                         title = stringResource(R.string.read_receipts_loopback_port),
                         value = port,
                         onValueChange = { port = it.filter(Char::isDigit).take(5) },
@@ -1202,10 +1195,9 @@ private fun BrowserTunnelScreen(
                     ) { ActionLabel(R.string.read_receipts_reconnect_saved, activeOperation == ActiveOperation.RECONNECTING) }
                 }
                 ActionRow {
-                    OutlinedButton(
+                    Button(
                         onClick = { disconnect(localizedContext, operationState) },
                         enabled = !actionsBusy && (runtime.originActive || runtime.tunnel.state != ReadReceiptsTunnelState.STOPPED),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                         modifier = Modifier.weight(1f),
                     ) { ActionLabel(R.string.read_receipts_disconnect, activeOperation == ActiveOperation.DISCONNECTING) }
                 }
@@ -1218,14 +1210,14 @@ private fun BrowserTunnelScreen(
 private fun DetailScaffold(@StringRes title: Int, onBack: () -> Unit, content: androidx.compose.foundation.lazy.LazyListScope.() -> Unit) {
     M3ListScaffold(
         title = stringResource(title),
-        navigationIcon = { ExpressiveBackButton(onClick = onBack) },
+        navigationIcon = { MiuixBackButton(onClick = onBack) },
         content = content,
     )
 }
 
 @Composable
 private fun StatusWidget(title: String, description: String, error: Boolean, loading: Boolean = false) {
-    BaseWidget(
+    MiuixBaseWidget(
         iconPlaceholder = false,
         title = title,
         description = description,
@@ -1236,7 +1228,7 @@ private fun StatusWidget(title: String, description: String, error: Boolean, loa
 
 @Composable
 private fun ErrorWidget(message: String) {
-    BaseWidget(iconPlaceholder = false, title = message, isError = true)
+    MiuixBaseWidget(iconPlaceholder = false, title = message, isError = true)
 }
 
 @Composable
@@ -1248,9 +1240,9 @@ private fun PortSection(
     onPortChange: (String) -> Unit,
     managed: Boolean = false,
 ) {
-    SegmentedColumn(title = stringResource(R.string.read_receipts_section_port)) {
+    MiuixSegmentedColumn(title = stringResource(R.string.read_receipts_section_port)) {
         item {
-            SwitchWidget(
+            MiuixSwitchWidget(
                 iconPlaceholder = false,
                 title = stringResource(R.string.read_receipts_automatic_port),
                 description = stringResource(R.string.read_receipts_automatic_port_description),
@@ -1262,7 +1254,7 @@ private fun PortSection(
         }
         if (!automatic) {
             item {
-                TextFieldDialogWidget(
+                MiuixTextFieldDialogWidget(
                     title = stringResource(R.string.read_receipts_loopback_port),
                     value = port,
                     onValueChange = { onPortChange(it.filter(Char::isDigit).take(5)) },
@@ -1280,7 +1272,7 @@ private fun PortSection(
 
 @Composable
 private fun RuntimeSection(runtime: RuntimeSnapshot) {
-    SegmentedColumn(title = stringResource(R.string.read_receipts_section_runtime)) {
+    MiuixSegmentedColumn(title = stringResource(R.string.read_receipts_section_runtime)) {
         item {
             StatusWidget(
                 stringResource(R.string.read_receipts_built_in_server),
@@ -1306,8 +1298,8 @@ private fun PersistentFeedback(feedback: OperationFeedback, loading: Boolean = f
             if (loading) LoadingIcon()
             Text(
                 text = feedback.message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (feedback.severity == FeedbackSeverity.ERROR) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MiuixTheme.textStyles.body2,
+                color = if (feedback.severity == FeedbackSeverity.ERROR) MiuixTheme.colorScheme.error else MiuixTheme.colorScheme.onSurfaceVariantSummary,
             )
         }
     }
@@ -1348,15 +1340,14 @@ private fun RuntimeActions(
                     activeOperation == ActiveOperation.CONNECTING,
                 )
             }
-            OutlinedButton(
+            Button(
                 onClick = onDisconnect,
                 enabled = activeOperation == null && (originActive || connected),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 modifier = Modifier.weight(1f),
             ) { ActionLabel(R.string.read_receipts_disconnect, activeOperation == ActiveOperation.DISCONNECTING) }
         }
         ActionRow {
-            OutlinedButton(onClick = onSave, enabled = activeOperation == null, modifier = Modifier.weight(1f)) {
+            Button(onClick = onSave, enabled = activeOperation == null, modifier = Modifier.weight(1f)) {
                 ActionLabel(R.string.action_save, activeOperation == ActiveOperation.SAVING)
             }
         }
@@ -1386,7 +1377,7 @@ private fun OperationProgress(
 @Composable
 private fun EmptyState(message: String) {
     Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-        Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(message, style = MiuixTheme.textStyles.body2, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
     }
 }
 
@@ -1394,8 +1385,8 @@ private fun EmptyState(message: String) {
 private fun SectionTitle(title: String) {
     Text(
         title,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.primary,
+        style = MiuixTheme.textStyles.title3,
+        color = MiuixTheme.colorScheme.primary,
         modifier = Modifier.padding(start = 32.dp, top = 16.dp, bottom = 16.dp),
     )
 }

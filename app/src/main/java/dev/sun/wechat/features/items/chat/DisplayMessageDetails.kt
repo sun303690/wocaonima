@@ -1,7 +1,7 @@
 package dev.sun.wechat.features.items.chat
 
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.ui.res.stringResource
 import com.composables.icons.materialsymbols.MaterialSymbols
 import com.composables.icons.materialsymbols.outlined.Info
@@ -12,8 +12,8 @@ import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
-import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.lazySegmentedItems
+import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
+import dev.sun.wechat.ui.content.miuix.miuixLazySegmentedItems
 import dev.sun.wechat.ui.utils.ChatInfoIcon
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.android.copyToClipboard
@@ -61,8 +61,8 @@ object DisplayMessageDetails : SwitchFeature(),
                         title = { Text(stringResource(R.string.chat_message_details_title)) },
                         text = {
                             LazyColumn {
-                                lazySegmentedItems(displayItems, key = { it.first }) { (key, value) ->
-                                    BaseWidget(
+                                miuixLazySegmentedItems(displayItems, key = { it.first }) { (key, value) ->
+                                    MiuixBaseWidget(
                                         title = key,
                                         description = value,
                                         onClick = {

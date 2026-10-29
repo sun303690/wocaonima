@@ -16,8 +16,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,8 +38,8 @@ import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.ColorPickerWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixColorPickerWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.HookParam
 import dev.sun.wechat.utils.WeLogger
@@ -197,9 +197,9 @@ object DisplayMessageTimeByAvatar : ClickableFeature(),
                 title = { Text(stringResource(R.string.feature_display_message_time_by_avatar_name)) },
                 text = {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
-                        SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                        MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                             item {
-                                OutlinedTextField(
+                                TextField(
                                     value = timeFormatInput,
                                     onValueChange = { timeFormatInput = it },
                                     label = { Text(stringResource(R.string.avatar_time_format)) },
@@ -209,7 +209,7 @@ object DisplayMessageTimeByAvatar : ClickableFeature(),
                                 )
                             }
                             item {
-                                OutlinedTextField(
+                                TextField(
                                     value = textSizeInputRaw,
                                     onValueChange = { textSizeInputRaw = it.filter { c -> c.isDigit() } },
                                     label = { Text(stringResource(R.string.avatar_time_font_size)) },
@@ -220,7 +220,7 @@ object DisplayMessageTimeByAvatar : ClickableFeature(),
                                 )
                             }
                             item {
-                                ColorPickerWidget(
+                                MiuixColorPickerWidget(
                                     title = stringResource(R.string.avatar_time_color),
                                     value = textColorInput,
                                     onValueChange = { textColorInput = it },

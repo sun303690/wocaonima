@@ -5,7 +5,7 @@ import android.app.Activity
 import android.view.View
 import android.widget.AdapterView
 import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Text
 import dev.sun.wechat.features.api.ui.WeConversationContextMenuApi
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature

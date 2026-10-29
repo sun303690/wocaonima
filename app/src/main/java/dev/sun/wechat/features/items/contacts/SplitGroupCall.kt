@@ -10,11 +10,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.ButtonGroupDefaults
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.ToggleButton
-import androidx.compose.material3.ToggleButtonDefaults
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -378,7 +375,7 @@ object SplitGroupCall : ClickableFeature(), IContactInfoProvider, IResolveDex {
                             .padding(vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        OutlinedTextField(
+                        TextField(
                             value = repeatCount,
                             onValueChange = { value ->
                                 repeatCount = value.filter(Char::isDigit)
@@ -390,29 +387,15 @@ object SplitGroupCall : ClickableFeature(), IContactInfoProvider, IResolveDex {
                         )
                         Row(
                             modifier = UiModifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             availableModes.forEachIndexed { index, option ->
-                                ToggleButton(
-                                    checked = mode == option,
-                                    onCheckedChange = { mode = option },
-                                    shapes = when {
-                                        availableModes.size == 1 ->
-                                            ButtonGroupDefaults.connectedLeadingButtonShapes(
-                                                shape = ToggleButtonDefaults.shape,
-                                                pressedShape = ToggleButtonDefaults.pressedShape,
-                                            )
-                                        index == 0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                                        index == availableModes.lastIndex ->
-                                            ButtonGroupDefaults.connectedTrailingButtonShapes()
-                                        else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-                                    },
-                                    modifier = UiModifier
-                                        .weight(1f)
-                                        .semantics { role = Role.RadioButton },
-                                ) {
-                                    Text(stringResource(option.labelRes), maxLines = 1)
-                                }
+                                MiuixChoiceChip(
+                                    selected = mode == option,
+                                    onClick = { mode = option },
+                                    modifier = UiModifier.weight(1f).semantics { role = Role.RadioButton },
+                                    label = { Text(stringResource(option.labelRes), maxLines = 1) },
+                                )
                             }
                         }
                     }

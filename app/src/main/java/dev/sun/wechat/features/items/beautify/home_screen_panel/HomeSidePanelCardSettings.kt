@@ -19,20 +19,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import dev.sun.wechat.ui.content.miuix.MiuixFilterChip
+import top.yukonga.miuix.kmp.basic.HorizontalDivider
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import dev.sun.wechat.ui.content.miuix.MiuixListItem
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.RadioButton
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,11 +51,11 @@ import com.composables.icons.materialsymbols.outlined.Person_pin
 import dev.sun.wechat.R
 import dev.sun.wechat.features.items.beautify.resolveBeautifyText
 import dev.sun.wechat.i18n.LocalWeKitLocalizedContext
-import dev.sun.wechat.ui.content.m3.BaseItemContainer
-import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.IntNumberPickerWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixBaseItemContainer
+import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
+import dev.sun.wechat.ui.content.miuix.MiuixIntNumberPickerWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 
 @Composable
 fun HomeSidePanelPanelSettings(
@@ -71,9 +70,9 @@ fun HomeSidePanelPanelSettings(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         SettingsHeader(stringResource(R.string.home_side_panel_settings), panelState::closeCardSettings)
-        SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+        MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
             item {
-                BaseWidget(
+                MiuixBaseWidget(
                     icon = MaterialSymbols.Outlined.Edit,
                     iconPlaceholder = false,
                     title = stringResource(R.string.home_side_panel_enter_edit_mode),
@@ -84,7 +83,7 @@ fun HomeSidePanelPanelSettings(
                 )
             }
             item {
-                SwitchWidget(
+                MiuixSwitchWidget(
                     iconPlaceholder = false,
                     title = stringResource(R.string.home_side_panel_show_toolbar_profile),
                     checked = state.showToolbarProfile,
@@ -92,7 +91,7 @@ fun HomeSidePanelPanelSettings(
                 )
             }
             item {
-                SwitchWidget(
+                MiuixSwitchWidget(
                     iconPlaceholder = false,
                     title = stringResource(R.string.home_side_panel_hide_wechat_title),
                     checked = state.hideWeChatTitle,
@@ -120,9 +119,9 @@ fun HomeSidePanelDateTimeSettings(
             stringResource(R.string.home_side_panel_date_time_settings),
             panelState::closeCardSettings,
         )
-        SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+        MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
             item {
-                SwitchWidget(
+                MiuixSwitchWidget(
                     iconPlaceholder = false,
                     title = stringResource(R.string.home_side_panel_show_lunar_calendar),
                     checked = card.showLunarCalendar,
@@ -158,10 +157,10 @@ fun HomeSidePanelWeatherSettings(
                 settings.selectedCity.province,
                 settings.selectedCity.city,
             ),
-            style = MaterialTheme.typography.titleMedium,
+            style = MiuixTheme.textStyles.title2,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            OutlinedButton(
+            Button(
                 onClick = { panelState.detectWeatherLocation(card.id) },
                 modifier = Modifier
                     .weight(1f)
@@ -177,11 +176,11 @@ fun HomeSidePanelWeatherSettings(
                     Text(
                         stringResource(R.string.home_side_panel_auto_detect),
                         maxLines = 1,
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MiuixTheme.textStyles.footnote1,
                     )
                 }
             }
-            OutlinedButton(
+            Button(
                 onClick = { panelState.readWeatherFromProfile(card.id) },
                 modifier = Modifier
                     .weight(1f)
@@ -197,7 +196,7 @@ fun HomeSidePanelWeatherSettings(
                     Text(
                         stringResource(R.string.home_side_panel_read_profile),
                         maxLines = 1,
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MiuixTheme.textStyles.footnote1,
                     )
                 }
             }
@@ -205,11 +204,11 @@ fun HomeSidePanelWeatherSettings(
         if (settings.actionInProgress) {
             Text(
                 stringResource(R.string.loading),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MiuixTheme.textStyles.footnote1,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             )
         }
-        OutlinedTextField(
+        TextField(
             value = query,
             onValueChange = {
                 query = it
@@ -223,20 +222,14 @@ fun HomeSidePanelWeatherSettings(
         if (settings.searchResults.isNotEmpty()) {
             Card(
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
             ) {
                 settings.searchResults.forEachIndexed { index, city ->
                     val selected = city.cityNum == settings.selectedCity.cityNum
-                    ListItem(
+                    MiuixListItem(
                         supportingContent = { Text("${city.province} · ${city.cityNum}") },
                         trailingContent = { RadioButton(selected = selected, onClick = null) },
-                        colors = ListItemDefaults.colors(
-                            containerColor = if (selected) {
-                                MaterialTheme.colorScheme.secondaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.surfaceContainerLow
-                            },
-                        ),
+                        containerColor = if (selected) MiuixTheme.colorScheme.secondaryContainer else MiuixTheme.colorScheme.surfaceContainer,
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable(enabled = !settings.actionInProgress) {
@@ -267,9 +260,9 @@ fun HomeSidePanelWalletSettings(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         SettingsHeader(stringResource(R.string.home_side_panel_wallet_settings), panelState::closeCardSettings)
-        SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+        MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
             item {
-                SwitchWidget(
+                MiuixSwitchWidget(
                     iconPlaceholder = false,
                     title = stringResource(R.string.home_side_panel_hide_balance_default),
                     description = stringResource(R.string.home_side_panel_hide_balance_summary),
@@ -280,8 +273,8 @@ fun HomeSidePanelWalletSettings(
         }
         Text(
             stringResource(R.string.home_side_panel_hide_balance_details),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MiuixTheme.textStyles.footnote1,
+            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
     }
@@ -306,13 +299,13 @@ fun HomeSidePanelHitokotoSettings(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         SettingsHeader(stringResource(R.string.home_side_panel_hitokoto_settings), panelState::closeCardSettings)
-        Text(stringResource(R.string.home_side_panel_categories), style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.home_side_panel_categories), style = MiuixTheme.textStyles.title2)
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             hitokotoCategoryLabels.forEach { (code, labelRes) ->
-                FilterChip(
+                MiuixFilterChip(
                     selected = code in draft.categories,
                     onClick = {
                         draft = draft.copy(
@@ -327,10 +320,10 @@ fun HomeSidePanelHitokotoSettings(
                 )
             }
         }
-        SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+        MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
             item {
                 BaseItemContainer {
-                    IntNumberPickerWidget(
+                    MiuixIntNumberPickerWidget(
                         title = stringResource(R.string.home_side_panel_min_length),
                         value = draft.minLength ?: 0,
                         startInt = 0,
@@ -346,7 +339,7 @@ fun HomeSidePanelHitokotoSettings(
             }
             item {
                 BaseItemContainer {
-                    IntNumberPickerWidget(
+                    MiuixIntNumberPickerWidget(
                         title = stringResource(R.string.home_side_panel_max_length),
                         value = draft.maxLength ?: 0,
                         startInt = 0,
@@ -361,7 +354,7 @@ fun HomeSidePanelHitokotoSettings(
                 }
             }
             item {
-                SwitchWidget(
+                MiuixSwitchWidget(
                     iconPlaceholder = false,
                     title = stringResource(R.string.home_side_panel_show_source),
                     checked = draft.showSource,
@@ -369,7 +362,7 @@ fun HomeSidePanelHitokotoSettings(
                 )
             }
             item {
-                SwitchWidget(
+                MiuixSwitchWidget(
                     iconPlaceholder = false,
                     title = stringResource(R.string.home_side_panel_show_author),
                     checked = draft.showAuthor,
@@ -380,11 +373,11 @@ fun HomeSidePanelHitokotoSettings(
         if (runtime is HitokotoUiState.Error) {
             Text(
                 LocalWeKitLocalizedContext.current.resolveBeautifyText(runtime.message),
-                color = MaterialTheme.colorScheme.error,
+                color = MiuixTheme.colorScheme.error,
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            OutlinedButton(
+            Button(
                 onClick = { draft = HitokotoSettings() },
                 modifier = Modifier.weight(1f),
             ) {
@@ -413,7 +406,7 @@ fun SettingsHeader(
         IconButton(onClick = onBack) {
             Icon(MaterialSymbols.Outlined.Arrow_back, contentDescription = stringResource(R.string.action_back))
         }
-        Text(title, style = MaterialTheme.typography.titleLarge)
+        Text(title, style = MiuixTheme.textStyles.title1)
     }
 }
 

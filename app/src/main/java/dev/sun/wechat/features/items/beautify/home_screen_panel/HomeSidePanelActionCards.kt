@@ -20,13 +20,13 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.HorizontalDivider
+import top.yukonga.miuix.kmp.basic.Icon
+import dev.sun.wechat.ui.content.miuix.MiuixListItem
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -312,7 +312,7 @@ fun HomeSidePanelAddActionItem(
                     .then(actionTerminalModifier)
                     .then(wholeCardDragModifier),
                 shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
             ) {
                 Column(
                     modifier = Modifier
@@ -324,9 +324,9 @@ fun HomeSidePanelAddActionItem(
                     Icon(
                         MaterialSymbols.Outlined.Add,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MiuixTheme.colorScheme.primary,
                     )
-                    Text(stringResource(R.string.action_add), style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.action_add), style = MiuixTheme.textStyles.footnote1)
                 }
             }
             Box(modifier = Modifier.align(Alignment.TopEnd)) {
@@ -342,12 +342,12 @@ fun HomeSidePanelAddActionItem(
         HomeSidePanelActionPlacement.LIST_ITEM -> Box(
             modifier = Modifier.fillMaxWidth(),
         ) {
-            ListItem(
+            MiuixListItem(
                 leadingContent = {
                     Icon(
                         MaterialSymbols.Outlined.Add,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MiuixTheme.colorScheme.primary,
                     )
                 },
                 modifier = Modifier
@@ -383,7 +383,7 @@ private fun HomeSidePanelActionsCardFrame(
             .animateContentSize(tween(HOME_SIDE_PANEL_REFLOW_ANIMATION_MILLIS)),
         cardModifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
         editMode = false,
         onEdit = null,
         onDelete = null,
@@ -420,7 +420,7 @@ private fun HomeSidePanelActionItem(
                     .fillMaxWidth()
                     .then(clickModifier),
                 shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceContainer),
             ) {
                 Column(
                     modifier = Modifier
@@ -429,18 +429,18 @@ private fun HomeSidePanelActionItem(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(5.dp),
                 ) {
-                    Icon(spec.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Icon(spec.icon, contentDescription = null, tint = MiuixTheme.colorScheme.primary)
                     Text(
                         stringResource(spec.labelRes),
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MiuixTheme.textStyles.footnote1,
                         fontWeight = FontWeight.Medium,
                     )
                 }
             }
 
-            HomeSidePanelActionPlacement.LIST_ITEM -> ListItem(
+            HomeSidePanelActionPlacement.LIST_ITEM -> MiuixListItem(
                 leadingContent = {
-                    Icon(spec.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Icon(spec.icon, contentDescription = null, tint = MiuixTheme.colorScheme.primary)
                 },
                 trailingContent = if (editMode) {
                     null

@@ -11,7 +11,7 @@ import android.content.IntentFilter
 import com.tencent.mm.ui.LauncherUI
 import com.tencent.mm.ui.chatting.ChattingUI
 import androidx.compose.runtime.Composable
-import dev.sun.wechat.ui.content.m3.TextFieldDialogWidget
+import dev.sun.wechat.ui.content.miuix.MiuixTextFieldDialogWidget
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.dexMethod
 import dev.sun.wechat.features.core.FeatureCategoryIds

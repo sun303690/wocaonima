@@ -15,7 +15,7 @@ import android.net.Uri
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,10 +40,10 @@ import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.DropDownMenuWidget
-import dev.sun.wechat.ui.content.m3.DropdownOption
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixDropDownMenuWidget
+import dev.sun.wechat.ui.content.miuix.DropdownOption
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.HostInfo
 import dev.sun.wechat.utils.TargetProcess
@@ -626,9 +626,9 @@ object NotificationsEvolved : ClickableFeature(), IResolveDex {
             AlertDialogContent(
                 title = { Text(stringResource(R.string.notifications_settings_title)) },
                 text = {
-                    SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                    MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                         item(key = "image_mode") {
-                            DropDownMenuWidget(
+                            MiuixDropDownMenuWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.notifications_image_behavior),
                                 description = null,
@@ -654,7 +654,7 @@ object NotificationsEvolved : ClickableFeature(), IResolveDex {
                             )
                         }
                         item(key = "sticker_mode") {
-                            DropDownMenuWidget(
+                            MiuixDropDownMenuWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.notifications_sticker_behavior),
                                 description = null,
@@ -676,7 +676,7 @@ object NotificationsEvolved : ClickableFeature(), IResolveDex {
                             )
                         }
                         item(key = "clear_history_after_quick_reply") {
-                            SwitchWidget(
+                            MiuixSwitchWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(
                                     R.string.notifications_clear_history_after_quick_reply,

@@ -29,14 +29,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import dev.sun.wechat.ui.content.miuix.MiuixAlertDialog
+import dev.sun.wechat.ui.content.miuix.MiuixDropdownMenu
+import dev.sun.wechat.ui.content.miuix.MiuixDropdownMenuItem
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Slider
+import top.yukonga.miuix.kmp.basic.SliderDefaults
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -276,15 +276,15 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                             .clickable { menuOpen = true }
                             .padding(horizontal = 10.dp, vertical = 2.dp),
                     )
-                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                        DropdownMenuItem(
+                    MiuixDropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        MiuixDropdownMenuItem(
                             text = { Text("导入主题") },
                             onClick = {
                                 menuOpen = false
                                 importLauncher.launch("*/*")
                             },
                         )
-                        DropdownMenuItem(
+                        MiuixDropdownMenuItem(
                             text = { Text("导出主题") },
                             onClick = {
                                 menuOpen = false
@@ -300,7 +300,7 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                                 }
                             },
                         )
-                        DropdownMenuItem(
+                        MiuixDropdownMenuItem(
                             text = { Text("备份主题") },
                             onClick = {
                                 menuOpen = false
@@ -314,21 +314,21 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                                 }
                             },
                         )
-                        DropdownMenuItem(
+                        MiuixDropdownMenuItem(
                             text = { Text("恢复默认") },
                             onClick = {
                                 menuOpen = false
                                 confirmReset = true
                             },
                         )
-                        DropdownMenuItem(
+                        MiuixDropdownMenuItem(
                             text = { Text("清除主题缓存") },
                             onClick = {
                                 menuOpen = false
                                 confirmClearCache = true
                             },
                         )
-                        DropdownMenuItem(
+                        MiuixDropdownMenuItem(
                             text = { Text("主题诊断") },
                             onClick = {
                                 menuOpen = false
@@ -349,7 +349,7 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                                     .show()
                             },
                         )
-                        DropdownMenuItem(
+                        MiuixDropdownMenuItem(
                             text = { Text("使用说明") },
                             onClick = {
                                 menuOpen = false
@@ -481,7 +481,7 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                         }
                         else -> {
                             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
-                                OutlinedTextField(
+                                TextField(
                                     value = draftName,
                                     onValueChange = { draftName = it },
                                     label = { Text("主题名称") },
@@ -490,7 +490,7 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                                 )
                                 if (descVisible) {
                                     Spacer(Modifier.height(8.dp))
-                                    OutlinedTextField(
+                                    TextField(
                                         value = draftDesc,
                                         onValueChange = { draftDesc = it },
                                         label = { Text("主题描述") },
@@ -606,12 +606,12 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
     // ── 弹窗区 ──────────────────────────────────────────────
 
     if (enableConfirm) {
-        AlertDialog(
+        MiuixAlertDialog(
             onDismissRequest = { enableConfirm = false },
             title = { Text("主题总开关未开启") },
             text = { Text("主题功能默认关闭。现在打开「主题」总开关并应用这套主题吗？") },
             confirmButton = {
-                TextButton(onClick = {
+                Button(onClick = {
                     enableConfirm = false
                     val feature = findFeature("主题工坊")
                     if (feature != null) {
@@ -627,23 +627,23 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                     doApply()
                 }) { Text("打开并应用") }
             },
-            dismissButton = { TextButton(onClick = { enableConfirm = false }) { Text("取消") } },
+            dismissButton = { Button(onClick = { enableConfirm = false }) { Text("取消") } },
         )
     }
 
     if (appliedDialog) {
-        AlertDialog(
+        MiuixAlertDialog(
             onDismissRequest = { appliedDialog = false },
             title = { Text("已应用") },
             text = {
                 Text("自动重启没有成功。请从最近任务把微信划掉，再重新打开，主题才会完全生效。")
             },
-            confirmButton = { TextButton(onClick = { appliedDialog = false }) { Text("知道了") } },
+            confirmButton = { Button(onClick = { appliedDialog = false }) { Text("知道了") } },
         )
     }
 
     if (showRandomPool) {
-        AlertDialog(
+        MiuixAlertDialog(
             onDismissRequest = { showRandomPool = false },
             title = { Text("随机背景图（${poolFiles.size}/${ThemePack.RANDOM_POOL_MAX}）") },
             text = {
@@ -684,12 +684,12 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { showRandomPool = false }) { Text("关闭") } },
+            confirmButton = { Button(onClick = { showRandomPool = false }) { Text("关闭") } },
         )
     }
 
     if (showGuide) {
-        AlertDialog(
+        MiuixAlertDialog(
             onDismissRequest = { showGuide = false },
             title = { Text("使用说明") },
             text = {
@@ -704,16 +704,16 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                     GuideLine("8", "旧气泡没换掉怎么办", "右上角 ⋮ →「清除主题缓存」，一键清掉已应用的气泡与背景，回到微信原生。")
                 }
             },
-            confirmButton = { TextButton(onClick = { showGuide = false }) { Text("知道了") } },
+            confirmButton = { Button(onClick = { showGuide = false }) { Text("知道了") } },
         )
     }
 
     if (showCreate) {
-        AlertDialog(
+        MiuixAlertDialog(
             onDismissRequest = { showCreate = false },
             title = { Text("新建主题") },
             text = {
-                OutlinedTextField(
+                TextField(
                     value = createName,
                     onValueChange = { createName = it },
                     label = { Text("主题名称") },
@@ -721,7 +721,7 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                 )
             },
             confirmButton = {
-                TextButton(onClick = {
+                Button(onClick = {
                     showCreate = false
                     ThemePack.createEmptyPack(createName.ifBlank { "我的主题" })
                         .onSuccess { pack ->
@@ -732,13 +732,13 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                         .onFailure { showToast(context, "创建失败：${it.message}") }
                 }) { Text("创建") }
             },
-            dismissButton = { TextButton(onClick = { showCreate = false }) { Text("取消") } },
+            dismissButton = { Button(onClick = { showCreate = false }) { Text("取消") } },
         )
     }
 
     // 主题下拉：只列自己新建/导入的主题（内置主题在下面网格里选）
     if (showPicker) {
-        AlertDialog(
+        MiuixAlertDialog(
             onDismissRequest = { showPicker = false },
             title = { Text("选择我的主题") },
             text = {
@@ -758,12 +758,12 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { showPicker = false }) { Text("关闭") } },
+            confirmButton = { Button(onClick = { showPicker = false }) { Text("关闭") } },
         )
     }
 
     if (confirmClearCache) {
-        AlertDialog(
+        MiuixAlertDialog(
             onDismissRequest = { confirmClearCache = false },
             title = { Text("清除主题缓存") },
             text = {
@@ -774,7 +774,7 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                 )
             },
             confirmButton = {
-                TextButton(onClick = {
+                Button(onClick = {
                     confirmClearCache = false
                     runCatching { ThemeStore.clearThemeCache() }
                         .onSuccess {
@@ -787,17 +787,17 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                         }
                 }) { Text("清除") }
             },
-            dismissButton = { TextButton(onClick = { confirmClearCache = false }) { Text("取消") } },
+            dismissButton = { Button(onClick = { confirmClearCache = false }) { Text("取消") } },
         )
     }
 
     if (confirmReset) {
-        AlertDialog(
+        MiuixAlertDialog(
             onDismissRequest = { confirmReset = false },
             title = { Text("恢复默认") },
             text = { Text("移除所有自定义背景，气泡恢复微信原生样式。背景会立即恢复，气泡要重进聊天界面才生效。") },
             confirmButton = {
-                TextButton(onClick = {
+                Button(onClick = {
                     confirmReset = false
                     runCatching { ThemeStore.restoreDefaultTheme() }
                         .onSuccess {
@@ -812,14 +812,14 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                         }
                 }) { Text("恢复") }
             },
-            dismissButton = { TextButton(onClick = { confirmReset = false }) { Text("取消") } },
+            dismissButton = { Button(onClick = { confirmReset = false }) { Text("取消") } },
         )
     }
 
     // 内置主题长按：只能重命名 / 改描述，没有分享
     if (builtinLongPress.isNotEmpty()) {
         val originalName = builtinThemes.firstOrNull { it.first == builtinLongPress }?.second ?: builtinLongPress
-        AlertDialog(
+        MiuixAlertDialog(
             onDismissRequest = { builtinLongPress = "" },
             title = { Text(ThemeStore.builtinDisplayName(builtinLongPress, originalName)) },
             text = {
@@ -842,16 +842,16 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                     )
                 }
             },
-            confirmButton = { TextButton(onClick = { builtinLongPress = "" }) { Text("关闭") } },
+            confirmButton = { Button(onClick = { builtinLongPress = "" }) { Text("关闭") } },
         )
     }
 
     if (builtinRenameId.isNotEmpty()) {
-        AlertDialog(
+        MiuixAlertDialog(
             onDismissRequest = { builtinRenameId = "" },
             title = { Text("重命名内置主题") },
             text = {
-                OutlinedTextField(
+                TextField(
                     value = builtinRenameText,
                     onValueChange = { builtinRenameText = it },
                     label = { Text("名称") },
@@ -859,46 +859,46 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                 )
             },
             confirmButton = {
-                TextButton(onClick = {
+                Button(onClick = {
                     ThemeStore.setBuiltinAlias(builtinRenameId, builtinRenameText)
                     builtinRenameId = ""
                     tick++
                     showToast(context, "已重命名")
                 }) { Text("确定") }
             },
-            dismissButton = { TextButton(onClick = { builtinRenameId = "" }) { Text("取消") } },
+            dismissButton = { Button(onClick = { builtinRenameId = "" }) { Text("取消") } },
         )
     }
 
     if (builtinDescId.isNotEmpty()) {
-        AlertDialog(
+        MiuixAlertDialog(
             onDismissRequest = { builtinDescId = "" },
             title = { Text("修改描述") },
             text = {
-                OutlinedTextField(
+                TextField(
                     value = builtinDescText,
                     onValueChange = { builtinDescText = it },
                     label = { Text("描述（可留空）") },
                 )
             },
             confirmButton = {
-                TextButton(onClick = {
+                Button(onClick = {
                     ThemeStore.setBuiltinDesc(builtinDescId, builtinDescText)
                     builtinDescId = ""
                     tick++
                     showToast(context, "已修改描述")
                 }) { Text("确定") }
             },
-            dismissButton = { TextButton(onClick = { builtinDescId = "" }) { Text("取消") } },
+            dismissButton = { Button(onClick = { builtinDescId = "" }) { Text("取消") } },
         )
     }
 
     renameTarget?.let { target ->
-        AlertDialog(
+        MiuixAlertDialog(
             onDismissRequest = { renameTarget = null },
             title = { Text("重命名") },
             text = {
-                OutlinedTextField(
+                TextField(
                     value = renameText,
                     onValueChange = { renameText = it },
                     label = { Text("主题名称") },
@@ -906,7 +906,7 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                 )
             },
             confirmButton = {
-                TextButton(onClick = {
+                Button(onClick = {
                     ThemePack.updateMeta(target, renameText, null)
                     renameTarget = null
                     refreshAll()
@@ -914,23 +914,23 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                     showToast(context, "已重命名")
                 }) { Text("确定") }
             },
-            dismissButton = { TextButton(onClick = { renameTarget = null }) { Text("取消") } },
+            dismissButton = { Button(onClick = { renameTarget = null }) { Text("取消") } },
         )
     }
 
     descTarget?.let { target ->
-        AlertDialog(
+        MiuixAlertDialog(
             onDismissRequest = { descTarget = null },
             title = { Text("修改描述") },
             text = {
-                OutlinedTextField(
+                TextField(
                     value = descText,
                     onValueChange = { descText = it },
                     label = { Text("描述（可留空）") },
                 )
             },
             confirmButton = {
-                TextButton(onClick = {
+                Button(onClick = {
                     ThemePack.updateMeta(target, null, descText)
                     descTarget = null
                     refreshAll()
@@ -938,12 +938,12 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                     showToast(context, "已修改描述")
                 }) { Text("确定") }
             },
-            dismissButton = { TextButton(onClick = { descTarget = null }) { Text("取消") } },
+            dismissButton = { Button(onClick = { descTarget = null }) { Text("取消") } },
         )
     }
 
     longPressTarget?.let { target ->
-        AlertDialog(
+        MiuixAlertDialog(
             onDismissRequest = { longPressTarget = null },
             title = { Text(target.name) },
             text = {
@@ -972,7 +972,7 @@ fun ThemeWorkshopScreen(onBack: () -> Unit) {
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { longPressTarget = null }) { Text("关闭") } },
+            confirmButton = { Button(onClick = { longPressTarget = null }) { Text("关闭") } },
         )
     }
 }
@@ -1111,9 +1111,9 @@ private fun OpacityRow(tick: Int) {
             onValueChange = { pct = it.toInt().coerceIn(5, 70) },
             onValueChangeFinished = { ThemeStore.setOverlayOpacity(pct) },
             valueRange = 5f..70f,
-            colors = SliderDefaults.colors(
+            colors = SliderDefaults.sliderColors(
                 thumbColor = MiuixTheme.colorScheme.primary,
-                activeTrackColor = MiuixTheme.colorScheme.primary,
+                foregroundColor = MiuixTheme.colorScheme.primary,
             ),
         )
         // 渲染方式（2026-10-27 重写为「DecorView 前景遮罩」，只有一种实现）：

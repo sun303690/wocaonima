@@ -1,6 +1,7 @@
 package dev.sun.wechat.features.items
 
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,6 +26,7 @@ import kotlinx.serialization.Serializable
 import java.text.Collator
 import java.util.Calendar
 import java.util.Locale
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Serializable
 data class AutomationToggleRule(val enabled: Boolean = false)
@@ -134,11 +136,11 @@ fun rememberAutomationSaveState(): AutomationSaveState {
 fun AutomationSaveContent(state: AutomationSaveState, content: @Composable () -> Unit) {
     androidx.compose.foundation.layout.Column {
         if (state.saving) {
-            androidx.compose.material3.LinearProgressIndicator()
+            LinearProgressIndicator(progress = 0f)
             Text(stringResource(R.string.structured_storage_saving))
         } else {
             if (state.failed) {
-                Text(stringResource(R.string.structured_storage_save_failed), color = androidx.compose.material3.MaterialTheme.colorScheme.error)
+                Text(stringResource(R.string.structured_storage_save_failed), color = MiuixTheme.colorScheme.error)
             }
             content()
         }

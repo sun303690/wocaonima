@@ -1,7 +1,7 @@
 package dev.sun.wechat.features.items.debug
 
 import androidx.activity.ComponentActivity
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.ui.res.stringResource
 import dev.sun.wechat.R
 import dev.sun.wechat.dexkit.cache.DexCacheManager

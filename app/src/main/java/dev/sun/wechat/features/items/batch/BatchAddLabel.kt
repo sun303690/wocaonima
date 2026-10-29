@@ -6,10 +6,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.LinearWavyProgressIndicator
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
 import dev.sun.wechat.ui.utils.ListItem
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.Composable
@@ -106,7 +106,7 @@ object BatchAddLabel : ClickableFeature() {
             title = { Text(stringResource(R.string.batch_add_label_select_label)) },
             text = {
                 DefaultColumn {
-                    OutlinedTextField(
+                    TextField(
                         value = newLabelName,
                         onValueChange = { newLabelName = it },
                         modifier = Modifier.fillMaxWidth(),
@@ -116,7 +116,7 @@ object BatchAddLabel : ClickableFeature() {
 
                     val loaded = labels
                     if (loaded == null) {
-                        LinearWavyProgressIndicator()
+                        LinearProgressIndicator()
                     } else if (loaded.isNotEmpty()) {
                         Text(stringResource(R.string.batch_add_label_existing_labels))
                         LazyColumn {
@@ -207,7 +207,7 @@ object BatchAddLabel : ClickableFeature() {
                                 )
                             }
                         )
-                        LinearWavyProgressIndicator(progress = { if (total == 0) 1f else completedValue.toFloat() / total })
+                        LinearProgressIndicator(progress = if (total == 0) 1f else completedValue.toFloat() / total)
                     }
                 },
                 confirmButton = if (done) {

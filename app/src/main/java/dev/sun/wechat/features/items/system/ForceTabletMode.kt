@@ -2,7 +2,7 @@ package dev.sun.wechat.features.items.system
 
 import android.content.Context
 import android.widget.Button
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.ui.res.stringResource
 import androidx.core.view.isGone
 import androidx.core.view.isVisible

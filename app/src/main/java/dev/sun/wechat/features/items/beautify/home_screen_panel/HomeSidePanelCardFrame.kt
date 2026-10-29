@@ -13,12 +13,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardColors
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardColors
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -111,9 +111,8 @@ fun HomeSidePanelCardBadge(
     ) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHighest,
-            tonalElevation = 6.dp,
-            shadowElevation = 2.dp,
+            color = MiuixTheme.colorScheme.surfaceContainerHighest,
+            shadowElevation = 6.dp,
         ) {
             Row {
                 if (retainedEdit) {
@@ -128,7 +127,7 @@ fun HomeSidePanelCardBadge(
                         onClick = onDelete.takeIf { visible },
                         contentDescription = stringResource(deleteDescriptionRes),
                         icon = MaterialSymbols.Outlined.Close,
-                        tint = MaterialTheme.colorScheme.error,
+                        tint = MiuixTheme.colorScheme.error,
                     )
                 }
             }
@@ -141,7 +140,7 @@ fun HomeSidePanelBadgeButton(
     onClick: (() -> Unit)?,
     contentDescription: String,
     icon: ImageVector,
-    tint: Color = MaterialTheme.colorScheme.onSurface,
+    tint: Color = MiuixTheme.colorScheme.onSurface,
 ) {
     val modifier = Modifier.size(36.dp)
     if (onClick != null) {

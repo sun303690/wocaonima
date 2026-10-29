@@ -17,7 +17,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,11 +34,11 @@ import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.DropDownMenuWidget
-import dev.sun.wechat.ui.content.m3.DropdownOption
-import dev.sun.wechat.ui.content.m3.IntNumberPickerWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixDropDownMenuWidget
+import dev.sun.wechat.ui.content.miuix.DropdownOption
+import dev.sun.wechat.ui.content.miuix.MiuixIntNumberPickerWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.utils.dpToPx
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
@@ -226,9 +226,9 @@ object BeautifyConversationList : ClickableFeature() {
             AlertDialogContent(
                 title = { Text(stringResource(R.string.beautify_conversation_list_title)) },
                 text = {
-                    SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                    MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                         item(key = "preset") {
-                            DropDownMenuWidget(
+                            MiuixDropDownMenuWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.beautify_conversation_preset),
                                 description = null,
@@ -257,7 +257,7 @@ object BeautifyConversationList : ClickableFeature() {
                             key = "highlight_unread",
                             animatedVisibility = preset != ConversationListPreset.NO_LAYOUT,
                         ) {
-                            SwitchWidget(
+                            MiuixSwitchWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.beautify_conversation_highlight_unread),
                                 checked = highlightUnread,
@@ -268,7 +268,7 @@ object BeautifyConversationList : ClickableFeature() {
                             )
                         }
                         item(key = "hide_dividers") {
-                            SwitchWidget(
+                            MiuixSwitchWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.beautify_conversation_hide_dividers),
                                 checked = hideDividers,
@@ -279,9 +279,9 @@ object BeautifyConversationList : ClickableFeature() {
                             )
                         }
                         item(key = "global_cards_section") {
-                            SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                            MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                                 item {
-                                    SwitchWidget(
+                                    MiuixSwitchWidget(
                                         iconPlaceholder = false,
                                         title = stringResource(R.string.beautify_global_list_cards_enabled),
                                         description = stringResource(R.string.beautify_global_list_cards_summary),
@@ -294,7 +294,7 @@ object BeautifyConversationList : ClickableFeature() {
                                     )
                                 }
                                 item(key = "global_dark", animatedVisibility = globalCardsEnabled) {
-                                    SwitchWidget(
+                                    MiuixSwitchWidget(
                                         iconPlaceholder = false,
                                         title = stringResource(R.string.beautify_global_list_cards_dark),
                                         checked = globalCardsDark,
@@ -306,7 +306,7 @@ object BeautifyConversationList : ClickableFeature() {
                                     )
                                 }
                                 item(key = "global_alpha", animatedVisibility = globalCardsEnabled) {
-                                    IntNumberPickerWidget(
+                                    MiuixIntNumberPickerWidget(
                                         iconPlaceholder = false,
                                         title = stringResource(R.string.beautify_global_list_cards_alpha),
                                         value = globalCardsAlpha,
@@ -322,7 +322,7 @@ object BeautifyConversationList : ClickableFeature() {
                                     )
                                 }
                                 item(key = "global_radius", animatedVisibility = globalCardsEnabled) {
-                                    IntNumberPickerWidget(
+                                    MiuixIntNumberPickerWidget(
                                         iconPlaceholder = false,
                                         title = stringResource(R.string.beautify_global_list_cards_radius),
                                         value = globalCardsRadius,
@@ -338,7 +338,7 @@ object BeautifyConversationList : ClickableFeature() {
                                     )
                                 }
                                 item(key = "global_inset", animatedVisibility = globalCardsEnabled) {
-                                    IntNumberPickerWidget(
+                                    MiuixIntNumberPickerWidget(
                                         iconPlaceholder = false,
                                         title = stringResource(R.string.beautify_global_list_cards_inset),
                                         value = globalCardsInset,
@@ -354,7 +354,7 @@ object BeautifyConversationList : ClickableFeature() {
                                     )
                                 }
                                 item(key = "global_gap", animatedVisibility = globalCardsEnabled) {
-                                    IntNumberPickerWidget(
+                                    MiuixIntNumberPickerWidget(
                                         iconPlaceholder = false,
                                         title = stringResource(R.string.beautify_global_list_cards_gap),
                                         value = globalCardsGap,
@@ -370,7 +370,7 @@ object BeautifyConversationList : ClickableFeature() {
                                     )
                                 }
                                 item(key = "global_height", animatedVisibility = globalCardsEnabled) {
-                                    IntNumberPickerWidget(
+                                    MiuixIntNumberPickerWidget(
                                         iconPlaceholder = false,
                                         title = stringResource(R.string.beautify_global_list_cards_height),
                                         value = globalCardsHeight,

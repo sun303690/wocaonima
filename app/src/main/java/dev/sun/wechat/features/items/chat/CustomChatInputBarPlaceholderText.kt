@@ -3,8 +3,8 @@ package dev.sun.wechat.features.items.chat
 import android.content.ContentValues
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,7 +27,7 @@ import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.DefaultColumn
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.PlaceholderChips
+import dev.sun.wechat.ui.content.miuix.MiuixPlaceholderChips
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
 import java.time.LocalDate
@@ -159,7 +159,7 @@ object CustomChatInputBarPlaceholderText : ClickableFeature(), IResolveDex, WeDa
                 title = { Text(stringResource(R.string.feature_custom_chat_input_bar_placeholder_text_name)) },
                 text = {
                     DefaultColumn {
-                        OutlinedTextField(
+                        TextField(
                             value = textInput,
                             onValueChange = { textInput = it },
                             label = { Text(stringResource(R.string.chat_placeholder_content)) },
@@ -171,7 +171,7 @@ object CustomChatInputBarPlaceholderText : ClickableFeature(), IResolveDex, WeDa
 
                         Text(stringResource(R.string.chat_placeholder_insert_hint))
 
-                        PlaceholderChips(
+                        MiuixPlaceholderChips(
                             placeholders = PLACEHOLDERS,
                             value = textInput,
                             isFieldFocused = isFocused,

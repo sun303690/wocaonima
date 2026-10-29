@@ -1,8 +1,8 @@
 package dev.sun.wechat.features.items.chat
 
 import androidx.activity.ComponentActivity
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextField
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -19,6 +19,7 @@ import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.TextButton
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.android.showToast
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
  * 伪装语音时长（完整版，对齐 Nuke 实现）：
@@ -75,8 +76,8 @@ object FakeVoiceDuration : ClickableFeature(), IResolveDex {
                     )
                     Text(
                         stringResource(R.string.chat_fake_voice_duration_hint),
-                        style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     )
                 },
                 dismissButton = {

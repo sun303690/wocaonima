@@ -25,11 +25,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -386,7 +386,7 @@ private fun HomeSidePanelProfileHeader(
         HomeSidePanelProfileAvatar(
             profile = profile,
             size = 58.dp,
-            textStyle = MaterialTheme.typography.titleLarge,
+            textStyle = MiuixTheme.textStyles.title1,
             contentDescription = if (editing) {
                 null
             } else {
@@ -409,7 +409,7 @@ private fun HomeSidePanelProfileHeader(
         ) {
             Text(
                 homeSidePanelProfileDisplayName(profile, stringResource(R.string.home_side_panel_wechat_user)),
-                style = MaterialTheme.typography.titleLarge,
+                style = MiuixTheme.textStyles.title1,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -425,7 +425,7 @@ private fun HomeSidePanelProfileHeader(
                         MaterialSymbols.Outlined.Chevron_right,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     )
                 }
             }
@@ -504,8 +504,8 @@ private fun HomeSidePanelStatus(
                 Box(Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF31B36B)))
                 Text(
                     stringResource(R.string.home_side_panel_online),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     maxLines = 1,
                 )
             }
@@ -514,8 +514,8 @@ private fun HomeSidePanelStatus(
                 HomeSidePanelTextStatusIcon(status.status, 22.dp)
                 Text(
                     status.status.description,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -525,13 +525,13 @@ private fun HomeSidePanelStatus(
                 Icon(
                     MaterialSymbols.Outlined.Close,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error,
+                    tint = MiuixTheme.colorScheme.error,
                     modifier = Modifier.size(16.dp),
                 )
                 Text(
                     stringResource(R.string.home_side_panel_fetch_failed),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.error,
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.error,
                     maxLines = 1,
                 )
                 IconButton(onClick = panelState::refreshStatus, modifier = Modifier.size(24.dp)) {
@@ -563,7 +563,7 @@ fun HomeSidePanelToolbarContent(
         HomeSidePanelProfileAvatar(
             profile = profile,
             size = 32.dp,
-            textStyle = MaterialTheme.typography.labelLarge,
+            textStyle = MiuixTheme.textStyles.button,
             contentDescription = stringResource(R.string.home_side_panel_open_panel),
             onClick = onAvatarClick,
         )
@@ -576,9 +576,9 @@ fun HomeSidePanelToolbarContent(
         ) {
             Text(
                 text = homeSidePanelProfileDisplayName(profile, stringResource(R.string.home_side_panel_wechat_user)),
-                style = MaterialTheme.typography.bodyMedium,
+                style = MiuixTheme.textStyles.body2,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = MiuixTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -594,7 +594,7 @@ fun HomeSidePanelToolbarContent(
                     imageVector = MaterialSymbols.Outlined.Chevron_right,
                     contentDescription = null,
                     modifier = Modifier.size(14.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 )
             }
         }
@@ -627,7 +627,7 @@ fun HomeSidePanelProfileAvatar(
             modifier = Modifier
                 .size(size)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer)
+                .background(MiuixTheme.colorScheme.primaryContainer)
                 .then(onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier),
             contentAlignment = Alignment.Center,
         ) {
@@ -635,7 +635,7 @@ fun HomeSidePanelProfileAvatar(
                 text = profile.nickname.firstOrNull()?.toString()
                     ?: stringResource(R.string.home_side_panel_fallback_initial),
                 style = textStyle,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                color = MiuixTheme.colorScheme.onPrimaryContainer,
             )
         }
     }
@@ -674,11 +674,11 @@ private fun HomeSidePanelToolbarStatus(
                     imageVector = MaterialSymbols.Outlined.Close,
                     contentDescription = null,
                     modifier = Modifier.size(11.dp),
-                    tint = MaterialTheme.colorScheme.error,
+                    tint = MiuixTheme.colorScheme.error,
                 )
                 HomeSidePanelToolbarStatusText(
                     stringResource(R.string.home_side_panel_fetch_failed),
-                    MaterialTheme.colorScheme.error,
+                    MiuixTheme.colorScheme.error,
                 )
             }
         }
@@ -687,7 +687,7 @@ private fun HomeSidePanelToolbarStatus(
 
 @Composable
 private fun HomeSidePanelTextStatusIcon(status: TextStatus, size: Dp) {
-    val iconTint = MaterialTheme.colorScheme.onSurface.toArgb()
+    val iconTint = MiuixTheme.colorScheme.onSurface.toArgb()
     key(status.iconId) {
         AndroidView(
             factory = { context ->
@@ -710,11 +710,11 @@ private fun HomeSidePanelTextStatusIcon(status: TextStatus, size: Dp) {
 @Composable
 private fun HomeSidePanelToolbarStatusText(
     text: String,
-    color: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    color: Color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
 ) {
     Text(
         text = text,
-        style = MaterialTheme.typography.labelSmall,
+        style = MiuixTheme.textStyles.footnote2,
         color = color,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,

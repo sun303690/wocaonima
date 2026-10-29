@@ -3,8 +3,8 @@ package dev.sun.wechat.features.items.contacts
 import android.app.Activity
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextField
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -23,7 +23,7 @@ import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.DefaultColumn
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.PlaceholderChips
+import dev.sun.wechat.ui.content.miuix.MiuixPlaceholderChips
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.formatEpoch
@@ -84,7 +84,7 @@ object AutoRemarkNewFriends : ClickableFeature() {
 
                         Text(stringResource(R.string.contacts_auto_remark_insert_placeholder))
 
-                        PlaceholderChips(
+                        MiuixPlaceholderChips(
                             placeholders = listOf($$"$nickname", $$"$time"),
                             value = displayFormatInput,
                             isFieldFocused = isFocused,

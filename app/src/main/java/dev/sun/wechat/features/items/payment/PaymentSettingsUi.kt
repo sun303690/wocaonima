@@ -6,15 +6,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import dev.sun.wechat.ui.content.miuix.MiuixCompatTextField
+import top.yukonga.miuix.kmp.basic.Switch
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,13 +38,13 @@ import dev.sun.wechat.features.items.AutomationKeywordRule
 import dev.sun.wechat.features.items.AutomationTimeRangeRule
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.WeTimeOfDayField
-import dev.sun.wechat.ui.content.m3.BaseItemContainer
-import dev.sun.wechat.ui.content.m3.BaseSupportingWidget
-import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.DropDownMenuWidget
-import dev.sun.wechat.ui.content.m3.DropdownOption
-import dev.sun.wechat.ui.content.m3.SegmentedColumnScope
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixBaseItemContainer
+import dev.sun.wechat.ui.content.miuix.MiuixBaseSupportingWidget
+import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
+import dev.sun.wechat.ui.content.miuix.MiuixDropDownMenuWidget
+import dev.sun.wechat.ui.content.miuix.DropdownOption
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumnScope
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 
 /**
  * Free-form value being edited through an in-dialog edit view. The payment dialogs live in a
@@ -73,7 +72,7 @@ fun PaymentTextEditDialog(
     AlertDialogContent(
         title = { Text(mode.title) },
         text = {
-            OutlinedTextField(
+            MiuixCompatTextField(
                 value = draft,
                 onValueChange = { draft = mode.filter(it) },
                 keyboardOptions = KeyboardOptions(keyboardType = mode.keyboardType),
@@ -92,7 +91,7 @@ fun PaymentTextEditDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onClose) { Text(stringResource(R.string.dialog_cancel)) }
+            Button(onClick = onClose) { Text(stringResource(R.string.dialog_cancel)) }
         },
     )
 }
@@ -104,7 +103,7 @@ fun PaymentNavigationRow(
     description: String,
     onClick: () -> Unit,
 ) {
-    BaseWidget(
+    MiuixBaseWidget(
         iconPlaceholder = false,
         title = title,
         description = description,
@@ -113,7 +112,7 @@ fun PaymentNavigationRow(
             Icon(
                 imageVector = MaterialSymbols.Outlined.Chevron_right,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             )
         },
     )
@@ -136,7 +135,7 @@ fun PaymentRuleRow(
     onCheckedChange: (Boolean) -> Unit,
 ) {
     if (overridden == null) {
-        SwitchWidget(
+        MiuixSwitchWidget(
             iconPlaceholder = false,
             title = title,
             description = summary,
@@ -146,7 +145,7 @@ fun PaymentRuleRow(
         return
     }
 
-    BaseWidget(
+    MiuixBaseWidget(
         iconPlaceholder = false,
         title = title,
         description = if (overridden) {
@@ -158,24 +157,13 @@ fun PaymentRuleRow(
         trailingDivider = true,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(enabled = overridden, onClick = onReset) {
+            Button(enabled = overridden, onClick = onReset) {
                 Text(stringResource(R.string.action_reset))
             }
             Switch(
                 checked = checked,
                 enabled = overridden,
-                onCheckedChange = onCheckedChange,
-                colors = SwitchDefaults.colors(
-                    checkedIconColor = MaterialTheme.colorScheme.primary,
-                    uncheckedIconColor = MaterialTheme.colorScheme.surfaceContainerHighest
-                ),
-                thumbContent = {
-                    Icon(
-                        imageVector = if (checked) MaterialSymbols.Outlined.Check else MaterialSymbols.Outlined.Close,
-                        contentDescription = null,
-                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                    )
-                },
+                onCheckedChange = onCheckedChange
             )
         }
     }
@@ -191,7 +179,7 @@ fun PaymentModeRuleRow(
     onActivate: () -> Unit,
     onReset: () -> Unit,
 ) {
-    BaseWidget(
+    MiuixBaseWidget(
         iconPlaceholder = false,
         title = title,
         description = if (overridden == false) {
@@ -202,7 +190,7 @@ fun PaymentModeRuleRow(
         onClick = if (overridden == false) onActivate else null,
         trailingContent = {
             if (overridden != null) {
-                TextButton(enabled = overridden, onClick = onReset) {
+                Button(enabled = overridden, onClick = onReset) {
                     Text(stringResource(R.string.action_reset))
                 }
             }
@@ -220,7 +208,7 @@ fun PaymentValueRow(
     valueHint: String? = null,
     trailingIcon: ImageVector = MaterialSymbols.Outlined.Edit,
 ) {
-    BaseWidget(
+    MiuixBaseWidget(
         iconPlaceholder = false,
         title = title,
         description = value.ifBlank { valueHint },
@@ -232,7 +220,7 @@ fun PaymentValueRow(
 
 @Composable
 fun PaymentErrorRow(message: String) {
-    BaseWidget(iconPlaceholder = false, title = message, isError = true)
+    MiuixBaseWidget(iconPlaceholder = false, title = message, isError = true)
 }
 
 /** Time-range fields shown while the owning rule is enabled. */
@@ -281,7 +269,7 @@ fun SegmentedColumnScope.keywordItems(
     inlineTextFields: Boolean = false,
 ) {
     item(key = "${keyPrefix}_mode", animatedVisibility = visible) {
-        DropDownMenuWidget(
+        MiuixDropDownMenuWidget(
             iconPlaceholder = false,
             title = stringResource(R.string.automation_keyword_mode_label),
             description = null,
@@ -303,7 +291,7 @@ fun SegmentedColumnScope.keywordItems(
         )
     }
     item(key = "${keyPrefix}_ignore_case", animatedVisibility = visible) {
-        SwitchWidget(
+        MiuixSwitchWidget(
             iconPlaceholder = false,
             title = stringResource(R.string.automation_ignore_case),
             checked = rule.ignoreCase,
@@ -317,11 +305,11 @@ fun SegmentedColumnScope.keywordItems(
             val invalidRegexMessage = stringResource(R.string.automation_regex_invalid)
             val regexError = invalidRegexMessage.takeIf { runCatching { Regex(rule.regex) }.isFailure }
             if (inlineTextFields) {
-                BaseSupportingWidget(
+                MiuixBaseSupportingWidget(
                     title = regexTitle,
                     description = stringResource(R.string.automation_regex_empty_summary),
                 ) {
-                    OutlinedTextField(
+                    MiuixCompatTextField(
                         value = rule.regex,
                         enabled = editable,
                         onValueChange = { onChange(rule.copy(regex = it)) },
@@ -356,7 +344,7 @@ fun SegmentedColumnScope.keywordItems(
     }
     rule.strings.forEach { keyword ->
         item(key = "${keyPrefix}_entry_$keyword", animatedVisibility = visible) {
-            BaseWidget(
+            MiuixBaseWidget(
                 iconPlaceholder = false,
                 title = keyword,
                 enabled = editable,
@@ -372,8 +360,8 @@ fun SegmentedColumnScope.keywordItems(
         val addTitle = stringResource(R.string.automation_new_keyword)
         if (inlineTextFields) {
             var pendingKeyword by remember { mutableStateOf("") }
-            BaseSupportingWidget(title = addTitle) {
-                OutlinedTextField(
+            MiuixBaseSupportingWidget(title = addTitle) {
+                MiuixCompatTextField(
                     value = pendingKeyword,
                     enabled = editable,
                     onValueChange = { pendingKeyword = it },

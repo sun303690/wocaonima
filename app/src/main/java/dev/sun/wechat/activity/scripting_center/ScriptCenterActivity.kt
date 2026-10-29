@@ -31,10 +31,10 @@ import dev.sun.wechat.i18n.LocaleResourceMode
 import dev.sun.wechat.i18n.WeKitLocaleProvider
 import dev.sun.wechat.ui.agent.settings.AgentConfirmDialog
 import dev.sun.wechat.ui.agent.settings.AgentSettingsScaffold
-import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
-import dev.sun.wechat.ui.utils.theme.ModuleTheme
+import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
+import dev.sun.wechat.ui.utils.theme.MiuixModuleTheme
 import dev.sun.wechat.utils.android.showToast
 import dev.sun.wechat.utils.fs.KnownPaths
 import dev.sun.wechat.utils.fs.createDirsSafe
@@ -51,7 +51,7 @@ class ScriptCenterActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             WeKitLocaleProvider(mode = LocaleResourceMode.InjectedHost) {
-                ModuleTheme { ScriptCenterScreen(this@ScriptCenterActivity) }
+                MiuixModuleTheme { ScriptCenterScreen(this@ScriptCenterActivity) }
             }
         }
     }
@@ -94,11 +94,11 @@ private fun ScriptCenterScreen(activity: ComponentActivity) {
 
     AgentSettingsScaffold(stringResource(R.string.script_center_title), onBack = { activity.finish() }) {
         item {
-            SegmentedColumn(title = stringResource(R.string.script_center_master_section)) {
+            MiuixSegmentedColumn(title = stringResource(R.string.script_center_master_section)) {
                 item {
-                    SwitchWidget(
+                    MiuixSwitchWidget(
                         title = stringResource(R.string.script_center_master_toggle),
-                        description = stringResource(R.string.script_center_master_desc),
+                        summary = stringResource(R.string.script_center_master_desc),
                         checked = masterOn,
                         onCheckedChange = { newState ->
                             masterOn = newState
@@ -118,11 +118,11 @@ private fun ScriptCenterScreen(activity: ComponentActivity) {
             }
         }
         item {
-            SegmentedColumn(title = stringResource(R.string.script_center_engines_section)) {
+            MiuixSegmentedColumn(title = stringResource(R.string.script_center_engines_section)) {
                 item {
-                    SwitchWidget(
+                    MiuixSwitchWidget(
                         title = stringResource(R.string.script_center_java_engine),
-                        description = stringResource(R.string.script_center_java_engine_desc),
+                        summary = stringResource(R.string.script_center_java_engine_desc),
                         checked = javaOn,
                         enabled = masterOn,
                         onCheckedChange = { newState ->
@@ -132,9 +132,9 @@ private fun ScriptCenterScreen(activity: ComponentActivity) {
                     )
                 }
                 item {
-                    SwitchWidget(
+                    MiuixSwitchWidget(
                         title = stringResource(R.string.script_center_python_engine),
-                        description = stringResource(R.string.script_center_python_engine_desc),
+                        summary = stringResource(R.string.script_center_python_engine_desc),
                         checked = pythonOn,
                         enabled = masterOn,
                         onCheckedChange = { newState ->
@@ -144,9 +144,9 @@ private fun ScriptCenterScreen(activity: ComponentActivity) {
                     )
                 }
                 item {
-                    BaseWidget(
+                    MiuixBaseWidget(
                         title = stringResource(R.string.script_center_python_manage),
-                        description = stringResource(R.string.script_center_python_manage_desc),
+                        summary = stringResource(R.string.script_center_python_manage_desc),
                         enabled = masterOn,
                         onClick = {
                             runCatching {
@@ -163,10 +163,10 @@ private fun ScriptCenterScreen(activity: ComponentActivity) {
             }
         }
         item {
-            SegmentedColumn(title = stringResource(R.string.script_center_local_section)) {
+            MiuixSegmentedColumn(title = stringResource(R.string.script_center_local_section)) {
                 if (localRows.isEmpty()) {
                     item {
-                        BaseWidget(
+                        MiuixBaseWidget(
                             title = stringResource(R.string.script_center_local_empty),
                             enabled = false,
                         )
@@ -174,9 +174,9 @@ private fun ScriptCenterScreen(activity: ComponentActivity) {
                 }
                 for (row in localRows) {
                     item(key = "${row.runtime}-${row.id}") {
-                        BaseWidget(
+                        MiuixBaseWidget(
                             title = row.id,
-                            description = activity.getString(
+                            summary = activity.getString(
                                 if (row.runtime == MarketRuntime.PYTHON) {
                                     R.string.script_center_runtime_python
                                 } else {
@@ -191,11 +191,11 @@ private fun ScriptCenterScreen(activity: ComponentActivity) {
             }
         }
         item {
-            SegmentedColumn(title = stringResource(R.string.script_center_market_section)) {
+            MiuixSegmentedColumn(title = stringResource(R.string.script_center_market_section)) {
                 item {
-                    BaseWidget(
+                    MiuixBaseWidget(
                         title = stringResource(R.string.script_center_market_refresh),
-                        description = ScriptCenter.marketStatus,
+                        summary = ScriptCenter.marketStatus,
                         icon = MaterialSymbols.Outlined.Refresh,
                         onClick = {
                             if (!marketLoading) {
@@ -216,9 +216,9 @@ private fun ScriptCenterScreen(activity: ComponentActivity) {
                 }
                 for (entry in marketEntries) {
                     item(key = "market-${entry.runtime}-${entry.id}") {
-                        BaseWidget(
+                        MiuixBaseWidget(
                             title = entry.name,
-                            description = listOfNotNull(
+                            summary = listOfNotNull(
                                 entry.id,
                                 entry.version.takeIf { it.isNotBlank() },
                                 entry.author.takeIf { it.isNotBlank() },

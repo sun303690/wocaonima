@@ -9,8 +9,8 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -26,14 +26,15 @@ import dev.sun.wechat.agent.data.WeAgentRepository
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.DropDownMenuWidget
-import dev.sun.wechat.ui.content.m3.DropdownOption
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixDropDownMenuWidget
+import dev.sun.wechat.ui.content.miuix.DropdownOption
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.android.showToast
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /** AI 语音助手设置面板（卡片式）。音色下拉内置，支持文字转语音发送。 */
 internal object AiVoiceSettingsDialog {
@@ -95,9 +96,9 @@ internal object AiVoiceSettingsDialog {
             title = { Text(stringResource(R.string.feature_ai_voice_assistant_name)) },
             text = {
                 Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).imePadding()) {
-                    SegmentedColumn(title = stringResource(R.string.aivoice_section_ai)) {
+                    MiuixSegmentedColumn(title = stringResource(R.string.aivoice_section_ai)) {
                         item {
-                            SwitchWidget(
+                            MiuixSwitchWidget(
                                 title = stringResource(R.string.aivoice_enabled),
                                 checked = enabled,
                                 onCheckedChange = { enabled = it },
@@ -111,7 +112,7 @@ internal object AiVoiceSettingsDialog {
                                     add(DropdownOption(selectedModelId, stringResource(R.string.aivoice_no_model)))
                                 }
                             }
-                            DropDownMenuWidget(
+                            MiuixDropDownMenuWidget(
                                 title = stringResource(R.string.aivoice_model),
                                 description = models.firstOrNull { it.id == selectedModelId }?.displayName ?: selectedModelId,
                                 value = selectedModelId,
@@ -153,7 +154,7 @@ internal object AiVoiceSettingsDialog {
                             )
                         }
                         item {
-                            SwitchWidget(
+                            MiuixSwitchWidget(
                                 title = stringResource(R.string.aivoice_voice_only),
                                 description = stringResource(R.string.aivoice_voice_only_desc),
                                 checked = voiceOnly,
@@ -162,9 +163,9 @@ internal object AiVoiceSettingsDialog {
                         }
                     }
 
-                    SegmentedColumn(title = stringResource(R.string.aivoice_section_tts)) {
+                    MiuixSegmentedColumn(title = stringResource(R.string.aivoice_section_tts)) {
                         item {
-                            DropDownMenuWidget(
+                            MiuixDropDownMenuWidget(
                                 title = stringResource(R.string.aivoice_engine),
                                 description = engine,
                                 value = engine,
@@ -186,8 +187,8 @@ internal object AiVoiceSettingsDialog {
                             if (site.isNotEmpty()) {
                                 Text(
                                     "${stringResource(R.string.aivoice_engine_site)} $site",
-                                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-                                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MiuixTheme.textStyles.footnote1,
+                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                                 )
                             }
@@ -201,7 +202,7 @@ internal object AiVoiceSettingsDialog {
                                     add(DropdownOption(selectedVoiceId, stringResource(R.string.aivoice_voice_manual)))
                                 }
                             }
-                            DropDownMenuWidget(
+                            MiuixDropDownMenuWidget(
                                 title = stringResource(R.string.aivoice_engine_voice),
                                 description = selectedVoiceId,
                                 value = selectedVoiceId,
@@ -251,9 +252,9 @@ internal object AiVoiceSettingsDialog {
                     }
 
                     // ---- 文字转语音 ----
-                    SegmentedColumn(title = stringResource(R.string.aivoice_section_manual_tts)) {
+                    MiuixSegmentedColumn(title = stringResource(R.string.aivoice_section_manual_tts)) {
                         item {
-                            OutlinedTextField(
+                            TextField(
                                 value = ttsText,
                                 onValueChange = { ttsText = it },
                                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
@@ -266,8 +267,8 @@ internal object AiVoiceSettingsDialog {
                         item {
                             Text(
                                 stringResource(R.string.aivoice_tts_hint),
-                                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-                                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MiuixTheme.textStyles.footnote1,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                             )
                         }
@@ -363,8 +364,8 @@ internal object AiVoiceSettingsDialog {
         onValueChange: (String) -> Unit,
     ) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
-            Text(title, style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
-            OutlinedTextField(
+            Text(title, style = MiuixTheme.textStyles.footnote1)
+            TextField(
                 value = value,
                 onValueChange = onValueChange,
                 modifier = Modifier.fillMaxWidth(),

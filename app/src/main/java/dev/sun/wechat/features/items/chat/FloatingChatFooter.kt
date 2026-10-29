@@ -21,7 +21,7 @@ import android.widget.RelativeLayout
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -49,10 +49,10 @@ import dev.sun.wechat.features.items.chat.FloatingChatFooter.offscreenHeight
 import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.BaseItemContainer
-import dev.sun.wechat.ui.content.m3.IntNumberPickerWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixBaseItemContainer
+import dev.sun.wechat.ui.content.miuix.MiuixIntNumberPickerWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.utils.allViews
 import dev.sun.wechat.ui.utils.findViewWhich
 import dev.sun.wechat.ui.utils.showComposeDialog
@@ -1031,9 +1031,9 @@ object FloatingChatFooter : ClickableFeature(), IResolveDex {
             AlertDialogContent(
                 title = { Text(stringResource(R.string.chat_floating_footer_title)) },
                 text = {
-                    SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                    MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                         item {
-                            SwitchWidget(
+                            MiuixSwitchWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.chat_floating_footer_panel_above),
                                 description = stringResource(R.string.chat_floating_footer_panel_above_summary),
@@ -1046,7 +1046,7 @@ object FloatingChatFooter : ClickableFeature(), IResolveDex {
                         }
                         item {
                             BaseItemContainer {
-                                IntNumberPickerWidget(
+                                MiuixIntNumberPickerWidget(
                                     title = stringResource(R.string.chat_floating_corner_radius_label),
                                     value = corner,
                                     startInt = MIN_CORNER_RADIUS,
@@ -1062,7 +1062,7 @@ object FloatingChatFooter : ClickableFeature(), IResolveDex {
                         }
                         item {
                             BaseItemContainer {
-                                IntNumberPickerWidget(
+                                MiuixIntNumberPickerWidget(
                                     title = stringResource(R.string.chat_floating_side_margin_label),
                                     value = side,
                                     startInt = MIN_SIDE_MARGIN,
@@ -1078,7 +1078,7 @@ object FloatingChatFooter : ClickableFeature(), IResolveDex {
                         }
                         item {
                             BaseItemContainer {
-                                IntNumberPickerWidget(
+                                MiuixIntNumberPickerWidget(
                                     title = stringResource(R.string.chat_floating_bottom_gap_label),
                                     value = gap,
                                     startInt = MIN_BOTTOM_GAP,
@@ -1094,7 +1094,7 @@ object FloatingChatFooter : ClickableFeature(), IResolveDex {
                         }
                         item {
                             BaseItemContainer {
-                                IntNumberPickerWidget(
+                                MiuixIntNumberPickerWidget(
                                     title = stringResource(R.string.chat_floating_elevation_label),
                                     value = elev,
                                     startInt = MIN_ELEVATION,

@@ -2,7 +2,7 @@ package dev.sun.wechat.features.items.chat
 
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -25,9 +25,9 @@ import dev.sun.wechat.features.items.chat.localizedChatString
 import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.RadioButtonWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.TextFieldDialogWidget
+import dev.sun.wechat.ui.content.miuix.MiuixRadioButtonWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixTextFieldDialogWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.android.showToast
 
@@ -165,9 +165,9 @@ object SendSecMsg : ClickableFeature(), IResolveDex {
             AlertDialogContent(
                 title = { Text(stringResource(R.string.feature_send_sec_msg_name)) },
                 text = {
-                    SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                    MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                         item {
-                            RadioButtonWidget(
+                            MiuixRadioButtonWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.send_sec_msg_mode_passive),
                                 description = stringResource(R.string.send_sec_msg_mode_passive_description),
@@ -179,7 +179,7 @@ object SendSecMsg : ClickableFeature(), IResolveDex {
                             )
                         }
                         item {
-                            RadioButtonWidget(
+                            MiuixRadioButtonWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.send_sec_msg_mode_active_menu),
                                 description = stringResource(R.string.send_sec_msg_mode_active_menu_description),
@@ -191,7 +191,7 @@ object SendSecMsg : ClickableFeature(), IResolveDex {
                             )
                         }
                         item {
-                            RadioButtonWidget(
+                            MiuixRadioButtonWidget(
                                 iconPlaceholder = false,
                                 title = stringResource(R.string.send_sec_msg_mode_active_prefix),
                                 description = stringResource(R.string.send_sec_msg_mode_active_prefix_description),
@@ -203,7 +203,7 @@ object SendSecMsg : ClickableFeature(), IResolveDex {
                             )
                         }
                         item(key = "trigger_prefix", animatedVisibility = currentMode == MODE_ACTIVE_PREFIX) {
-                            TextFieldDialogWidget(
+                            MiuixTextFieldDialogWidget(
                                 title = stringResource(R.string.send_sec_msg_trigger_prefix),
                                 value = triggerPrefix,
                                 onValueChange = { triggerPrefix = it },

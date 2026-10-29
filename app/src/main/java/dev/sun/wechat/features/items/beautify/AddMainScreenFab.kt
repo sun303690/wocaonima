@@ -41,14 +41,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SmallFloatingActionButton
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.FloatingActionButton
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import dev.sun.wechat.ui.content.miuix.MiuixCompatTextField
+import top.yukonga.miuix.kmp.basic.Surface
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -106,8 +104,8 @@ import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.DefaultColumn
 import dev.sun.wechat.ui.content.IconButton
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.RadioButtonWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixRadioButtonWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
 import dev.sun.wechat.ui.utils.LifecycleOwnerProvider
 import dev.sun.wechat.ui.utils.ReorderableList
 import dev.sun.wechat.ui.utils.rootView
@@ -457,8 +455,8 @@ object AddMainScreenFab : ClickableFeature() {
                                 FabMenuEntry(localizedName(localizedContext, item), icon, onClick = action)
                             }
                             val backgroundColor = if (isSystemInDarkTheme()) Color(0xFF191919) else Color(0xFFF7F7F7)
-                            val activeColor = MaterialTheme.colorScheme.primary
-                            val errorColor = MaterialTheme.colorScheme.error
+                            val activeColor = MiuixTheme.colorScheme.primary
+                            val errorColor = MiuixTheme.colorScheme.error
                             val layoutDirection = LocalLayoutDirection.current
 
                             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -631,9 +629,7 @@ object AddMainScreenFab : ClickableFeature() {
     private fun FabMenuLabel(name: String, backgroundColor: Color, tint: Color) {
         Surface(
             shape = MaterialTheme.shapes.large,
-            color = backgroundColor,
-            tonalElevation = 2.dp,
-            shadowElevation = 2.dp
+            color = backgroundColor
         ) {
             Text(
                 text = name,
@@ -647,7 +643,7 @@ object AddMainScreenFab : ClickableFeature() {
 
     @Composable
     private fun FabMenuButton(entry: FabMenuEntry, backgroundColor: Color, tint: Color) {
-        SmallFloatingActionButton(
+        FloatingActionButton(
             onClick = {
                 entry.onClick()
                 // 编辑模式下的菜单项（例如「重置位置」）不应收起菜单
@@ -655,7 +651,8 @@ object AddMainScreenFab : ClickableFeature() {
             },
             containerColor = backgroundColor,
             shape = CircleShape,
-            elevation = FloatingActionButtonDefaults.elevation(2.dp)
+            minWidth = 40.dp,
+            minHeight = 40.dp
         ) {
             Icon(entry.icon, contentDescription = entry.name, tint = tint)
         }
@@ -736,12 +733,12 @@ object AddMainScreenFab : ClickableFeature() {
                     DefaultColumn(Modifier.verticalScroll(rememberScrollState())) {
                         Text(
                             stringResource(R.string.fab_add_shortcut_message),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary
                         )
                         Text(
                             stringResource(R.string.fab_action_type),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
+                            style = MiuixTheme.textStyles.button,
+                            color = MiuixTheme.colorScheme.primary,
                             modifier = Modifier.padding(top = 12.dp)
                         )
 
@@ -752,12 +749,12 @@ object AddMainScreenFab : ClickableFeature() {
                             FabType.RESTART_HOST to R.string.fab_default_restart_wechat,
                             FabType.FORCE_STOP to R.string.fab_default_force_stop,
                         )
-                        SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                        MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                             typeOptions.forEach { (type, labelRes) ->
                                 item(key = type) {
                                     val label = stringResource(labelRes)
                                     val unavailable = type != FabType.START_ACTIVITY && hasType(type)
-                                    RadioButtonWidget(
+                                    MiuixRadioButtonWidget(
                                         iconPlaceholder = false,
                                         title = if (unavailable) {
                                             stringResource(R.string.fab_type_already_added, label)
@@ -775,7 +772,7 @@ object AddMainScreenFab : ClickableFeature() {
                             }
                         }
 
-                        OutlinedTextField(
+                        MiuixCompatTextField(
                             value = newName,
                             onValueChange = { newName = it },
                             label = { Text(stringResource(R.string.fab_button_name)) },
@@ -789,7 +786,7 @@ object AddMainScreenFab : ClickableFeature() {
                         )
 
                         if (newType == FabType.START_ACTIVITY) {
-                            OutlinedTextField(
+                            MiuixCompatTextField(
                                 value = newActivity,
                                 onValueChange = { newActivity = it },
                                 label = { Text(stringResource(R.string.fab_activity_class_name)) },
@@ -800,8 +797,8 @@ object AddMainScreenFab : ClickableFeature() {
                             )
                             Text(
                                 stringResource(R.string.fab_presets),
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.primary,
+                                style = MiuixTheme.textStyles.button,
+                                color = MiuixTheme.colorScheme.primary,
                                 modifier = Modifier.padding(top = 12.dp)
                             )
                             presets.forEach { preset ->
@@ -812,7 +809,7 @@ object AddMainScreenFab : ClickableFeature() {
                                         presetName,
                                         preset.activityClassName,
                                     ),
-                                    color = MaterialTheme.colorScheme.primary,
+                                    color = MiuixTheme.colorScheme.primary,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable {
@@ -827,8 +824,8 @@ object AddMainScreenFab : ClickableFeature() {
 
                         Text(
                             stringResource(R.string.fab_icon),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
+                            style = MiuixTheme.textStyles.button,
+                            color = MiuixTheme.colorScheme.primary,
                             modifier = Modifier.padding(top = 12.dp)
                         )
                         Row(
@@ -846,11 +843,11 @@ object AddMainScreenFab : ClickableFeature() {
                                         .clickable { newIconName = iconName },
                                     shape = CircleShape,
                                     color = if (selected) {
-                                        MaterialTheme.colorScheme.secondaryContainer
+                                        MiuixTheme.colorScheme.secondaryContainer
                                     } else {
-                                        MaterialTheme.colorScheme.surfaceContainerHighest
+                                        MiuixTheme.colorScheme.surfaceContainerHighest
                                     },
-                                    tonalElevation = if (selected) 2.dp else 0.dp,
+                                    shadowElevation = if (selected) 2.dp else 0.dp,
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
@@ -860,9 +857,9 @@ object AddMainScreenFab : ClickableFeature() {
                                                 stringResource(iconLabelRes(iconName)),
                                             ),
                                             tint = if (selected) {
-                                                MaterialTheme.colorScheme.onSecondaryContainer
+                                                MiuixTheme.colorScheme.onSecondaryContainer
                                             } else {
-                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                                MiuixTheme.colorScheme.onSurfaceVariantSummary
                                             },
                                         )
                                     }
@@ -923,8 +920,8 @@ object AddMainScreenFab : ClickableFeature() {
                                 Text(stringResource(R.string.fab_shortcuts_title), fontWeight = FontWeight.SemiBold)
                                 Text(
                                     stringResource(R.string.fab_reorder_immediate_hint),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MiuixTheme.textStyles.footnote1,
+                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                 )
                             }
                             TextButton(
@@ -955,7 +952,7 @@ object AddMainScreenFab : ClickableFeature() {
                             Icon(
                                 imageVector = MaterialSymbols.OutlinedFilled.Drag_pan,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = MiuixTheme.colorScheme.primary,
                             )
                             Column(
                                 modifier = Modifier
@@ -965,8 +962,8 @@ object AddMainScreenFab : ClickableFeature() {
                                 Text(stringResource(R.string.fab_adjust_position), fontWeight = FontWeight.Medium)
                                 Text(
                                     stringResource(R.string.fab_adjust_position_summary),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MiuixTheme.textStyles.footnote1,
+                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                 )
                             }
                         }
@@ -974,7 +971,7 @@ object AddMainScreenFab : ClickableFeature() {
                         if (currentItems.isEmpty()) {
                             Text(
                                 stringResource(R.string.fab_empty_shortcuts),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                 modifier = Modifier.padding(vertical = 28.dp),
                             )
                         } else {
@@ -1011,13 +1008,13 @@ object AddMainScreenFab : ClickableFeature() {
                                             Icon(
                                                 imageVector = MaterialSymbols.Outlined.Drag_handle,
                                                 contentDescription = stringResource(R.string.fab_drag_to_reorder_description),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                             )
                                         }
                                         Icon(
                                             imageVector = iconPool[item.iconName] ?: MaterialSymbols.OutlinedFilled.Add,
                                             contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
+                                            tint = MiuixTheme.colorScheme.primary,
                                             modifier = Modifier
                                                 .size(28.dp)
                                                 .padding(end = 4.dp),
@@ -1028,8 +1025,8 @@ object AddMainScreenFab : ClickableFeature() {
                                             Text(itemName, fontWeight = FontWeight.Medium)
                                             Text(
                                                 description,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                style = MiuixTheme.textStyles.footnote1,
+                                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                                 maxLines = 1,
                                             )
                                         }
@@ -1046,7 +1043,7 @@ object AddMainScreenFab : ClickableFeature() {
                                                     R.string.fab_delete_description,
                                                     itemName,
                                                 ),
-                                                tint = MaterialTheme.colorScheme.error,
+                                                tint = MiuixTheme.colorScheme.error,
                                             )
                                         }
                                     }

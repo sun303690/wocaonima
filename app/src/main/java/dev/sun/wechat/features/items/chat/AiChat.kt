@@ -12,11 +12,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import dev.sun.wechat.ui.content.miuix.MiuixAlertDialog
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,11 +51,11 @@ import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.ContactsSelector
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.BaseWidget
-import dev.sun.wechat.ui.content.m3.DropDownMenuWidget
-import dev.sun.wechat.ui.content.m3.DropdownOption
-import dev.sun.wechat.ui.content.m3.IntNumberPickerWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
+import dev.sun.wechat.ui.content.miuix.MiuixDropDownMenuWidget
+import dev.sun.wechat.ui.content.miuix.DropdownOption
+import dev.sun.wechat.ui.content.miuix.MiuixIntNumberPickerWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
 import kotlin.math.roundToInt
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToast
@@ -639,7 +639,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                 title = { Text(stringResource(R.string.ai_chat_config_title)) },
                 text = {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
-                        DropDownMenuWidget(
+                        MiuixDropDownMenuWidget(
                             iconPlaceholder = false,
                             title = "人物设定",
                             description = "选一个人物设定自动填入系统人设，之后可手动微调",
@@ -665,14 +665,14 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                                 }
                             },
                         )
-                        BaseWidget(
+                        MiuixBaseWidget(
                             iconPlaceholder = false,
                             title = "导出全部人设",
                             description = "导出自定义、联系人和群聊专属人设（不包含 API Key）",
                             onClick = { exportPersonasLauncher.launch("wekit-ai-personas.json") },
                             trailingContent = { Icon(MaterialSymbols.Outlined.Save, null) },
                         )
-                        BaseWidget(
+                        MiuixBaseWidget(
                             iconPlaceholder = false,
                             title = "导入人设",
                             description = "导入 WeKit 人设 JSON；同名项目会被文件内容替换",
@@ -690,7 +690,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                             singleLine = false,
                         )
                         if (personaKeyInput.value == PERSONA_CUSTOM && promptInput.value.isNotBlank()) {
-                            BaseWidget(
+                            MiuixBaseWidget(
                                 iconPlaceholder = false,
                                 title = "保存为我的设定",
                                 description = "把当前系统人设定个名字存起来，下次直接从下拉里选",
@@ -702,13 +702,13 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                                     Icon(
                                         MaterialSymbols.Outlined.Save,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                     )
                                 },
                             )
                         }
                         if (personaKeyInput.value.startsWith(CUSTOM_PERSONA_PREFIX)) {
-                            BaseWidget(
+                            MiuixBaseWidget(
                                 iconPlaceholder = false,
                                 title = "删除此设定",
                                 description = "从我的设定里移除「" +
@@ -723,13 +723,13 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                                     Icon(
                                         MaterialSymbols.Outlined.Delete,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                     )
                                 },
                             )
                         }
                         Spacer(Modifier.height(8.dp))
-                        IntNumberPickerWidget(
+                        MiuixIntNumberPickerWidget(
                             iconPlaceholder = false,
                             title = stringResource(R.string.ai_chat_temperature),
                             description = "0~20，数值 ÷10 即温度（0.0~2.0），越大越有创造性",
@@ -740,7 +740,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                             valueSuffix = "",
                             onValueChange = { temperatureTenInput.value = it },
                         )
-                        IntNumberPickerWidget(
+                        MiuixIntNumberPickerWidget(
                             iconPlaceholder = false,
                             title = stringResource(R.string.ai_chat_max_tokens),
                             description = stringResource(R.string.ai_chat_max_tokens_description),
@@ -751,7 +751,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                             valueSuffix = " tokens",
                             onValueChange = { tokensInput.value = it },
                         )
-                        IntNumberPickerWidget(
+                        MiuixIntNumberPickerWidget(
                             iconPlaceholder = false,
                             title = stringResource(R.string.ai_chat_context_rounds),
                             description = stringResource(R.string.ai_chat_context_rounds_description),
@@ -762,7 +762,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                             valueSuffix = " 轮",
                             onValueChange = { roundsInput.value = it },
                         )
-                        IntNumberPickerWidget(
+                        MiuixIntNumberPickerWidget(
                             iconPlaceholder = false,
                             title = stringResource(R.string.ai_chat_reply_delay),
                             description = stringResource(R.string.ai_chat_reply_delay_description),
@@ -774,7 +774,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                             onValueChange = { delayInput.value = it },
                         )
                         Spacer(Modifier.height(8.dp))
-                        DropDownMenuWidget(
+                        MiuixDropDownMenuWidget(
                             iconPlaceholder = false,
                             title = "群聊触发方式",
                             description = "仅影响群聊；私聊仍按授权名单回复",
@@ -795,45 +795,45 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                             "群聊触发前缀", groupPrefixInput.value,
                             { groupPrefixInput.value = it }, "例如 /ai，发送给模型前自动移除",
                         )
-                        IntNumberPickerWidget(
+                        MiuixIntNumberPickerWidget(
                             iconPlaceholder = false, title = "单会话冷却时间",
                             description = "避免连续消息触发刷屏", value = cooldownInput.value,
                             startInt = 0, endInt = 3600, stepSize = 5, valueSuffix = " 秒",
                             onValueChange = { cooldownInput.value = it },
                         )
-                        IntNumberPickerWidget(
+                        MiuixIntNumberPickerWidget(
                             iconPlaceholder = false, title = "单会话每日上限",
                             description = "0 表示不限制", value = dailyLimitInput.value,
                             startInt = 0, endInt = 10000, stepSize = 10, valueSuffix = " 条",
                             onValueChange = { dailyLimitInput.value = it },
                         )
-                        IntNumberPickerWidget(
+                        MiuixIntNumberPickerWidget(
                             iconPlaceholder = false, title = "上下文字符上限",
                             description = "超出时优先保留最近消息", value = contextCharsInput.value,
                             startInt = 1000, endInt = 100000, stepSize = 1000, valueSuffix = " 字符",
                             onValueChange = { contextCharsInput.value = it },
                         )
-                        IntNumberPickerWidget(
+                        MiuixIntNumberPickerWidget(
                             iconPlaceholder = false, title = "历史消息回读条数",
                             description = "每次自动回复前固定读取微信群最近 10 条文本消息", value = 10,
                             startInt = 10, endInt = 10, stepSize = 1, valueSuffix = " 条",
                             onValueChange = { },
                         )
-                        DropDownMenuWidget(
+                        MiuixDropDownMenuWidget(
                             iconPlaceholder = false, title = "授权群聊上下文监控",
                             description = "监听授权群聊消息并持续加入现场上下文",
                             value = if (monitorInput.value) 1 else 0,
                             options = listOf(DropdownOption(1, "开启"), DropdownOption(0, "关闭")),
                             onValueChange = { monitorInput.value = it == 1 },
                         )
-                        DropDownMenuWidget(
+                        MiuixDropDownMenuWidget(
                             iconPlaceholder = false, title = "群聊仅监控不回复",
                             description = "开启后只收集授权群聊上下文，不触发模型回复",
                             value = if (monitorOnlyInput.value) 1 else 0,
                             options = listOf(DropdownOption(1, "开启"), DropdownOption(0, "关闭")),
                             onValueChange = { monitorOnlyInput.value = it == 1 },
                         )
-                        BaseWidget(
+                        MiuixBaseWidget(
                             iconPlaceholder = false,
                             title = "AI 自动回复诊断",
                             description = buildString {
@@ -854,14 +854,14 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                             },
                             trailingContent = { Icon(MaterialSymbols.Outlined.Chevron_right, null) },
                         )
-                        BaseWidget(
+                        MiuixBaseWidget(
                             iconPlaceholder = false, title = "清除全部 AI 上下文",
                             description = "立即丢弃当前内存中的所有会话上下文",
                             onClick = { clearContext(); showToast("AI 上下文已清除") },
                             trailingContent = { Icon(MaterialSymbols.Outlined.Delete, null) },
                         )
                         Spacer(Modifier.height(8.dp))
-                        DropDownMenuWidget(
+                        MiuixDropDownMenuWidget(
                             iconPlaceholder = false,
                             title = stringResource(R.string.ai_chat_list_mode),
                             description = stringResource(
@@ -875,7 +875,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                             ),
                             onValueChange = { modeInput.value = it },
                         )
-                        BaseWidget(
+                        MiuixBaseWidget(
                             iconPlaceholder = false,
                             title = stringResource(
                                 if (modeInput.value == LIST_WHITELIST) R.string.ai_chat_configure_whitelist
@@ -890,7 +890,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                                 Icon(
                                     MaterialSymbols.Outlined.Chevron_right,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                 )
                             },
                         )
@@ -932,12 +932,12 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                 dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.dialog_cancel)) } },
             )
             if (showSavePersonaDialog.value) {
-                AlertDialog(
+                MiuixAlertDialog(
                     onDismissRequest = { showSavePersonaDialog.value = false },
                     icon = { Icon(MaterialSymbols.Outlined.Save, contentDescription = null) },
                     title = { Text("保存人物设定") },
                     text = {
-                        OutlinedTextField(
+                        TextField(
                             value = personaNameInput.value,
                             onValueChange = { personaNameInput.value = it },
                             label = { Text("设定名称（如：我的分身）") },
@@ -977,10 +977,10 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.titleSmall,
+                style = MiuixTheme.textStyles.title3,
                 modifier = Modifier.padding(bottom = 4.dp),
             )
-            OutlinedTextField(
+            TextField(
                 value = value,
                 onValueChange = onValueChange,
                 modifier = Modifier.fillMaxWidth(),
@@ -988,8 +988,8 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
             )
             Text(
                 text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MiuixTheme.textStyles.footnote1,
+                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 modifier = Modifier.padding(top = 4.dp),
             )
         }

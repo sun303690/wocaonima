@@ -28,13 +28,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import dev.sun.wechat.ui.content.miuix.MiuixChoiceChip
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -567,8 +564,8 @@ object CustomMessageBubbles : ClickableFeature(), WeChatMessageViewApi.ICreateVi
     ) {
         Text(
             text = stringResource(R.string.beautify_bubble_text_color),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
+            style = MiuixTheme.textStyles.button,
+            color = MiuixTheme.colorScheme.primary,
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -590,8 +587,8 @@ object CustomMessageBubbles : ClickableFeature(), WeChatMessageViewApi.ICreateVi
 
         Text(
             text = stringResource(R.string.beautify_bubble_background_color),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
+            style = MiuixTheme.textStyles.button,
+            color = MiuixTheme.colorScheme.primary,
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -613,8 +610,8 @@ object CustomMessageBubbles : ClickableFeature(), WeChatMessageViewApi.ICreateVi
 
         Text(
             text = stringResource(R.string.beautify_bubble_image),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
+            style = MiuixTheme.textStyles.button,
+            color = MiuixTheme.colorScheme.primary,
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -623,9 +620,9 @@ object CustomMessageBubbles : ClickableFeature(), WeChatMessageViewApi.ICreateVi
             Text(
                 text = stringResource(if (form.imageExists) R.string.imported else R.string.not_imported),
                 color = if (form.imageExists) {
-                    MaterialTheme.colorScheme.primary
+                    MiuixTheme.colorScheme.primary
                 } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
+                    MiuixTheme.colorScheme.onSurfaceVariantSummary
                 },
                 modifier = Modifier.weight(1f),
             )
@@ -646,9 +643,9 @@ object CustomMessageBubbles : ClickableFeature(), WeChatMessageViewApi.ICreateVi
                     imageVector = MaterialSymbols.Outlined.Delete,
                     contentDescription = stringResource(R.string.beautify_bubble_delete_imported_description),
                     tint = if (form.imageExists) {
-                        MaterialTheme.colorScheme.error
+                        MiuixTheme.colorScheme.error
                     } else {
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        MiuixTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                     },
                 )
             }
@@ -714,8 +711,8 @@ object CustomMessageBubbles : ClickableFeature(), WeChatMessageViewApi.ICreateVi
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error,
-                                contentColor = MaterialTheme.colorScheme.onError,
+                                containerColor = MiuixTheme.colorScheme.error,
+                                contentColor = MiuixTheme.colorScheme.onError,
                             ),
                         ) {
                             Text(stringResource(R.string.action_delete))
@@ -732,19 +729,17 @@ object CustomMessageBubbles : ClickableFeature(), WeChatMessageViewApi.ICreateVi
                     title = { Text(stringResource(R.string.beautify_bubble_title)) },
                     text = {
                         DefaultColumn(Modifier.verticalScroll(rememberScrollState())) {
-                            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                                BubbleSide.entries.forEachIndexed { index, side ->
-                                    SegmentedButton(
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                BubbleSide.entries.forEach { side ->
+                                    MiuixChoiceChip(
                                         selected = selectedSide == side,
                                         onClick = { selectedSide = side },
-                                        shape = SegmentedButtonDefaults.itemShape(
-                                            index,
-                                            BubbleSide.entries.size,
-                                        ),
                                         modifier = Modifier.weight(1f),
-                                    ) {
-                                        Text(stringResource(side.titleRes))
-                                    }
+                                        label = { Text(stringResource(side.titleRes)) },
+                                    )
                                 }
                             }
 

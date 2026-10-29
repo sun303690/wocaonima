@@ -15,8 +15,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import dev.sun.wechat.ui.content.miuix.MiuixCompatTextField
+import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,9 +37,9 @@ import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.m3.BaseSupportingWidget
-import dev.sun.wechat.ui.content.m3.SegmentedColumn
-import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.miuix.MiuixBaseSupportingWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.math.DecimalExpression
@@ -549,17 +549,17 @@ object ModifyWalletBalanceDisplay : ClickableFeature(), IResolveDex {
                         modifier = Modifier.verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                        MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                             item {
-                                SwitchWidget(
+                                MiuixSwitchWidget(
                                     title = stringResource(R.string.payment_wallet_balance_title),
                                     checked = balanceEnabled,
                                     onCheckedChange = { balanceEnabled = it },
                                 )
                             }
                             item(animatedVisibility = balanceEnabled) {
-                                BaseSupportingWidget(title = stringResource(R.string.payment_wallet_balance_expression)) {
-                                    OutlinedTextField(
+                                MiuixBaseSupportingWidget(title = stringResource(R.string.payment_wallet_balance_expression)) {
+                                    MiuixCompatTextField(
                                         value = balanceInput,
                                         onValueChange = { balanceInput = it },
                                         supportingText = { Text(balanceError ?: expressionHint) },
@@ -573,17 +573,17 @@ object ModifyWalletBalanceDisplay : ClickableFeature(), IResolveDex {
                             }
                         }
 
-                        SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                        MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                             item {
-                                SwitchWidget(
+                                MiuixSwitchWidget(
                                     title = stringResource(R.string.payment_wealth_balance_title),
                                     checked = lqtEnabled,
                                     onCheckedChange = { lqtEnabled = it },
                                 )
                             }
                             item(animatedVisibility = lqtEnabled) {
-                                BaseSupportingWidget(title = stringResource(R.string.payment_wallet_balance_expression)) {
-                                    OutlinedTextField(
+                                MiuixBaseSupportingWidget(title = stringResource(R.string.payment_wallet_balance_expression)) {
+                                    MiuixCompatTextField(
                                         value = lqtInput,
                                         onValueChange = { lqtInput = it },
                                         supportingText = { Text(lqtError ?: expressionHint) },
@@ -597,17 +597,17 @@ object ModifyWalletBalanceDisplay : ClickableFeature(), IResolveDex {
                             }
                         }
 
-                        SegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                        MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                             item {
-                                SwitchWidget(
+                                MiuixSwitchWidget(
                                     title = stringResource(R.string.payment_business_balance_title),
                                     checked = businessEnabled,
                                     onCheckedChange = { businessEnabled = it },
                                 )
                             }
                             item(animatedVisibility = businessEnabled) {
-                                BaseSupportingWidget(title = stringResource(R.string.payment_wallet_balance_expression)) {
-                                    OutlinedTextField(
+                                MiuixBaseSupportingWidget(title = stringResource(R.string.payment_wallet_balance_expression)) {
+                                    MiuixCompatTextField(
                                         value = businessInput,
                                         onValueChange = { businessInput = it },
                                         supportingText = { Text(businessError ?: expressionHint) },
