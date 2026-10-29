@@ -903,7 +903,7 @@ private fun PythonDiagnosticsScreen(pluginId: String, onBack: () -> Unit) {
         },
     ) {
         item {
-            SegmentedColumn {
+            MiuixSegmentedColumn {
                 item { MiuixBaseWidget(title = stringResource(R.string.python_diag_runtime), description = runtime.toString()) }
                 item {
                     MiuixBaseWidget(

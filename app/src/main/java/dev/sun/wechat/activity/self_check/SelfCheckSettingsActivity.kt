@@ -258,7 +258,7 @@ private fun SelfCheckRoot(onFinish: () -> Unit) {
             )
         }
         item(key = "actions") {
-            SegmentedColumn {
+            MiuixSegmentedColumn {
                 item(key = "scan") {
                     MiuixBaseWidget(
                         title = "一键自检",
@@ -272,7 +272,7 @@ private fun SelfCheckRoot(onFinish: () -> Unit) {
                                 replaceItems = true,
                             )
                         },
-                        trailingContent = { _ ->
+                        trailingContent = {
                             Icon(
                                 imageVector = MaterialSymbols.Outlined.Chevron_right,
                                 contentDescription = null,
@@ -295,7 +295,7 @@ private fun SelfCheckRoot(onFinish: () -> Unit) {
                                 afterRun = { rescan() },
                             )
                         },
-                        trailingContent = { _ ->
+                        trailingContent = {
                             Icon(
                                 imageVector = MaterialSymbols.Outlined.Chevron_right,
                                 contentDescription = null,

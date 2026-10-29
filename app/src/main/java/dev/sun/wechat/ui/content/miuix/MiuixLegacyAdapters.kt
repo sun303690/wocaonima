@@ -70,8 +70,25 @@ fun MiuixBaseWidget(
 }
 
 @Composable
-fun MiuixSwitchWidget(title: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: Modifier = Modifier, summary: String? = null, description: String? = summary, enabled: Boolean = true) {
-    MiuixBaseWidget(title, modifier, summary, description, enabled = enabled, onClick = if (enabled) ({ onCheckedChange(!checked) }) else null)
+fun MiuixSwitchWidget(
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    summary: String? = null,
+    description: String? = summary,
+    enabled: Boolean = true,
+    onClick: (() -> Unit)? = null,
+    trailingDivider: Boolean = false,
+) {
+    MiuixBaseWidget(
+        title = title,
+        modifier = modifier,
+        summary = summary,
+        description = description,
+        enabled = enabled,
+        onClick = if (enabled) onClick ?: { onCheckedChange(!checked) } else null,
+    )
 }
 
 class MiuixSegmentedColumnScope {
