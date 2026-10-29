@@ -130,7 +130,7 @@ object MoodFeature : ClickableFeature() {
                         if (models.isNotEmpty()) {
                             val replyOpts = listOf(DropdownOption("", "（未选择）")) +
                                 models.map { DropdownOption(it.id, "${it.displayName.ifBlank { it.modelIdRemote }} (${it.providerId})") }
-                            // 存的 modelId 已被删除时回退（未选择），避免 DropDownMenuWidget first{} 崩溃
+                            // 存的 modelId 已被删除时回退（未选择），避免 MiuixDropDownMenuWidget first{} 崩溃
                             val effectiveId = if (replyOpts.any { it.value == replyModelId }) replyModelId else ""
                             if (effectiveId != replyModelId) replyModelId = effectiveId
                             val selectedLabel = replyOpts.firstOrNull { it.value == effectiveId }?.label ?: "（未选择）"

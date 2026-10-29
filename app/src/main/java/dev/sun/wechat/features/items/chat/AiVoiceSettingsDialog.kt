@@ -105,7 +105,7 @@ internal object AiVoiceSettingsDialog {
                             )
                         }
                         item {
-                            // 确保 selectedModelId 始终存在于 options，避免 DropDownMenuWidget 抛 NoSuchElementException
+                            // 确保 selectedModelId 始终存在于 options，避免 MiuixDropDownMenuWidget 抛 NoSuchElementException
                             val modelOptions = buildList {
                                 models.forEach { add(DropdownOption(it.id, it.displayName)) }
                                 if (none { it.value == selectedModelId }) {
@@ -194,7 +194,7 @@ internal object AiVoiceSettingsDialog {
                             }
                         }
                         item {
-                            // 确保 selectedVoiceId 始终存在于 options，否则 DropDownMenuWidget 内部
+                            // 确保 selectedVoiceId 始终存在于 options，否则 MiuixDropDownMenuWidget 内部
                             // options.first{it.value==value} 会抛 NoSuchElementException 崩溃
                             val safeOptions = buildList {
                                 voiceOptions.forEach { add(DropdownOption(it.first, it.second)) }

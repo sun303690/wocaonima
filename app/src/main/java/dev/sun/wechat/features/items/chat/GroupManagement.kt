@@ -718,7 +718,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
                 title = { Text(stringResource(R.string.glg_config_title)) },
                 text = {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
-                        SegmentedColumn {
+                        MiuixSegmentedColumn {
                             item {
                                 MiuixBaseWidget(
                                     iconPlaceholder = false,

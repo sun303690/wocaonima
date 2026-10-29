@@ -678,7 +678,7 @@ object HalfScreenAlbumPicker : ClickableFeature() {
                 text = {
                     MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                         item {
-                            BaseItemContainer {
+                            MiuixBaseItemContainer {
                                 MiuixIntNumberPickerWidget(
                                     title = stringResource(R.string.chat_half_screen_album_height_label),
                                     value = height,

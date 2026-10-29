@@ -2903,7 +2903,7 @@ object FloatingChatHeader : ClickableFeature(), IResolveDex {
                                 key = "component_gap",
                                 animatedVisibility = layoutStyle == HeaderLayoutStyle.SEPARATED,
                             ) {
-                                BaseItemContainer {
+                                MiuixBaseItemContainer {
                                     MiuixIntNumberPickerWidget(
                                         title = stringResource(R.string.chat_floating_component_gap_label),
                                         value = componentGap,
@@ -2920,7 +2920,7 @@ object FloatingChatHeader : ClickableFeature(), IResolveDex {
                                 }
                             }
                             item {
-                                BaseItemContainer {
+                                MiuixBaseItemContainer {
                                     MiuixIntNumberPickerWidget(
                                         title = stringResource(R.string.chat_floating_corner_radius_label),
                                         value = corner,
@@ -2937,7 +2937,7 @@ object FloatingChatHeader : ClickableFeature(), IResolveDex {
                                 }
                             }
                             item {
-                                BaseItemContainer {
+                                MiuixBaseItemContainer {
                                     MiuixIntNumberPickerWidget(
                                         title = stringResource(R.string.chat_floating_side_margin_label),
                                         value = side,
@@ -2954,7 +2954,7 @@ object FloatingChatHeader : ClickableFeature(), IResolveDex {
                                 }
                             }
                             item {
-                                BaseItemContainer {
+                                MiuixBaseItemContainer {
                                     MiuixIntNumberPickerWidget(
                                         title = stringResource(R.string.chat_floating_top_gap_label),
                                         value = topGap,
@@ -2971,7 +2971,7 @@ object FloatingChatHeader : ClickableFeature(), IResolveDex {
                                 }
                             }
                             item {
-                                BaseItemContainer {
+                                MiuixBaseItemContainer {
                                     MiuixIntNumberPickerWidget(
                                         title = stringResource(R.string.chat_floating_card_gap_label),
                                         value = extraGap,
@@ -2988,7 +2988,7 @@ object FloatingChatHeader : ClickableFeature(), IResolveDex {
                                 }
                             }
                             item {
-                                BaseItemContainer {
+                                MiuixBaseItemContainer {
                                     MiuixIntNumberPickerWidget(
                                         title = stringResource(R.string.chat_floating_elevation_label),
                                         value = elevation,

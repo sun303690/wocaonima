@@ -464,7 +464,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                             )
                         }
                         item {
-                            BaseItemContainer {
+                            MiuixBaseItemContainer {
                                 MiuixIntNumberPickerWidget(
                                     icon = MaterialSymbols.Outlined.Opacity,
                                     title = stringResource(R.string.opacity_percent),
@@ -545,7 +545,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                         }
                         if (cardsInput) {
                             item {
-                                BaseItemContainer {
+                                MiuixBaseItemContainer {
                                     MiuixIntNumberPickerWidget(
                                         iconPlaceholder = false,
                                         title = stringResource(R.string.beautify_global_background_list_radius),
@@ -563,7 +563,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                                 }
                             }
                             item {
-                                BaseItemContainer {
+                                MiuixBaseItemContainer {
                                     MiuixIntNumberPickerWidget(
                                         iconPlaceholder = false,
                                         title = stringResource(R.string.beautify_global_background_list_horizontal_inset),
@@ -581,7 +581,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                                 }
                             }
                             item {
-                                BaseItemContainer {
+                                MiuixBaseItemContainer {
                                     MiuixIntNumberPickerWidget(
                                         iconPlaceholder = false,
                                         title = stringResource(R.string.beautify_global_background_list_spacing),
@@ -599,7 +599,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                                 }
                             }
                             item {
-                                BaseItemContainer {
+                                MiuixBaseItemContainer {
                                     MiuixIntNumberPickerWidget(
                                         iconPlaceholder = false,
                                         title = stringResource(R.string.beautify_global_background_list_height),

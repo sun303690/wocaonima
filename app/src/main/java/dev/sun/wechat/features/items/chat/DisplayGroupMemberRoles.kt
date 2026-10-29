@@ -355,7 +355,7 @@ object DisplayGroupMemberRoles : ClickableFeature(), IResolveDex,
     }
 }
 
-/** Single-line inline text field filling a [BaseSupportingWidget] supporting slot. */
+/** Single-line inline text field filling a [MiuixBaseSupportingWidget] supporting slot. */
 @Composable
 private fun InlineRoleTextField(value: String, onValueChange: (String) -> Unit) {
     TextField(

@@ -173,7 +173,7 @@ object FakeLocation : ClickableFeature(), IResolveDex {
             AlertDialogContent(
                 title = { Text(stringResource(R.string.system_fake_location_select)) },
                 text = {
-                    SegmentedColumn {
+                    MiuixSegmentedColumn {
                         item {
                             MiuixBaseWidget(
                                 title = stringResource(R.string.system_fake_location_wechat),

@@ -128,7 +128,7 @@ object ImageRotation : ClickableFeature() {
                             )
                         }
                         item {
-                            BaseItemContainer {
+                            MiuixBaseItemContainer {
                                 MiuixIntNumberPickerWidget(
                                     title = stringResource(R.string.image_rotation_period_milliseconds),
                                     value = duration,

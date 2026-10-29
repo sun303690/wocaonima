@@ -322,7 +322,7 @@ fun HomeSidePanelHitokotoSettings(
         }
         MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
             item {
-                BaseItemContainer {
+                MiuixBaseItemContainer {
                     MiuixIntNumberPickerWidget(
                         title = stringResource(R.string.home_side_panel_min_length),
                         value = draft.minLength ?: 0,
@@ -338,7 +338,7 @@ fun HomeSidePanelHitokotoSettings(
                 }
             }
             item {
-                BaseItemContainer {
+                MiuixBaseItemContainer {
                     MiuixIntNumberPickerWidget(
                         title = stringResource(R.string.home_side_panel_max_length),
                         value = draft.maxLength ?: 0,

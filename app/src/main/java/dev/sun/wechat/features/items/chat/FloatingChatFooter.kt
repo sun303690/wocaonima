@@ -1045,7 +1045,7 @@ object FloatingChatFooter : ClickableFeature(), IResolveDex {
                             )
                         }
                         item {
-                            BaseItemContainer {
+                            MiuixBaseItemContainer {
                                 MiuixIntNumberPickerWidget(
                                     title = stringResource(R.string.chat_floating_corner_radius_label),
                                     value = corner,
@@ -1061,7 +1061,7 @@ object FloatingChatFooter : ClickableFeature(), IResolveDex {
                             }
                         }
                         item {
-                            BaseItemContainer {
+                            MiuixBaseItemContainer {
                                 MiuixIntNumberPickerWidget(
                                     title = stringResource(R.string.chat_floating_side_margin_label),
                                     value = side,
@@ -1077,7 +1077,7 @@ object FloatingChatFooter : ClickableFeature(), IResolveDex {
                             }
                         }
                         item {
-                            BaseItemContainer {
+                            MiuixBaseItemContainer {
                                 MiuixIntNumberPickerWidget(
                                     title = stringResource(R.string.chat_floating_bottom_gap_label),
                                     value = gap,
@@ -1093,7 +1093,7 @@ object FloatingChatFooter : ClickableFeature(), IResolveDex {
                             }
                         }
                         item {
-                            BaseItemContainer {
+                            MiuixBaseItemContainer {
                                 MiuixIntNumberPickerWidget(
                                     title = stringResource(R.string.chat_floating_elevation_label),
                                     value = elev,

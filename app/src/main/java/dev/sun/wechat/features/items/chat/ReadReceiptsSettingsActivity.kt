@@ -547,7 +547,7 @@ private fun ReadReceiptsHomeScreen(
                     )
                 }
                 item {
-                    BaseItemContainer {
+                    MiuixBaseItemContainer {
                         MiuixIntNumberPickerWidget(
                             title = stringResource(R.string.chat_read_receipts_poll_interval),
                             value = intervalSecs,

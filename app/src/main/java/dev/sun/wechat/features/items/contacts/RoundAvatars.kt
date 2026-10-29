@@ -94,7 +94,7 @@ object RoundAvatars : ClickableFeature(), IResolveDex {
                 text = {
                     MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                         item {
-                            BaseItemContainer {
+                            MiuixBaseItemContainer {
                                 MiuixIntNumberPickerWidget(
                                     title = stringResource(R.string.contacts_round_avatar_radius),
                                     value = percent,

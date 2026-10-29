@@ -223,7 +223,7 @@ object CenterProfileCard : ClickableFeature(), IResolveDex {
                             contentPadding = PaddingValues(0.dp),
                         ) {
                             item {
-                                BaseItemContainer {
+                                MiuixBaseItemContainer {
                                     MiuixIntNumberPickerWidget(
                                         title = stringResource(R.string.beautify_profile_card_avatar_top_margin),
                                         value = avatarTopMargin,
@@ -239,7 +239,7 @@ object CenterProfileCard : ClickableFeature(), IResolveDex {
                                 }
                             }
                             item {
-                                BaseItemContainer {
+                                MiuixBaseItemContainer {
                                     MiuixIntNumberPickerWidget(
                                         title = stringResource(R.string.beautify_profile_card_avatar_size),
                                         value = avatarSize,
@@ -255,7 +255,7 @@ object CenterProfileCard : ClickableFeature(), IResolveDex {
                                 }
                             }
                             item {
-                                BaseItemContainer {
+                                MiuixBaseItemContainer {
                                     MiuixIntNumberPickerWidget(
                                         title = stringResource(R.string.beautify_profile_card_nickname_top_margin),
                                         value = nameTopMargin,
@@ -271,7 +271,7 @@ object CenterProfileCard : ClickableFeature(), IResolveDex {
                                 }
                             }
                             item {
-                                BaseItemContainer {
+                                MiuixBaseItemContainer {
                                     MiuixIntNumberPickerWidget(
                                         title = stringResource(R.string.beautify_profile_card_wechat_id_top_margin),
                                         value = aliasTopMargin,
@@ -287,7 +287,7 @@ object CenterProfileCard : ClickableFeature(), IResolveDex {
                                 }
                             }
                             item {
-                                BaseItemContainer {
+                                MiuixBaseItemContainer {
                                     MiuixIntNumberPickerWidget(
                                         title = stringResource(R.string.beautify_profile_card_signature_top_margin),
                                         value = signatureTopMargin,
@@ -352,7 +352,7 @@ object CenterProfileCard : ClickableFeature(), IResolveDex {
         }
     }
 
-    /** Single-line inline text field filling a [BaseSupportingWidget] supporting slot. */
+    /** Single-line inline text field filling a [MiuixBaseSupportingWidget] supporting slot. */
     @Composable
     private fun InlineTextField(value: String, onValueChange: (String) -> Unit) {
         TextField(

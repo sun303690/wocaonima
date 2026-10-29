@@ -224,14 +224,14 @@ fun PaymentErrorRow(message: String) {
 }
 
 /** Time-range fields shown while the owning rule is enabled. */
-fun SegmentedColumnScope.timeRangeItems(
+fun MiuixSegmentedColumnScope.timeRangeItems(
     rule: AutomationTimeRangeRule,
     editable: Boolean,
     visible: Boolean,
     onChange: (AutomationTimeRangeRule) -> Unit,
 ) {
     item(key = "time_range_fields", animatedVisibility = visible) {
-        BaseItemContainer {
+        MiuixBaseItemContainer {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -258,7 +258,7 @@ fun SegmentedColumnScope.timeRangeItems(
 }
 
 /** Keyword rule controls: match mode, ignore-case, keyword list / regex. */
-fun SegmentedColumnScope.keywordItems(
+fun MiuixSegmentedColumnScope.keywordItems(
     keyPrefix: String,
     rule: AutomationKeywordRule,
     editable: Boolean,
@@ -409,7 +409,7 @@ fun SegmentedColumnScope.keywordItems(
 }
 
 /** Delay value rows shown while the delay rule is enabled. */
-fun SegmentedColumnScope.delayItems(
+fun MiuixSegmentedColumnScope.delayItems(
     baseMs: String,
     randomRangeMs: String,
     editable: Boolean,

@@ -1121,7 +1121,7 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
                                 )
                             }
                             item(animatedVisibility = useFloatingInput && useBackdropInput) {
-                                BaseItemContainer {
+                                MiuixBaseItemContainer {
                                     val radius = blurRadiusInput.roundToInt()
                                     MiuixIntNumberPickerWidget(
                                         title = stringResource(R.string.nav_blur_radius),
@@ -1163,7 +1163,7 @@ object ReplaceNavigationBar : ClickableFeature(), IResolveDex {
                                 )
                             }
                             item {
-                                BaseItemContainer {
+                                MiuixBaseItemContainer {
                                     MiuixIntNumberPickerWidget(
                                         title = stringResource(R.string.nav_bar_scale),
                                         value = barScaleInput.roundToInt(),
