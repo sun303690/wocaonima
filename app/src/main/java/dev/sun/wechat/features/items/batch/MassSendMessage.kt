@@ -2,6 +2,7 @@ package dev.sun.wechat.features.items.batch
 
 import android.content.Context
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -219,7 +220,7 @@ object MassSendMessage : ClickableFeature() {
                         value = content,
                         onValueChange = { content = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text(stringResource(R.string.batch_mass_send_text_label)) },
+                        label = stringResource(R.string.batch_mass_send_text_label),
                         singleLine = false,
                         minLines = 3,
                         maxLines = 8,
@@ -263,12 +264,19 @@ object MassSendMessage : ClickableFeature() {
                         )
                     } else {
                         MassTaskStore.tags.forEach { tag ->
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                modifier = Modifier.clickable {
+                                    selectedTags = if (tag.name in selectedTags) {
+                                        selectedTags - tag.name
+                                    } else {
+                                        selectedTags + tag.name
+                                    }
+                                },
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
                                 Checkbox(
                                     checked = tag.name in selectedTags,
-                                    onCheckedChange = { checked ->
-                                        selectedTags = if (checked) selectedTags + tag.name else selectedTags - tag.name
-                                    },
+                                    onCheckedChange = null,
                                 )
                                 Column {
                                     Text(tag.name)
@@ -357,7 +365,7 @@ object MassSendMessage : ClickableFeature() {
                         value = name,
                         onValueChange = { name = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text(stringResource(R.string.mass_task_tag_name_label)) },
+                        label = stringResource(R.string.mass_task_tag_name_label),
                         singleLine = true,
                     )
                     WeButton(onClick = {
