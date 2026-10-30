@@ -72,6 +72,7 @@ object MoodFeature : ClickableFeature() {
 
     override fun onClick(context: ComponentActivity) {
         showComposeDialog(context, directlyDismissable = false) {
+            var jevEnabled by remember { mutableStateOf(MoodTransport.jevEnabled) }
             var jevProvider by remember { mutableStateOf(MoodTransport.jevProviderId) }
             var jevKey by remember { mutableStateOf(MoodTransport.jevKey) }
             var jevEndpoint by remember { mutableStateOf(MoodTransport.jevEndpoint) }
@@ -91,13 +92,19 @@ object MoodFeature : ClickableFeature() {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         // ===== Jev 情绪分析 =====
                         Text("情绪分析（Jev）", style = MiuixTheme.textStyles.title3)
+                        MiuixSwitchWidget(
+                            title = "启用 Jev 情绪分析",
+                            checked = jevEnabled,
+                            onCheckedChange = { jevEnabled = it },
+                            summary = "关闭后不再调用 Jev 模型，消息下方不会显示情绪分析",
+                        )
                         val jevOpts = JevProvider.entries.map { DropdownOption(it.id, it.label) }
                         MiuixDropDownMenuWidget(
                             title = "渠道",
                             description = JevProvider.entries.firstOrNull { it.id == jevProvider }?.label ?: jevProvider,
                             value = jevProvider,
                             options = jevOpts,
-                            enabled = true,
+                            enabled = jevEnabled,
                             onValueChange = { jevProvider = it },
                         )
                         // 显示当前渠道的官网注册链接
@@ -107,7 +114,7 @@ object MoodFeature : ClickableFeature() {
                             Button(onClick = {
                                 val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
                                 context.startActivity(intent)
-                            }) {
+                            }, enabled = jevEnabled) {
                                 Text("👉 去 ${currentProvider.label} 注册获取 API Key", style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.primary)
                             }
                         }
@@ -117,6 +124,7 @@ object MoodFeature : ClickableFeature() {
                             label = "API Key",
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
+                            enabled = jevEnabled,
                         )
                         if (jevProvider == "custom") {
                             TextField(
@@ -125,6 +133,7 @@ object MoodFeature : ClickableFeature() {
                                 label = "接口地址",
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
+                                enabled = jevEnabled,
                             )
                             TextField(
                                 value = jevModel,
@@ -132,6 +141,7 @@ object MoodFeature : ClickableFeature() {
                                 label = "模型名",
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
+                                enabled = jevEnabled,
                             )
                         }
                         HorizontalDivider()
@@ -160,6 +170,7 @@ object MoodFeature : ClickableFeature() {
                 },
                 confirmButton = {
                     Button(onClick = {
+                        MoodTransport.jevEnabled = jevEnabled
                         MoodTransport.jevProviderId = jevProvider
                         MoodTransport.jevKey = jevKey.trim()
                         MoodTransport.jevEndpoint = jevEndpoint.trim()

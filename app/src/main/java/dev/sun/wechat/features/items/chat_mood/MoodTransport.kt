@@ -12,6 +12,7 @@ object MoodTransport {
 
     private const val TAG = "MoodTransport"
 
+    var jevEnabled by KvStore.prefOption("mood_jev_enabled", true)
     var jevProviderId by KvStore.prefOption("mood_jev_provider", "typesafe")
     var jevKey by KvStore.prefOption("mood_jev_key", "")
     var jevEndpoint by KvStore.prefOption("mood_jev_endpoint", ApiSettings.DEFAULT_ENDPOINT)
@@ -23,6 +24,7 @@ object MoodTransport {
         ApiSettings.fromInput(jevEndpoint, jevKey, jevProviderId, jevModel)
 
     suspend fun analyze(input: AnalysisInput, shouldContinue: suspend () -> Boolean = { true }): Mood {
+        if (!jevEnabled) throw IllegalStateException("Jev 模型已关闭，请在「情绪分析」设置中开启")
         val s = jevSettings()
         val profile = try {
             JevProtocol.parseProfile(
