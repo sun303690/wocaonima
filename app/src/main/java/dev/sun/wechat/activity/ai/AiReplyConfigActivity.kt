@@ -100,6 +100,7 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
     var mofaVoice by remember { mutableStateOf(TextToSpeech.selectedVoice) }
     var doubaoVoice by remember { mutableStateOf(TextToSpeech.doubaoSpeaker) }
     var emotion by remember { mutableStateOf(TextToSpeech.selectedEmotion) }
+    var customVoice by remember { mutableStateOf(TextToSpeech.customVoiceId) }
     var showMofaPicker by remember { mutableStateOf(false) }
     var showEmotionPicker by remember { mutableStateOf(false) }
     var voiceBusy by remember { mutableStateOf(false) }
@@ -109,7 +110,13 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
     }
 
     val isDoubao = backend == TextToSpeech.BACKEND_DOUBAO
-    val voiceLabel = if (isDoubao) doubaoVoiceLabel(doubaoVoice) else mofaVoice
+    val voiceLabel = when {
+        customVoice.isNotBlank() -> "自定义：$customVoice"
+        isDoubao -> doubaoVoiceLabel(doubaoVoice)
+        else -> mofaVoice
+    }
+    val effectiveMofaVoice = customVoice.ifBlank { mofaVoice }
+    val effectiveDoubaoVoice = customVoice.ifBlank { doubaoVoice }
 
     Column(
         modifier = Modifier
@@ -238,6 +245,8 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
                     if (isDoubao) {
                         showDoubaoVoicePicker(context, doubaoVoice, cookie) { id, name ->
                             doubaoVoice = id
+                            customVoice = ""
+                            TextToSpeech.customVoiceId = ""
                             TextToSpeech.doubaoSpeaker = id
                             TextToSpeech.doubaoSpeakerName = name
                         }
@@ -245,6 +254,18 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
                         showMofaPicker = true
                     }
                 }
+                OutlinedTextField(
+                    value = customVoice,
+                    onValueChange = {
+                        customVoice = it.trim()
+                        TextToSpeech.customVoiceId = it.trim()
+                    },
+                    label = { Text("自定义音色 ID（留空用预设）") },
+                    placeholder = { Text("如 zh_female_wenroutaozi_uranus_bigtts / S_xxxx") },
+                    singleLine = true,
+                    supportingText = { Text("填写后优先于上面选择的预设音色；魔方与豆包共用此字段") },
+                    modifier = Modifier.fillMaxWidth(),
+                )
                 SettingsRow(
                     title = "语气",
                     value = if (isDoubao) "豆包音色自带语气" else emotion,
@@ -261,7 +282,7 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
                                 voiceBusy = false
                                 toast(context, "请先填写豆包 Cookie")
                             } else {
-                                TextToSpeech.generateVoiceDoubao(sample, doubaoVoice, cookie) { path, err ->
+                                TextToSpeech.generateVoiceDoubao(sample, effectiveDoubaoVoice, cookie) { path, err ->
                                     voiceBusy = false
                                     if (path != null) playWav(path) else toast(context, "合成失败：$err")
                                 }
@@ -273,7 +294,7 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
                             } else {
                                 val vec = TextToSpeech.EMOTIONS.firstOrNull { it.first == emotion }?.second
                                     ?: TextToSpeech.EMOTIONS.first().second
-                                TextToSpeech.generateVoice(sample, mofaVoice, vec, apiKey) { path, err ->
+                                TextToSpeech.generateVoice(sample, effectiveMofaVoice, vec, apiKey) { path, err ->
                                     voiceBusy = false
                                     if (path != null) playWav(path) else toast(context, "合成失败：$err")
                                 }
@@ -304,6 +325,8 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
                                 selected = voice.voiceId == mofaVoice,
                                 onClick = {
                                     mofaVoice = voice.voiceId
+                                    customVoice = ""
+                                    TextToSpeech.customVoiceId = ""
                                     TextToSpeech.selectedVoice = voice.voiceId
                                     showMofaPicker = false
                                 },

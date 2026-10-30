@@ -117,6 +117,8 @@ object TextToSpeech :
     var apiKey by prefOption("tts_api_key", "")
     var selectedVoice by prefOption("tts_voice_id", "琅琊榜-梅长苏")
     var selectedEmotion by prefOption("tts_emotion", "平静")
+    /** 自定义音色 ID；非空时优先于 [selectedVoice] / [doubaoSpeaker]。 */
+    var customVoiceId by prefOption("tts_custom_voice_id", "")
 
     var backend by prefOption("tts_backend", BACKEND_MOFA)
     var doubaoCookie by prefOption("tts_doubao_cookie", "")
