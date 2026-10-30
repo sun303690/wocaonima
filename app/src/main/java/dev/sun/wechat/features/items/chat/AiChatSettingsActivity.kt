@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import dev.sun.wechat.ui.content.miuix.MiuixAlertDialog
-import dev.sun.wechat.ui.utils.theme.EngineModuleTheme
+import dev.sun.wechat.ui.utils.theme.MiuixModuleTheme
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.RadioButton
@@ -38,7 +38,7 @@ import kotlinx.coroutines.withContext
 class AiChatSettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { EngineModuleTheme { AiSettingsScreen() } }
+        setContent { MiuixModuleTheme { AiSettingsScreen() } }
     }
 
     @Composable

@@ -23,17 +23,6 @@ fun MiuixFilterChip(
     leadingIcon: (@Composable () -> Unit)? = null,
     label: @Composable () -> Unit,
 ) {
-    if (material3Engine()) {
-        androidx.compose.material3.FilterChip(
-            selected = selected,
-            onClick = onClick,
-            modifier = modifier,
-            enabled = enabled,
-            leadingIcon = leadingIcon,
-            label = label,
-        )
-        return
-    }
     Box(
         modifier.background(if (selected) MiuixTheme.colorScheme.primaryContainer else MiuixTheme.colorScheme.surfaceContainer, RoundedCornerShape(18.dp))
             .clickable(enabled = enabled, onClick = onClick).padding(horizontal = 14.dp, vertical = 8.dp),
@@ -60,21 +49,6 @@ fun MiuixListItem(
     onClick: (() -> Unit)? = null,
     headlineContent: @Composable () -> Unit,
 ) {
-    if (material3Engine()) {
-        androidx.compose.material3.ListItem(
-            modifier = if (onClick != null) {
-                modifier.clickable(enabled = enabled, onClick = onClick)
-            } else {
-                modifier
-            },
-            headlineContent = headlineContent,
-            supportingContent = supportingContent,
-            leadingContent = leadingContent,
-            trailingContent = trailingContent,
-            colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = containerColor),
-        )
-        return
-    }
     Row(
         modifier.fillMaxWidth().background(containerColor)
             .then(if (onClick != null) Modifier.clickable(enabled = enabled, onClick = onClick) else Modifier)
@@ -89,17 +63,5 @@ fun MiuixListItem(
 
 @Composable
 fun MiuixChoiceChip(selected: Boolean, onClick: () -> Unit, text: String, modifier: Modifier = Modifier) {
-    if (material3Engine()) {
-        androidx.compose.material3.FilterChip(
-            selected = selected,
-            onClick = onClick,
-            modifier = modifier,
-            label = { androidx.compose.material3.Text(text) },
-            leadingIcon = {
-                androidx.compose.material3.RadioButton(selected = selected, onClick = null)
-            },
-        )
-        return
-    }
     MiuixFilterChip(selected, onClick, modifier = modifier, label = { Row(verticalAlignment = Alignment.CenterVertically) { RadioButton(selected, null); Spacer(Modifier.width(6.dp)); Text(text) } })
 }

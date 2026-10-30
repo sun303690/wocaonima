@@ -22,10 +22,6 @@ fun MiuixBackButton(
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
 ) {
-    if (material3Engine()) {
-        dev.sun.wechat.ui.content.m3.ExpressiveBackButton(onClick = onClick, modifier = modifier)
-        return
-    }
     IconButton(onClick = onClick, modifier = modifier) {
         Icon(MaterialSymbols.Outlined.Arrow_back, contentDescription)
     }
@@ -39,16 +35,6 @@ fun <T> MiuixOptionDropdown(
     onDismissRequest: () -> Unit,
     onValueChange: (T) -> Unit,
 ) {
-    if (material3Engine()) {
-        dev.sun.wechat.ui.content.m3.ExpressiveOptionDropdown(
-            expanded = expanded,
-            value = value,
-            options = options.map { dev.sun.wechat.ui.content.m3.DropdownOption(it.value, it.label) },
-            onDismissRequest = onDismissRequest,
-            onValueChange = onValueChange,
-        )
-        return
-    }
     MiuixDropdownMenu(expanded = expanded, onDismissRequest = onDismissRequest) {
         options.forEach { option ->
             MiuixDropdownMenuItem(
@@ -69,16 +55,6 @@ fun MiuixActionButton(
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
 ) {
-    if (material3Engine()) {
-        androidx.compose.material3.Button(onClick = onClick, modifier = modifier) {
-            if (icon != null) {
-                androidx.compose.material3.Icon(icon, contentDescription = null)
-                Spacer(Modifier.width(6.dp))
-            }
-            androidx.compose.material3.Text(text)
-        }
-        return
-    }
     Button(onClick = onClick, modifier = modifier) {
         Row {
             if (icon != null) {

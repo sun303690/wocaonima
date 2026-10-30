@@ -39,18 +39,6 @@ fun MiuixColorPickerWidget(
     iconPlaceholder: Boolean = false,
     enabled: Boolean = true,
 ) {
-    if (material3Engine()) {
-        dev.sun.wechat.ui.content.m3.ColorPickerWidget(
-            title = title,
-            value = value,
-            onValueChange = onValueChange,
-            modifier = modifier,
-            icon = icon,
-            iconPlaceholder = iconPlaceholder,
-            enabled = enabled,
-        )
-        return
-    }
     val parsed = remember(value) { runCatching { Color(value.toColorInt()) }.getOrDefault(Color.Black) }
     var showPicker by remember { mutableStateOf(false) }
 

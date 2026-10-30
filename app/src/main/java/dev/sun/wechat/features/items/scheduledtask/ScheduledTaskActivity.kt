@@ -55,7 +55,7 @@ import dev.sun.wechat.ui.navigation.LocalNavigator
 import dev.sun.wechat.ui.navigation.Navigator
 import dev.sun.wechat.ui.navigation.rememberM3NavEffects
 import dev.sun.wechat.ui.utils.showComposeDialog
-import dev.sun.wechat.ui.utils.theme.EngineModuleTheme
+import dev.sun.wechat.ui.utils.theme.MiuixModuleTheme
 import dev.sun.wechat.ui.utils.theme.ThemeSettings
 import dev.sun.wechat.utils.android.showToast
 import dev.sun.wechat.utils.fs.KnownPaths
@@ -79,7 +79,7 @@ class ScheduledTaskActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             WeKitLocaleProvider(mode = LocaleResourceMode.InjectedHost) {
-                EngineModuleTheme { ScheduledTaskRoot(::finish) }
+                MiuixModuleTheme { ScheduledTaskRoot(::finish) }
             }
         }
     }

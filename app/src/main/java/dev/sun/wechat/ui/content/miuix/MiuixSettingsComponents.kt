@@ -65,15 +65,6 @@ fun MiuixSecondaryScaffold(
     showWallpaper: Boolean = true,
     content: LazyListScope.() -> Unit,
 ) {
-    if (material3Engine()) {
-        dev.sun.wechat.ui.content.m3.SettingsScaffold(
-            title = title,
-            onBack = onBack,
-            actions = actions,
-            content = content,
-        )
-        return
-    }
     val headerHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
     val wallpaper = remember(showWallpaper, ThemeSettings.settingsWallpaper, ThemeSettings.settingsWallpaperPath) {
         if (!showWallpaper || !ThemeSettings.settingsWallpaper) {
@@ -134,12 +125,6 @@ fun MiuixSettingsPage(
 
 @Composable
 fun MiuixSettingsCard(content: @Composable ColumnScope.() -> Unit) {
-    if (material3Engine()) {
-        dev.sun.wechat.ui.content.m3.BaseItemContainer(modifier = Modifier.fillMaxWidth()) {
-            Column(content = content)
-        }
-        return
-    }
     val shape = RoundedCornerShape(20.dp)
     Surface(Modifier.fillMaxWidth().clip(shape), shape = shape, color = MiuixTheme.colorScheme.surfaceContainer) {
         Column(content = content)
@@ -148,15 +133,6 @@ fun MiuixSettingsCard(content: @Composable ColumnScope.() -> Unit) {
 
 @Composable
 fun MiuixSettingsAction(title: String, summary: String = "", onClick: () -> Unit) {
-    if (material3Engine()) {
-        dev.sun.wechat.ui.content.m3.BaseWidget(
-            modifier = Modifier.fillMaxWidth(),
-            title = title,
-            description = summary.ifEmpty { null },
-            onClick = onClick,
-        )
-        return
-    }
     Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(title, fontSize = 17.sp, color = MiuixTheme.colorScheme.onSurface)
@@ -168,16 +144,6 @@ fun MiuixSettingsAction(title: String, summary: String = "", onClick: () -> Unit
 
 @Composable
 fun MiuixSettingsToggle(title: String, summary: String = "", checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    if (material3Engine()) {
-        dev.sun.wechat.ui.content.m3.SwitchWidget(
-            modifier = Modifier.fillMaxWidth(),
-            title = title,
-            description = summary.ifEmpty { null },
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-        )
-        return
-    }
     BasicComponent(
         title = title,
         summary = summary.ifEmpty { null },
@@ -188,21 +154,6 @@ fun MiuixSettingsToggle(title: String, summary: String = "", checked: Boolean, o
 
 @Composable
 fun MiuixSettingsSearch(value: String, hint: String, onValueChange: (String) -> Unit, onSearch: () -> Unit = {}) {
-    if (material3Engine()) {
-        androidx.compose.material3.OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            label = { androidx.compose.material3.Text(hint) },
-            trailingIcon = {
-                androidx.compose.material3.IconButton(onClick = onSearch) {
-                    androidx.compose.material3.Text("\u2315")
-                }
-            },
-        )
-        return
-    }
     TextField(
         value = value,
         onValueChange = onValueChange,
@@ -216,13 +167,5 @@ fun MiuixSettingsSearch(value: String, hint: String, onValueChange: (String) -> 
 
 @Composable
 fun MiuixSettingsSectionTitle(text: String) {
-    if (material3Engine()) {
-        androidx.compose.material3.Text(
-            text = text,
-            style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
-            color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-        )
-        return
-    }
     Text(text, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MiuixTheme.colorScheme.onSurface)
 }

@@ -33,17 +33,6 @@ fun MiuixAlertDialog(
     confirmButton: @Composable () -> Unit,
     dismissButton: @Composable (() -> Unit)? = null,
 ) {
-    if (material3Engine()) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = onDismissRequest,
-            icon = icon,
-            title = title,
-            text = text,
-            confirmButton = confirmButton,
-            dismissButton = dismissButton,
-        )
-        return
-    }
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismissRequest) {
         Column(
             modifier = Modifier
@@ -77,19 +66,6 @@ fun MiuixMessageDialog(
     onDismiss: () -> Unit,
 ) {
     if (!show) return
-    if (material3Engine()) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = onDismiss,
-            title = { androidx.compose.material3.Text(title) },
-            text = { androidx.compose.material3.Text(message) },
-            confirmButton = {
-                androidx.compose.material3.TextButton(onClick = onDismiss) {
-                    androidx.compose.material3.Text(confirmText)
-                }
-            },
-        )
-        return
-    }
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier

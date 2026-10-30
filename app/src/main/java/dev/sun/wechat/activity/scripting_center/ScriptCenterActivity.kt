@@ -34,7 +34,7 @@ import dev.sun.wechat.ui.agent.settings.AgentSettingsScaffold
 import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
 import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
 import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
-import dev.sun.wechat.ui.utils.theme.EngineModuleTheme
+import dev.sun.wechat.ui.utils.theme.MiuixModuleTheme
 import dev.sun.wechat.utils.android.showToast
 import dev.sun.wechat.utils.fs.KnownPaths
 import dev.sun.wechat.utils.fs.createDirsSafe
@@ -51,7 +51,7 @@ class ScriptCenterActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             WeKitLocaleProvider(mode = LocaleResourceMode.InjectedHost) {
-                EngineModuleTheme { ScriptCenterScreen(this@ScriptCenterActivity) }
+                MiuixModuleTheme { ScriptCenterScreen(this@ScriptCenterActivity) }
             }
         }
     }

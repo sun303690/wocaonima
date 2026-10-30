@@ -35,35 +35,6 @@ fun MiuixCompatTextField(
     minLines: Int = 1,
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
 ) {
-    if (material3Engine()) {
-        val m3Label: (@Composable () -> Unit)? =
-            if (label.isEmpty()) null else ({ androidx.compose.material3.Text(label) })
-        Column(modifier) {
-            if (prefix != null) prefix()
-            androidx.compose.material3.OutlinedTextField(
-                value = value,
-                onValueChange = onValueChange,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = enabled,
-                readOnly = readOnly,
-                textStyle = textStyle,
-                label = m3Label,
-                placeholder = placeholder,
-                leadingIcon = leadingIcon,
-                trailingIcon = trailingIcon,
-                supportingText = supportingText,
-                isError = isError,
-                visualTransformation = visualTransformation,
-                keyboardOptions = keyboardOptions,
-                keyboardActions = keyboardActions,
-                singleLine = singleLine,
-                minLines = minLines,
-                maxLines = maxLines,
-            )
-            if (suffix != null) suffix()
-        }
-        return
-    }
     Column(modifier) {
         if (prefix != null) prefix()
         TextField(
