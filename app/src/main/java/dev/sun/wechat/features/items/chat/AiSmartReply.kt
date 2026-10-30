@@ -218,9 +218,12 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
                 KvStore.putString(stylePromptKey(selectedStyle), stylePromptInput.trim())
                 // 换一批: 先清空旧候选, 生成中显示思考态
                 candidates = emptyList()
-                candidates = generateCandidates(talker, text, selectedStyle, stylePromptInput.trim())
+                val result = generateCandidates(talker, text, selectedStyle, stylePromptInput.trim())
+                candidates = result.getOrDefault(emptyList())
                 loading = false
-                if (candidates.isEmpty()) error = "生成失败，请检查模型配置"
+                error = result.exceptionOrNull()?.let {
+                    "生成失败：" + (it.message ?: it.javaClass.simpleName).take(160)
+                } ?: if (candidates.isEmpty()) "模型没有返回内容，请换个模型再试" else null
             }
         }
 
@@ -325,13 +328,16 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
         }
     }
 
-    private suspend fun generateCandidates(talker: String, content: String, styleName: String, promptOverride: String? = null): List<String> =
+    private suspend fun generateCandidates(talker: String, content: String, styleName: String, promptOverride: String? = null): Result<List<String>> =
         withContext(Dispatchers.IO) {
             try {
                 // 直接用 WeAgent 的默认模型（未设置则回退第一个模型）
-                val modelId = WeAgentRepository.resolvedDefaultModelId() ?: return@withContext emptyList()
-                val model = WeAgentRepository.getModel(modelId) ?: return@withContext emptyList()
-                val provider = WeAgentRepository.getModelProvider(model.providerId) ?: return@withContext emptyList()
+                val modelId = WeAgentRepository.resolvedDefaultModelId()
+                    ?: return@withContext Result.failure(IllegalStateException("没有配置模型，请先在 WeAgent 模型设置里添加服务商和模型"))
+                val model = WeAgentRepository.getModel(modelId)
+                    ?: return@withContext Result.failure(IllegalStateException("模型 $modelId 不存在，请在模型设置里重新添加"))
+                val provider = WeAgentRepository.getModelProvider(model.providerId)
+                    ?: return@withContext Result.failure(IllegalStateException("模型未绑定服务商，请在模型设置里检查"))
                 val client = ModelProviderManager.clientFor(provider)
 
                 val count = replyCount.coerceIn(1, 20)
@@ -344,9 +350,16 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
                     append("根据对方最后一条消息，生成${count}条回复。每条单独一行，不要序号，不要多余解释。")
                     if (contextText.isNotBlank()) append("\n\n最近聊天记录参考：\n$contextText")
                 }
+                // 从输入栏打开时没有选中具体消息，content 为空；空 content 会被服务端以
+                // "user content required" 拒绝，这里补一句明确的指令并把聊天记录带上。
+                val userContent = content.takeIf { it.isNotBlank() }
+                    ?: buildString {
+                        append("请根据下面的最近聊天记录，生成${count}条我可以直接发送的回复。")
+                        if (contextText.isNotBlank()) append("\n\n最近聊天记录：\n").append(contextText)
+                    }
                 val messages = listOf(
                     LlmMessage(LlmRole.SYSTEM, systemPrompt),
-                    LlmMessage(LlmRole.USER, content),
+                    LlmMessage(LlmRole.USER, userContent),
                 )
                 val request = ModelProviderManager.buildRequest(model, messages, emptyList(), stream = true)
                 val sb = StringBuilder()
@@ -358,11 +371,14 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
                         else -> {}
                     }
                 }
-                sb.toString().lines().map { it.trim() }.filter { it.isNotEmpty() }
-                    .filter { !it.matches(Regex("^\\d+[.、．]?.*")) }.take(count)
-                    .ifEmpty { listOf(sb.toString().trim()) }
+                Result.success(
+                    sb.toString().lines().map { it.trim() }.filter { it.isNotEmpty() }
+                        .filter { !it.matches(Regex("^\\d+[.、．]?.*")) }
+                        .filter { it.isNotBlank() }.take(count)
+                        .ifEmpty { listOf(sb.toString().trim()).filter { it.isNotBlank() } }
+                )
             } catch (e: Exception) {
-                WeLogger.e(TAG, "generate failed", e); emptyList()
+                WeLogger.e(TAG, "generate failed: ${e.message}", e); Result.failure(e)
             }
         }
 }
