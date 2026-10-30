@@ -93,7 +93,7 @@ import java.lang.reflect.Modifier as JavaModifier
 object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputBarListener,
     WeDatabaseListenerApi.IQueryListener {
 
-    override val technicalId: String = "隐藏联系人"
+    override val technicalId = "隐藏联系人"
     override val nameRes: Int = R.string.feature_hide_contacts_name
     override val categoryIds: List<String> = listOf(FeatureCategoryIds.CONTACTS_GROUPS, FeatureCategoryIds.SECRET_FRIEND)
 

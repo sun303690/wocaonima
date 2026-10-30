@@ -57,6 +57,8 @@ import dev.sun.wechat.utils.WeLogger
 )
 object HideContactsNotifications : ApiFeature(), IResolveDex {
 
+    override val technicalId = "隐藏联系人通知抑制"
+
     private const val TAG = "HideContactsNotifications"
 
     private const val CHANNEL_ID_TEAM = "wcx_team_summary"
