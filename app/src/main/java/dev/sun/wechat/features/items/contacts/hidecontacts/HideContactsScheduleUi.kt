@@ -214,7 +214,7 @@ internal fun HideContacts.showSchedulesDialog(context: Context) {
                             Text(
                                 "到点自动临时显示或恢复隐藏，不会改动隐藏列表",
                                 fontSize = 12.sp,
-                                color = MiuixTheme.colorScheme.onSurfaceVariant,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                             )
                         }
                         TextButton(
@@ -238,7 +238,7 @@ internal fun HideContacts.showSchedulesDialog(context: Context) {
                     if (schedules.isEmpty()) {
                         Text(
                             "暂无定时任务，点击右上角“添加”创建",
-                            color = MiuixTheme.colorScheme.onSurfaceVariant,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                             modifier = Modifier.padding(vertical = 28.dp),
                         )
                     } else {
@@ -478,7 +478,7 @@ private fun showScheduleEditor(
                             Text(
                                 "单次任务触发后会自动删除",
                                 fontSize = 12.sp,
-                                color = MiuixTheme.colorScheme.onSurfaceVariant,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                             )
 
                             if (isOncePast) {

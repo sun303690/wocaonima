@@ -3,7 +3,7 @@ package dev.sun.wechat.features.items.contacts.hidecontacts
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.dexMethod
 import dev.sun.wechat.features.core.ApiFeature
-import dev.sun.wechat.features.core.Feature
+import dev.sun.wechat.features.core.FeatureCategoryIds
 
 import dev.sun.wechat.features.items.contacts.HideContacts
 import dev.sun.wechat.data.KvStore
@@ -50,14 +50,11 @@ import dev.sun.wechat.utils.WeLogger
  * hidden contact's chats and contact rows reappear, but their **notifications stay suppressed**.
  * Turn 隐藏联系人 off entirely to get notifications back.
  */
-@Feature(
-    name = "隐藏联系人通知抑制",
-    categories = ["API"],
-    description = "在 push 进程内抑制被隐藏联系人的新消息通知 (随「隐藏联系人」开关自动生效)"
-)
 object HideContactsNotifications : ApiFeature(), IResolveDex {
 
     override val technicalId = "隐藏联系人通知抑制"
+    override val nameRes = R.string.feature_hide_contacts_notifications_name
+    override val categoryIds = listOf(FeatureCategoryIds.API)
 
     private const val TAG = "HideContactsNotifications"
 

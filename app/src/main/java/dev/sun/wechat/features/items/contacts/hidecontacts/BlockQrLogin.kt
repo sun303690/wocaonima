@@ -2,7 +2,7 @@ package dev.sun.wechat.features.items.contacts.hidecontacts
 
 import android.app.Activity
 import android.os.Bundle
-import dev.sun.wechat.features.core.Feature
+import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToast
@@ -21,12 +21,11 @@ import dev.ujhhgtg.reflekt.utils.toClass
  *
  * 默认关闭：开了之后自己扫码登录也会被拦（要先关掉再登录），所以交给用户自己决定。
  */
-@Feature(
-    name = "拦截扫码登录",
-    categories = ["密友功能"],
-    description = "别人扫码登录你的微信时，手机端的「登录确认」页会立即关闭并提示（自己也登不了，需先关闭本开关）",
-)
 object BlockQrLogin : SwitchFeature() {
+
+    override val technicalId = "拦截扫码登录"
+    override val nameRes = R.string.hide_contacts_block_qr_login_name
+    override val categoryIds = listOf(FeatureCategoryIds.SECRET_FRIEND)
 
     private const val TAG = "BlockQrLogin"
 

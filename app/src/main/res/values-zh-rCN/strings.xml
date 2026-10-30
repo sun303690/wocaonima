@@ -4528,4 +4528,21 @@
     <string name="ui_group_ai_settings_test_ok">连接成功</string>
     <string name="ui_group_ai_settings_testing">测试中…</string>
     <string name="ui_group_ai_settings_title">API 配置</string>
+    <string name="feature_hide_contacts_conversations_name">主页会话隐藏</string>
+    <string name="feature_hide_contacts_contacts_name">通讯录隐藏</string>
+    <string name="feature_hide_contacts_group_members_name">群成员选择器隐藏</string>
+    <string name="feature_hide_contacts_favorites_name">收藏列表隐藏</string>
+    <string name="feature_hide_contacts_finder_like_name">视频号互动隐藏</string>
+    <string name="feature_hide_contacts_search_name">搜索结果隐藏</string>
+    <string name="feature_hide_contacts_moments_name">朋友圈隐藏</string>
+    <string name="feature_hide_contacts_moments_inline_name">朋友圈互动隐藏</string>
+    <string name="feature_hide_contacts_voip_name">音视频通话隐藏</string>
+    <string name="feature_hide_contacts_block_chat_name">禁止进入聊天</string>
+    <string name="feature_hide_contacts_block_profile_name">禁止查看资料</string>
+    <string name="feature_hide_contacts_mute_name">自动免打扰</string>
+    <string name="feature_hide_contacts_new_friends_name">新的朋友隐藏</string>
+    <string name="feature_hide_contacts_unread_name">未读角标隐藏</string>
+    <string name="feature_hide_contacts_reject_voip_name">自动拒接音视频</string>
+    <string name="feature_hide_contacts_vibrate_name">密友消息震动</string>
+    <string name="feature_hide_contacts_team_summary_name">微信团队汇总提醒</string>
 </resources>

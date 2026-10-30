@@ -43,7 +43,6 @@ import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
 import dev.sun.wechat.features.api.ui.WeChatInputBarApi
 import dev.sun.wechat.features.api.ui.WeMainActivityBeautifyApi
 import dev.sun.wechat.features.core.ClickableFeature
-import dev.sun.wechat.features.core.Feature
 import dev.sun.wechat.features.core.FeatureCategoryIds
 
 import dev.sun.wechat.features.items.contacts.hidecontacts.installBlockHooks
@@ -83,13 +82,6 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 import java.lang.reflect.Modifier as JavaModifier
 
-
-@Feature(
-    name = "隐藏联系人",
-    // 双分类：密友功能（设置列表最后一项，隐蔽入口）与联系人与群组（原入口）。
-    categories = ["联系人与群组", "密友功能"],
-    description = "隐藏指定的联系人"
-)
 object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputBarListener,
     WeDatabaseListenerApi.IQueryListener {
 
@@ -794,7 +786,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
                                 Icon(
                                     MaterialSymbols.Outlined.Chevron_right,
                                     contentDescription = null,
-                                    tint = MiuixTheme.colorScheme.onSurfaceVariant,
+                                    tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                 )
                             },
                         )
@@ -807,7 +799,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
                                 Icon(
                                     MaterialSymbols.Outlined.Chevron_right,
                                     contentDescription = null,
-                                    tint = MiuixTheme.colorScheme.onSurfaceVariant,
+                                    tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                 )
                             },
                         )
