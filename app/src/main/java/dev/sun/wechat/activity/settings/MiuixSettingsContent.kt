@@ -52,6 +52,14 @@ fun MiuixSettingsContent(onFinish: () -> Unit) {
     var page by remember { mutableStateOf(MiuixPage.HOME) }
     var query by remember { mutableStateOf("") }
     var categoryId by remember { mutableStateOf(FEATURE_CATEGORIES.first().id) }
+    // 页面是本地状态栈而不是 NavHost，必须自己接管返回键，否则返回会直接关掉设置。
+    androidx.activity.compose.BackHandler(enabled = page != MiuixPage.HOME) {
+        page = when (page) {
+            MiuixPage.CATEGORY -> MiuixPage.FEATURES
+            MiuixPage.LICENSE -> MiuixPage.ABOUT
+            else -> MiuixPage.HOME
+        }
+    }
     when (page) {
         MiuixPage.HOME -> MiuixHome(
             onFinish,
@@ -503,22 +511,42 @@ private fun MiuixChoiceDialog(
     onDismiss: () -> Unit,
 ) {
     if (!show) return
-    top.yukonga.miuix.kmp.overlay.OverlayDialog(show = true, onDismissRequest = onDismiss) {
+    // Miuix 的 OverlayDialog 只有在 Miuix Scaffold 提供的 popup host 里才会真正渲染，
+    // 设置页是普通 LazyColumn，没有任何 host，弹窗会静默不显示。这里改用平台 Dialog。
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(MiuixTheme.colorScheme.surface)
+                .padding(vertical = 10.dp),
         ) {
-            Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MiuixTheme.colorScheme.onSurface)
+            Text(
+                title,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
+                color = MiuixTheme.colorScheme.onSurface,
+            )
+            val current = ThemeSettings.uiEngine.displayName
             options.forEach { (label, action) ->
-                Text(
-                    label,
-                    modifier = Modifier
+                Row(
+                    Modifier
                         .fillMaxWidth()
                         .clickable { action(); onDismiss() }
-                        .padding(vertical = 14.dp),
-                    fontSize = 16.sp,
-                    color = MiuixTheme.colorScheme.onSurface,
-                )
+                        .padding(horizontal = 20.dp, vertical = 15.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        label,
+                        modifier = Modifier.weight(1f),
+                        fontSize = 16.sp,
+                        color = if (label == current) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurface,
+                    )
+                    if (label == current) {
+                        Text("✓", fontSize = 16.sp, color = MiuixTheme.colorScheme.primary)
+                    }
+                }
             }
         }
     }
