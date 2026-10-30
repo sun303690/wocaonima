@@ -8,7 +8,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import dev.sun.wechat.activity.settings.LocalComponentActivity
 import dev.sun.wechat.i18n.LocaleResourceMode
 import dev.sun.wechat.i18n.WeKitLocaleProvider
-import dev.sun.wechat.ui.utils.theme.MiuixModuleTheme
+import dev.sun.wechat.ui.utils.theme.EngineModuleTheme
 
 /** WCX v344 完整主题工坊在 WeKit 中的独立宿主页。 */
 class ThemeWorkshopActivity : ComponentActivity() {
@@ -21,7 +21,7 @@ class ThemeWorkshopActivity : ComponentActivity() {
         setContent {
             CompositionLocalProvider(LocalComponentActivity provides this) {
                 WeKitLocaleProvider(mode = LocaleResourceMode.InjectedHost) {
-                    MiuixModuleTheme {
+                    EngineModuleTheme {
                         ThemeWorkshopScreen(onBack = ::finish)
                     }
                 }

@@ -79,7 +79,7 @@ import dev.sun.wechat.ui.navigation.LocalNavigator
 import dev.sun.wechat.ui.navigation.Navigator
 import dev.sun.wechat.ui.navigation.rememberM3NavEffects
 import dev.sun.wechat.ui.animation.predictiveback.weKitNavTransition
-import dev.sun.wechat.ui.utils.theme.MiuixModuleTheme
+import dev.sun.wechat.ui.utils.theme.EngineModuleTheme
 import dev.sun.wechat.ui.utils.theme.ThemeSettings
 import dev.sun.wechat.utils.android.copyToClipboard
 import kotlinx.coroutines.Dispatchers
@@ -103,7 +103,7 @@ class ReadReceiptsSettingsActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             WeKitLocaleProvider(mode = LocaleResourceMode.InjectedHost) {
-                MiuixModuleTheme {
+                EngineModuleTheme {
                     ReadReceiptsSettingsRoot(
                         activity = this@ReadReceiptsSettingsActivity,
                         onFinish = ::finish,

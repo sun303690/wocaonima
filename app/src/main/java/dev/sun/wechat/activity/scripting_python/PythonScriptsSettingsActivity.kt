@@ -95,7 +95,7 @@ import dev.sun.wechat.ui.content.miuix.rememberMiuixBlurBackdrop
 import dev.sun.wechat.ui.navigation.LocalNavigator
 import dev.sun.wechat.ui.navigation.Navigator
 import dev.sun.wechat.ui.navigation.rememberM3NavEffects
-import dev.sun.wechat.ui.utils.theme.MiuixModuleTheme
+import dev.sun.wechat.ui.utils.theme.EngineModuleTheme
 import dev.sun.wechat.ui.utils.theme.ThemeSettings
 import dev.sun.wechat.utils.fs.KnownPaths
 import dev.sun.wechat.utils.TargetProcesses
@@ -119,7 +119,7 @@ class PythonScriptsSettingsActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             WeKitLocaleProvider(mode = LocaleResourceMode.InjectedHost) {
-                MiuixModuleTheme { PythonSettingsRoot(this@PythonScriptsSettingsActivity, ::finish) }
+                EngineModuleTheme { PythonSettingsRoot(this@PythonScriptsSettingsActivity, ::finish) }
             }
         }
     }

@@ -21,17 +21,62 @@ data class DropdownOption<T>(val value: T, val label: String)
 
 @Composable
 fun MiuixBaseSupportingWidget(title: String, modifier: Modifier = Modifier, description: String? = null, iconPlaceholder: Boolean = false, onClick: (() -> Unit)? = null, enabled: Boolean = true, supportingContent: @Composable () -> Unit) {
+    if (material3Engine()) {
+        dev.sun.wechat.ui.content.m3.BaseSupportingWidget(
+            title = title,
+            modifier = modifier,
+            description = description,
+            iconPlaceholder = iconPlaceholder,
+            onClick = onClick,
+            enabled = enabled,
+        ) { supportingContent() }
+        return
+    }
     MiuixBaseWidget(title = title, summary = description, modifier = modifier, iconPlaceholder = iconPlaceholder, onClick = onClick, enabled = enabled)
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) { supportingContent() }
 }
 
 @Composable
 fun MiuixRadioButtonWidget(title: String, modifier: Modifier = Modifier, description: String? = null, icon: ImageVector? = null, iconPlaceholder: Boolean = false, selected: Boolean = false, enabled: Boolean = true, trailingDivider: Boolean = false, onClick: (() -> Unit)? = null, onSelect: (() -> Unit)? = null) {
+    if (material3Engine()) {
+        dev.sun.wechat.ui.content.m3.RadioButtonWidget(
+            title = title,
+            modifier = modifier,
+            description = description,
+            icon = icon,
+            iconPlaceholder = iconPlaceholder,
+            selected = selected,
+            enabled = enabled,
+            trailingDivider = trailingDivider,
+            onClick = onClick,
+            onSelect = onSelect,
+        )
+        return
+    }
     MiuixBaseWidget(title = title, summary = description, modifier = modifier, icon = icon, iconPlaceholder = iconPlaceholder, selected = selected, enabled = enabled, onClick = onClick ?: onSelect, trailingContent = { RadioButton(selected = selected, onClick = onSelect ?: onClick, enabled = enabled) })
 }
 
 @Composable
 fun MiuixIntNumberPickerWidget(icon: ImageVector? = null, iconPlaceholder: Boolean = false, title: String, description: String? = null, enabled: Boolean = true, value: Int, startInt: Int, endInt: Int, stepSize: Int = 0, showTooltip: Boolean = true, valueSuffix: String = "", subduedValue: Boolean = false, onValueClick: (() -> Unit)? = null, onValueChange: (Int) -> Unit) {
+    if (material3Engine()) {
+        dev.sun.wechat.ui.content.m3.IntNumberPickerWidget(
+            icon = icon,
+            iconPlaceholder = iconPlaceholder,
+            title = title,
+            description = description,
+            enabled = enabled,
+            value = value,
+            startInt = startInt,
+            endInt = endInt,
+            stepSize = stepSize,
+            showTooltip = showTooltip,
+            valueSuffix = valueSuffix,
+            subduedValue = subduedValue,
+            onValueClick = onValueClick,
+            onValueChange = onValueChange,
+        )
+        return
+    }
     MiuixBaseSupportingWidget(title, description = description, iconPlaceholder = iconPlaceholder, enabled = enabled) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Slider(value = value.toFloat(), onValueChange = { onValueChange(it.toInt().coerceIn(startInt, endInt)) }, valueRange = startInt.toFloat()..endInt.toFloat(), modifier = Modifier.weight(1f), enabled = enabled)
@@ -42,6 +87,19 @@ fun MiuixIntNumberPickerWidget(icon: ImageVector? = null, iconPlaceholder: Boole
 
 @Composable
 fun <T> MiuixDropDownMenuWidget(icon: ImageVector? = null, iconPlaceholder: Boolean = false, title: String, description: String?, value: T, options: List<DropdownOption<T>>, enabled: Boolean = true, onValueChange: (T) -> Unit) {
+    if (material3Engine()) {
+        dev.sun.wechat.ui.content.m3.DropDownMenuWidget(
+            icon = icon,
+            iconPlaceholder = iconPlaceholder,
+            title = title,
+            description = description,
+            value = value,
+            options = options.map { dev.sun.wechat.ui.content.m3.DropdownOption(it.value, it.label) },
+            enabled = enabled,
+            onValueChange = onValueChange,
+        )
+        return
+    }
     var expanded by remember { mutableStateOf(false) }
     val selected = options.firstOrNull { it.value == value }
     MiuixBaseWidget(title = title, summary = description ?: selected?.label, icon = icon, iconPlaceholder = iconPlaceholder, enabled = enabled, onClick = { expanded = true })

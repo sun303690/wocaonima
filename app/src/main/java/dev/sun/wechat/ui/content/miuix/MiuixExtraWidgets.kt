@@ -24,6 +24,10 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun MiuixBaseItemContainer(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    if (material3Engine()) {
+        dev.sun.wechat.ui.content.m3.BaseItemContainer(modifier = modifier) { content() }
+        return
+    }
     Card(modifier.fillMaxWidth()) { Column { content() } }
 }
 
@@ -35,6 +39,24 @@ fun MiuixTextFieldDialogWidget(
     filter: (String) -> String = { it }, password: Boolean = false,
     valueHint: String? = null, singleLine: Boolean = true,
 ) {
+    if (material3Engine()) {
+        dev.sun.wechat.ui.content.m3.TextFieldDialogWidget(
+            title = title,
+            value = value,
+            onValueChange = onValueChange,
+            dialogTitle = dialogTitle,
+            confirmLabel = confirmLabel,
+            dismissLabel = dismissLabel,
+            modifier = modifier,
+            enabled = enabled,
+            keyboardType = keyboardType,
+            filter = filter,
+            password = password,
+            valueHint = valueHint,
+            singleLine = singleLine,
+        )
+        return
+    }
     var show by remember { mutableStateOf(false) }; var draft by remember(value) { mutableStateOf(value) }
     MiuixBaseWidget(modifier = modifier, title = title, summary = if (value.isBlank()) valueHint else if (password) "••••••••" else value, enabled = enabled, onClick = { draft = value; show = true })
     if (show) MiuixAlertDialog(onDismissRequest = { show = false }, title = { Text(dialogTitle) }, text = { TextField(value = draft, onValueChange = { draft = filter(it) }, singleLine = singleLine, modifier = Modifier.fillMaxWidth()) }, confirmButton = { top.yukonga.miuix.kmp.basic.Button(onClick = { show = false; onValueChange(draft) }) { Text(confirmLabel) } }, dismissButton = { top.yukonga.miuix.kmp.basic.Button(onClick = { show = false }) { Text(dismissLabel) } })
@@ -42,6 +64,16 @@ fun MiuixTextFieldDialogWidget(
 
 @Composable
 fun MiuixPlaceholderChips(placeholders: List<String>, value: TextFieldValue, isFieldFocused: Boolean, onValueChange: (TextFieldValue) -> Unit, modifier: Modifier = Modifier) {
+    if (material3Engine()) {
+        dev.sun.wechat.ui.content.m3.PlaceholderChips(
+            placeholders = placeholders,
+            value = value,
+            isFieldFocused = isFieldFocused,
+            onValueChange = onValueChange,
+            modifier = modifier,
+        )
+        return
+    }
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), modifier = modifier.fillMaxWidth().padding(vertical = 4.dp)) {
         placeholders.forEach { placeholder ->
             Text(placeholder, modifier = Modifier.background(MiuixTheme.colorScheme.secondaryContainer).clickable {

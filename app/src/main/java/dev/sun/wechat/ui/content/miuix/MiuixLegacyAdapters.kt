@@ -49,6 +49,25 @@ fun MiuixBaseWidget(
     trailingDivider: Boolean = false,
     foreContent: (@Composable BoxScope.() -> Unit)? = null,
 ) {
+    if (material3Engine()) {
+        dev.sun.wechat.ui.content.m3.BaseWidget(
+            modifier = modifier,
+            icon = icon,
+            iconColor = iconColor,
+            iconPlaceholder = iconPlaceholder,
+            title = title,
+            description = description ?: summary,
+            enabled = enabled,
+            isError = isError,
+            selected = selected,
+            onClick = onClick,
+            onTrailingClick = onTrailingClick,
+            trailingDivider = trailingDivider,
+            foreContent = { foreContent?.invoke(this) },
+            trailingContent = { trailingContent?.invoke(this) },
+        )
+        return
+    }
     val cardColor = when {
         isError -> MiuixTheme.colorScheme.errorContainer
         selected -> MiuixTheme.colorScheme.secondaryContainer
@@ -87,6 +106,22 @@ fun MiuixSwitchWidget(
     isError: Boolean = false,
     trailingDivider: Boolean = false,
 ) {
+    if (material3Engine()) {
+        dev.sun.wechat.ui.content.m3.SwitchWidget(
+            modifier = modifier,
+            icon = icon,
+            iconPlaceholder = iconPlaceholder,
+            title = title,
+            description = description ?: summary,
+            enabled = enabled,
+            isError = isError,
+            onClick = onClick,
+            trailingDivider = trailingDivider,
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+        )
+        return
+    }
     MiuixBaseWidget(
         title = title,
         modifier = modifier,
@@ -112,11 +147,26 @@ class MiuixSegmentedColumnScope {
     fun item(key: Any? = null, animatedVisibility: Boolean = true, content: @Composable () -> Unit) {
         if (animatedVisibility) entries += content
     }
+    internal fun material3Entries(): List<@Composable () -> Unit> = entries
     @Composable internal fun Render() { entries.forEach { it() } }
 }
 
 @Composable
 fun MiuixSegmentedColumn(modifier: Modifier = Modifier, title: String = "", contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 8.dp), titlePadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 4.dp), content: MiuixSegmentedColumnScope.() -> Unit) {
+    if (material3Engine()) {
+        val m3Scope = MiuixSegmentedColumnScope().apply(content)
+        dev.sun.wechat.ui.content.m3.SegmentedColumn(
+            modifier = modifier,
+            title = title,
+            contentPadding = contentPadding,
+            titlePadding = titlePadding,
+        ) {
+            m3Scope.material3Entries().forEachIndexed { index, entry ->
+                item(key = index) { entry() }
+            }
+        }
+        return
+    }
     val scope = MiuixSegmentedColumnScope().apply(content)
     Column(modifier.fillMaxWidth().padding(contentPadding)) {
         if (title.isNotEmpty()) SmallTitle(text = title, modifier = Modifier.padding(titlePadding))

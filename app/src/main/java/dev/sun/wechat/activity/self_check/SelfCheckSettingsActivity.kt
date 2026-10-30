@@ -64,7 +64,7 @@ import dev.sun.wechat.ui.agent.settings.AgentListActionButton
 import dev.sun.wechat.ui.content.miuix.MiuixBaseItemContainer
 import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
 import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
-import dev.sun.wechat.ui.utils.theme.MiuixModuleTheme
+import dev.sun.wechat.ui.utils.theme.EngineModuleTheme
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToast
 import kotlinx.coroutines.Dispatchers
@@ -96,7 +96,7 @@ class SelfCheckSettingsActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             WeKitLocaleProvider(mode = LocaleResourceMode.InjectedHost) {
-                MiuixModuleTheme {
+                EngineModuleTheme {
                     SelfCheckRoot(onFinish = ::finish)
                 }
             }

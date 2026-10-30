@@ -13,9 +13,13 @@ import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.blur.textureBlur
 import top.yukonga.miuix.kmp.shader.isRenderEffectSupported
+import dev.sun.wechat.ui.content.rememberMaterial3BlurBackdrop as rememberM3BlurBackdrop
+import dev.sun.wechat.ui.content.m3AppBarBlur as m3AppBarBlurModifier
+import dev.sun.wechat.ui.content.m3AppBarColor as m3AppBarColorOf
 
 @Composable
 fun rememberMiuixBlurBackdrop(enabled: Boolean = true): LayerBackdrop? {
+    if (material3Engine()) return rememberM3BlurBackdrop(enabled)
     if (!enabled || !isRenderEffectSupported()) return null
     val surfaceColor = MiuixTheme.colorScheme.surfaceContainer
     return rememberLayerBackdrop {
@@ -25,8 +29,10 @@ fun rememberMiuixBlurBackdrop(enabled: Boolean = true): LayerBackdrop? {
 }
 
 @Composable
-fun LayerBackdrop?.miuixAppBarColor(): Color =
-    if (this != null) Color.Transparent else MiuixTheme.colorScheme.surfaceContainer
+fun LayerBackdrop?.miuixAppBarColor(): Color {
+    if (material3Engine()) return this.m3AppBarColorOf()
+    return if (this != null) Color.Transparent else MiuixTheme.colorScheme.surfaceContainer
+}
 
 @Composable
 fun Modifier.miuixAppBarBlur(
@@ -36,6 +42,9 @@ fun Modifier.miuixAppBarBlur(
     blendAlpha: Float = 0.8f,
     shape: Shape = RectangleShape,
 ): Modifier {
+    if (material3Engine()) {
+        return this.m3AppBarBlurModifier(backdrop, enabled = enabled, blurRadius = blurRadius, blendAlpha = blendAlpha, shape = shape)
+    }
     if (!enabled || backdrop == null) return this
     val blendColor = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = blendAlpha)
     return then(

@@ -22,6 +22,17 @@ fun MiuixDropdownMenu(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     if (!expanded) return
+    if (material3Engine()) {
+        androidx.compose.material3.DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = onDismissRequest,
+            modifier = modifier,
+            offset = androidx.compose.ui.unit.DpOffset(offset.x, offset.y),
+        ) {
+            content()
+        }
+        return
+    }
     val density = LocalDensity.current
     Popup(
         alignment = androidx.compose.ui.Alignment.TopEnd,
@@ -44,6 +55,17 @@ fun MiuixDropdownMenuItem(
     trailingIcon: (@Composable () -> Unit)? = null,
     enabled: Boolean = true,
 ) {
+    if (material3Engine()) {
+        androidx.compose.material3.DropdownMenuItem(
+            text = text,
+            onClick = onClick,
+            modifier = modifier,
+            leadingIcon = leadingIcon,
+            trailingIcon = trailingIcon,
+            enabled = enabled,
+        )
+        return
+    }
     MiuixListItem(
         headlineContent = text,
         modifier = modifier,

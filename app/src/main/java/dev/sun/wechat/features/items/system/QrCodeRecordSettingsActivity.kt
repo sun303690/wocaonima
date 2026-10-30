@@ -62,7 +62,7 @@ import dev.sun.wechat.utils.formatEpoch
 import dev.sun.wechat.utils.openInSystem
 import dev.sun.wechat.ui.content.miuix.MiuixDropdownMenu
 import dev.sun.wechat.ui.content.miuix.MiuixDropdownMenuItem
-import dev.sun.wechat.ui.utils.theme.MiuixModuleTheme
+import dev.sun.wechat.ui.utils.theme.EngineModuleTheme
 
 @Keep
 class QrCodeRecordSettingsActivity : ComponentActivity() {
@@ -73,7 +73,7 @@ class QrCodeRecordSettingsActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             WeKitLocaleProvider(mode = LocaleResourceMode.InjectedHost) {
-                MiuixModuleTheme {
+                EngineModuleTheme {
                     QrCodeRecordSettingsScreen(
                         records = records,
                         onFinish = ::finish,

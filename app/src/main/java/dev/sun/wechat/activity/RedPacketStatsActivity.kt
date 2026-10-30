@@ -28,7 +28,7 @@ import dev.sun.wechat.activity.settings.M3ListScaffold
 import dev.sun.wechat.features.items.payment.stats.RedPacketRecordEntity
 import dev.sun.wechat.features.items.payment.stats.RedPacketStatsManager
 import dev.sun.wechat.ui.content.Button
-import dev.sun.wechat.ui.utils.theme.MiuixModuleTheme
+import dev.sun.wechat.ui.utils.theme.EngineModuleTheme
 import dev.sun.wechat.utils.android.showToast
 import kotlinx.coroutines.launch
 import java.util.Calendar
@@ -47,7 +47,7 @@ class RedPacketStatsActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MiuixModuleTheme {
+            EngineModuleTheme {
                 RedPacketStatsScreen()
             }
         }
