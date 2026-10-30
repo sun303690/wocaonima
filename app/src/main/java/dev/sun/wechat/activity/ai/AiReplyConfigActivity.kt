@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -104,6 +105,7 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
     var showMofaPicker by remember { mutableStateOf(false) }
     var showEmotionPicker by remember { mutableStateOf(false) }
     var voiceBusy by remember { mutableStateOf(false) }
+    var editField by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         modelId = runCatching { WeAgentRepository.resolvedDefaultModelId() }.getOrNull()
@@ -218,30 +220,21 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
                 }
                 HorizontalDivider()
 
-                OutlinedTextField(
-                    value = apiKey,
-                    onValueChange = {
-                        apiKey = it
-                        TextToSpeech.apiKey = it
-                    },
-                    label = { Text("语音 API Key") },
-                    visualTransformation = PasswordVisualTransformation(),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = cookie,
-                    onValueChange = {
-                        cookie = it
-                        TextToSpeech.doubaoCookie = it
-                    },
-                    label = { Text("豆包 Cookie") },
-                    visualTransformation = PasswordVisualTransformation(),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
-                SettingsRow("音色", voiceLabel) {
+                SettingsRow(
+                    title = "语音 API Key",
+                    value = if (apiKey.isBlank()) "未填写" else "••••••••",
+                    actionText = "编辑",
+                ) { editField = "key" }
+                SettingsRow(
+                    title = "豆包 Cookie",
+                    value = if (cookie.isBlank()) "未填写" else "••••••••",
+                    actionText = "编辑",
+                ) { editField = "cookie" }
+                HorizontalDivider()
+                SettingsRow(
+                    title = "音色",
+                    value = voiceLabel,
+                ) {
                     if (isDoubao) {
                         showDoubaoVoicePicker(context, doubaoVoice, cookie) { id, name ->
                             doubaoVoice = id
@@ -254,23 +247,16 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
                         showMofaPicker = true
                     }
                 }
-                OutlinedTextField(
-                    value = customVoice,
-                    onValueChange = {
-                        customVoice = it.trim()
-                        TextToSpeech.customVoiceId = it.trim()
-                    },
-                    label = { Text("自定义音色 ID（留空用预设）") },
-                    placeholder = { Text("如 zh_female_wenroutaozi_uranus_bigtts / S_xxxx") },
-                    singleLine = true,
-                    supportingText = { Text("填写后优先于上面选择的预设音色；魔方与豆包共用此字段") },
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                SettingsRow(
+                    title = "自定义音色",
+                    value = customVoice.ifBlank { "未设置（使用上面的预设音色）" },
+                    actionText = "编辑",
+                ) { editField = "custom" }
                 SettingsRow(
                     title = "语气",
                     value = if (isDoubao) "豆包音色自带语气" else emotion,
                     actionText = if (isDoubao) null else "选择",
-                ) { showEmotionPicker = true }
+                ) { if (!isDoubao) showEmotionPicker = true }
 
                 Button(
                     enabled = !voiceBusy,
@@ -305,6 +291,75 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
                 ) { Text(if (voiceBusy) "合成中…" else "测试语音") }
             }
         }
+    }
+
+    val field = editField
+    if (field != null) {
+        var buffer by remember(field) {
+            mutableStateOf(
+                when (field) {
+                    "key" -> apiKey
+                    "cookie" -> cookie
+                    else -> customVoice
+                },
+            )
+        }
+        AlertDialog(
+            onDismissRequest = { editField = null },
+            title = {
+                Text(
+                    when (field) {
+                        "key" -> "语音 API Key"
+                        "cookie" -> "豆包 Cookie"
+                        else -> "自定义音色 ID"
+                    },
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = buffer,
+                        onValueChange = { buffer = it },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text(
+                        when (field) {
+                            "key" -> "配音魔方控制台「API Key 管理」里创建"
+                            "cookie" -> "doubao.com 开发者工具里复制 sessionid / sid_guard / uid_tt 三段"
+                            else -> "留空则用预设音色；魔方与豆包共用此值"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val v = buffer.trim()
+                        when (field) {
+                            "key" -> {
+                                apiKey = v
+                                TextToSpeech.apiKey = v
+                            }
+
+                            "cookie" -> {
+                                cookie = v
+                                TextToSpeech.doubaoCookie = v
+                            }
+
+                            else -> {
+                                customVoice = v
+                                TextToSpeech.customVoiceId = v
+                            }
+                        }
+                        editField = null
+                    },
+                ) { Text("保存") }
+            },
+            dismissButton = { TextButton(onClick = { editField = null }) { Text("取消") } },
+        )
     }
 
     if (showMofaPicker) {
@@ -395,11 +450,13 @@ private fun SettingsRow(
     onAction: () -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onAction),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(Modifier.padding(end = 8.dp)) {
+        Column(Modifier.weight(1f).padding(end = 8.dp)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
             Text(
                 value,
@@ -408,7 +465,7 @@ private fun SettingsRow(
             )
         }
         if (actionText != null) {
-            TextButton(onClick = onAction) { Text(actionText) }
+            Text(actionText, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         }
     }
 }

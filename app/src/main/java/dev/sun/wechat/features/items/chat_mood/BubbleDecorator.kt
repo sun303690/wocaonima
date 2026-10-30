@@ -99,6 +99,19 @@ object BubbleDecorator {
             suggestion != null -> {
                 chips.addView(hint(state, "帮我回 · 点一条填入输入框", muted = true))
                 suggestion.parts.forEach { part -> chips.addView(chip(state, part)) }
+                if (VoiceReply.enabled() && suggestion.parts.isNotEmpty()) {
+                    val first = suggestion.parts.first()
+                    val voiceChip = chip(state, "🔊 语音发送：${first.take(18)}")
+                    voiceChip.setOnClickListener {
+                        if (!VoiceReply.ready()) {
+                            showToast(state.row.context, "语音未配置：请到「设置 → AI 回复配置」填写 API Key / Cookie")
+                        } else {
+                            showToast(state.row.context, "正在合成语音…")
+                            VoiceReply.send(state.input.talker, first)
+                        }
+                    }
+                    chips.addView(voiceChip)
+                }
                 if (suggestion.reason.isNotBlank()) {
                     chips.addView(hint(state, suggestion.reason, muted = true))
                 }

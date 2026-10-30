@@ -231,6 +231,9 @@ object ReplyPanel {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                                 Text("${index + 1}. $part", modifier = Modifier.weight(1f))
                                 Button(onClick = { copyText(context, part) }) { Text("复制") }
+                                if (VoiceReply.enabled()) {
+                                    Button(onClick = { VoiceReply.send(talker, part) }) { Text("语音") }
+                                }
                             }
                         }
                         if (suggestion.reason.isNotBlank()) {
