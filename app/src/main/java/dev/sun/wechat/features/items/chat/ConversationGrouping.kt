@@ -117,7 +117,7 @@ import dev.sun.wechat.features.api.ui.WeConversationListViewApi
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.items.beautify.home_screen_panel.HomeSidePanel
-import dev.sun.wechat.features.items.secret_friend.SecretFriendState
+import dev.sun.wechat.features.items.contacts.HideContacts
 import dev.sun.wechat.i18n.LocalWeKitLocalizedContext
 import dev.sun.wechat.i18n.HostLocalizedStrings
 import dev.sun.wechat.data.KvStore
@@ -1939,7 +1939,7 @@ object ConversationGrouping : ClickableFeature(), IResolveDex {
                 while (cursor.moveToNext()) add(cursor.getString(0))
             }
         }
-        val hidden = SecretFriendState.getWxIds()
+        val hidden = HideContacts.effectiveHiddenContacts
         val unreadByUsername = WeMessageApi.getConversationUnreadStates(usernames)
             .filterKeys { it !in hidden && (countOfficialUnread || !isOfficialConversation(it)) }
         return groups.associate { group ->

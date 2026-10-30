@@ -2,12 +2,21 @@ package dev.sun.wechat.features.items.self_check
 
 import android.content.Context
 import dev.sun.wechat.BuildConfig
+import dev.sun.wechat.constants.Preferences
 import dev.sun.wechat.features.api.core.WeConversationApi
 import dev.sun.wechat.features.core.FeaturesProvider
 import dev.sun.wechat.features.core.SwitchFeature
-import dev.sun.wechat.features.items.secret_friend.HideConversations
-import dev.sun.wechat.features.items.secret_friend.SecretFriendManager
-import dev.sun.wechat.features.items.secret_friend.SecretFriendState
+import dev.sun.wechat.features.items.contacts.HideContacts
+import dev.sun.wechat.features.items.contacts.hidecontacts.BlockHiddenChatSurface
+import dev.sun.wechat.features.items.contacts.hidecontacts.BlockHiddenProfileSurface
+import dev.sun.wechat.features.items.contacts.hidecontacts.HideContactListSurface
+import dev.sun.wechat.features.items.contacts.hidecontacts.HideConversationSurface
+import dev.sun.wechat.features.items.contacts.hidecontacts.HideMomentsInlineSurface
+import dev.sun.wechat.features.items.contacts.hidecontacts.HideMomentsSurface
+import dev.sun.wechat.features.items.contacts.hidecontacts.HideNewFriendsSurface
+import dev.sun.wechat.features.items.contacts.hidecontacts.HideSearchSurface
+import dev.sun.wechat.features.items.contacts.hidecontacts.HideUnreadSurface
+import dev.sun.wechat.features.items.contacts.hidecontacts.HideVoipSurface
 import dev.sun.wechat.utils.HostInfo
 import dev.sun.wechat.utils.crash.ExitReasonRecorder
 import dev.sun.wechat.utils.crash.ProcessTimeline
@@ -144,41 +153,50 @@ object ModuleSelfCheck {
     private fun secretFriendSection(): List<HealthItem> {
         val section = SECTION_SECRET
         val out = mutableListOf<HealthItem>()
-        val master = SecretFriendState.isSecretFriendMasterOn()
+        val master = Preferences.hiddenContactsMasterEnabled
         val openMaster: () -> String = {
-            runCatching { SecretFriendManager.applyToggle(true) }
-            "密友功能总开关已开启；若名单为空请到「密友名单管理」添加密友"
+            Preferences.hiddenContactsMasterEnabled = true
+            "密友功能总开关已开启；若名单为空请到「隐藏联系人」添加联系人"
         }
         out += HealthItem(
             "密友总开关", section, if (master) "开启" else "关闭", master,
-            "密友功能的总开关（在「密友功能」分类页顶部）。关闭后所有隐藏/拦截都不生效，名单保留。",
+            "密友功能的总开关（在「密友功能」分类页顶部，即「隐藏联系人」主控）。关闭后所有隐藏/拦截都不生效，名单保留。",
             actionLabel = if (master) null else "开启总开关",
             action = if (master) null else openMaster,
             inactive = !master,
         )
-        val count = SecretFriendState.getStoredWxIds().size
+        val count = HideContacts.hiddenContacts.size
         out += HealthItem(
             "密友名单人数", section, "$count", true,
-            "当前密友名单共 $count 人。为 0 时不会有任何隐藏效果，请到「密友名单管理」添加密友。",
+            "当前隐藏名单共 $count 人。为 0 时不会有任何隐藏效果，请到「隐藏联系人」添加联系人。",
         )
-        val temp = SecretFriendState.isTemporarilyShown()
+        val temp = HideContacts.isTemporarilyShown
         out += HealthItem(
             "密友临时解除", section, if (temp) "生效中" else "未激活", !temp,
-            "临时解除期间，名单内所有人对你可见。当前：${if (temp) "生效中" else "未激活"}。",
+            "临时解除期间，名单内所有人对你可见（#wm# / 三击标题触发）。当前：${if (temp) "生效中" else "未激活"}。",
             inactive = temp,
         )
-        val faces = runCatching {
-            SecretFriendDiagnostics.collectDetailRows().filter { it.section == SecretFriendDiagnostics.SECTION_FACES }
-        }.getOrDefault(emptyList())
-        val onFaces = faces.count { it.ok }
+        // 用新「隐藏联系人」的各隐藏面开关聚合生效状态。
+        val faces = listOf(
+            Triple("主页会话隐藏", HideConversationSurface.isEnabled),
+            Triple("通讯录隐藏", HideContactListSurface.isEnabled),
+            Triple("搜索结果隐藏", HideSearchSurface.isEnabled),
+            Triple("朋友圈隐藏", HideMomentsSurface.isEnabled),
+            Triple("朋友圈互动隐藏", HideMomentsInlineSurface.isEnabled),
+            Triple("音视频通话隐藏", HideVoipSurface.isEnabled),
+            Triple("新的朋友隐藏", HideNewFriendsSurface.isEnabled),
+            Triple("未读角标隐藏", HideUnreadSurface.isEnabled),
+            Triple("禁止进入聊天", BlockHiddenChatSurface.isEnabled),
+            Triple("禁止查看资料", BlockHiddenProfileSurface.isEnabled),
+        )
+        val onFaces = faces.count { it.third }
         out += HealthItem(
             "密友隐藏面生效", section, "$onFaces/${faces.size}", master && onFaces == faces.size,
-            "隐藏面里当前有 $onFaces 个处于「生效」状态。\n未生效的多为开关未开或总开关关闭；到「密友功能诊断」页可逐面查看。",
-            actionLabel = "重新对账",
+            "隐藏面里当前有 $onFaces 个处于「开启」状态。\n未开启的多为开关未开或总开关关闭；到「密友功能」分类页可逐面开启。",
+            actionLabel = "刷新会话列表",
             action = {
-                val a = runCatching { HideConversations.reconcileOnListChange() }.isSuccess
-                runCatching { WeConversationApi.reloadConversations() }
-                if (a) "已按当前名单重新对账并刷新会话列表" else "对账失败"
+                val a = runCatching { WeConversationApi.reloadConversations() }.isSuccess
+                if (a) "已刷新会话列表" else "刷新失败"
             },
             inactive = !master,
         )
@@ -249,15 +267,14 @@ object ModuleSelfCheck {
     }
 
     private fun repairSecretFriend(): List<HealthItem> {
-        val ok1 = runCatching { HideConversations.reconcileOnListChange() }.isSuccess
-        val ok2 = runCatching { WeConversationApi.reloadConversations() }.isSuccess
+        val ok = runCatching { WeConversationApi.reloadConversations() }.isSuccess
         return listOf(
             HealthItem(
                 "密友名单",
                 "密友隐藏面重新对账",
-                "对账=${if (ok1) "成功" else "失败"}，刷新会话=${if (ok2) "成功" else "失败"}",
-                ok1,
-                "按当前密友名单重新隐藏/恢复会话行，并刷新会话列表。",
+                "刷新会话=${if (ok) "成功" else "失败"}",
+                ok,
+                "按当前隐藏名单重新过滤/恢复会话行，并刷新会话列表。",
             ),
         )
     }

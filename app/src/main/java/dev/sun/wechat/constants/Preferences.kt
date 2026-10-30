@@ -31,6 +31,9 @@ object Preferences {
     // Python entry-script editor
     const val PYTHON_EDITOR_SOFT_WRAP = "python_editor_soft_wrap"
 
+    // Hidden contacts master switch
+    const val HIDDEN_CONTACTS_MASTER_ENABLED = "hidden_contacts_master_enabled"
+
     var verboseLog by prefOption(VERBOSE_LOG, false)
     var noDexResolve by prefOption(NO_DEX_RESOLVE, false)
     var showStartupToast by prefOption(SHOW_STARTUP_TOAST, false)
@@ -45,4 +48,6 @@ object Preferences {
 //        set(value) { KvStore.putBool(USE_ACTIVITY_INSTEAD_OF_DIALOG, value) }
 
     var pythonEditorSoftWrap by prefOption(PYTHON_EDITOR_SOFT_WRAP, false)
+
+    var hiddenContactsMasterEnabled by prefOption(HIDDEN_CONTACTS_MASTER_ENABLED, true)
 }
