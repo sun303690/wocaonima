@@ -923,6 +923,7 @@
     <string name="feature_split_group_chats_description">让群聊一分为二; 在假群聊中发送的红包即为假红包</string>
     <string name="feature_hide_contacts_notifications_name">隐藏联系人通知抑制</string>
     <string name="feature_hide_contacts_notifications_description">在 push 进程内抑制被隐藏联系人的新消息通知 (随「隐藏联系人」开关自动生效)</string>
+    <string name="hide_contacts_block_qr_login_name">拦截扫码登录</string>
     <string name="feature_copy_we_chat_debug_info_name">复制调试信息</string>
     <string name="feature_copy_we_chat_debug_info_description">在报告模块问题时, 请附上本功能的结果</string>
     <string name="feature_crash_interceptor_name">崩溃拦截</string>

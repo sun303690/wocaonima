@@ -1,5 +1,6 @@
 package dev.sun.wechat.features.items.contacts.hidecontacts
 
+import dev.sun.wechat.R
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.dexMethod
 import dev.sun.wechat.features.core.ApiFeature

@@ -2,6 +2,7 @@ package dev.sun.wechat.features.items.contacts.hidecontacts
 
 import android.app.Activity
 import android.os.Bundle
+import dev.sun.wechat.R
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.utils.WeLogger

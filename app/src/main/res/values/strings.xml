@@ -960,6 +960,7 @@
     <string name="feature_split_group_chats_description">Let the group chat be divided into two; the red packets sent in the fake group chat are fake red packets</string>
     <string name="feature_hide_contacts_notifications_name">Suppress hidden-contact notifications</string>
     <string name="feature_hide_contacts_notifications_description">Suppress new message notifications for hidden contacts during the push process (automatically takes effect with the "Hide Contacts" switch)</string>
+    <string name="hide_contacts_block_qr_login_name">Block QR login</string>
     <string name="feature_copy_we_chat_debug_info_name">Copy WeChat debug information</string>
     <string name="feature_copy_we_chat_debug_info_description">When reporting a module problem, please include the results of this function</string>
     <string name="feature_crash_interceptor_name">Java crash interceptor</string>

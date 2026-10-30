@@ -1,5 +1,6 @@
 package dev.sun.wechat.features.items.contacts.hidecontacts
 
+import dev.sun.wechat.R
 import dev.sun.wechat.features.api.core.WeConversationApi
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature
