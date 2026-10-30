@@ -23,9 +23,7 @@ import dev.sun.wechat.R
 import dev.sun.wechat.activity.self_check.SelfCheckSettingsActivity
 import dev.sun.wechat.ui.utils.theme.AppThemeMode
 import dev.sun.wechat.ui.utils.theme.SettingsUiEngine
-import dev.sun.wechat.ui.content.miuix.DropdownOption
 import dev.sun.wechat.ui.content.miuix.MiuixBaseItemContainer
-import dev.sun.wechat.ui.content.miuix.MiuixDropDownMenuWidget
 import dev.sun.wechat.ui.utils.theme.PageTransitionAnimation
 import dev.sun.wechat.features.core.BaseFeature
 import dev.sun.wechat.features.core.ClickableFeature
@@ -35,6 +33,17 @@ import dev.sun.wechat.ui.utils.theme.ThemeSettings
 import dev.sun.wechat.utils.WeLogger
 import top.yukonga.miuix.kmp.basic.*
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import androidx.compose.ui.graphics.Color
+import com.composables.icons.materialsymbols.MaterialSymbols
+import com.composables.icons.materialsymbols.outlined.Article
+import com.composables.icons.materialsymbols.outlined.Bug_report
+import com.composables.icons.materialsymbols.outlined.Extension
+import com.composables.icons.materialsymbols.outlined.Info
+import com.composables.icons.materialsymbols.outlined.Star
+import com.composables.icons.materialsymbols.outlined.Upload
+import com.composables.icons.materialsymbols.outlined.Wallpaper
+import top.yukonga.miuix.kmp.preference.ArrowPreference
+import top.yukonga.miuix.kmp.preference.SwitchPreference
 
 private enum class MiuixPage { HOME, FEATURES, CATEGORY, APPEARANCE, BACKUP, LOGS, ABOUT, LICENSE }
 
@@ -86,36 +95,108 @@ private fun MiuixHome(
         item {
             MiuixSearch(query, { query = it }, { search(query) })
             Spacer(Modifier.height(12.dp))
+            MiuixSectionTitle("快捷入口")
             MiuixCard {
-                MiuixAction("全部功能", "浏览分类、搜索与配置所有功能", openFeatures)
+                ArrowPreference(
+                    title = "全部功能",
+                    summary = "浏览分类、搜索与配置所有功能",
+                    startAction = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Extension, Color(0xFF4C8DFF)) },
+                    onClick = openFeatures,
+                )
                 HorizontalDivider()
-                MiuixAction("外观设置", "主题模式、强调色、圆角与动效", openAppearance)
-                HorizontalDivider()
-                MiuixAction("主题工坊", "完整主题、壁纸、气泡与诊断") {
-                    (context as? ComponentActivity)?.let(dev.sun.wechat.features.items.beautify.ThemeStore::onClick)
-                }
-                HorizontalDivider()
-                MiuixAction("备份与还原", "导出、导入或清空模块配置", openBackup)
-                HorizontalDivider()
-                MiuixAction("日志中心", "模块日志、崩溃日志与主题诊断", openLogs)
-                HorizontalDivider()
-                MiuixAction("自检与诊断", "检查 Hook、权限与运行环境") { context.startActivity(Intent(context, SelfCheckSettingsActivity::class.java)) }
-                HorizontalDivider()
-                MiuixAction("关于与许可", "版本、开源协议与项目链接", openAbout)
+                ArrowPreference(
+                    title = "外观设置",
+                    summary = "主题模式、强调色、圆角与动效",
+                    startAction = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Wallpaper, Color(0xFF9B6BFF)) },
+                    onClick = openAppearance,
+                )
             }
-            Spacer(Modifier.height(12.dp))
-            Text("功能分类", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MiuixTheme.colorScheme.onBackground)
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
+            MiuixSectionTitle("功能分类")
             MiuixCard {
                 FEATURE_CATEGORIES.forEachIndexed { index, category ->
                     val enabledCount = FeaturesProvider.ALL_FEATURES.count {
                         category.id in it.categoryIds && (it as? SwitchFeature)?.isEnabled == true
                     }
-                    MiuixAction(stringResource(category.titleRes), "${enabledCount} 项已启用") { openCategory(category.id) }
+                    ArrowPreference(
+                        title = stringResource(category.titleRes),
+                        summary = "${enabledCount} 项已启用",
+                        startAction = { MiuixPreferenceIcon(category.icon, categoryTint(index)) },
+                        onClick = { openCategory(category.id) },
+                    )
                     if (index != FEATURE_CATEGORIES.lastIndex) HorizontalDivider()
                 }
             }
+            Spacer(Modifier.height(4.dp))
+            MiuixSectionTitle("工具")
+            MiuixCard {
+                ArrowPreference(
+                    title = "主题工坊",
+                    summary = "完整主题、壁纸、气泡与诊断",
+                    startAction = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Star, Color(0xFFFF9F0A)) },
+                    onClick = {
+                        (context as? ComponentActivity)?.let(dev.sun.wechat.features.items.beautify.ThemeStore::onClick)
+                    },
+                )
+                HorizontalDivider()
+                ArrowPreference(
+                    title = "备份与还原",
+                    summary = "导出、导入或清空模块配置",
+                    startAction = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Upload, Color(0xFF34C759)) },
+                    onClick = openBackup,
+                )
+                HorizontalDivider()
+                ArrowPreference(
+                    title = "日志中心",
+                    summary = "模块日志、崩溃日志与主题诊断",
+                    startAction = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Article, Color(0xFF8E8E93)) },
+                    onClick = openLogs,
+                )
+                HorizontalDivider()
+                ArrowPreference(
+                    title = "自检与诊断",
+                    summary = "检查 Hook、权限与运行环境",
+                    startAction = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Bug_report, Color(0xFFFF453A)) },
+                    onClick = { context.startActivity(Intent(context, SelfCheckSettingsActivity::class.java)) },
+                )
+                HorizontalDivider()
+                ArrowPreference(
+                    title = "关于与许可",
+                    summary = "版本、开源协议与项目链接",
+                    startAction = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Info, Color(0xFF30B0C7)) },
+                    onClick = openAbout,
+                )
+            }
         }
+    }
+}
+
+private fun categoryTint(index: Int): Color = when (index % 6) {
+    0 -> Color(0xFF4C8DFF)
+    1 -> Color(0xFF34C759)
+    2 -> Color(0xFFFF9F0A)
+    3 -> Color(0xFFFF453A)
+    4 -> Color(0xFF9B6BFF)
+    else -> Color(0xFF30B0C7)
+}
+
+@Composable
+private fun MiuixSectionTitle(text: String) {
+    Text(
+        text,
+        fontSize = 13.sp,
+        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+        modifier = Modifier.padding(start = 6.dp, top = 6.dp, bottom = 6.dp),
+    )
+}
+
+@Composable
+private fun MiuixPreferenceIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, tint: Color) {
+    Box(
+        Modifier.size(30.dp).clip(RoundedCornerShape(9.dp)).background(tint),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(19.dp))
     }
 }
 
@@ -145,45 +226,77 @@ private fun MiuixAppearancePage(back: () -> Unit) {
     )
     MiuixPageFrame("外观设置", back) {
         item {
+            MiuixSectionTitle("引擎")
             MiuixCard {
-                MiuixAction("主题模式", ThemeSettings.themeMode.displayName) {
-                    val entries = AppThemeMode.entries
-                    ThemeSettings.updateThemeMode(entries[(entries.indexOf(ThemeSettings.themeMode) + 1) % entries.size]); tick++
-                }
+                ArrowPreference(
+                    title = "主题模式",
+                    summary = ThemeSettings.themeMode.displayName,
+                    startAction = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Wallpaper, Color(0xFF9B6BFF)) },
+                    onClick = {
+                        val entries = AppThemeMode.entries
+                        ThemeSettings.updateThemeMode(entries[(entries.indexOf(ThemeSettings.themeMode) + 1) % entries.size]); tick++
+                    },
+                )
                 HorizontalDivider()
-                MiuixAction("页面切换动效", ThemeSettings.pageTransitionAnimation.name) {
-                    val entries = PageTransitionAnimation.entries
-                    ThemeSettings.updatePageTransitionAnimation(entries[(entries.indexOf(ThemeSettings.pageTransitionAnimation) + 1) % entries.size]); tick++
-                }
+                ArrowPreference(
+                    title = "页面切换动效",
+                    summary = ThemeSettings.pageTransitionAnimation.name,
+                    startAction = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Star, Color(0xFFFF9F0A)) },
+                    onClick = {
+                        val entries = PageTransitionAnimation.entries
+                        ThemeSettings.updatePageTransitionAnimation(entries[(entries.indexOf(ThemeSettings.pageTransitionAnimation) + 1) % entries.size]); tick++
+                    },
+                )
                 HorizontalDivider()
-                MiuixAction("UI 组件引擎", ThemeSettings.uiEngine.displayName) {
-                    showEnginePicker = true
-                }
-                HorizontalDivider()
-                MiuixToggle("设置页背景图", ThemeSettings.settingsWallpaper) {
-                    ThemeSettings.updateSettingsWallpaper(it); tick++
-                }
+                ArrowPreference(
+                    title = "UI 组件引擎",
+                    summary = ThemeSettings.uiEngine.displayName,
+                    startAction = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Extension, Color(0xFF4C8DFF)) },
+                    onClick = { showEnginePicker = true },
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+            MiuixSectionTitle("背景")
+            MiuixCard {
+                SwitchPreference(
+                    checked = ThemeSettings.settingsWallpaper,
+                    onCheckedChange = { ThemeSettings.updateSettingsWallpaper(it); tick++ },
+                    title = "设置页背景图",
+                    summary = "在设置页显示背景图片",
+                )
                 if (ThemeSettings.settingsWallpaper) {
                     HorizontalDivider()
-                    MiuixAction(
-                        "选择背景图片",
-                        ThemeSettings.settingsWallpaperPath?.let { java.io.File(it).name } ?: "跟随主题壁纸",
-                    ) { picker.launch("image/*") }
+                    ArrowPreference(
+                        title = "选择背景图片",
+                        summary = ThemeSettings.settingsWallpaperPath?.let { java.io.File(it).name } ?: "跟随主题壁纸",
+                        onClick = { picker.launch("image/*") },
+                    )
                     if (ThemeSettings.settingsWallpaperPath != null) {
                         HorizontalDivider()
-                        MiuixAction("清除自定义图片", "恢复使用主题壁纸") {
-                            ThemeSettings.updateSettingsWallpaperPath(null); tick++
-                        }
+                        ArrowPreference(
+                            title = "清除自定义图片",
+                            summary = "恢复使用主题壁纸",
+                            onClick = { ThemeSettings.updateSettingsWallpaperPath(null); tick++ },
+                        )
                     }
                 }
+            }
+            Spacer(Modifier.height(4.dp))
+            MiuixSectionTitle("取色")
+            MiuixCard {
+                SwitchPreference(
+                    checked = ThemeSettings.dynamicWallpaper,
+                    onCheckedChange = { ThemeSettings.updateDynamicWallpaper(it); tick++ },
+                    title = "使用动态壁纸颜色",
+                    summary = "从系统壁纸提取强调色",
+                )
                 HorizontalDivider()
-                MiuixToggle("使用动态壁纸颜色", ThemeSettings.dynamicWallpaper) {
-                    ThemeSettings.updateDynamicWallpaper(it); tick++
-                }
-                HorizontalDivider()
-                MiuixToggle("同时应用到微信", ThemeSettings.applyToWechat) {
-                    ThemeSettings.updateApplyToWechat(it); tick++
-                }
+                SwitchPreference(
+                    checked = ThemeSettings.applyToWechat,
+                    onCheckedChange = { ThemeSettings.updateApplyToWechat(it); tick++ },
+                    title = "同时应用到微信",
+                    summary = "重启微信后生效",
+                )
             }
         }
     }

@@ -41,6 +41,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.composables.icons.materialsymbols.MaterialSymbols
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import com.composables.icons.materialsymbols.outlined.Tune
+import top.yukonga.miuix.kmp.basic.Switch
+import top.yukonga.miuix.kmp.preference.ArrowPreference
+import top.yukonga.miuix.kmp.preference.SwitchPreference
 import com.composables.icons.materialsymbols.outlined.Account_circle
 import com.composables.icons.materialsymbols.outlined.Add_circle
 import com.composables.icons.materialsymbols.outlined.Article
@@ -63,7 +71,6 @@ import com.composables.icons.materialsymbols.outlined.Package_2
 import com.composables.icons.materialsymbols.outlined.Payments
 import com.composables.icons.materialsymbols.outlined.Settings
 import com.composables.icons.materialsymbols.outlined.Terminal
-import com.composables.icons.materialsymbols.outlined.Tune
 import com.composables.icons.materialsymbols.outlined.Visibility_off
 import com.composables.icons.materialsymbols.outlined.Wand_stars
 import dev.sun.wechat.R
@@ -78,12 +85,10 @@ import dev.sun.wechat.i18n.WeKitLocaleProvider
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.ui.content.FloatingBottomBar
 import dev.sun.wechat.ui.content.FloatingBottomBarDefaults
-import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.content.miuix.miuixAppBarBlur
 import dev.sun.wechat.ui.content.miuix.miuixAppBarColor
 import dev.sun.wechat.ui.content.miuix.rememberMiuixBlurBackdrop
@@ -388,7 +393,9 @@ fun FeatureRow(
     val localizedContext = LocalWeKitLocalizedContext.current
     val configKey = item.technicalId
     val localizedName = item.localizedName(localizedContext)
-    val localizedDescription = item.localizedDescription(localizedContext)
+    val localizedDescription = item.localizedDescription(localizedContext).ifBlank { null }
+    val icon = FEATURE_CATEGORIES.firstOrNull { category -> category.id in item.categoryIds }?.icon
+        ?: MaterialSymbols.Outlined.Tune
 
     DisposableEffect(configKey) {
         (item as SwitchFeature).setToggleCompletionCallback {
@@ -417,40 +424,48 @@ fun FeatureRow(
 
             if (item.noSwitchWidget) {
                 // Pure action row: the whole row triggers the feature's action.
-                MiuixBaseWidget(
-                    iconPlaceholder = false,
+                ArrowPreference(
                     title = localizedName,
-                    description = localizedDescription,
+                    summary = localizedDescription,
+                    startAction = { FeaturePreferenceIcon(icon) },
                     onClick = openConfig,
-                    trailingContent = {
-                        Icon(
-                            imageVector = MaterialSymbols.Outlined.Chevron_right,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    },
                 )
             } else {
-                // Dual click areas: the main area opens the feature's config, the
-                // switch past the divider toggles it (WeAgent "Memory" row pattern).
-                MiuixSwitchWidget(
-                    iconPlaceholder = false,
+                // Dual click areas: the row opens the config, the switch only toggles.
+                ArrowPreference(
                     title = localizedName,
-                    description = localizedDescription,
+                    summary = localizedDescription,
+                    startAction = { FeaturePreferenceIcon(icon) },
+                    endActions = {
+                        Switch(
+                            checked = checked,
+                            onCheckedChange = { toggle(it) },
+                        )
+                    },
                     onClick = openConfig,
-                    trailingDivider = true,
-                    checked = checked,
-                    onCheckedChange = { toggle(it) },
                 )
             }
         }
 
-        is SwitchFeature -> MiuixSwitchWidget(
-            iconPlaceholder = false,
-            title = localizedName,
-            description = localizedDescription,
+        is SwitchFeature -> SwitchPreference(
             checked = checked,
             onCheckedChange = { toggle(it) },
+            title = localizedName,
+            summary = localizedDescription,
+            startAction = { FeaturePreferenceIcon(icon) },
         )
+    }
+}
+
+@Composable
+private fun FeaturePreferenceIcon(icon: ImageVector) {
+    Box(
+        Modifier
+            .size(30.dp)
+            .clip(RoundedCornerShape(9.dp))
+            .background(Color(0xFF4C8DFF)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(19.dp))
     }
 }
