@@ -2,6 +2,8 @@ package dev.sun.wechat.activity.settings
 
 import android.content.Intent
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -22,6 +24,7 @@ import dev.sun.wechat.activity.self_check.SelfCheckSettingsActivity
 import dev.sun.wechat.ui.utils.theme.AppThemeMode
 import dev.sun.wechat.ui.utils.theme.SettingsUiEngine
 import dev.sun.wechat.ui.content.miuix.DropdownOption
+import dev.sun.wechat.ui.content.miuix.MiuixBaseItemContainer
 import dev.sun.wechat.ui.content.miuix.MiuixDropDownMenuWidget
 import dev.sun.wechat.ui.utils.theme.PageTransitionAnimation
 import dev.sun.wechat.features.core.BaseFeature
@@ -119,6 +122,27 @@ private fun MiuixHome(
 @Composable
 private fun MiuixAppearancePage(back: () -> Unit) {
     var tick by remember { mutableIntStateOf(0) }
+    var showEnginePicker by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            val target = java.io.File(context.filesDir, "settings_background.img")
+            runCatching {
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    target.outputStream().use { output -> input.copyTo(output) }
+                }
+            }.onSuccess {
+                ThemeSettings.updateSettingsWallpaperPath(target.absolutePath)
+                tick++
+            }
+        }
+    }
+    MiuixChoiceDialog(
+        show = showEnginePicker,
+        title = "UI 组件引擎",
+        options = SettingsUiEngine.entries.map { engine -> engine.displayName to { ThemeSettings.updateUiEngine(engine) } },
+        onDismiss = { showEnginePicker = false },
+    )
     MiuixPageFrame("外观设置", back) {
         item {
             MiuixCard {
@@ -132,21 +156,25 @@ private fun MiuixAppearancePage(back: () -> Unit) {
                     ThemeSettings.updatePageTransitionAnimation(entries[(entries.indexOf(ThemeSettings.pageTransitionAnimation) + 1) % entries.size]); tick++
                 }
                 HorizontalDivider()
-                MiuixDropDownMenuWidget(
-                    title = "UI 组件引擎",
-                    description = null,
-                    value = ThemeSettings.uiEngine,
-                    options = SettingsUiEngine.entries.map {
-                        DropdownOption(it, it.displayName)
-                    },
-                    onValueChange = {
-                        ThemeSettings.updateUiEngine(it)
-                        tick++
-                    },
-                )
+                MiuixAction("UI 组件引擎", ThemeSettings.uiEngine.displayName) {
+                    showEnginePicker = true
+                }
                 HorizontalDivider()
                 MiuixToggle("设置页背景图", ThemeSettings.settingsWallpaper) {
                     ThemeSettings.updateSettingsWallpaper(it); tick++
+                }
+                if (ThemeSettings.settingsWallpaper) {
+                    HorizontalDivider()
+                    MiuixAction(
+                        "选择背景图片",
+                        ThemeSettings.settingsWallpaperPath?.let { java.io.File(it).name } ?: "跟随主题壁纸",
+                    ) { picker.launch("image/*") }
+                    if (ThemeSettings.settingsWallpaperPath != null) {
+                        HorizontalDivider()
+                        MiuixAction("清除自定义图片", "恢复使用主题壁纸") {
+                            ThemeSettings.updateSettingsWallpaperPath(null); tick++
+                        }
+                    }
                 }
                 HorizontalDivider()
                 MiuixToggle("使用动态壁纸颜色", ThemeSettings.dynamicWallpaper) {
@@ -339,17 +367,46 @@ private fun MiuixCategoryPage(categoryId: String, back: () -> Unit) {
 
 @Composable
 private fun MiuixFeatureRow(feature: BaseFeature, changed: () -> Unit) {
-    val context = LocalContext.current
-    MiuixCard {
-        Row(Modifier.fillMaxWidth().clickable {
-            if (feature is ClickableFeature) (context as? ComponentActivity)?.let(feature::onClick)
-        }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(feature.localizedName(context), fontSize = 17.sp, fontWeight = FontWeight.Medium, color = MiuixTheme.colorScheme.onSurface)
-                Text(feature.localizedDescription(context), fontSize = 13.sp, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+    val revision = FeatureCategoryState.revision
+    val checked = remember(feature.technicalId, revision) {
+        dev.sun.wechat.data.KvStore.getBoolOrDef(
+            feature.technicalId,
+            (feature as? SwitchFeature)?.defaultEnabled == true,
+        )
+    }
+    Column(Modifier.padding(horizontal = 16.dp)) {
+        MiuixBaseItemContainer {
+            FeatureRow(item = feature, checked = checked, onCheckedChange = { changed() })
+            feature.Ui()
+        }
+    }
+}
+
+@Composable
+private fun MiuixChoiceDialog(
+    show: Boolean,
+    title: String,
+    options: List<Pair<String, () -> Unit>>,
+    onDismiss: () -> Unit,
+) {
+    if (!show) return
+    top.yukonga.miuix.kmp.overlay.OverlayDialog(show = true, onDismissRequest = onDismiss) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MiuixTheme.colorScheme.onSurface)
+            options.forEach { (label, action) ->
+                Text(
+                    label,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { action(); onDismiss() }
+                        .padding(vertical = 14.dp),
+                    fontSize = 16.sp,
+                    color = MiuixTheme.colorScheme.onSurface,
+                )
             }
-            if (feature is SwitchFeature) Switch(feature.isEnabled, onCheckedChange = { feature.applyToggle(it); changed() })
-            else Text("›", fontSize = 25.sp, color = MiuixTheme.colorScheme.primary)
         }
     }
 }
@@ -388,10 +445,16 @@ private fun MiuixAction(title: String, summary: String, click: () -> Unit) {
 @Composable
 private fun MiuixPageFrame(title: String, back: () -> Unit, content: androidx.compose.foundation.lazy.LazyListScope.() -> Unit) {
     val showWallpaper = ThemeSettings.settingsWallpaper
-    val wallpaper = remember(showWallpaper) {
-        if (showWallpaper) dev.sun.wechat.features.items.beautify.ThemePack.active()?.wallpaper() else null
+    val customPath = ThemeSettings.settingsWallpaperPath
+    val wallpaper = remember(showWallpaper, customPath) {
+        if (!showWallpaper) {
+            null
+        } else {
+            customPath?.let { java.io.File(it) }?.takeIf { it.isFile }
+                ?: dev.sun.wechat.features.items.beautify.ThemePack.active()?.wallpaper()
+        }
     }
-    Box(Modifier.fillMaxSize().navigationBarsPadding()) {
+    Box(Modifier.fillMaxSize().background(MiuixTheme.colorScheme.background).navigationBarsPadding()) {
         if (wallpaper != null) {
             coil3.compose.AsyncImage(
                 model = wallpaper,

@@ -112,9 +112,27 @@ enum class AppColorSpec(
  */
 object ThemeSettings {
 
-    var uiEngine by mutableStateOf(
-        SettingsUiEngine.fromName(KvStore.getString(Preferences.THEME_UI_ENGINE))
-    )
+    /**
+     * 旧版本把 Material 3 当默认值，已落盘的值会一直盖住新的默认引擎。
+     * 这里做一次性迁移：只有「从未选择过」或「仍停在旧的默认值 MATERIAL3」时才切到 Miuix，
+     * 之后用户手动选回 Material 3 / Nuke 会被正常尊重。
+     */
+    private const val UI_ENGINE_DEFAULT_MIGRATED = "settings_theme_ui_engine_miuix_migrated"
+
+    private fun initialUiEngine(): SettingsUiEngine {
+        val raw = KvStore.getString(Preferences.THEME_UI_ENGINE)
+        if (KvStore.getBoolOrFalse(UI_ENGINE_DEFAULT_MIGRATED)) return SettingsUiEngine.fromName(raw)
+        KvStore.putBool(UI_ENGINE_DEFAULT_MIGRATED, true)
+        val migrated = if (raw == null || raw == SettingsUiEngine.MATERIAL3.name) {
+            SettingsUiEngine.MIUIX
+        } else {
+            SettingsUiEngine.fromName(raw)
+        }
+        KvStore.putString(Preferences.THEME_UI_ENGINE, migrated.name)
+        return migrated
+    }
+
+    var uiEngine by mutableStateOf(initialUiEngine())
         private set
     var themeMode by mutableStateOf(AppThemeMode.fromName(KvStore.getString(Preferences.THEME_MODE)))
         private set
@@ -161,8 +179,14 @@ object ThemeSettings {
     var dynamicWallpaper by mutableStateOf(KvStore.getBoolOrFalse(Preferences.THEME_DYNAMIC_WALLPAPER))
         private set
 
-    /** 设置页是否用当前主题包壁纸做背景图（Miuix 设置页生效）。 */
+    /** 设置页是否显示背景图（Miuix 设置页生效）。 */
     var settingsWallpaper by mutableStateOf(KvStore.getBoolOrDef("theme_settings_wallpaper", false))
+        private set
+
+    /** 用户自选的设置页背景图路径；为空时回落到主题包壁纸。 */
+    var settingsWallpaperPath by mutableStateOf(
+        KvStore.getString("theme_settings_wallpaper_path")?.takeIf { it.isNotBlank() }
+    )
         private set
     var paletteStyle by mutableStateOf(
         AppPaletteStyle.fromName(KvStore.getString(Preferences.THEME_PALETTE_STYLE))
@@ -250,6 +274,13 @@ object ThemeSettings {
         updateNukePopupAnimation(NukePopupAnimationMode.Vanilla)
         updateNukePopupDialogHost(false)
         updateNukePopupPredictiveExit(false)
+    }
+
+    fun updateSettingsWallpaperPath(path: String?) {
+        settingsWallpaperPath = path?.takeIf { it.isNotBlank() }
+        val stored = settingsWallpaperPath
+        if (stored == null) KvStore.remove("theme_settings_wallpaper_path")
+        else KvStore.putString("theme_settings_wallpaper_path", stored)
     }
 
     fun updateSettingsWallpaper(value: Boolean) {

@@ -97,6 +97,13 @@ fun MiuixSwitchWidget(
         enabled = enabled,
         isError = isError,
         onClick = if (enabled) onClick ?: { onCheckedChange(!checked) } else null,
+        trailingContent = {
+            Switch(
+                checked = checked,
+                onCheckedChange = { onCheckedChange(it) },
+                enabled = enabled,
+            )
+        },
     )
 }
 
