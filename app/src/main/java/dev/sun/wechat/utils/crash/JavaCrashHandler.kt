@@ -1,5 +1,8 @@
 package dev.sun.wechat.utils.crash
 
+import android.os.Handler
+import android.os.Looper
+import dev.sun.wechat.features.api.core.WeConversationApi
 import dev.sun.wechat.utils.HostInfo
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.crash.CrashInfoCollector.collectCrashInfo
@@ -36,6 +39,16 @@ object JavaCrashHandler : Thread.UncaughtExceptionHandler {
     }
 
     override fun uncaughtException(thread: Thread, throwable: Throwable) {
+        // 已知主线程框架异常：ListView 在 CheckForTap/layoutChildren 里发现 adapter 内容变了
+        // 却没收到 notifyDataSetChanged。微信主页会话列表本身就是「异步查询 + 增量刷新」，
+        // 偶发命中（真机日志：微信 8.0.77 + 8GB 机型、可用内存仅 3MB）。这类异常不破坏数据，
+        // 放行会直接杀进程，用户看到的就是「微信闪退」；吞掉并请求一次列表重载即可自愈。
+        if (isRecoverableAdapterMismatch(throwable)) {
+            WeLogger.w(TAG, "swallowed recoverable adapter-mismatch crash: " + throwable.message)
+            recoverConversationList()
+            return
+        }
+
         if (isHandlingOnThisThread.get()!!) {
             WeLogger.e(
                 TAG,
@@ -73,6 +86,21 @@ object JavaCrashHandler : Thread.UncaughtExceptionHandler {
             } finally {
                 if (locked) handlerLock.unlock()
                 isHandlingOnThisThread.set(false)
+            }
+        }
+    }
+
+    private fun isRecoverableAdapterMismatch(t: Throwable): Boolean {
+        if (t !is IllegalStateException) return false
+        val message = t.message ?: return false
+        return message.contains("adapter has changed but ListView did not receive a notification")
+    }
+
+    private fun recoverConversationList() {
+        runCatching {
+            Handler(Looper.getMainLooper()).post {
+                runCatching { WeConversationApi.reloadConversations() }
+                    .onFailure { WeLogger.w(TAG, "reload after swallowed crash failed", it) }
             }
         }
     }
