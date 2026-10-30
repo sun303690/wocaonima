@@ -267,7 +267,7 @@ object ReplyPanel {
                         modifier = Modifier.fillMaxWidth(),
                     ) { Text("打开语音配置") }
                     HorizontalDivider()
-                    Text("角色库", style = MiuixTheme.textStyles.title3), style = MiuixTheme.textStyles.title3)
+                    Text("角色库", style = MiuixTheme.textStyles.title3)
                     Text("把当前身份和背景存成角色，下次直接套用", style = MiuixTheme.textStyles.footnote1,
                         color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
                     TextField(

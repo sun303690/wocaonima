@@ -70,7 +70,7 @@ fun MiuixColorPickerWidget(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showPicker = false }) { Text("完成") }
+                TextButton(text = "完成", onClick = { showPicker = false })
             },
         )
     }
