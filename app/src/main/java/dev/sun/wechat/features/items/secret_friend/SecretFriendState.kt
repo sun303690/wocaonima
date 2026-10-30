@@ -228,12 +228,16 @@ object SecretFriendState {
         KvStore.putLong(KEY_TEMP_UNTIL, until)
         WeLogger.i(TAG, "temporarily showing secret friends for $minutes min")
         showToastIfEnabled(context, toastTempShown)
-        // 隐藏靠 SQL 过滤(getWxIds)：行还在库里时，临显只要放行 + 刷新列表即可。
-        //
-        // 不要在这里 INSERT 回 rconversation：直接写会话表会让微信的内存会话列表与
-        // 适配器数据不同步，主页列表下次 layout 就抛
-        // "The content of the adapter has changed but ListView did not receive a notification"。
-        // （420c7177 上真机崩溃就出在这里，故撤回。）
+        // 行还在库里时，放行 SQL 过滤 + reload 就能显示；但历史版本（以及 delChatContact 路径）
+        // 会把 rconversation 行物理删掉、只留快照，那时放行也查不到行——表现就是「三击标题没反应」。
+        // 所以先用快照把行补回来（幂等 REPLACE），再刷新列表。写入与刷新都在主线程串行执行，
+        // 且此刻 temporarilyShown=true，attachNotifySuppressor 不会介入，避免与增量刷新互踩。
+        val restored = runCatching { HideConversations.restoreHiddenRows() }
+            .onFailure { WeLogger.w(TAG, "restoreHiddenRows on temp-show failed", it) }
+            .getOrDefault(0)
+        if (restored > 0) {
+            WeLogger.i(TAG, "temp-show restored $restored conversation row(s) from snapshots")
+        }
         WeConversationApi.reloadConversations()
         scheduleTempExpiry(until)
         // 列表是异步查询 + 分段刷新，补一次稍后的 reload 兜住「查询早于事务提交」的竞态。

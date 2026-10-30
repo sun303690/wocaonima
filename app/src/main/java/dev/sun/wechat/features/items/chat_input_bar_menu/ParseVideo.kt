@@ -216,6 +216,8 @@ object ParseVideo : ClickableFeature() {
         val video_desc: String = "",
         val video_word: String = "",
         val video_link: String = "",
+        val images: List<String> = emptyList(),
+        val music: String = "",
         val author: AuthorData? = null,
     )
 
@@ -282,7 +284,10 @@ object ParseVideo : ClickableFeature() {
         return builder.build()
     }
 
-    private fun parseVideo(link: String): Result<VideoParseResult> = runCatching {
+    /** [mode] 0=自动(主线路→备用线路)，1=仅主线路，2=仅备用线路。 */
+    private fun parseVideo(link: String, mode: Int = 0): Result<VideoParseResult> = runCatching {
+        if (mode == 1) return@runCatching parseByPrimary(link).getOrThrow()
+        if (mode == 2) return@runCatching parseByBackup(link).getOrThrow()
         // dy.51web.eu.org 优先（用户指定抖音解析接口，多清晰度无水印）；失败再回退 kit9 聚合解析
         parseByPrimary(link).getOrElse { primaryError ->
             WeLogger.w(TAG, "primary(dy.51web) parse failed, fallback to kit9: ${primaryError.message}")
@@ -323,6 +328,8 @@ object ParseVideo : ClickableFeature() {
                             video_title = data.title,
                             video_cover = data.cover,
                             video_link = videoUrl,
+                            images = data.images.filter { it.startsWith("http") },
+                            music = data.music,
                         ),
                     ),
                 ),
@@ -466,6 +473,8 @@ object ParseVideo : ClickableFeature() {
 fun showParseDialog(context: android.content.Context) {
         showComposeDialog(context, directlyDismissable = false) {
             var link by remember { mutableStateOf("") }
+            // 解析线路：0 自动 / 1 主线路(51web 多清晰度) / 2 备用线路(kit9)
+            var lineMode by remember { mutableStateOf(0) }
             var loading by remember { mutableStateOf(false) }
             var errorMsg by remember { mutableStateOf<String?>(null) }
             var parseResult by remember { mutableStateOf<VideoParseResult?>(null) }
@@ -539,6 +548,32 @@ fun showParseDialog(context: android.content.Context) {
                 }
             }
 
+            fun downloadImages(data: VideoData) {
+                if (data.images.isEmpty()) return
+                scope.launch {
+                    downloading = true
+                    downloadProgress = 0f
+                    try {
+                        val dir = ensureSaveDir()
+                        var ok = 0
+                        withContext(Dispatchers.IO) {
+                            data.images.forEachIndexed { index, imageUrl ->
+                                // 用序号与时间戳命名，避免同一毫秒内多张图互相覆盖
+                                val out = java.io.File(dir, "image_${System.currentTimeMillis()}_$index.jpg")
+                                if (downloadVideo(imageUrl, out).isSuccess) ok++
+                                downloadProgress = (index + 1).toFloat() / data.images.size
+                            }
+                        }
+                        showToast("已下载 $ok 张图片喵")
+                    } catch (t: Throwable) {
+                        WeLogger.e(TAG, "download images failed", t)
+                        errorMsg = "图片下载失败: ${t.message}"
+                    } finally {
+                        downloading = false
+                    }
+                }
+            }
+
             fun doParse() {
                 val trimmed = extractVideoUrl(link)
                 if (trimmed.isEmpty()) {
@@ -555,7 +590,7 @@ fun showParseDialog(context: android.content.Context) {
                 directCoverUrl = ""
                 directMusicUrl = ""
                 scope.launch {
-                    val parsed = withContext(Dispatchers.IO) { parseVideo(trimmed) }
+                    val parsed = withContext(Dispatchers.IO) { parseVideo(trimmed, lineMode) }
                     loading = false
                     parsed.fold(
                         onSuccess = { r ->
@@ -714,6 +749,32 @@ fun showParseDialog(context: android.content.Context) {
                             .fillMaxWidth()
                             .padding(vertical = 4.dp),
                     ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = "解析线路",
+                                style = MiuixTheme.textStyles.footnote1,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                            )
+                            Spacer(Modifier.weight(1f))
+                            // 用「点一下循环切换」代替下拉菜单：AlertDialog 自身的 window 里没有 Miuix PopupHost，
+                            // 之前 UI 组件引擎下拉在设置页就踩过同样的坑（点了不弹）。
+                            TextButton(
+                                onClick = { lineMode = (lineMode + 1) % 3 },
+                            ) {
+                                Text(
+                                    when (lineMode) {
+                                        1 -> "主线路（多清晰度）"
+                                        2 -> "备用线路"
+                                        else -> "自动线路"
+                                    } + " ▾",
+                                )
+                            }
+                            Spacer(Modifier.weight(1f))
+                        }
+
                         MiuixCompatTextField(
                             value = link,
                             onValueChange = { link = it },
@@ -725,6 +786,16 @@ fun showParseDialog(context: android.content.Context) {
                             modifier = Modifier.fillMaxWidth(),
                             minLines = 2,
                             maxLines = 4,
+                            trailingIcon = {
+                                TextButton(
+                                    onClick = {
+                                        val clip = readTextFromClipboard(appContext).orEmpty()
+                                        val extracted = extractVideoUrl(clip)
+                                        if (extracted.isNotEmpty()) link = extracted
+                                    },
+                                    enabled = !loading,
+                                ) { Text("粘贴") }
+                            },
                         )
 
                         Spacer(Modifier.height(8.dp))
@@ -738,14 +809,14 @@ fun showParseDialog(context: android.content.Context) {
                                 modifier = Modifier.weight(1f),
                                 enabled = !loading && !downloading && !sending,
                             ) {
-                                Text(stringResource(R.string.parse_video_convert))
+                                Text("转换喵")
                             }
                             MiuixButton(
                                 onClick = { doSendNow() },
                                 modifier = Modifier.weight(1f),
                                 enabled = !loading && !downloading && !sending,
                             ) {
-                                Text(stringResource(R.string.parse_video_send))
+                                Text("发送喵")
                             }
                         }
 
@@ -773,6 +844,48 @@ fun showParseDialog(context: android.content.Context) {
                         // ===== 解析结果卡片（封面 + 信息 + 清晰度 + 保存封面/音乐） =====
                         parseResult?.let { r ->
                             val data = r.parsedData() ?: return@let
+
+                            // ===== 图集喵：图文作品（抖音图集/小红书等）=====
+                            if (data.images.isNotEmpty()) {
+                                Spacer(Modifier.height(8.dp))
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = MiuixTheme.colorScheme.surfaceContainer,
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Column(Modifier.padding(12.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Column(Modifier.weight(1f)) {
+                                                Text("图集喵", style = MiuixTheme.textStyles.title3)
+                                                Spacer(Modifier.height(2.dp))
+                                                Text(
+                                                    text = "检测到图集：${data.images.size} 张图片喵",
+                                                    style = MiuixTheme.textStyles.footnote1,
+                                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                                )
+                                            }
+                                            TextButton(
+                                                onClick = { downloadImages(data) },
+                                                enabled = !downloading && !sending,
+                                            ) { Text("下载图片喵") }
+                                        }
+                                        Spacer(Modifier.height(8.dp))
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            data.images.take(3).forEach { imageUrl ->
+                                                AsyncImage(
+                                                    model = imageUrl,
+                                                    contentDescription = null,
+                                                    contentScale = ContentScale.Crop,
+                                                    modifier = Modifier
+                                                        .size(84.dp)
+                                                        .clip(RoundedCornerShape(10.dp)),
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
                             Spacer(Modifier.height(8.dp))
                             Surface(
                                 shape = RoundedCornerShape(16.dp),
@@ -780,6 +893,19 @@ fun showParseDialog(context: android.content.Context) {
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
                                 Column(Modifier.padding(12.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = "视频喵",
+                                            style = MiuixTheme.textStyles.title3,
+                                            modifier = Modifier.weight(1f),
+                                        )
+                                        Text(
+                                            text = "检测到视频：${if (qualityList.isNotEmpty()) qualityList.size else 1} 个喵",
+                                            style = MiuixTheme.textStyles.footnote1,
+                                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                        )
+                                    }
+                                    Spacer(Modifier.height(8.dp))
                                     Row(verticalAlignment = Alignment.Top) {
                                         if (directCoverUrl.isNotBlank()) {
                                             AsyncImage(
@@ -1011,6 +1137,15 @@ fun showParseDialog(context: android.content.Context) {
                                 enabled = !extractingMusic && !sending,
                             ) {
                                 Text(stringResource(R.string.parse_video_download_music))
+                            }
+                            if (data.images.isNotEmpty()) {
+                                MiuixButton(
+                                    onClick = {
+                                        downloadImages(data)
+                                        doDownload()
+                                    },
+                                    enabled = !downloading && !sending,
+                                ) { Text("下载全部文件喵") }
                             }
                         }
                     } else if (data != null) {

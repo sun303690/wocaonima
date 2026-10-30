@@ -35,6 +35,7 @@ import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import dev.sun.wechat.features.items.chat.TextToSpeech
 
 /**
  * 「帮我回 · 找话题」面板（移植自微话助手 ReplyHostUi，改为 WeKit 的 Compose 弹窗）。
@@ -258,7 +259,15 @@ object ReplyPanel {
                     }
 
                     HorizontalDivider()
-                    Text("角色库", style = MiuixTheme.textStyles.title3)
+                    Text("语音配置", style = MiuixTheme.textStyles.title3)
+                    Text("语音回复的接口、音色与语气", style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                    Button(
+                        onClick = { TextToSpeech.showVoiceConfig(context) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("打开语音配置") }
+                    HorizontalDivider()
+                    Text("角色库", style = MiuixTheme.textStyles.title3), style = MiuixTheme.textStyles.title3)
                     Text("把当前身份和背景存成角色，下次直接套用", style = MiuixTheme.textStyles.footnote1,
                         color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
                     TextField(

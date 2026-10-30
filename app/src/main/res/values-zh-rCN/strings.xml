@@ -860,8 +860,6 @@
     <string name="feature_view_sticker_as_image_description">点击聊天中的贴纸时使用微信原生图片查看器打开</string>
     <string name="feature_voice_message_playback_optimization_name">语音消息播放逻辑优化</string>
     <string name="feature_voice_message_playback_optimization_description">优化语音消息听筒/扬声器自动切换: 完全禁用自动切换, 或切换后继承播放进度不再从头重播</string>
-    <string name="feature_voice_message_menu_name">语音消息菜单</string>
-    <string name="feature_voice_message_menu_description">将“语音消息”添加到长按消息菜单和聊天工具栏</string>
     <string name="feature_voice_panel_name">语音面板</string>
     <string name="feature_voice_panel_description">长按语音按钮打开语音面板</string>
     <string name="feature_mention_members_name">@所有人</string>
@@ -1387,7 +1385,6 @@
     <string name="chat_toolbar_tool_contact_card">个人名片</string>
     <string name="chat_toolbar_tool_music">音乐</string>
     <string name="chat_toolbar_quick_reply">快捷回复</string>
-    <string name="chat_toolbar_voice_message">语音消息</string>
     <string name="chat_toolbar_display_style">显示样式</string>
     <string name="chat_toolbar_select_display_style_description">选择显示样式</string>
     <string name="chat_toolbar_display_order">显示与顺序</string>
@@ -4195,8 +4192,7 @@
     <string name="parse_video_save_cover">保存封面</string>
     <string name="parse_video_downloading_music">正在下载音乐…</string>
     <string name="parse_video_download_music_direct">保存音乐</string>
-    <string name="parse_video_music_download_failed">音乐提取失败</string>    <string name="feature_ai_voice_assistant_name">AI语音助手</string>
-    <string name="feature_ai_voice_assistant_description">DeepSeek AI 自动回复（触发词+记忆）并通过多引擎TTS发送语音回复</string>
+    <string name="parse_video_music_download_failed">音乐提取失败</string>
     <string name="aivoice_section_ai">AI 对话设置</string>
     <string name="aivoice_enabled">AI 自动回复</string>
     <string name="aivoice_api_url">API 地址</string>
@@ -4453,4 +4449,12 @@
 <string name="script_center_uninstall_failed_toast">卸载失败</string>
 <string name="feature_script_center_name">脚本插件中心</string>
 <string name="feature_script_center_description">Java/Python 脚本总开关、本地插件管理与在线插件市场</string>
+    <string name="feature_text_to_speech_name">文字转语音</string>
+    <string name="feature_text_to_speech_description">将文本转为语音消息发送, 需在设置中选择启用哪个入口</string>
+    <string name="tts_entry_group_title">菜单入口</string>
+    <string name="tts_entry_bubble">长按聊天气泡</string>
+    <string name="tts_entry_bubble_description">在文本消息的长按菜单中添加「转语音」功能</string>
+    <string name="tts_entry_input_bar">长按加号或发送按钮</string>
+    <string name="tts_entry_input_bar_description">在聊天输入栏长按菜单中添加「转语音」功能, 输入框文字将作为转换内容</string>
+    <string name="chat_tts_menu">转语音</string>
 </resources>

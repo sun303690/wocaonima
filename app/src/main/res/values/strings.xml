@@ -1961,9 +1961,6 @@
     <string name="tiax_connection_failed">Connection failed: %1$s</string>
     <string name="tiax_apikey_required">API Key required</string>
     <string name="voice_directory_url_label">Custom directory URL (JSON)</string>
-    <string name="feature_voice_message_menu_name">Voice Message Menu</string>
-    <string name="feature_voice_message_menu_description">Add "Voice Message" to long-press message menu and chat toolbar</string>
-    <string name="chat_toolbar_voice_message">Voice message</string>
     <string name="voice_panel_upload_voice">Upload voice</string>
     <string name="voice_panel_voice_examples">Voice examples</string>
     <string name="voice_setting_pack_layout">Top-level layout for local and shared voice packs</string>
@@ -4200,8 +4197,7 @@
     <string name="parse_video_save_cover">Save cover</string>
     <string name="parse_video_downloading_music">Downloading music…</string>
     <string name="parse_video_download_music_direct">Save music</string>
-    <string name="parse_video_music_download_failed">Music extraction failed</string>    <string name="feature_ai_voice_assistant_name">AI voice assistant</string>
-    <string name="feature_ai_voice_assistant_description">DeepSeek AI auto-reply (trigger word + memory) with multi-engine TTS voice reply</string>
+    <string name="parse_video_music_download_failed">Music extraction failed</string>
     <string name="aivoice_section_ai">AI Conversation</string>
     <string name="aivoice_enabled">AI auto-reply</string>
     <string name="aivoice_api_url">API URL</string>
@@ -4458,4 +4454,12 @@
 <string name="script_center_uninstall_failed_toast">Uninstall failed</string>
 <string name="feature_script_center_name">Script plugin center</string>
 <string name="feature_script_center_description">Master switch for Java/Python scripting, local plugin management and online plugin market</string>
+    <string name="feature_text_to_speech_name">Text to speech</string>
+    <string name="feature_text_to_speech_description">Turn text into a voice message; choose which menu entry to enable in its settings</string>
+    <string name="tts_entry_group_title">Menu entries</string>
+    <string name="tts_entry_bubble">Long-press message bubble</string>
+    <string name="tts_entry_bubble_description">Add the \"Text to speech\" entry to the long-press menu of text messages</string>
+    <string name="tts_entry_input_bar">Long-press plus or send button</string>
+    <string name="tts_entry_input_bar_description">Add the \"Text to speech\" entry to the chat input bar long-press menu; the input field text becomes the content to convert</string>
+    <string name="chat_tts_menu">Text to speech</string>
 </resources>

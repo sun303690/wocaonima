@@ -167,7 +167,6 @@ object ChatToolbar : ClickableFeature(), IResolveDex {
     // live outside NAME_TO_ICON_MAP. Their icons are resolved via iconFor().
     private const val QUICK_REPLY_NAME = "快捷回复"
     private const val WEAGENT_NAME = "WeAgent"
-    private const val VOICE_MESSAGE_NAME = "语音消息"
     private const val VIDEO_PARSE_NAME = "视频解析"
 
     private val methodAppPanelInitAppGrid by dexMethod {
@@ -311,7 +310,6 @@ object ChatToolbar : ClickableFeature(), IResolveDex {
     private fun iconFor(name: String): ImageVector = when (name) {
         QUICK_REPLY_NAME -> MaterialSymbols.Outlined.Chat
         WEAGENT_NAME -> MaterialSymbols.Outlined.Smart_toy
-        VOICE_MESSAGE_NAME -> MaterialSymbols.Outlined.Volume_up
         VIDEO_PARSE_NAME -> MaterialSymbols.Outlined.Video_file
         else -> NAME_TO_ICON_MAP.getValue(name)
     }
@@ -339,7 +337,6 @@ object ChatToolbar : ClickableFeature(), IResolveDex {
         "音乐" -> R.string.chat_toolbar_tool_music
         QUICK_REPLY_NAME -> R.string.chat_toolbar_quick_reply
         WEAGENT_NAME -> R.string.feature_we_agent_name
-        VOICE_MESSAGE_NAME -> R.string.chat_toolbar_voice_message
         VIDEO_PARSE_NAME -> R.string.feature_parse_video_name
         else -> error("unsupported toolbar item: $name")
     }
@@ -348,11 +345,10 @@ object ChatToolbar : ClickableFeature(), IResolveDex {
     // configs that predate quick replies get that item inserted first, and ones that predate the
     // WeAgent entry get it inserted right before 快捷回复.
     private fun normalizeOrder(order: List<String>): List<String> {
-        val supportedItems = setOf(QUICK_REPLY_NAME, WEAGENT_NAME, VOICE_MESSAGE_NAME, VIDEO_PARSE_NAME) + NAME_TO_ICON_MAP.keys
+        val supportedItems = setOf(QUICK_REPLY_NAME, WEAGENT_NAME, VIDEO_PARSE_NAME) + NAME_TO_ICON_MAP.keys
         val result = order.filter { it in supportedItems }.distinct().toMutableList()
         if (QUICK_REPLY_NAME !in result) result.add(0, QUICK_REPLY_NAME)
         if (WEAGENT_NAME !in result) result.add(result.indexOf(QUICK_REPLY_NAME), WEAGENT_NAME)
-        if (VOICE_MESSAGE_NAME !in result) result.add(result.indexOf(WEAGENT_NAME).takeIf { it >= 0 } ?: result.indexOf(QUICK_REPLY_NAME) + 1, VOICE_MESSAGE_NAME)
         if (VIDEO_PARSE_NAME !in result) result.add(result.indexOf(WEAGENT_NAME) + 1, VIDEO_PARSE_NAME)
         NAME_TO_ICON_MAP.keys.forEach { if (it !in result) result.add(it) }
         return result
@@ -552,10 +548,6 @@ object ChatToolbar : ClickableFeature(), IResolveDex {
                                 // Activity — and stays reachable when the ball is disabled.
                                 WeAgentService.init()
                                 WeAgentOverlayController.openPanel()
-                            })
-
-                            list.add(VOICE_MESSAGE_NAME to {
-                                AiVoiceSettingsDialog.show(activity)
                             })
 
                             list.add(VIDEO_PARSE_NAME to {

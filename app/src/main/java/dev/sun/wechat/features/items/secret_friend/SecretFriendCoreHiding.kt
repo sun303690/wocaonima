@@ -69,8 +69,12 @@ object HideConversations : SwitchFeature(), IResolveDex,
         }
     }
 
+    /** 正在为密友消息执行 markAsRead 时置位（通知分发同步执行，避免自递归）。 */
+    private val markingAsRead = ThreadLocal.withInitial { false }
+
     override fun onEnable() {
         WeDatabaseListenerApi.addListener(this)
+        attachNotifySuppressor()
 
         if (methodSqliteWrapperRawQuery.isPlaceholder) {
             WeLogger.w(TAG, "SQLite wrapper query method not resolved; conversation hiding disabled")
@@ -109,6 +113,48 @@ object HideConversations : SwitchFeature(), IResolveDex,
                     WeConversationApi.reloadConversations()
                 }
         }.onFailure { WeLogger.w(TAG, "attach onResume reload hook failed", it) }
+    }
+
+    /**
+     * 从源头取消「新消息 → 会话列表增量刷新」（对齐 wcx HideContacts.hookNewMessageNotification）。
+     *
+     * 密友来消息时 ConversationStorage 以 eventType=3 把该行直接推给列表 adapter，绕过 SQL 过滤，
+     * 这是「密友来消息后又出现在主页」的根因；此前靠写库监听里 reload 抢救，这一次 reload 与
+     * 微信自己的 adapter 更新互相踩，导致 adapter 计数与 ListView 已布局子 view 不一致，下一次
+     * 点击就抛 IllegalStateException（真机崩溃栈：CheckForTap → layoutChildren）。
+     *
+     * 现在在通知分发入口直接吞掉事件：adapter 永远收不到该行，列表零抖动、无需事后 reload；
+     * 顺带 markAsRead 清未读。临时显示态放行（此时本来就要让用户看到）。
+     */
+    private fun attachNotifySuppressor() {
+        val method = WeConversationApi.methodNotifyConversationChanged
+        if (!method.isAvailable) {
+            WeLogger.w(TAG, "conversation notify method unavailable; new-message suppression disabled")
+            return
+        }
+        method.hookBefore {
+            if (!_isEnabled) return@hookBefore
+            if (SecretFriendState.isTemporarilyShown()) return@hookBefore
+            val eventType = args.getOrNull(0) as? Int ?: return@hookBefore
+            if (eventType != 3) return@hookBefore
+            val talker = args.getOrNull(2) as? String ?: return@hookBefore
+            if (talker.isEmpty() || !SecretFriendState.isSecret(talker)) return@hookBefore
+
+            if (markingAsRead.get() == true) {
+                result = null
+                return@hookBefore
+            }
+            markingAsRead.set(true)
+            try {
+                WeConversationApi.markAsRead(talker)
+            } catch (t: Throwable) {
+                WeLogger.w(TAG, "markAsRead for suppressed notify failed", t)
+            } finally {
+                markingAsRead.set(false)
+            }
+            WeLogger.d(TAG, "suppressed live update for secret conversation: $talker")
+            result = null
+        }
     }
 
     override fun onDisable() {
@@ -155,8 +201,10 @@ object HideConversations : SwitchFeature(), IResolveDex,
         // 密友会话刷掉；DB 行保留，未读圆点/角标仍在（符合「隐藏但保留提示圆点」的诉求）。
         if (SecretFriendState.isTemporarilyShown()) return
         if (!SecretFriendState.isSecret(username)) return
-        WeLogger.d(TAG, "secret conversation row written, forcing filtered reload: $username")
-        WeConversationApi.reloadConversations()
+        // 不再 reloadConversations：它与微信自己的增量刷新同频竞争，是
+        // "adapter has changed but ListView did not receive a notification" 崩溃的来源；
+        // 这一行现在由 attachNotifySuppressor 在通知入口直接拦下（adapter 看不到该行）。
+        WeLogger.d(TAG, "secret conversation row written (suppressed at notify entry): $username")
     }
 
     // ── 会话行快照与临时解除重建 ──
