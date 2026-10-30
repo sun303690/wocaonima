@@ -904,6 +904,30 @@ internal object ThemeSurface {
     private val savedWindowBackgrounds =
         java.util.WeakHashMap<Activity, android.graphics.drawable.Drawable?>()
 
+    /** 聊天页壁纸解码缓存：同一张图反复进出聊天页不再重解码（大图解码在主线程会卡住几秒）。 */
+    private val chattingWallpaperCache = android.util.LruCache<String, android.graphics.Bitmap>(4)
+
+    /** 按屏幕尺寸降采样解码，避免把 4000px 原图整张解进内存。 */
+    private fun decodeChattingWallpaper(activity: Activity, path: String): android.graphics.Bitmap? {
+        chattingWallpaperCache.get(path)?.let { return it }
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(path, bounds)
+        val metrics = activity.resources.displayMetrics
+        var sample = 1
+        while (bounds.outWidth / (sample * 2) >= metrics.widthPixels &&
+            bounds.outHeight / (sample * 2) >= metrics.heightPixels
+        ) {
+            sample *= 2
+        }
+        val options = BitmapFactory.Options().apply {
+            inSampleSize = sample
+            inPreferredConfig = android.graphics.Bitmap.Config.RGB_565
+        }
+        val bmp = runCatching { BitmapFactory.decodeFile(path, options) }.getOrNull() ?: return null
+        chattingWallpaperCache.put(path, bmp)
+        return bmp
+    }
+
     private fun applyChattingWallpaper(activity: Activity) {
         val src = ThemeMaterials.wallpaperSourceFor(activity, ThemeStore.activeThemeIdOrEmpty())
         if (src == null) {
@@ -911,7 +935,7 @@ internal object ThemeSurface {
             return
         }
         runCatching {
-            val bmp = BitmapFactory.decodeFile(src.absolutePathString())
+            val bmp = decodeChattingWallpaper(activity, src.absolutePathString())
             if (bmp == null) {
                 WeLogger.e(TAG, "聊天页壁纸解码失败：${src.absolutePathString()}")
                 restoreWindowBackground(activity)

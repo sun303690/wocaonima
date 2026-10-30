@@ -9,6 +9,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -44,7 +45,12 @@ class AiChatSettingsActivity : ComponentActivity() {
     private fun AiSettingsScreen() {
         var tab by remember { mutableIntStateOf(0) }
         val tabs = listOf("回复", "人设", "记忆", "诊断")
-        Column(Modifier.fillMaxSize()) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                // MiuixTheme 没有根 Surface，这里不铺底色就会透出下层界面。
+                .background(MiuixTheme.colorScheme.background)
+        ) {
             Row(Modifier.fillMaxWidth().padding(start = 6.dp, end = 8.dp, top = 20.dp)) {
                 Button(onClick = { finish() }) { Text("‹", style = MiuixTheme.textStyles.headline1) }
                 Spacer(Modifier.weight(1f))

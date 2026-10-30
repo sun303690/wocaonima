@@ -1614,7 +1614,13 @@ private fun PageScaffold(
     @Suppress("UNUSED_PARAMETER") largeTitleUnused: String = largeTitle,
     content: @Composable (PaddingValues) -> Unit,
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            // MiuixTheme 不提供根 Surface，缺了这层底色在 edge-to-edge 的独立 Activity 里
+            // 会透出下层（微信界面），看起来就是「背景是透明的」。
+            .background(MiuixTheme.colorScheme.background)
+    ) {
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),

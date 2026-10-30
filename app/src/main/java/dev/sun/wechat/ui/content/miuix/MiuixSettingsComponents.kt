@@ -1,5 +1,6 @@
 package dev.sun.wechat.ui.content.miuix
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -24,10 +25,17 @@ fun MiuixSettingsPage(
     actions: (@Composable () -> Unit)? = null,
     content: LazyListScope.() -> Unit,
 ) {
-    Box(Modifier.fillMaxSize().navigationBarsPadding()) {
+    val headerHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
+    Box(
+        Modifier
+            .fillMaxSize()
+            .navigationBarsPadding()
+            // MiuixTheme 不提供根 Surface，缺底色时页面会透出下层的微信界面。
+            .background(MiuixTheme.colorScheme.background)
+    ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 82.dp, bottom = 24.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = headerHeight + 12.dp, bottom = 24.dp),
             content = content,
         )
         Surface(Modifier.fillMaxWidth(), color = MiuixTheme.colorScheme.background.copy(alpha = .95f)) {

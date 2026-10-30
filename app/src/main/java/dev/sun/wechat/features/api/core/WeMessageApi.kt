@@ -1603,8 +1603,14 @@ object WeMessageApi : ApiFeature(), IResolveDex {
     fun sendText(toUser: String, text: String): Boolean {
         return try {
             WeLogger.i(TAG, "sending text message: $text")
-            val sendMsgObject = methodGetSendMsgObject.method.invoke(null) ?: return false
             val msgObj = createSendMsgScene(toUser, text)
+            if (!methodGetSendMsgObject.isAvailable) {
+                // 新版本微信里 hi0.j1.d() 已解析不到，改走 NetSceneQueue 的公开入口，
+                // 两者最终进的是同一个 NetSceneQueue。
+                WeNetSceneApi.sendNetScene(msgObj)
+                return true
+            }
+            val sendMsgObject = methodGetSendMsgObject.method.invoke(null) ?: return false
             methodPostToQueue.method.invoke(sendMsgObject, msgObj) as? Boolean ?: false
         } catch (e: Exception) {
             WeLogger.e(TAG, "failed to send text message", e)
