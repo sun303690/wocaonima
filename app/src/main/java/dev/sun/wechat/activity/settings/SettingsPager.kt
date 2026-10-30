@@ -28,13 +28,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -103,7 +103,6 @@ import com.mikepenz.aboutlibraries.ui.compose.variant.LibraryDetailMode
 import com.mikepenz.aboutlibraries.ui.compose.variant.LibraryRow
 import dev.sun.wechat.BuildConfig
 import dev.sun.wechat.R
-import dev.sun.wechat.activity.self_check.SelfCheckSettingsActivity
 import dev.sun.wechat.constants.Preferences
 import dev.sun.wechat.features.api.core.WeApi
 import dev.sun.wechat.features.items.debug.ResetDexCache
@@ -113,17 +112,19 @@ import dev.sun.wechat.i18n.LocalWeKitLocalizedContext
 import dev.sun.wechat.i18n.SupportedLocale
 import dev.sun.wechat.i18n.WeKitLocaleController
 import dev.sun.wechat.data.KvStore
-import dev.sun.wechat.ui.content.miuix.MiuixBaseItemContainer
-import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
-import dev.sun.wechat.ui.content.miuix.MiuixDropDownMenuWidget
-import dev.sun.wechat.ui.content.miuix.DropdownOption
-import dev.sun.wechat.ui.content.miuix.MiuixBackButton
-import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
-import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
-import dev.sun.wechat.ui.content.miuix.miuixAppBarBlur
-import dev.sun.wechat.ui.content.miuix.miuixAppBarColor
-import dev.sun.wechat.ui.content.miuix.miuixBackdropLayer
-import dev.sun.wechat.ui.content.miuix.rememberMiuixBlurBackdrop
+import dev.sun.wechat.ui.content.m3.BaseItemContainer
+import dev.sun.wechat.ui.content.m3.BaseWidget
+import dev.sun.wechat.ui.content.m3.CornerRadius
+import dev.sun.wechat.ui.content.m3.DropDownMenuWidget
+import dev.sun.wechat.ui.content.m3.DropdownOption
+import dev.sun.wechat.ui.content.m3.ExpressiveBackButton
+import dev.sun.wechat.ui.content.m3.ExpressiveCollapsingTopAppBar
+import dev.sun.wechat.ui.content.m3.SegmentedColumn
+import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.m3AppBarBlur
+import dev.sun.wechat.ui.content.m3AppBarColor
+import dev.sun.wechat.ui.content.m3BackdropLayer
+import dev.sun.wechat.ui.content.rememberMaterial3BlurBackdrop
 import dev.sun.wechat.ui.utils.GitHubIcon
 import dev.sun.wechat.ui.utils.TelegramIcon
 import dev.sun.wechat.ui.utils.theme.AppColorSpec
@@ -177,7 +178,7 @@ fun SettingsPager(onOpenLicense: () -> Unit) {
 
         // 调试
         item {
-            MiuixSegmentedColumn(title = stringResource(R.string.settings_section_debug)) {
+            SegmentedColumn(title = stringResource(R.string.settings_section_debug)) {
                 item { SecuritySwitch(context) }
                 item {
                     PrefSwitch(
@@ -209,7 +210,7 @@ fun SettingsPager(onOpenLicense: () -> Unit) {
 
         // 兼容
         item {
-            MiuixSegmentedColumn(title = stringResource(R.string.settings_section_compatibility)) {
+            SegmentedColumn(title = stringResource(R.string.settings_section_compatibility)) {
                 item {
                     PrefSwitch(
                         key = Preferences.NO_DEX_RESOLVE,
@@ -239,7 +240,7 @@ fun SettingsPager(onOpenLicense: () -> Unit) {
 
         // 配置
         item {
-            MiuixSegmentedColumn(title = stringResource(R.string.settings_section_configuration)) {
+            SegmentedColumn(title = stringResource(R.string.settings_section_configuration)) {
                 item {
                     PrefArrow(
                         title = stringResource(R.string.settings_export_config_title),
@@ -277,7 +278,7 @@ fun SettingsPager(onOpenLicense: () -> Unit) {
 
         // 更新
         item {
-            MiuixSegmentedColumn(title = stringResource(R.string.settings_section_update)) {
+            SegmentedColumn(title = stringResource(R.string.settings_section_update)) {
                 item {
                     PrefArrow(
                         title = stringResource(R.string.settings_check_update_title),
@@ -305,25 +306,12 @@ fun SettingsPager(onOpenLicense: () -> Unit) {
                         },
                     )
                 }
-                item {
-                    val actCtx = LocalComponentActivity.current
-                    PrefArrow(
-                        title = stringResource(R.string.settings_self_check_title),
-                        summary = stringResource(R.string.settings_self_check_summary),
-                        icon = MaterialSymbols.Outlined.Build_circle,
-                        onClick = {
-                            actCtx.startActivity(
-                                Intent(context, SelfCheckSettingsActivity::class.java)
-                            )
-                        },
-                    )
-                }
             }
         }
 
         // 关于
         item {
-            MiuixSegmentedColumn(title = stringResource(R.string.settings_section_about)) {
+            SegmentedColumn(title = stringResource(R.string.settings_section_about)) {
                 item {
                     PrefArrow(
                         title = stringResource(R.string.settings_version_title),
@@ -340,6 +328,21 @@ fun SettingsPager(onOpenLicense: () -> Unit) {
                 }
                 item {
                     PrefArrow(
+                        title = stringResource(R.string.settings_donate_title),
+                        summary = stringResource(R.string.settings_donate_summary),
+                        icon = MaterialSymbols.Outlined.Volunteer_activism,
+                        onClick = {
+//                        context.startActivity(Intent().apply {
+//                            setClassName(HostInfo.packageName, "${PackageNames.WECHAT}.plugin.collect.reward.ui.QrRewardSelectMoneyUI")
+//                            putExtra("key_qrcode_url", "m0n#Z7LGW*s4AVH!z'd(?)")
+//                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+//                        })
+                            "https://ifdian.net/a/ujhhgtg".toUri().openInSystem(context, true)
+                        },
+                    )
+                }
+                item {
+                    PrefArrow(
                         title = stringResource(R.string.settings_open_source_licenses_title),
                         summary = stringResource(R.string.settings_open_source_licenses_summary),
                         icon = MaterialSymbols.Outlined.License,
@@ -349,16 +352,16 @@ fun SettingsPager(onOpenLicense: () -> Unit) {
                 item {
                     PrefArrow(
                         title = stringResource(R.string.brand_github),
-                        summary = "qq657585180/WeKitsun",
+                        summary = "Ujhhgtg/WeKit",
                         icon = GitHubIcon,
-                        onClick = { "https://github.com/qq657585180/WeKitsun".toUri().openInSystem(context, true) })
+                        onClick = { "https://github.com/Ujhhgtg/WeKit".toUri().openInSystem(context, true) })
                 }
                 item {
                     PrefArrow(
                         title = stringResource(R.string.brand_telegram),
-                        summary = "https://t.me/+bcdb3j7qPgw0NDE9",
+                        summary = "https://t.me/+7j5dJ6g16B43OWVl",
                         icon = TelegramIcon,
-                        onClick = { "https://t.me/+bcdb3j7qPgw0NDE9".toUri().openInSystem(context, true) })
+                        onClick = { "https://t.me/+7j5dJ6g16B43OWVl".toUri().openInSystem(context, true) })
                 }
             }
         }
@@ -390,9 +393,9 @@ private fun ProfileCard() {
         }
     }
 
-    MiuixSegmentedColumn {
+    SegmentedColumn {
         item {
-            MiuixBaseItemContainer {
+            BaseItemContainer {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -507,9 +510,9 @@ private fun ThemeSection() {
     var showColorPicker by remember { mutableStateOf(false) }
     SeedColorPickerDialog(show = showColorPicker, onDismiss = { showColorPicker = false })
 
-    MiuixSegmentedColumn(title = stringResource(R.string.settings_section_interface)) {
+    SegmentedColumn(title = stringResource(R.string.settings_section_interface)) {
         item {
-            MiuixDropDownMenuWidget(
+            DropDownMenuWidget(
                 title = stringResource(R.string.settings_language_title),
                 description = languageSummary,
                 value = selectedLanguage,
@@ -520,7 +523,7 @@ private fun ThemeSection() {
         }
 
         item {
-            MiuixDropDownMenuWidget(
+            DropDownMenuWidget(
                 title = stringResource(R.string.settings_ui_engine_title),
                 description = null,
                 value = ThemeSettings.uiEngine,
@@ -533,7 +536,7 @@ private fun ThemeSection() {
         }
 
         item {
-            MiuixDropDownMenuWidget(
+            DropDownMenuWidget(
                 title = stringResource(R.string.settings_theme_mode_title),
                 description = null,
                 value = ThemeSettings.themeMode,
@@ -546,7 +549,7 @@ private fun ThemeSection() {
         }
 
         item {
-            MiuixSwitchWidget(
+            SwitchWidget(
                 title = stringResource(R.string.settings_predictive_back_animation_title),
                 description = stringResource(R.string.settings_predictive_back_animation_summary),
                 checked = ThemeSettings.predictiveBackEnabled,
@@ -561,7 +564,7 @@ private fun ThemeSection() {
         }
 
         item {
-            MiuixDropDownMenuWidget(
+            DropDownMenuWidget(
                 title = stringResource(R.string.settings_page_transition_animation_title),
                 description = null,
                 value = ThemeSettings.pageTransitionAnimation,
@@ -574,7 +577,7 @@ private fun ThemeSection() {
         }
 
         item {
-            MiuixSwitchWidget(
+            SwitchWidget(
                 title = stringResource(R.string.settings_dynamic_wallpaper_title),
                 description = stringResource(R.string.settings_dynamic_wallpaper_summary),
                 icon = MaterialSymbols.Outlined.Wallpaper,
@@ -586,7 +589,7 @@ private fun ThemeSection() {
             )
         }
         item(animatedVisibility = !dynamicWallpaper) {
-            MiuixBaseWidget(
+            BaseWidget(
                 title = stringResource(R.string.settings_seed_color_title),
                 description = stringResource(R.string.settings_seed_color_summary),
                 icon = MaterialSymbols.Outlined.Colorize,
@@ -601,7 +604,7 @@ private fun ThemeSection() {
             }
         }
         item {
-            MiuixDropDownMenuWidget(
+            DropDownMenuWidget(
                 title = stringResource(R.string.settings_palette_style_title),
                 description = null,
                 value = ThemeSettings.paletteStyle,
@@ -632,7 +635,7 @@ private fun ThemeSection() {
         }
         val spec2025Supported = ThemeSettings.paletteStyle.supportsSpec2025
         item {
-            MiuixDropDownMenuWidget(
+            DropDownMenuWidget(
                 title = stringResource(R.string.settings_color_spec_title),
                 description = if (!spec2025Supported) {
                     stringResource(R.string.settings_color_spec_unsupported)
@@ -649,7 +652,7 @@ private fun ThemeSection() {
 
         item {
             var applyToWechat by remember { mutableStateOf(ThemeSettings.applyToWechat) }
-            MiuixSwitchWidget(
+            SwitchWidget(
                 title = stringResource(R.string.settings_apply_to_wechat_title),
                 description = stringResource(R.string.settings_apply_to_wechat_summary),
                 icon = MaterialSymbols.Outlined.Sync,
@@ -743,6 +746,9 @@ private fun HsvSlider(
     onValueChange: (Float) -> Unit,
     valueRange: ClosedFloatingPointRange<Float>,
 ) {
+    val sliderState = remember(valueRange) { SliderState(value = value, trackRange = valueRange) }
+    sliderState.value = value
+
     Column {
         Text(
             text = "$label: ${value.toInt()}",
@@ -750,9 +756,8 @@ private fun HsvSlider(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Slider(
-            value = value,
+            state = sliderState,
             onValueChange = onValueChange,
-            valueRange = valueRange,
         )
     }
 }
@@ -772,7 +777,7 @@ private fun PrefSwitch(
     // Must match the default declared on the matching `prefOption`, otherwise the switch shows
     // "off" for a preference that is actually on until the user toggles it once.
     var checked by remember(key, default) { mutableStateOf(KvStore.getBoolOrDef(key, default)) }
-    MiuixSwitchWidget(
+    SwitchWidget(
         title = title,
         description = summary,
         icon = icon,
@@ -793,13 +798,13 @@ private fun PrefArrow(
 ) {
     if (onClick == null) {
         // Informational row: no trailing arrow, no ripple.
-        MiuixBaseWidget(
+        BaseWidget(
             title = title,
             description = summary,
             icon = icon,
         )
     } else {
-        MiuixBaseWidget(
+        BaseWidget(
             title = title,
             description = summary,
             icon = icon,
@@ -812,7 +817,7 @@ private fun PrefArrow(
 @Composable
 private fun SecuritySwitch(context: Context) {
     var checked by remember { mutableStateOf(SafeMode.isEnabled) }
-    MiuixSwitchWidget(
+    SwitchWidget(
         title = stringResource(R.string.settings_safe_mode_title),
         description = stringResource(R.string.settings_safe_mode_summary),
         icon = MaterialSymbols.Outlined.Shield,
@@ -998,7 +1003,7 @@ fun LicenseScreen(onBack: () -> Unit) {
     }
     var selectedLibrary by remember { mutableStateOf<Library?>(null) }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
-    val barBackdrop = rememberMiuixBlurBackdrop()
+    val barBackdrop = rememberMaterial3BlurBackdrop()
 
     Scaffold(
         modifier = Modifier
@@ -1006,14 +1011,14 @@ fun LicenseScreen(onBack: () -> Unit) {
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
-            LargeFlexibleTopAppBar(
-                modifier = Modifier.miuixAppBarBlur(barBackdrop),
-                title = { Text(stringResource(R.string.licenses_title)) },
-                navigationIcon = { MiuixBackButton(onClick = onBack) },
+            ExpressiveCollapsingTopAppBar(
+                modifier = Modifier.m3AppBarBlur(barBackdrop),
+                title = stringResource(R.string.licenses_title),
+                navigationIcon = { ExpressiveBackButton(onClick = onBack) },
                 scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = barBackdrop.miuixAppBarColor(),
-                    scrolledContainerColor = barBackdrop.miuixAppBarColor(),
+                    containerColor = barBackdrop.m3AppBarColor(),
+                    scrolledContainerColor = barBackdrop.m3AppBarColor(),
                 ),
             )
         }
@@ -1022,7 +1027,7 @@ fun LicenseScreen(onBack: () -> Unit) {
             libraries = filteredLibraries,
             modifier = Modifier
                 .fillMaxSize()
-                .miuixBackdropLayer(barBackdrop),
+                .m3BackdropLayer(barBackdrop),
             contentPadding = scaffoldPadding + PaddingValues(horizontal = 16.dp),
             colors = LibraryDefaults.libraryColors(
                 libraryBackgroundColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -1072,7 +1077,7 @@ fun LicenseScreen(onBack: () -> Unit) {
                     style = style,
                     modifier = Modifier
                         .padding(vertical = 4.dp)
-                        .clip(RoundedCornerShape(16.dp)),
+                        .clip(RoundedCornerShape(CornerRadius)),
                 )
             },
             onLibraryClick = { library ->

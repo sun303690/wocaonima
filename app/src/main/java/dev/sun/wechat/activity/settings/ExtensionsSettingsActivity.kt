@@ -45,13 +45,13 @@ import dev.sun.wechat.extensions.PythonRuntimePack
 import dev.sun.wechat.i18n.LocaleResourceMode
 import dev.sun.wechat.i18n.LocalWeKitLocalizedContext
 import dev.sun.wechat.i18n.WeKitLocaleProvider
-import dev.sun.wechat.ui.agent.settings.AgentConfirmDialog
-import dev.sun.wechat.ui.agent.settings.AgentListActionButton
-import dev.sun.wechat.ui.content.miuix.MiuixBaseItemContainer
-import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
-import dev.sun.wechat.ui.content.miuix.MiuixBackButton
-import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
-import dev.sun.wechat.ui.utils.theme.MiuixModuleTheme
+import dev.sun.wechat.ui.content.m3.SettingsConfirmDialog
+import dev.sun.wechat.ui.content.m3.SettingsListActionButton
+import dev.sun.wechat.ui.content.m3.BaseItemContainer
+import dev.sun.wechat.ui.content.m3.BaseWidget
+import dev.sun.wechat.ui.content.m3.ExpressiveBackButton
+import dev.sun.wechat.ui.content.m3.SegmentedColumn
+import dev.sun.wechat.ui.utils.theme.ModuleTheme
 import java.util.Locale
 
 /**
@@ -73,7 +73,7 @@ class ExtensionsSettingsActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             WeKitLocaleProvider(mode = LocaleResourceMode.InjectedHost) {
-                MiuixModuleTheme {
+                ModuleTheme {
                     ExtensionsRoot(
                         autoPackId = intent.getStringExtra(EXTRA_PACK_ID),
                         autoDownload = intent.getBooleanExtra(EXTRA_AUTO_DOWNLOAD, false),
@@ -106,7 +106,7 @@ private fun ExtensionsRoot(autoPackId: String?, autoDownload: Boolean, onFinish:
 
     M3ListScaffold(
         title = stringResource(R.string.extensions_screen_title),
-        onBack = onFinish,
+        navigationIcon = { ExpressiveBackButton(onClick = onFinish) },
     ) {
         for (pack in ExtensionPacks.packs.filter(ExtensionPack::isSupported)) {
             item(key = pack.id) { PackGroup(pack) }
@@ -121,9 +121,9 @@ private fun PackGroup(pack: ExtensionPack) {
     val context = LocalContext.current
     val localizedContext = LocalWeKitLocalizedContext.current
 
-    MiuixSegmentedColumn {
+    SegmentedColumn {
         item(key = "info") {
-            MiuixBaseWidget(
+            BaseWidget(
                 title = stringResource(pack.nameRes),
                 description = descriptionLine(pack, state),
                 icon = pack.icon,
@@ -131,7 +131,7 @@ private fun PackGroup(pack: ExtensionPack) {
         }
         when (val s = state) {
             is Downloading -> item(key = "downloading") {
-                MiuixBaseItemContainer {
+                BaseItemContainer {
                     Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                         LinearProgressIndicator(
                             progress = { s.progress },
@@ -155,20 +155,20 @@ private fun PackGroup(pack: ExtensionPack) {
                 }
             }
             is Verifying -> item(key = "verifying") {
-                MiuixBaseWidget(
+                BaseWidget(
                     title = stringResource(R.string.extensions_pack_verifying),
                     description = stringResource(R.string.extensions_pack_downloading),
                 )
             }
             else -> item(key = "actions") {
-                MiuixBaseItemContainer {
+                BaseItemContainer {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        AgentListActionButton(
+                        SettingsListActionButton(
                             label = stringResource(
                                 when (s) {
                                     is UpdateAvailable -> R.string.extensions_pack_update
@@ -193,7 +193,7 @@ private fun PackGroup(pack: ExtensionPack) {
     }
 
     if (confirmDelete) {
-        AgentConfirmDialog(
+        SettingsConfirmDialog(
             show = true,
             title = stringResource(R.string.extensions_pack_delete_confirm_title),
             message = stringResource(R.string.extensions_pack_delete_confirm_msg),

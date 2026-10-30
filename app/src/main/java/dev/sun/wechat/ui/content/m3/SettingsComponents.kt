@@ -65,13 +65,39 @@ fun SettingsScaffold(
     actions: @Composable RowScope.() -> Unit = {},
     content: LazyListScope.() -> Unit,
 ) {
-    // 统一外壳：与设置内二级页、M3ListScaffold 共用同一套标题栏/底色/背景图。
-    dev.sun.wechat.ui.content.miuix.MiuixSecondaryScaffold(
-        title = title,
-        onBack = onBack,
-        actions = actions,
-        content = content,
-    )
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val barBackdrop = rememberMaterial3BlurBackdrop()
+    Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        topBar = {
+            ExpressiveCollapsingTopAppBar(
+                modifier = Modifier.m3AppBarBlur(barBackdrop),
+                title = title,
+                navigationIcon = {
+                    if (onBack != null) {
+                        ExpressiveBackButton(onClick = onBack)
+                    }
+                },
+                actions = actions,
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = barBackdrop.m3AppBarColor(),
+                    scrolledContainerColor = barBackdrop.m3AppBarColor(),
+                ),
+            )
+        },
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .m3BackdropLayer(barBackdrop),
+            contentPadding = innerPadding,
+            content = content,
+        )
+    }
 }
 
 /**

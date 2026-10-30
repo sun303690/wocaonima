@@ -37,11 +37,10 @@ import dev.sun.wechat.features.core.featureCategoryComparator
 import dev.sun.wechat.i18n.LocalWeKitLocalizedContext
 import dev.sun.wechat.i18n.WeKitLocaleController
 import dev.sun.wechat.data.KvStore
-import dev.sun.wechat.ui.content.miuix.MiuixBaseItemContainer
-import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
-import dev.sun.wechat.ui.content.miuix.MiuixBackButton
-import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
-import dev.sun.wechat.ui.content.miuix.miuixLazySegmentedItems
+import dev.sun.wechat.ui.content.m3.BaseWidget
+import dev.sun.wechat.ui.content.m3.ExpressiveBackButton
+import dev.sun.wechat.ui.content.m3.SegmentedColumn
+import dev.sun.wechat.ui.content.m3.lazySegmentedItems
 import java.text.Collator
 import java.util.Locale
 
@@ -55,21 +54,6 @@ private fun featureChecked(item: BaseFeature): Boolean {
     val revision = FeatureCategoryState.revision
     return remember(item.technicalId, revision) {
         KvStore.getBoolOrDef(item.technicalId, (item as? SwitchFeature)?.defaultEnabled == true)
-    }
-}
-
-/** A feature row plus its optional per-feature settings UI, unified into one segmented card. */
-@Composable
-private fun FeatureItem(feature: BaseFeature) {
-    Column(Modifier.padding(horizontal = 16.dp)) {
-        MiuixBaseItemContainer {
-            FeatureRow(
-                item = feature,
-                checked = featureChecked(feature),
-                onCheckedChange = {},
-            )
-            feature.Ui()
-        }
     }
 }
 
@@ -156,18 +140,24 @@ fun FeaturesPager(onOpenCategory: (String) -> Unit) {
                 }
             } else {
                 item { Spacer(Modifier.height(12.dp)) }
-                miuixLazySegmentedItems(filteredItems, key = { it.technicalId }) { feature ->
-                    FeatureItem(feature)
+                lazySegmentedItems(filteredItems, key = { it.technicalId }) { feature ->
+                    Column(Modifier.padding(horizontal = 16.dp)) {
+                        FeatureRow(
+                            item = feature,
+                            checked = featureChecked(feature),
+                            onCheckedChange = {},
+                        )
+                    }
                 }
             }
         } else {
             item {
-                MiuixSegmentedColumn(
+                SegmentedColumn(
                     modifier = Modifier.padding(top = 12.dp),
                     contentPadding = PaddingValues(horizontal = 16.dp),
                 ) {
                     item(key = NEW_FEATURES_CATEGORY) {
-                        MiuixBaseWidget(
+                        BaseWidget(
                             icon = MaterialSymbols.Outlined.Fiber_new,
                             title = stringResource(featureCategoryTitleRes(NEW_FEATURES_CATEGORY)),
                             description = stringResource(
@@ -187,7 +177,7 @@ fun FeaturesPager(onOpenCategory: (String) -> Unit) {
                     }
                     item(key = ENABLED_FEATURES_CATEGORY) {
                         val enabledCount = FeatureCategoryState.enabledItems().size
-                        MiuixBaseWidget(
+                        BaseWidget(
                             icon = MaterialSymbols.Outlined.Check_circle,
                             title = stringResource(featureCategoryTitleRes(ENABLED_FEATURES_CATEGORY)),
                             description = stringResource(R.string.feature_category_enabled_summary, enabledCount),
@@ -206,10 +196,10 @@ fun FeaturesPager(onOpenCategory: (String) -> Unit) {
 
             item { Spacer(Modifier.height(8.dp)) }
             item {
-                MiuixSegmentedColumn(contentPadding = PaddingValues(horizontal = 16.dp)) {
+                SegmentedColumn(contentPadding = PaddingValues(horizontal = 16.dp)) {
                     FEATURE_CATEGORIES.forEach { category ->
                         item(key = category.id) {
-                            MiuixBaseWidget(
+                            BaseWidget(
                                 icon = category.icon,
                                 title = stringResource(category.titleRes),
                                 onClick = { onOpenCategory(category.id) },
@@ -262,7 +252,7 @@ fun CategoryDetailScreen(categoryId: String, onBack: () -> Unit) {
 
     M3ListScaffold(
         title = stringResource(featureCategoryTitleRes(categoryId)),
-        onBack = onBack,
+        navigationIcon = { ExpressiveBackButton(onClick = onBack) },
     ) {
         if (items.isEmpty()) {
             item {
@@ -280,8 +270,14 @@ fun CategoryDetailScreen(categoryId: String, onBack: () -> Unit) {
             }
         } else {
             item { Spacer(Modifier.height(12.dp)) }
-            miuixLazySegmentedItems(items, key = { it.technicalId }) { feature ->
-                FeatureItem(feature)
+            lazySegmentedItems(items, key = { it.technicalId }) { feature ->
+                Column(Modifier.padding(horizontal = 16.dp)) {
+                    FeatureRow(
+                        item = feature,
+                        checked = featureChecked(feature),
+                        onCheckedChange = {},
+                    )
+                }
             }
         }
 

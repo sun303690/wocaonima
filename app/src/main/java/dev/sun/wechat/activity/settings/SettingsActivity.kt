@@ -26,6 +26,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -41,14 +43,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.composables.icons.materialsymbols.MaterialSymbols
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import com.composables.icons.materialsymbols.outlined.Tune
-import top.yukonga.miuix.kmp.basic.Switch
-import top.yukonga.miuix.kmp.preference.ArrowPreference
-import top.yukonga.miuix.kmp.preference.SwitchPreference
 import com.composables.icons.materialsymbols.outlined.Account_circle
 import com.composables.icons.materialsymbols.outlined.Add_circle
 import com.composables.icons.materialsymbols.outlined.Article
@@ -71,8 +65,13 @@ import com.composables.icons.materialsymbols.outlined.Package_2
 import com.composables.icons.materialsymbols.outlined.Payments
 import com.composables.icons.materialsymbols.outlined.Settings
 import com.composables.icons.materialsymbols.outlined.Terminal
+import com.composables.icons.materialsymbols.outlined.Tune
 import com.composables.icons.materialsymbols.outlined.Visibility_off
 import com.composables.icons.materialsymbols.outlined.Wand_stars
+import com.composables.icons.materialsymbols.outlinedfilled.Article
+import com.composables.icons.materialsymbols.outlinedfilled.Home
+import com.composables.icons.materialsymbols.outlinedfilled.Settings
+import com.composables.icons.materialsymbols.outlinedfilled.Tune
 import dev.sun.wechat.R
 import dev.sun.wechat.activity.nuke.NukeSettingsContent
 import dev.sun.wechat.features.core.BaseFeature
@@ -85,17 +84,17 @@ import dev.sun.wechat.i18n.WeKitLocaleProvider
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.ui.content.FloatingBottomBar
 import dev.sun.wechat.ui.content.FloatingBottomBarDefaults
-import top.yukonga.miuix.kmp.basic.TopAppBar
-import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
-import top.yukonga.miuix.kmp.theme.MiuixTheme
-import dev.sun.wechat.ui.content.miuix.miuixAppBarBlur
-import dev.sun.wechat.ui.content.miuix.miuixAppBarColor
-import dev.sun.wechat.ui.content.miuix.rememberMiuixBlurBackdrop
+import dev.sun.wechat.ui.content.m3.BaseWidget
+import dev.sun.wechat.ui.content.m3.ExpressiveCollapsingTopAppBar
+import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.m3AppBarBlur
+import dev.sun.wechat.ui.content.m3AppBarColor
+import dev.sun.wechat.ui.content.rememberMaterial3BlurBackdrop
 import dev.sun.wechat.ui.navigation.LocalNavigator
 import dev.sun.wechat.ui.navigation.Navigator
 import dev.sun.wechat.ui.navigation.rememberM3NavEffects
 import dev.sun.wechat.ui.utils.theme.ModuleTheme
+import dev.sun.wechat.ui.content.miuix.MiuixSettingsContent
 import dev.sun.wechat.ui.utils.theme.MiuixModuleTheme
 import dev.sun.wechat.ui.utils.theme.SettingsUiEngine
 import dev.sun.wechat.ui.utils.theme.ThemeSettings
@@ -153,9 +152,9 @@ data class FeatureCategory(
 val FEATURE_CATEGORIES = listOf(
     FeatureCategory(FeatureCategoryIds.CHAT, R.string.feature_category_chat_title, MaterialSymbols.Outlined.Chat),
     FeatureCategory(FeatureCategoryIds.CONTACTS_GROUPS, R.string.feature_category_contacts_groups_title, MaterialSymbols.Outlined.Contacts),
-    FeatureCategory(FeatureCategoryIds.SECRET_FRIEND, R.string.feature_category_secret_friend_title, MaterialSymbols.Outlined.Visibility_off),
     FeatureCategory(FeatureCategoryIds.PAYMENT, R.string.feature_category_payment_title, MaterialSymbols.Outlined.Payments),
     FeatureCategory(FeatureCategoryIds.MOMENTS, R.string.feature_category_moments_title, MaterialSymbols.Outlined.Camera),
+    FeatureCategory(FeatureCategoryIds.SECRET_FRIEND, R.string.feature_category_secret_friend_title, MaterialSymbols.Outlined.Visibility_off),
     FeatureCategory(FeatureCategoryIds.SYSTEM_PRIVACY, R.string.feature_category_system_privacy_title, MaterialSymbols.Outlined.Wand_stars),
     FeatureCategory(FeatureCategoryIds.VOIP, R.string.feature_category_voip_title, MaterialSymbols.Outlined.Call),
     FeatureCategory(FeatureCategoryIds.NOTIFICATIONS, R.string.feature_category_notifications_title, MaterialSymbols.Outlined.Notifications),
@@ -295,7 +294,7 @@ private fun MainPagerScreen(
             onSelected = { scope.launch { pagerState.animateScrollToPage(it) } },
             backdrop = backdrop,
             colors = FloatingBottomBarDefaults.colors(
-                containerColor = MiuixTheme.colorScheme.surfaceContainer,
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 indicatorColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 activeContentColor = MaterialTheme.colorScheme.primary,
@@ -333,10 +332,10 @@ private data class NavItem(
 )
 
 private val TAB_ITEMS = listOf(
-    NavItem(R.string.nav_home, MaterialSymbols.Outlined.Home, MaterialSymbols.Outlined.Home),
-    NavItem(R.string.nav_features, MaterialSymbols.Outlined.Tune, MaterialSymbols.Outlined.Tune),
-    NavItem(R.string.nav_logs, MaterialSymbols.Outlined.Article, MaterialSymbols.Outlined.Article),
-    NavItem(R.string.nav_settings, MaterialSymbols.Outlined.Settings, MaterialSymbols.Outlined.Settings),
+    NavItem(R.string.nav_home, MaterialSymbols.Outlined.Home, MaterialSymbols.OutlinedFilled.Home),
+    NavItem(R.string.nav_features, MaterialSymbols.Outlined.Tune, MaterialSymbols.OutlinedFilled.Tune),
+    NavItem(R.string.nav_logs, MaterialSymbols.Outlined.Article, MaterialSymbols.OutlinedFilled.Article),
+    NavItem(R.string.nav_settings, MaterialSymbols.Outlined.Settings, MaterialSymbols.OutlinedFilled.Settings),
 )
 
 /** Bottom padding so scrollable content clears the floating bar. */
@@ -349,17 +348,37 @@ val CONTENT_BOTTOM_INSET = 88.dp
 @Composable
 fun M3ListScaffold(
     title: String,
-    onBack: (() -> Unit)? = null,
-    actions: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {},
+    navigationIcon: @Composable (() -> Unit)? = null,
     content: LazyListScope.() -> Unit,
 ) {
-    // 全 App 二级页统一外壳：大标题 + 圆形返回 + 统一底色/背景图。
-    dev.sun.wechat.ui.content.miuix.MiuixSecondaryScaffold(
-        title = title,
-        onBack = onBack,
-        actions = actions,
-        content = content,
-    )
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val barBackdrop = rememberMaterial3BlurBackdrop()
+    Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        topBar = {
+            ExpressiveCollapsingTopAppBar(
+                modifier = Modifier.m3AppBarBlur(barBackdrop),
+                title = title,
+                navigationIcon = { navigationIcon?.invoke() },
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = barBackdrop.m3AppBarColor(),
+                    scrolledContainerColor = barBackdrop.m3AppBarColor(),
+                ),
+            )
+        },
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(barBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier),
+            contentPadding = innerPadding,
+            content = content,
+        )
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -376,9 +395,7 @@ fun FeatureRow(
     val localizedContext = LocalWeKitLocalizedContext.current
     val configKey = item.technicalId
     val localizedName = item.localizedName(localizedContext)
-    val localizedDescription = item.localizedDescription(localizedContext).ifBlank { null }
-    val icon = FEATURE_CATEGORIES.firstOrNull { category -> category.id in item.categoryIds }?.icon
-        ?: MaterialSymbols.Outlined.Tune
+    val localizedDescription = item.localizedDescription(localizedContext)
 
     DisposableEffect(configKey) {
         (item as SwitchFeature).setToggleCompletionCallback {
@@ -407,48 +424,40 @@ fun FeatureRow(
 
             if (item.noSwitchWidget) {
                 // Pure action row: the whole row triggers the feature's action.
-                ArrowPreference(
+                BaseWidget(
+                    iconPlaceholder = false,
                     title = localizedName,
-                    summary = localizedDescription,
-                    startAction = { FeaturePreferenceIcon(icon) },
+                    description = localizedDescription,
                     onClick = openConfig,
-                )
-            } else {
-                // Dual click areas: the row opens the config, the switch only toggles.
-                ArrowPreference(
-                    title = localizedName,
-                    summary = localizedDescription,
-                    startAction = { FeaturePreferenceIcon(icon) },
-                    endActions = {
-                        Switch(
-                            checked = checked,
-                            onCheckedChange = { toggle(it) },
+                    trailingContent = {
+                        Icon(
+                            imageVector = MaterialSymbols.Outlined.Chevron_right,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     },
+                )
+            } else {
+                // Dual click areas: the main area opens the feature's config, the
+                // switch past the divider toggles it (WeAgent "Memory" row pattern).
+                SwitchWidget(
+                    iconPlaceholder = false,
+                    title = localizedName,
+                    description = localizedDescription,
                     onClick = openConfig,
+                    trailingDivider = true,
+                    checked = checked,
+                    onCheckedChange = { toggle(it) },
                 )
             }
         }
 
-        is SwitchFeature -> SwitchPreference(
+        is SwitchFeature -> SwitchWidget(
+            iconPlaceholder = false,
+            title = localizedName,
+            description = localizedDescription,
             checked = checked,
             onCheckedChange = { toggle(it) },
-            title = localizedName,
-            summary = localizedDescription,
-            startAction = { FeaturePreferenceIcon(icon) },
         )
-    }
-}
-
-@Composable
-private fun FeaturePreferenceIcon(icon: ImageVector) {
-    Box(
-        Modifier
-            .size(30.dp)
-            .clip(RoundedCornerShape(9.dp))
-            .background(Color(0xFF4C8DFF)),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(19.dp))
     }
 }

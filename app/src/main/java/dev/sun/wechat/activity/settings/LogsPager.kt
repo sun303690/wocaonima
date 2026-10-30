@@ -85,13 +85,13 @@ import com.composables.icons.materialsymbols.outlined.Share
 import dev.sun.wechat.R
 import dev.sun.wechat.activity.TransparentActivity
 import dev.sun.wechat.i18n.LocalWeKitLocalizedContext
-import dev.sun.wechat.ui.content.miuix.MiuixBaseItemContainer
-import dev.sun.wechat.ui.content.miuix.MiuixDropDownMenuWidget
-import dev.sun.wechat.ui.content.miuix.DropdownOption
-import dev.sun.wechat.ui.content.miuix.miuixAppBarBlur
-import dev.sun.wechat.ui.content.miuix.miuixAppBarColor
-import dev.sun.wechat.ui.content.miuix.miuixBackdropLayer
-import dev.sun.wechat.ui.content.miuix.rememberMiuixBlurBackdrop
+import dev.sun.wechat.ui.content.m3.BaseItemContainer
+import dev.sun.wechat.ui.content.m3.DropDownMenuWidget
+import dev.sun.wechat.ui.content.m3.DropdownOption
+import dev.sun.wechat.ui.content.m3AppBarBlur
+import dev.sun.wechat.ui.content.m3AppBarColor
+import dev.sun.wechat.ui.content.m3BackdropLayer
+import dev.sun.wechat.ui.content.rememberMaterial3BlurBackdrop
 import dev.sun.wechat.utils.HostInfo
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToastSuspend
@@ -318,7 +318,7 @@ fun LogsPager() {
     var menuExpanded by remember { mutableStateOf(false) }
 
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
-    val barBackdrop = rememberMiuixBlurBackdrop()
+    val barBackdrop = rememberMaterial3BlurBackdrop()
 
     fun requestRefresh(targetKind: LogKind, fromPull: Boolean) {
         val ownsPullIndicator = fromPull || activePullRequests[targetKind] != null
@@ -335,13 +335,13 @@ fun LogsPager() {
         topBar = {
             // The blur layer spans the app bar and the tab row beneath it, mirroring the old
             // miuix TopAppBar bottomContent arrangement.
-            Column(modifier = Modifier.miuixAppBarBlur(barBackdrop)) {
+            Column(modifier = Modifier.m3AppBarBlur(barBackdrop)) {
                 TopAppBar(
                     title = { Text(stringResource(R.string.nav_logs)) },
                     scrollBehavior = scrollBehavior,
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = barBackdrop.miuixAppBarColor(),
-                        scrolledContainerColor = barBackdrop.miuixAppBarColor(),
+                        containerColor = barBackdrop.m3AppBarColor(),
+                        scrolledContainerColor = barBackdrop.m3AppBarColor(),
                     ),
                     actions = {
                         IconButton(onClick = {
@@ -449,7 +449,7 @@ fun LogsPager() {
             LogTabContent(
                 kind = k,
                 listState = if (k == LogKind.RUN) runListState else crashListState,
-                backdropLayer = Modifier.miuixBackdropLayer(barBackdrop),
+                backdropLayer = Modifier.m3BackdropLayer(barBackdrop),
                 innerPadding = innerPadding,
                 refreshRequest = request,
                 isPullRefreshing = activePullRequests[k] == request && request?.ownsPullIndicator == true,
@@ -715,7 +715,7 @@ private fun FileSelector(
         }
     }
     Box(modifier.fillMaxWidth()) {
-        MiuixDropDownMenuWidget(
+        DropDownMenuWidget(
             iconPlaceholder = false,
             title = stringResource(R.string.logs_select_file),
             description = files.getOrNull(selectedIndex)?.let {
@@ -748,7 +748,7 @@ private fun RunLogCard(entry: RunLogEntry, modifier: Modifier = Modifier) {
         label = "chevron",
     )
 
-    MiuixBaseItemContainer(modifier = modifier.fillMaxWidth()) {
+    BaseItemContainer(modifier = modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 entry.level?.let { level ->
@@ -839,7 +839,7 @@ private fun CrashSectionCard(section: CrashSection, modifier: Modifier = Modifie
         label = "crashChevron",
     )
 
-    MiuixBaseItemContainer(modifier = modifier.fillMaxWidth()) {
+    BaseItemContainer(modifier = modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
             if (section.title.isNotEmpty() || isLong) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
