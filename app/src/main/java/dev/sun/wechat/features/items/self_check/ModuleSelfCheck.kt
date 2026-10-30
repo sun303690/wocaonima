@@ -178,16 +178,16 @@ object ModuleSelfCheck {
         )
         // 用新「隐藏联系人」的各隐藏面开关聚合生效状态。
         val faces = listOf(
-            Triple("主页会话隐藏", HideConversationSurface.isEnabled),
-            Triple("通讯录隐藏", HideContactListSurface.isEnabled),
-            Triple("搜索结果隐藏", HideSearchSurface.isEnabled),
-            Triple("朋友圈隐藏", HideMomentsSurface.isEnabled),
-            Triple("朋友圈互动隐藏", HideMomentsInlineSurface.isEnabled),
-            Triple("音视频通话隐藏", HideVoipSurface.isEnabled),
-            Triple("新的朋友隐藏", HideNewFriendsSurface.isEnabled),
-            Triple("未读角标隐藏", HideUnreadSurface.isEnabled),
-            Triple("禁止进入聊天", BlockHiddenChatSurface.isEnabled),
-            Triple("禁止查看资料", BlockHiddenProfileSurface.isEnabled),
+            Triple("主页会话隐藏", HideConversationSurface.isEnabled, HideConversationSurface.isEnabled),
+            Triple("通讯录隐藏", HideContactListSurface.isEnabled, HideContactListSurface.isEnabled),
+            Triple("搜索结果隐藏", HideSearchSurface.isEnabled, HideSearchSurface.isEnabled),
+            Triple("朋友圈隐藏", HideMomentsSurface.isEnabled, HideMomentsSurface.isEnabled),
+            Triple("朋友圈互动隐藏", HideMomentsInlineSurface.isEnabled, HideMomentsInlineSurface.isEnabled),
+            Triple("音视频通话隐藏", HideVoipSurface.isEnabled, HideVoipSurface.isEnabled),
+            Triple("新的朋友隐藏", HideNewFriendsSurface.isEnabled, HideNewFriendsSurface.isEnabled),
+            Triple("未读角标隐藏", HideUnreadSurface.isEnabled, HideUnreadSurface.isEnabled),
+            Triple("禁止进入聊天", BlockHiddenChatSurface.isEnabled, BlockHiddenChatSurface.isEnabled),
+            Triple("禁止查看资料", BlockHiddenProfileSurface.isEnabled, BlockHiddenProfileSurface.isEnabled),
         )
         val onFaces = faces.count { it.third }
         out += HealthItem(

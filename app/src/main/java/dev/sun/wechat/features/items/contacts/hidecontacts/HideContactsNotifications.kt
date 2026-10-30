@@ -8,7 +8,7 @@ import dev.sun.wechat.features.core.FeatureCategoryIds
 
 import dev.sun.wechat.features.items.contacts.HideContacts
 import dev.sun.wechat.data.KvStore
-import dev.sun.wechat.utils.TargetProcesses
+import dev.sun.wechat.utils.TargetProcess
 import dev.sun.wechat.utils.WeLogger
 
 /**
@@ -125,11 +125,7 @@ object HideContactsNotifications : ApiFeature(), IResolveDex {
     }
 
     /** `CoreService` — and therefore both notification paths — lives in `:push`, not in main. */
-    override fun startup() {
-        if (!TargetProcesses.isInMain && TargetProcesses.currentType != TargetProcesses.PROC_PUSH)
-            return
-        enable()
-    }
+    override val targetProcesses = setOf(TargetProcess.MAIN, TargetProcess.PUSH)
 
     /**
      * Whether a notification for [wxId] must be swallowed.
