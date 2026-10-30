@@ -31,6 +31,10 @@ abstract class CheckMiuixPurityTask : DefaultTask() {
         val allowlist = setOf(
             "features/items/chat/TextToSpeech.kt",
             "features/items/chat/DoubaoVoicePicker.kt",
+            // 引擎桥接层必须同时引用 M3 与 Miuix，属于分派实现而非 Miuix 页面。
+            "ui/content/miuix/EngineBridge.kt",
+            // WCS「AI 候选回复」整屏按上游 Material3 实现移植，待迁 Miuix 后移出。
+            "features/items/chat/AiReplyCandidates.kt",
         )
         val offenders = files.filter { file ->
             file.relativeTo(root).path !in allowlist &&
