@@ -4294,6 +4294,8 @@
 
     <string name="smart_reply_style">Tone preset</string>
     <string name="smart_reply_tap_generate">Choose a tone and tap Generate</string>
+    <string name="feature_ai_reply_config_name">AI Reply Settings</string>
+    <string name="feature_ai_reply_config_description">Model and voice configuration for AI replies</string>
     <string name="feature_ai_chat_name">AI Chat</string>
     <string name="feature_ai_chat_description">Let AI continuously reply to every text message received from conversations in the list</string>
     <string name="ai_chat_config_title">AI Chat Settings</string>

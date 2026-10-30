@@ -4289,6 +4289,8 @@
 
     <string name="smart_reply_style">语气预设</string>
     <string name="smart_reply_tap_generate">选择语气预设，点击生成回复</string>
+    <string name="feature_ai_reply_config_name">AI 回复配置</string>
+    <string name="feature_ai_reply_config_description">AI 回复的模型与语音配置</string>
     <string name="feature_ai_chat_name">AI 聊天</string>
     <string name="feature_ai_chat_description">让 AI 对名单内收到的每条文字消息进行连续对话回复</string>
     <string name="ai_chat_config_title">AI 聊天设置</string>

@@ -4268,6 +4268,8 @@
 
     <string name="smart_reply_style">語氣預設</string>
     <string name="smart_reply_tap_generate">選擇語氣預設，點擊生成回覆</string>
+    <string name="feature_ai_reply_config_name">AI 回覆設定</string>
+    <string name="feature_ai_reply_config_description">AI 回覆的模型與語音設定</string>
     <string name="feature_ai_chat_name">AI 聊天</string>
     <string name="feature_ai_chat_description">讓 AI 對名單內收到的每則文字訊息進行連續對話回覆</string>
     <string name="ai_chat_config_title">AI 聊天設定</string>

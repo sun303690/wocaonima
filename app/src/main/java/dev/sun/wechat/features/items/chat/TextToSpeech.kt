@@ -118,10 +118,13 @@ object TextToSpeech :
     var selectedVoice by prefOption("tts_voice_id", "琅琊榜-梅长苏")
     var selectedEmotion by prefOption("tts_emotion", "平静")
 
-    private var backend by prefOption("tts_backend", BACKEND_MOFA)
-    private var doubaoCookie by prefOption("tts_doubao_cookie", "")
-    private var doubaoSpeaker by prefOption("tts_doubao_speaker", "zh_female_shuangkuai_emo_v3_wvae_bigtts")
-    private var doubaoSpeakerName by prefOption("tts_doubao_speaker_name", "爽快 · 女声")
+    var backend by prefOption("tts_backend", BACKEND_MOFA)
+    var doubaoCookie by prefOption("tts_doubao_cookie", "")
+    var doubaoSpeaker by prefOption("tts_doubao_speaker", "zh_female_shuangkuai_emo_v3_wvae_bigtts")
+    var doubaoSpeakerName by prefOption("tts_doubao_speaker_name", "爽快 · 女声")
+
+    /** AI 回复是否带语音（AI 回复配置页与自动回复共用）。 */
+    var voiceReplyEnabled by prefOption("ai_reply_tts_enabled", true)
 
     /** 入口一: 长按聊天消息气泡的菜单 */
     private var entryBubble by prefOption("tts_entry_bubble", false)
