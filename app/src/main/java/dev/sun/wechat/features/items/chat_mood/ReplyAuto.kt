@@ -74,7 +74,7 @@ object ReplyAuto {
         }
         jobs[key] = scope.launch {
             pending += key
-            notify()
+            notifyRefresh()
             try {
                 delay(600) // 等这一批消息都绑定完，再读历史
                 val model = ReplyConfig.resolveModel()?.third
@@ -102,7 +102,7 @@ object ReplyAuto {
                 failures[key] = e.message ?: "生成失败"
             } finally {
                 pending -= key
-                notify()
+                notifyRefresh()
             }
         }
     }
@@ -115,7 +115,7 @@ object ReplyAuto {
         failures.clear()
         talkers.clear()
         latestByTalker.clear()
-        notify()
+        notifyRefresh()
     }
 
     /** 找回失败条目的 talker，供卡片点击重试用。 */
@@ -140,7 +140,7 @@ object ReplyAuto {
         }
     }
 
-    private fun notify() {
+    private fun notifyRefresh() {
         onRefresh?.invoke()
     }
 }
