@@ -87,6 +87,7 @@ import dev.sun.wechat.ui.content.FloatingBottomBarDefaults
 import dev.sun.wechat.ui.content.m3.BaseWidget
 import dev.sun.wechat.ui.content.m3.ExpressiveCollapsingTopAppBar
 import dev.sun.wechat.ui.content.m3.SwitchWidget
+import dev.sun.wechat.ui.content.m3.ExpressiveBackButton
 import dev.sun.wechat.ui.content.m3AppBarBlur
 import dev.sun.wechat.ui.content.m3AppBarColor
 import dev.sun.wechat.ui.content.rememberMaterial3BlurBackdrop
@@ -94,7 +95,6 @@ import dev.sun.wechat.ui.navigation.LocalNavigator
 import dev.sun.wechat.ui.navigation.Navigator
 import dev.sun.wechat.ui.navigation.rememberM3NavEffects
 import dev.sun.wechat.ui.utils.theme.ModuleTheme
-import dev.sun.wechat.ui.content.miuix.MiuixSettingsContent
 import dev.sun.wechat.ui.utils.theme.MiuixModuleTheme
 import dev.sun.wechat.ui.utils.theme.SettingsUiEngine
 import dev.sun.wechat.ui.utils.theme.ThemeSettings
@@ -348,6 +348,7 @@ val CONTENT_BOTTOM_INSET = 88.dp
 @Composable
 fun M3ListScaffold(
     title: String,
+    onBack: (() -> Unit)? = null,
     navigationIcon: @Composable (() -> Unit)? = null,
     content: LazyListScope.() -> Unit,
 ) {
@@ -362,7 +363,13 @@ fun M3ListScaffold(
             ExpressiveCollapsingTopAppBar(
                 modifier = Modifier.m3AppBarBlur(barBackdrop),
                 title = title,
-                navigationIcon = { navigationIcon?.invoke() },
+                navigationIcon = {
+                    if (onBack != null) {
+                        ExpressiveBackButton(onClick = onBack)
+                    } else {
+                        navigationIcon?.invoke()
+                    }
+                },
                 scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = barBackdrop.m3AppBarColor(),

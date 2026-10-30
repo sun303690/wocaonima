@@ -75,10 +75,19 @@ fun IntNumberPickerWidget(
         SliderState(
             value = value.toFloat(),
             steps = stepsCount,
-            trackRange = startInt.toFloat()..endInt.toFloat()
+            valueRange = startInt.toFloat()..endInt.toFloat()
         )
     }
     sliderState.value = value.toFloat()
+    sliderState.onValueChange = { newValue ->
+        val intValue = newValue.roundToInt()
+        if (intValue != lastIntValue) {
+            if (stepSize == 0) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            else haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+            lastIntValue = intValue
+            onValueChange(intValue)
+        }
+    }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -123,15 +132,6 @@ fun IntNumberPickerWidget(
         ) {
             Slider(
                 state = sliderState,
-                onValueChange = {
-                    val intValue = it.roundToInt()
-                    if (intValue != lastIntValue) {
-                        if (stepSize == 0) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        else haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                        lastIntValue = intValue
-                        onValueChange(intValue)
-                    }
-                },
                 enabled = enabled,
                 modifier = Modifier.weight(1f),
                 interactionSource = interactionSource,

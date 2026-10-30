@@ -746,8 +746,9 @@ private fun HsvSlider(
     onValueChange: (Float) -> Unit,
     valueRange: ClosedFloatingPointRange<Float>,
 ) {
-    val sliderState = remember(valueRange) { SliderState(value = value, trackRange = valueRange) }
+    val sliderState = remember(valueRange) { SliderState(value = value, valueRange = valueRange) }
     sliderState.value = value
+    sliderState.onValueChange = onValueChange
 
     Column {
         Text(
@@ -757,7 +758,6 @@ private fun HsvSlider(
         )
         Slider(
             state = sliderState,
-            onValueChange = onValueChange,
         )
     }
 }
