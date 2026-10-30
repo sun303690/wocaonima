@@ -106,7 +106,7 @@ private fun ExtensionsRoot(autoPackId: String?, autoDownload: Boolean, onFinish:
 
     M3ListScaffold(
         title = stringResource(R.string.extensions_screen_title),
-        navigationIcon = { MiuixBackButton(onClick = onFinish) },
+        onBack = onFinish,
     ) {
         for (pack in ExtensionPacks.packs.filter(ExtensionPack::isSupported)) {
             item(key = pack.id) { PackGroup(pack) }

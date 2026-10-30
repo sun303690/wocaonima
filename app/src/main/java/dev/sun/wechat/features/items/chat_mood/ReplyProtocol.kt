@@ -1,29 +1,24 @@
 package dev.sun.wechat.features.items.chat_mood
 
-import dev.sun.wechat.utils.WeLogger
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.IOException
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.concurrent.TimeUnit
 
-/** 回复生成协议（移植自 Yanwai ReplyProtocol + ReplyHttpClient）。 */
+/**
+ * 回复生成协议（移植自 Yanwai ReplyProtocol）：只负责拼提示词、解析模型输出的 JSON。
+ * 真正的模型调用走 WeAgent 的模型路由（见 [ReplyHttpClient]），不再自己拼 HTTP 请求，
+ * 因此 OpenAI / Responses / Anthropic / Gemini 等服务商都能直接工作。
+ */
 object ReplyProtocol {
+
+    /** 一次调用的系统提示与用户输入。 */
+    data class Prompts(val system: String, val user: String)
 
     // ==================== 帮我回 ====================
 
-    fun buildReplyPayload(
-        model: String, messages: List<ContextMessage>, draft: String, direction: String,
+    fun buildReplyPrompts(
+        messages: List<ContextMessage>, draft: String, direction: String,
         knowledge: String, relationship: ReplyRelationship, customRelationship: String,
-    ): JSONObject {
+    ): Prompts {
         val instructions = """
             ${ContactBackground.GUIDANCE}
             你是言外的聊天回复助手。结合当前整段对话，替"我"拟本轮可依次发送的自然短消息。
@@ -40,20 +35,8 @@ object ReplyProtocol {
         """.trimIndent()
 
         val evidence = buildReplyEvidence(messages, draft, direction, relationship, customRelationship)
-        return JSONObject().apply {
-            put("model", model)
-            put("stream", false)
-            put("messages", JSONArray().apply {
-                put(JSONObject().apply {
-                    put("role", "system")
-                    put("content", "$instructions\n\n$knowledge")
-                })
-                put(JSONObject().apply {
-                    put("role", "user")
-                    put("content", evidence.toString())
-                })
-            })
-        }
+        val system = if (knowledge.isBlank()) instructions else "$instructions\n\n$knowledge"
+        return Prompts(system, evidence.toString())
     }
 
     private fun buildReplyEvidence(
@@ -76,15 +59,8 @@ object ReplyProtocol {
         }
     }
 
-    fun parseReply(body: String): ReplySuggestion {
-        val root = JSONObject(body)
-        check(!root.has("error")) { "模型返回错误" }
-        val choice = root.optJSONArray("choices")?.optJSONObject(0)
-            ?: throw IllegalStateException("模型响应格式异常")
-        val content = choice.optJSONObject("message")?.optString("content", "")
-            ?.trim()?.removePrefix("```json")?.removePrefix("```")?.removeSuffix("```")?.trim()
-            ?: throw IllegalStateException("模型未返回内容")
-        val result = JSONObject(content)
+    fun parseReplyText(content: String): ReplySuggestion {
+        val result = JSONObject(cleanJson(content))
         val replies = result.optJSONArray("replies")
         val parts = if (replies != null && replies.length() in 1..6) {
             (0 until replies.length()).map { replies.getString(it).trim() }
@@ -98,10 +74,10 @@ object ReplyProtocol {
 
     // ==================== 找话题 ====================
 
-    fun buildTopicPayload(
-        model: String, messages: List<ContextMessage>, draft: String, notes: String,
+    fun buildTopicPrompts(
+        messages: List<ContextMessage>, draft: String, notes: String,
         relationship: ReplyRelationship, customRelationship: String,
-    ): JSONObject {
+    ): Prompts {
         val instructions = """
             你是言外的找话题助手。当前对话可能陷入僵局，你需要帮"我"找几个新话题。
             话题要自然、贴近双方关系和最近聊天内容，不突兀、不生硬。
@@ -110,39 +86,21 @@ object ReplyProtocol {
             最多 3 个话题。不输出思考过程或 Markdown。
         """.trimIndent()
 
-        return JSONObject().apply {
-            put("model", model)
-            put("stream", false)
-            put("messages", JSONArray().apply {
-                put(JSONObject().apply {
-                    put("role", "system")
-                    put("content", instructions)
-                })
-                put(JSONObject().apply {
-                    put("role", "user")
-                    put("content", JSONObject().apply {
-                        put("messages", JSONArray(messages.map { msg ->
-                            JSONObject().apply { put("speaker", msg.speaker); put("text", msg.text) }
-                        }))
-                        put("draft", draft)
-                        put("notes", notes)
-                        put("relationship", relationship.displayLabel(customRelationship))
-                    }.toString())
-                })
-            })
+        val evidence = JSONObject().apply {
+            put("messages", JSONArray(messages.map { msg ->
+                JSONObject().apply { put("speaker", msg.speaker); put("text", msg.text) }
+            }))
+            put("draft", draft)
+            put("notes", notes)
+            put("relationship", relationship.displayLabel(customRelationship))
         }
+        return Prompts(instructions, evidence.toString())
     }
 
     data class TopicSuggestion(val title: String, val text: String, val why: String)
 
-    fun parseTopics(body: String): List<TopicSuggestion> {
-        val root = JSONObject(body)
-        val choice = root.optJSONArray("choices")?.optJSONObject(0)
-            ?: throw IllegalStateException("模型响应格式异常")
-        val content = choice.optJSONObject("message")?.optString("content", "")
-            ?.trim()?.removePrefix("```json")?.removePrefix("```")?.removeSuffix("```")?.trim()
-            ?: throw IllegalStateException("模型未返回内容")
-        val result = JSONObject(content)
+    fun parseTopicsText(content: String): List<TopicSuggestion> {
+        val result = JSONObject(cleanJson(content))
         val topics = result.optJSONArray("topics")
             ?: throw IllegalStateException("模型未返回话题")
         return (0 until minOf(topics.length(), 3)).map { i ->
@@ -153,5 +111,14 @@ object ReplyProtocol {
                 why = t.optString("why", ""),
             )
         }
+    }
+
+    /** 去掉 ```json 围栏和 JSON 之外的寒暄。 */
+    private fun cleanJson(raw: String): String {
+        val trimmed = raw.trim()
+        val start = trimmed.indexOf('{')
+        val end = trimmed.lastIndexOf('}')
+        if (start >= 0 && end > start) return trimmed.substring(start, end + 1)
+        return trimmed.removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
     }
 }

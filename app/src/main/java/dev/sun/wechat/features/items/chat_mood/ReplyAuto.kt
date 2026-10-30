@@ -77,14 +77,11 @@ object ReplyAuto {
             notifyRefresh()
             try {
                 delay(600) // 等这一批消息都绑定完，再读历史
-                val model = ReplyConfig.resolveModel()?.third
-                    ?: throw IllegalStateException("未选择回复模型，请在情绪分析设置里选择")
                 val limit = KvStore.getStringOrDef(LIMIT_KEY, "50").toIntOrNull() ?: 50
                 val page = withContext(Dispatchers.IO) { ReplyHistory.load(talker, limit) }
                 if (page.messages.isEmpty()) throw IllegalStateException("没读到文字消息")
                 val identity = ReplyStorage.load(talker)
-                val payload = ReplyProtocol.buildReplyPayload(
-                    model = model,
+                val prompts = ReplyProtocol.buildReplyPrompts(
                     messages = page.messages,
                     draft = "",
                     direction = "",
@@ -92,7 +89,7 @@ object ReplyAuto {
                     relationship = identity.relationship,
                     customRelationship = identity.custom,
                 )
-                val suggestion = ReplyHttpClient.generateReply(payload)
+                val suggestion = ReplyHttpClient.generateReply(prompts.system, prompts.user)
                 results[key] = suggestion
                 trimCache()
             } catch (e: kotlinx.coroutines.CancellationException) {

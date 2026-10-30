@@ -161,6 +161,12 @@ object WeAgentRepository {
     /** First configured model id, if any (used to seed a new session when no default is set). */
     suspend fun firstModelId(): String? = db.modelDao().first()?.id
 
+    /** WeAgent 默认模型（设置里选过且仍存在），没有就回退第一个模型。 */
+    suspend fun resolvedDefaultModelId(): String? {
+        WeAgentSettings.defaultModelId()?.let { id -> if (getModel(id) != null) return id }
+        return firstModelId()
+    }
+
     /** Creates a new session with a placeholder title; returns its id. modelId null = "默认" (follow settings default). */
     suspend fun createSession(modelId: String?, systemPromptId: String?): String {
         val now = nextStamp()

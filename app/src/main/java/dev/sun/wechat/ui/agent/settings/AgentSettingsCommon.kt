@@ -68,42 +68,13 @@ fun AgentSettingsScaffold(
     actions: @Composable RowScope.() -> Unit = {},
     content: LazyListScope.() -> Unit,
 ) {
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
-    val barBackdrop = rememberMaterial3BlurBackdrop()
-    Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .nestedScroll(scrollBehavior.nestedScrollConnection),
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        topBar = {
-            LargeFlexibleTopAppBar(
-                modifier = Modifier.m3AppBarBlur(barBackdrop),
-                title = { Text(title) },
-                navigationIcon = {
-                    if (onBack != null) {
-                        Row {
-                            ExpressiveBackButton(onClick = onBack)
-                            Spacer(modifier = Modifier.size(16.dp))
-                        }
-                    }
-                },
-                actions = actions,
-                scrollBehavior = scrollBehavior,
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = barBackdrop.m3AppBarColor(),
-                    scrolledContainerColor = barBackdrop.m3AppBarColor(),
-                ),
-            )
-        },
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .m3BackdropLayer(barBackdrop),
-            contentPadding = innerPadding,
-            content = content,
-        )
-    }
+    // 统一外壳：Agent 设置二级页与设置内二级页共用同一套标题栏/底色。
+    dev.sun.wechat.ui.content.m3.SettingsScaffold(
+        title = title,
+        onBack = onBack,
+        actions = actions,
+        content = content,
+    )
 }
 
 /**

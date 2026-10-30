@@ -9,6 +9,7 @@ import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.Button
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -76,11 +77,13 @@ object MoodFeature : ClickableFeature() {
             var jevEndpoint by remember { mutableStateOf(MoodTransport.jevEndpoint) }
             var jevModel by remember { mutableStateOf(MoodTransport.jevModel) }
 
-            // 回复模型：从 WeAgent 已配模型中选择（帮我回直接用它）
-            var replyModelId by remember { mutableStateOf(ReplyConfig.modelId) }
             var autoReply by remember { mutableStateOf(ReplyAuto.enabled) }
             val models by remember { WeAgentRepository.observeModels() }
                 .collectAsState(initial = emptyList())
+            var defaultModelId by remember { mutableStateOf<String?>(null) }
+            LaunchedEffect(Unit) { defaultModelId = WeAgentRepository.resolvedDefaultModelId() }
+            val activeModelName = models.firstOrNull { it.id == defaultModelId }
+                ?.let { it.displayName.ifBlank { it.modelIdRemote } }
 
             AlertDialogContent(
                 title = { Text("言外 · 情绪分析 & 帮我回") },
@@ -136,24 +139,12 @@ object MoodFeature : ClickableFeature() {
                         // ===== 帮我回 · 找话题 =====
                         Text("帮我回 · 找话题", style = MiuixTheme.textStyles.title3)
                         Text("回复和话题生成使用 WeAgent 已配置的聊天模型", style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-                        if (models.isNotEmpty()) {
-                            val replyOpts = listOf(DropdownOption("", "（未选择）")) +
-                                models.map { DropdownOption(it.id, "${it.displayName.ifBlank { it.modelIdRemote }} (${it.providerId})") }
-                            // 存的 modelId 已被删除时回退（未选择），避免 MiuixDropDownMenuWidget first{} 崩溃
-                            val effectiveId = if (replyOpts.any { it.value == replyModelId }) replyModelId else ""
-                            if (effectiveId != replyModelId) replyModelId = effectiveId
-                            val selectedLabel = replyOpts.firstOrNull { it.value == effectiveId }?.label ?: "（未选择）"
-                            MiuixDropDownMenuWidget(
-                                title = "回复模型",
-                                description = selectedLabel,
-                                value = effectiveId,
-                                options = replyOpts,
-                                enabled = true,
-                                onValueChange = { replyModelId = it },
-                            )
-                        } else {
-                            Text("暂无已配置的模型，请先在 WeAgent 设置中添加", style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.error)
-                        }
+                        Text(
+                            if (activeModelName != null) "使用 WeAgent 模型：$activeModelName（可在 WeAgent 设置里切换）"
+                            else "尚未在 WeAgent 里配置模型，请先去 WeAgent 设置添加",
+                            style = MiuixTheme.textStyles.footnote1,
+                            color = if (activeModelName != null) MiuixTheme.colorScheme.onSurfaceVariantSummary else MiuixTheme.colorScheme.error,
+                        )
                         MiuixSwitchWidget(
                             title = "对方新消息自动帮我回",
                             checked = autoReply,
@@ -173,7 +164,6 @@ object MoodFeature : ClickableFeature() {
                         MoodTransport.jevKey = jevKey.trim()
                         MoodTransport.jevEndpoint = jevEndpoint.trim()
                         MoodTransport.jevModel = jevModel.trim()
-                        ReplyConfig.modelId = replyModelId
                         ReplyAuto.enabled = autoReply
                         onDismiss()
                     }) { Text(stringResource(R.string.dialog_confirm)) }

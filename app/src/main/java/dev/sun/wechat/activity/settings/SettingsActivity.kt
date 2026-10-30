@@ -349,34 +349,17 @@ val CONTENT_BOTTOM_INSET = 88.dp
 @Composable
 fun M3ListScaffold(
     title: String,
-    navigationIcon: @Composable (() -> Unit)? = null,
+    onBack: (() -> Unit)? = null,
+    actions: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {},
     content: LazyListScope.() -> Unit,
 ) {
-    val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
-    val barBackdrop = rememberMiuixBlurBackdrop()
-    Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .nestedScroll(scrollBehavior.nestedScrollConnection),
-        containerColor = MiuixTheme.colorScheme.surfaceContainer,
-        topBar = {
-            TopAppBar(
-                modifier = Modifier.miuixAppBarBlur(barBackdrop),
-                title = title,
-                navigationIcon = { navigationIcon?.invoke() },
-                scrollBehavior = scrollBehavior,
-                color = barBackdrop.miuixAppBarColor(),
-            )
-        },
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .then(barBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier),
-            contentPadding = innerPadding,
-            content = content,
-        )
-    }
+    // 全 App 二级页统一外壳：大标题 + 圆形返回 + 统一底色/背景图。
+    dev.sun.wechat.ui.content.miuix.MiuixSecondaryScaffold(
+        title = title,
+        onBack = onBack,
+        actions = actions,
+        content = content,
+    )
 }
 
 // ---------------------------------------------------------------------------

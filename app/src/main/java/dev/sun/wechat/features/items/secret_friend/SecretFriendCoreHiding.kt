@@ -260,6 +260,12 @@ object HideConversations : SwitchFeature(), IResolveDex,
         }.getOrNull()
     }
 
+    /** 已持久化的会话行快照数量（诊断用：判断临显时到底有没有行可重建）。 */
+    fun snapshotCount(): Int {
+        if (rowSnapshots.isEmpty()) loadPersistedSnapshots()
+        return rowSnapshots.size
+    }
+
     /**
      * 临时解除/名单变动/关闭开关：用快照重建已删除的密友会话行。不做 isSecret 过滤——
      * 已移出名单的密友其会话行同样要回来（调用方随后按需 removeSecretRows 再隐藏）。

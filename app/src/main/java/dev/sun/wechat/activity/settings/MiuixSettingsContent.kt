@@ -24,6 +24,7 @@ import dev.sun.wechat.activity.self_check.SelfCheckSettingsActivity
 import dev.sun.wechat.ui.utils.theme.AppThemeMode
 import dev.sun.wechat.ui.utils.theme.SettingsUiEngine
 import dev.sun.wechat.ui.content.miuix.MiuixBaseItemContainer
+import dev.sun.wechat.ui.content.miuix.MiuixSettingsPage
 import dev.sun.wechat.ui.utils.theme.PageTransitionAnimation
 import dev.sun.wechat.features.core.BaseFeature
 import dev.sun.wechat.features.core.ClickableFeature
@@ -99,7 +100,7 @@ private fun MiuixHome(
 ) {
     val context = LocalContext.current
     var query by remember { mutableStateOf("") }
-    MiuixPageFrame("WeKit · Miuix", onFinish) {
+    MiuixSettingsPage("WeKit · Miuix", onFinish) {
         item {
             MiuixSearch(query, { query = it }, { search(query) })
             Spacer(Modifier.height(12.dp))
@@ -232,7 +233,7 @@ private fun MiuixAppearancePage(back: () -> Unit) {
         options = SettingsUiEngine.entries.map { engine -> engine.displayName to { ThemeSettings.updateUiEngine(engine) } },
         onDismiss = { showEnginePicker = false },
     )
-    MiuixPageFrame("外观设置", back) {
+    MiuixSettingsPage("外观设置", back) {
         item {
             MiuixSectionTitle("引擎")
             MiuixCard {
@@ -320,7 +321,7 @@ private fun MiuixLogsPage(back: () -> Unit) {
             .distinctBy { it.absolutePath }
             .sortedByDescending { it.lastModified() }
     }
-    MiuixPageFrame("日志中心", back) {
+    MiuixSettingsPage("日志中心", back) {
         item {
             MiuixCard {
                 MiuixAction("主题诊断", "复制当前主题渲染与页面判定状态") {
@@ -347,7 +348,7 @@ private fun MiuixLogsPage(back: () -> Unit) {
 @Composable
 private fun MiuixAboutPage(back: () -> Unit, openLicense: () -> Unit) {
     val context = LocalContext.current
-    MiuixPageFrame("关于", back) {
+    MiuixSettingsPage("关于", back) {
         item {
             MiuixCard {
                 MiuixAction("WeKit", "版本 ${dev.sun.wechat.BuildConfig.VERSION_NAME}") { }
@@ -371,14 +372,14 @@ private fun MiuixLicensePage(back: () -> Unit) {
         "YukiHookAPI / LSPosed APIs · Xposed integration",
         "MMKV · Tencent key-value storage",
     )
-    MiuixPageFrame("开源许可", back) {
+    MiuixSettingsPage("开源许可", back) {
         item { MiuixCard { licenses.forEachIndexed { i, text -> if (i > 0) HorizontalDivider(); MiuixAction(text, "详见项目内许可证与上游仓库") { } } } }
     }
 }
 
 @Composable
 private fun MiuixBackupPage(back: () -> Unit) {
-    MiuixPageFrame("备份与还原", back) {
+    MiuixSettingsPage("备份与还原", back) {
         item {
             val context = LocalContext.current
             MiuixCard {
@@ -417,7 +418,7 @@ private fun MiuixFeatures(
                 it.localizedDescription(context).contains(query, true)
         }
     }
-    MiuixPageFrame("功能", back) {
+    MiuixSettingsPage("功能", back) {
         item { MiuixSearch(query, update, {}); Spacer(Modifier.height(12.dp)) }
         if (searching) {
             if (results.isEmpty()) {
@@ -466,7 +467,7 @@ private fun MiuixCategoryPage(categoryId: String, back: () -> Unit) {
             .distinctBy { it.technicalId }
             .filter { categoryId in it.categoryIds }
     }
-    MiuixPageFrame(title, back) {
+    MiuixSettingsPage(title, back) {
         if (features.isEmpty()) {
             item {
                 MiuixCard {
@@ -580,48 +581,5 @@ private fun MiuixAction(title: String, summary: String, click: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable(onClick = click).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) { Text(title, fontSize = 17.sp, color = MiuixTheme.colorScheme.onSurface); Text(summary, fontSize = 13.sp, color = MiuixTheme.colorScheme.onSurfaceVariantSummary) }
         Text("›", fontSize = 25.sp, color = MiuixTheme.colorScheme.primary)
-    }
-}
-
-@Composable
-private fun MiuixPageFrame(title: String, back: () -> Unit, content: androidx.compose.foundation.lazy.LazyListScope.() -> Unit) {
-    val showWallpaper = ThemeSettings.settingsWallpaper
-    val customPath = ThemeSettings.settingsWallpaperPath
-    val wallpaper = remember(showWallpaper, customPath) {
-        if (!showWallpaper) {
-            null
-        } else {
-            customPath?.let { java.io.File(it) }?.takeIf { it.isFile }
-                ?: dev.sun.wechat.features.items.beautify.ThemePack.active()?.wallpaper()
-        }
-    }
-    Box(Modifier.fillMaxSize().background(MiuixTheme.colorScheme.background).navigationBarsPadding()) {
-        if (wallpaper != null) {
-            coil3.compose.AsyncImage(
-                model = wallpaper,
-                contentDescription = null,
-                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                imageLoader = dev.sun.wechat.ui.content.GlobalImageLoader,
-                modifier = Modifier.fillMaxSize(),
-            )
-            // 压一层底色保证卡片/文字对比度
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(MiuixTheme.colorScheme.background.copy(alpha = 0.94f)),
-            )
-        }
-        val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-        LazyColumn(
-            Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = topInset + 64.dp + 12.dp, bottom = 24.dp),
-            content = content,
-        )
-        Surface(Modifier.fillMaxWidth(), color = MiuixTheme.colorScheme.background.copy(alpha = .95f)) {
-            Row(Modifier.statusBarsPadding().height(64.dp).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("‹", fontSize = 38.sp, modifier = Modifier.clickable(onClick = back).padding(horizontal = 8.dp), color = MiuixTheme.colorScheme.onBackground)
-                Text(title, fontSize = 25.sp, fontWeight = FontWeight.Bold, color = MiuixTheme.colorScheme.onBackground)
-            }
-        }
     }
 }

@@ -1621,23 +1621,13 @@ private fun PageScaffold(
             // 会透出下层（微信界面），看起来就是「背景是透明的」。
             .background(MiuixTheme.colorScheme.background)
     ) {
-        Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = if (onBack != null) "← $title" else title,
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable(enabled = onBack != null) { onBack?.invoke() }
-                        .padding(horizontal = 18.dp, vertical = 16.dp),
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = if (onBack != null) MiuixTheme.colorScheme.primary else titleColor(),
-                )
-                topBarActions()
-            }
+        Column(modifier = Modifier.fillMaxSize()) {
+            // 统一二级页标题栏（与设置内二级页同一套大标题/圆形返回）。
+            dev.sun.wechat.ui.content.miuix.MiuixSecondaryBar(
+                title = title,
+                onBack = onBack,
+                actions = topBarActions,
+            )
             Box(modifier = Modifier.weight(1f)) { content(PaddingValues(0.dp)) }
         }
         if (bottomBar != null) {

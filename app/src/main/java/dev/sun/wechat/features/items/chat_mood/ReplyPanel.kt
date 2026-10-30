@@ -40,7 +40,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
  * 「帮我回 · 找话题」面板（移植自微话助手 ReplyHostUi，改为 WeKit 的 Compose 弹窗）。
  *
  * 只读上下文、只生成建议，复制后由用户自己发送；不写回微信输入框、不自动发消息。
- * 模型走 WeAgent 已配置模型（ReplyConfig），身份/背景/角色库存本地 KvStore。
+ * 模型走 WeAgent（默认模型），身份/背景/角色库存本地 KvStore。
  */
 object ReplyPanel {
 
@@ -105,10 +105,7 @@ object ReplyPanel {
                     if (page.messages.isEmpty()) {
                         throw IllegalStateException("没读到文字消息，请先打开该聊天页滚一下再试")
                     }
-                    val model = ReplyConfig.resolveModel()?.third
-                        ?: throw IllegalStateException("请先在设置里选择回复模型")
-                    val payload = ReplyProtocol.buildReplyPayload(
-                        model = model,
+                    val prompts = ReplyProtocol.buildReplyPrompts(
                         messages = page.messages,
                         draft = page.draft,
                         direction = direction,
@@ -116,7 +113,7 @@ object ReplyPanel {
                         relationship = relationship,
                         customRelationship = customText.trim(),
                     )
-                    replies = ReplyHttpClient.generateReply(payload)
+                    replies = ReplyHttpClient.generateReply(prompts.system, prompts.user)
                     topics = emptyList()
                 } catch (e: Exception) {
                     if (e is kotlinx.coroutines.CancellationException) throw e
@@ -139,17 +136,14 @@ object ReplyPanel {
                     if (page.messages.isEmpty()) {
                         throw IllegalStateException("没读到文字消息，请先打开该聊天页滚一下再试")
                     }
-                    val model = ReplyConfig.resolveModel()?.third
-                        ?: throw IllegalStateException("请先在设置里选择回复模型")
-                    val payload = ReplyProtocol.buildTopicPayload(
-                        model = model,
+                    val prompts = ReplyProtocol.buildTopicPrompts(
                         messages = page.messages,
                         draft = page.draft,
                         notes = direction,
                         relationship = relationship,
                         customRelationship = customText.trim(),
                     )
-                    topics = ReplyHttpClient.findTopics(payload)
+                    topics = ReplyHttpClient.findTopics(prompts.system, prompts.user)
                     replies = null
                 } catch (e: Exception) {
                     if (e is kotlinx.coroutines.CancellationException) throw e

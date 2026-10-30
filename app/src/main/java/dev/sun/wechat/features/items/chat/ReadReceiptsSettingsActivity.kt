@@ -376,7 +376,7 @@ private fun ReadReceiptsHomeScreen(
 
     M3ListScaffold(
         title = stringResource(R.string.feature_read_receipts_name),
-        navigationIcon = { MiuixBackButton(onClick = onFinish) },
+        onBack = onFinish,
     ) {
         item {
             MiuixSegmentedColumn(title = stringResource(R.string.read_receipts_section_runtime)) {
@@ -1210,7 +1210,7 @@ private fun BrowserTunnelScreen(
 private fun DetailScaffold(@StringRes title: Int, onBack: () -> Unit, content: androidx.compose.foundation.lazy.LazyListScope.() -> Unit) {
     M3ListScaffold(
         title = stringResource(title),
-        navigationIcon = { MiuixBackButton(onClick = onBack) },
+        onBack = onBack,
         content = content,
     )
 }

@@ -228,10 +228,21 @@ object SecretFriendState {
         KvStore.putLong(KEY_TEMP_UNTIL, until)
         WeLogger.i(TAG, "temporarily showing secret friends for $minutes min")
         showToastIfEnabled(context, toastTempShown)
-        // 方案1：隐藏靠 SQL 过滤(getWxIds)，不删行；临显时 getWxIds 返回空 → 查询放行→显示。
-        // 无需 restoreHiddenRows(insert 在 8.0.78 会失败)。
+        // 隐藏靠 SQL 过滤(getWxIds)，行通常还在库里；但历史版本（以及 delChatContact 路径）
+        // 曾把 rconversation 行物理删掉，只留快照——那种情况下 SQL 放行也查不到行，
+        // 主页列表毫无变化，表现就是「三击标题没反应」。
+        // 因此临显时先用快照把行重建（REPLACE 写入会触发微信 DB 观察者重建列表），
+        // 再刷新一次；两者都是幂等的，行还在时 REPLACE 只是重写同一行。
+        val restored = runCatching { HideConversations.restoreHiddenRows() }
+            .onFailure { WeLogger.w(TAG, "restoreHiddenRows on temp-show failed", it) }
+            .getOrDefault(0)
+        WeLogger.i(TAG, "temp-show restore: restored=$restored snapshots=${HideConversations.snapshotCount()}")
         WeConversationApi.reloadConversations()
         scheduleTempExpiry(until)
+        // 列表是异步查询 + 分段刷新，补一次稍后的 reload 兜住「查询早于事务提交」的竞态。
+        mainHandler.postDelayed({
+            if (isTemporarilyShown()) WeConversationApi.reloadConversations()
+        }, 600L)
     }
 
     /**

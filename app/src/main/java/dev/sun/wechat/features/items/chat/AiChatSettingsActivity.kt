@@ -51,11 +51,14 @@ class AiChatSettingsActivity : ComponentActivity() {
                 // MiuixTheme 没有根 Surface，这里不铺底色就会透出下层界面。
                 .background(MiuixTheme.colorScheme.background)
         ) {
-            Row(Modifier.fillMaxWidth().padding(start = 6.dp, end = 8.dp, top = 20.dp)) {
-                Button(onClick = { finish() }) { Text("‹", style = MiuixTheme.textStyles.headline1) }
-                Spacer(Modifier.weight(1f))
-                Button(onClick = { AiChat.clearContext(); Toast.makeText(this@AiChatSettingsActivity, "AI 上下文已清除", Toast.LENGTH_SHORT).show() }) { Text("•••") }
-            }
+            // 统一二级页标题栏。
+            dev.sun.wechat.ui.content.miuix.MiuixSecondaryBar(
+                title = "AI 设置",
+                onBack = { finish() },
+                actions = {
+                    Button(onClick = { AiChat.clearContext(); Toast.makeText(this@AiChatSettingsActivity, "AI 上下文已清除", Toast.LENGTH_SHORT).show() }) { Text("•••") }
+                },
+            )
             TabRow(tabs = tabs, selectedTabIndex = tab, onTabSelected = { tab = it })
             when (tab) {
                 0 -> ReplyPage()

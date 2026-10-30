@@ -44,7 +44,6 @@ import dev.sun.wechat.features.api.core.WeDatabaseApi
 import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.features.api.core.models.MessageInfo
 import dev.sun.wechat.features.api.ui.WeChatMessageContextMenuApi
-import dev.sun.wechat.features.items.chat_mood.ReplyConfig
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
@@ -329,10 +328,8 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
     private suspend fun generateCandidates(talker: String, content: String, styleName: String, promptOverride: String? = null): List<String> =
         withContext(Dispatchers.IO) {
             try {
-                // 优先用情绪分析 UI 里选的回复模型；未选或已删时回退 WeAgent 默认模型
-                val modelId = ReplyConfig.modelId.takeIf { it.isNotBlank() && WeAgentRepository.getModel(it) != null }
-                    ?: WeAgentRepository.firstModelId()
-                    ?: return@withContext emptyList()
+                // 直接用 WeAgent 的默认模型（未设置则回退第一个模型）
+                val modelId = WeAgentRepository.resolvedDefaultModelId() ?: return@withContext emptyList()
                 val model = WeAgentRepository.getModel(modelId) ?: return@withContext emptyList()
                 val provider = WeAgentRepository.getModelProvider(model.providerId) ?: return@withContext emptyList()
                 val client = ModelProviderManager.clientFor(provider)

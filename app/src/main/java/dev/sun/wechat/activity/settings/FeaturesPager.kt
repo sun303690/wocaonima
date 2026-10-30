@@ -262,7 +262,7 @@ fun CategoryDetailScreen(categoryId: String, onBack: () -> Unit) {
 
     M3ListScaffold(
         title = stringResource(featureCategoryTitleRes(categoryId)),
-        navigationIcon = { MiuixBackButton(onClick = onBack) },
+        onBack = onBack,
     ) {
         if (items.isEmpty()) {
             item {

@@ -22,16 +22,29 @@ object AgentLlm {
      * 用法与 AiSmartReply 完全一致，只是不挂任何工具。
      */
     suspend fun complete(prompt: String): String {
-        val modelId = WeAgentRepository.firstModelId()
+        val modelId = WeAgentRepository.resolvedDefaultModelId()
             ?: throw IllegalStateException("未在 WeAgent 中配置模型")
+        return completeWith(modelId, prompt)
+    }
+
+    /** 用指定模型做一次补全（按服务商类型自动选择线上/本地适配器）。 */
+    suspend fun completeWith(modelId: String, prompt: String, system: String = ""): String =
+        completeWithPrompts(modelId, system.takeIf { it.isNotBlank() }, prompt)
+
+    /** 带系统提示的单轮补全；system 为 null/空时只发用户消息。 */
+    suspend fun completeWithPrompts(modelId: String, system: String?, user: String): String {
         val model = WeAgentRepository.getModel(modelId)
             ?: throw IllegalStateException("模型 $modelId 不存在，请重新选择")
         val provider = WeAgentRepository.getModelProvider(model.providerId)
             ?: throw IllegalStateException("模型未绑定服务商")
         val client = ModelProviderManager.clientFor(provider)
+        val messages = buildList {
+            if (!system.isNullOrBlank()) add(LlmMessage(LlmRole.SYSTEM, system))
+            add(LlmMessage(LlmRole.USER, user))
+        }
         val request = ModelProviderManager.buildRequest(
             model = model,
-            messages = listOf(LlmMessage(LlmRole.USER, prompt)),
+            messages = messages,
             tools = emptyList(),
             stream = true,
         )
