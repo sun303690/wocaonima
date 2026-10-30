@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -67,23 +68,12 @@ import dev.sun.wechat.utils.AudioUtils
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToast
 import dev.sun.wechat.utils.fs.KnownPaths
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Response
-import okhttp3.WebSocket
-import okhttp3.WebSocketListener
-import okio.ByteString
 import org.json.JSONArray
 import org.json.JSONObject
 import kotlinx.coroutines.delay
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
-import java.util.UUID
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
-import kotlin.random.Random
 
 object TextToSpeech :
     ClickableFeature(),
@@ -101,18 +91,8 @@ object TextToSpeech :
     const val BACKEND_MOFA = 0
     const val BACKEND_DOUBAO = 1
 
-    // 豆包网页端逆向协议: 鉴权在 WebSocket 握手阶段完成, 依赖登录态 Cookie
-    private const val DOUBAO_WS = "wss://ws-samantha.doubao.com/samantha/audio/tts"
-    private const val DOUBAO_ORIGIN = "https://www.doubao.com"
-    private const val DOUBAO_UA =
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    private const val DOUBAO_AID = 497858
-    private const val DOUBAO_VERSION_CODE = 20800
-    private const val DOUBAO_PC_VERSION = "2.46.3"
-
-    /** 服务端不保证主动关闭连接, 静默这么久即视为合成结束 */
-    private const val DOUBAO_IDLE_GAP_MS = 2500L
-    private const val DOUBAO_MAX_WAIT_MS = 30000L
+    // 豆包网页端协议 (Samantha 音频通道) 整体下沉到 DoubaoSamanthaTts:
+    // 握手期鉴权、参数拼接、音频接收、30 秒超时、8 秒节流与 180 秒风控冷却都在那边
 
     var apiKey by prefOption("tts_api_key", "")
     var selectedVoice by prefOption("tts_voice_id", "琅琊榜-梅长苏")
@@ -147,24 +127,13 @@ object TextToSpeech :
 
     data class DoubaoVoice(val id: String, val label: String)
 
-    /** 离线兜底表：这些 id 都不在豆包推荐接口里，所以只有名字，没有头像和分类标签。 */
-    val DOUBAO_VOICES = listOf(
-        DoubaoVoice("zh_female_shuangkuai_emo_v3_wvae_bigtts", "爽快 · 女声"),
-        DoubaoVoice("zh_female_tianmei_conversation_v4_wvae_bigtts", "甜美 · 女声"),
-        DoubaoVoice("zh_female_qingche_moon_bigtts", "清澈 · 女声"),
-        DoubaoVoice("zh_male_yangguang_conversation_v4_wvae_bigtts", "阳光 · 男声"),
-        DoubaoVoice("zh_male_chenwen_moon_bigtts", "沉稳 · 男声"),
-        DoubaoVoice("zh_male_rap_mars_bigtts", "说唱 · 男声"),
-        DoubaoVoice("en_female_sarah_conversation_bigtts", "Sarah · 英文女声"),
-        DoubaoVoice("en_male_adam_conversation_bigtts", "Adam · 英文男声"),
-    )
-
-    private val doubaoClient by lazy {
-        OkHttpClient.Builder()
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(0, TimeUnit.SECONDS)
-            .pingInterval(10, TimeUnit.SECONDS)
-            .build()
+    /**
+     * 内置 9 个音色：由 [DoubaoSamanthaTts.VOICES] 派生，和设置页试听列表、WebSocket 客户端
+     * 共用同一份表，避免音色 id 两处漂移。这些 id 都不在豆包推荐接口里，所以只有名字，
+     * 没有头像和分类标签。
+     */
+    val DOUBAO_VOICES: List<DoubaoVoice> = DoubaoSamanthaTts.VOICES.map { (id, label) ->
+        DoubaoVoice(id, label)
     }
 
     val EMOTIONS = listOf(
@@ -531,10 +500,78 @@ object TextToSpeech :
         showComposeDialog(context) {
             var apiKeyState by remember { mutableStateOf(apiKey) }
             var cookieState by remember { mutableStateOf(doubaoCookie) }
+            var doubaoVoiceState by remember { mutableStateOf(doubaoSpeaker) }
+            var auditioningId by remember { mutableStateOf<String?>(null) }
+            var playingId by remember { mutableStateOf<String?>(null) }
+            var player by remember { mutableStateOf<MediaPlayer?>(null) }
+
+            DisposableEffect(Unit) {
+                onDispose {
+                    runCatching { player?.stop() }
+                    runCatching { player?.release() }
+                    player = null
+                }
+            }
+
+            fun stopAudition() {
+                runCatching { player?.stop() }
+                runCatching { player?.release() }
+                player = null
+                playingId = null
+            }
+
+            fun pickDoubaoVoice(id: String, label: String) {
+                doubaoVoiceState = id
+                doubaoSpeaker = id
+                doubaoSpeakerName = label
+            }
+
+            /** 试听：8 秒最小间隔 + 180 秒风控冷却由 DoubaoSamanthaTts 统一管，错误文案带剩余秒数。 */
+            fun auditionDoubaoVoice(id: String) {
+                if (playingId == id) {
+                    stopAudition()
+                    return
+                }
+                if (cookieState.isBlank()) {
+                    showToast(context, "请先填写豆包 Cookie")
+                    return
+                }
+                stopAudition()
+                auditioningId = id
+                DoubaoSamanthaTts.synthesize(
+                    DoubaoSamanthaTts.AUDITION_TEXT,
+                    id,
+                    cookieState,
+                ) { path, error ->
+                    auditioningId = null
+                    if (path == null) {
+                        showToast(context, error)
+                        return@synthesize
+                    }
+                    val next = MediaPlayer()
+                    player = next
+                    playingId = id
+                    next.setOnPreparedListener { it.start() }
+                    next.setOnCompletionListener { playingId = null }
+                    next.setOnErrorListener { _, _, _ ->
+                        playingId = null
+                        showToast(context, "试听播放失败，音频文件可能已损坏")
+                        true
+                    }
+                    runCatching {
+                        next.setDataSource(path)
+                        next.prepareAsync()
+                    }.onFailure {
+                        playingId = null
+                        showToast(context, "试听播放失败：${it.message}")
+                    }
+                }
+            }
+
             AlertDialogContent(
                 title = { Text("文字转语音设置") },
                 text = {
-                    Column {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
                         SegmentedColumn(title = "配音魔方") {
                             item {
                                 TextFieldDialogWidget(
@@ -574,7 +611,47 @@ object TextToSpeech :
                                     password = true,
                                 )
                             }
+                            // 9 个内置音色：点整行选中，点右侧图标用当前 Cookie 现场合成一句试听
+                            DoubaoSamanthaTts.VOICES.forEach { (id, label) ->
+                                item(key = id) {
+                                    BaseWidget(
+                                        iconPlaceholder = false,
+                                        title = label,
+                                        description = if (doubaoVoiceState == id) "当前音色 · $id" else id,
+                                        selected = doubaoVoiceState == id,
+                                        enabled = auditioningId != id,
+                                        onClick = { pickDoubaoVoice(id, label) },
+                                        onTrailingClick = { auditionDoubaoVoice(id) },
+                                        trailingContent = {
+                                            when {
+                                                auditioningId == id -> CircularProgressIndicator(
+                                                    modifier = Modifier.size(18.dp),
+                                                    strokeWidth = 2.dp,
+                                                )
+
+                                                playingId == id -> Icon(
+                                                    MaterialSymbols.Outlined.Pause,
+                                                    contentDescription = "停止试听",
+                                                    modifier = Modifier.size(20.dp),
+                                                )
+
+                                                else -> Icon(
+                                                    MaterialSymbols.Outlined.Play_arrow,
+                                                    contentDescription = "试听",
+                                                    modifier = Modifier.size(20.dp),
+                                                )
+                                            }
+                                        },
+                                    )
+                                }
+                            }
                         }
+                        Text(
+                            "9 个音色走豆包网页端 Samantha 通道，逐个试听按 8 秒最小间隔排队；" +
+                                "约 6 次快速请求会触发服务端风控 (710022002)，届时自动冷却 180 秒",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                         Text(
                             "在已登录的 doubao.com 开发者工具 (Application → Cookies) 中复制三个字段, 形如 sessionid=…; sid_guard=…; uid_tt=…, 有效期约 30 天",
                             style = MaterialTheme.typography.bodySmall,
@@ -725,100 +802,20 @@ object TextToSpeech :
         }.start()
     }
 
-    private fun doubaoWsUrl(speaker: String): String {
-        // 伪装成一次全新的网页会话: 三个身份字段每次随机
-        val dev = (7_400_000_000_000_000_000L + Random.nextLong(999_999_999_999_999_999L)).toString()
-        return "$DOUBAO_WS?speaker=$speaker&format=aac&speech_rate=0&pitch=0" +
-            "&version_code=$DOUBAO_VERSION_CODE&language=zh&device_platform=web" +
-            "&aid=$DOUBAO_AID&real_aid=$DOUBAO_AID&pkg_type=release_version" +
-            "&device_id=$dev&pc_version=$DOUBAO_PC_VERSION&web_id=$dev&tea_uuid=$dev" +
-            "&region=&sys_region=&samantha_web=1&use-olympus-account=1&web_tab_id=${UUID.randomUUID()}"
-    }
-
+    /**
+     * 豆包合成：转交 [DoubaoSamanthaTts]（Samantha WebSocket 通道，替代旧 HTTP / 裸 WS 实现）。
+     * 签名与旧实现完全一致，[VoiceReply]、[AiReplyConfigActivity]、[AiReplyCandidates] 等调用方无需改动。
+     */
     fun generateVoiceDoubao(
         text: String,
         speaker: String,
         cookie: String = doubaoCookie,
         cb: (String?, String) -> Unit,
     ) {
-        Thread {
-            val audio = ByteArrayOutputStream()
-            val closed = CountDownLatch(1)
-            var error = ""
-
-            val request = Request.Builder()
-                .url(doubaoWsUrl(speaker))
-                .header("Origin", DOUBAO_ORIGIN)
-                .header("User-Agent", DOUBAO_UA)
-                .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
-                .header("Cache-Control", "no-cache")
-                .header("Pragma", "no-cache")
-                .header("Cookie", cookie)
-                .build()
-
-            val ws = doubaoClient.newWebSocket(request, object : WebSocketListener() {
-                override fun onOpen(webSocket: WebSocket, response: Response) {
-                    webSocket.send(JSONObject().put("event", "text").put("text", text).toString())
-                    webSocket.send(JSONObject().put("event", "finish").toString())
-                }
-
-                override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
-                    synchronized(audio) { audio.write(bytes.toByteArray()) }
-                }
-
-                override fun onMessage(webSocket: WebSocket, raw: String) {
-                    val obj = runCatching { JSONObject(raw) }.getOrNull() ?: return
-                    val code = obj.optInt("code", 0)
-                    if (code != 0) {
-                        error = "code=$code ${obj.optString("message")}"
-                        webSocket.cancel()
-                        closed.countDown()
-                    }
-                }
-
-                override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
-                    closed.countDown()
-                }
-
-                override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                    error = t.message ?: "websocket failure"
-                    closed.countDown()
-                }
-            })
-
-            // 服务端不保证主动关闭连接, 因此以「不再收到数据」作为结束信号
-            val deadline = System.currentTimeMillis() + DOUBAO_MAX_WAIT_MS
-            var received = 0
-            var lastGrowth = System.currentTimeMillis()
-            while (System.currentTimeMillis() < deadline) {
-                if (closed.await(500, TimeUnit.MILLISECONDS)) break
-                val size = synchronized(audio) { audio.size() }
-                if (size != received) {
-                    received = size
-                    lastGrowth = System.currentTimeMillis()
-                } else if (size > 0 && System.currentTimeMillis() - lastGrowth > DOUBAO_IDLE_GAP_MS) {
-                    break
-                }
-            }
-            ws.cancel()
-
-            val bytes = synchronized(audio) { audio.toByteArray() }
-            var path: String? = null
-            if (bytes.isEmpty()) {
-                if (error.isEmpty()) error = "未收到音频数据"
-            } else {
-                val dir = File(KnownPaths.moduleCache.toFile(), "wcs_tts").apply { mkdirs() }
-                val dest = File(dir, "doubao_${System.currentTimeMillis()}.aac")
-                dest.writeBytes(bytes)
-                path = dest.absolutePath
-                lastWavPath = path
-            }
-            if (error.isNotEmpty()) WeLogger.w(TAG, "doubao tts failed: $error")
-
-            val result = path
-            val reason = error
-            mh.post { cb(result, reason) }
-        }.start()
+        DoubaoSamanthaTts.synthesize(text, speaker, cookie) { path, error ->
+            if (path != null) lastWavPath = path
+            cb(path, error)
+        }
     }
 
     fun sendVoiceTo(talker: String, wavPath: String, cb: (Boolean) -> Unit) {
