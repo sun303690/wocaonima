@@ -20,7 +20,8 @@ object MessageSniffer {
     private val lifecycle = object : WeChatMessageViewApi.IMessageViewLifecycleListener {
         override fun onMessageViewAttached(view: View, message: MessageInfo) {
             try {
-                if (!MoodAnalyzer.enabled) return
+                // 只开「自动帮我回」时也要跑，否则消息下方不会有回复建议卡片
+                if (!MoodAnalyzer.enabled && !ReplyAuto.enabled) return
                 if (message.type?.isText != true) return  // 非纯文字(图片/语音/文件/视频/链接/引用)不参与
                 val talker = message.talker
                 val text = MessagePolicy.textOrNull(message.humanReadableRepr) ?: return  // 空/超长不算正确文字
@@ -43,6 +44,8 @@ object MessageSniffer {
                 )
                 MoodAnalyzer.submit(input) { view.isShown }
                 BubbleDecorator.show(view, input)
+                // 自动帮我回：只对对方的新消息触发，生成结果画在同一张卡片里
+                ReplyAuto.request(talker, input.key)
             } catch (t: Throwable) {
                 WeLogger.e(TAG, "onMessageViewAttached failed", t)
             }

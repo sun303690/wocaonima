@@ -28,6 +28,7 @@ import dev.sun.wechat.features.items.chat.AiSmartReply
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.miuix.DropdownOption
 import dev.sun.wechat.ui.content.miuix.MiuixDropDownMenuWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
 
@@ -49,6 +50,10 @@ object MoodFeature : ClickableFeature() {
         // 情绪分析入口：＋/发送键长按菜单条目 + 帮我回长按消息菜单
         WeChatInputBarMenuApi.addProvider(ChatMoodHostUi)
         WeChatMessageContextMenuApi.addProvider(AiSmartReply)
+        // 帮我回 · 找话题入口（长按消息 / 输入栏 ＋ 菜单）
+        WeChatInputBarMenuApi.addProvider(ReplyEntry)
+        WeChatMessageContextMenuApi.addProvider(ReplyEntry)
+        ReplyHistory.ensureSubscribed()
         WeLogger.i(TAG, "情绪分析已启用")
     }
 
@@ -57,6 +62,9 @@ object MoodFeature : ClickableFeature() {
         BubbleDecorator.clearAll()
         WeChatInputBarMenuApi.removeProvider(ChatMoodHostUi)
         WeChatMessageContextMenuApi.removeProvider(AiSmartReply)
+        WeChatInputBarMenuApi.removeProvider(ReplyEntry)
+        WeChatMessageContextMenuApi.removeProvider(ReplyEntry)
+        ReplyAuto.clear()
         MoodStore.clear()
         WeLogger.i(TAG, "情绪分析已停用")
     }
@@ -70,6 +78,7 @@ object MoodFeature : ClickableFeature() {
 
             // 回复模型：从 WeAgent 已配模型中选择（帮我回直接用它）
             var replyModelId by remember { mutableStateOf(ReplyConfig.modelId) }
+            var autoReply by remember { mutableStateOf(ReplyAuto.enabled) }
             val models by remember { WeAgentRepository.observeModels() }
                 .collectAsState(initial = emptyList())
 
@@ -145,6 +154,12 @@ object MoodFeature : ClickableFeature() {
                         } else {
                             Text("暂无已配置的模型，请先在 WeAgent 设置中添加", style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.error)
                         }
+                        MiuixSwitchWidget(
+                            title = "对方新消息自动帮我回",
+                            checked = autoReply,
+                            onCheckedChange = { autoReply = it },
+                            summary = "在已开启分析的聊天里，对方发来消息后，消息下方直接给出可点击填入输入框的回复；不会自动发送",
+                        )
                         Button(onClick = {
                             AiSmartReply.openSmartReply(context, WeCurrentConversationApi.value)
                         }, modifier = Modifier.fillMaxWidth()) {
@@ -159,6 +174,7 @@ object MoodFeature : ClickableFeature() {
                         MoodTransport.jevEndpoint = jevEndpoint.trim()
                         MoodTransport.jevModel = jevModel.trim()
                         ReplyConfig.modelId = replyModelId
+                        ReplyAuto.enabled = autoReply
                         onDismiss()
                     }) { Text(stringResource(R.string.dialog_confirm)) }
                 },
