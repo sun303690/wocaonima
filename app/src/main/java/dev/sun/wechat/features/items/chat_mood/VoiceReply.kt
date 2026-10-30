@@ -1,9 +1,7 @@
 package dev.sun.wechat.features.items.chat_mood
 
-import android.media.MediaMetadataRetriever
 import android.os.Handler
 import android.os.Looper
-import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.features.items.chat.TextToSpeech
 import dev.sun.wechat.utils.HostInfo
 import dev.sun.wechat.utils.WeLogger
@@ -41,12 +39,13 @@ object VoiceReply {
                 WeLogger.w(TAG, "tts failed: $error")
                 main.post { onResult(false) }
             } else {
-                val duration = durationMs(path)
-                val sent = runCatching { WeMessageApi.sendVoice(talker, path, duration) }.getOrDefault(false)
-                if (!sent) WeLogger.w(TAG, "sendVoice failed for $talker")
-                main.post {
-                    showToast(HostInfo.application, if (sent) "语音已发送" else "语音发送失败")
-                    onResult(sent)
+                // 微信语音消息要求 SILK 编码：先由 sendVoiceTo 做 WAV→SILK 转换再发送
+                TextToSpeech.sendVoiceTo(talker, path) { sent ->
+                    if (!sent) WeLogger.w(TAG, "sendVoice failed for $talker")
+                    main.post {
+                        showToast(HostInfo.application, if (sent) "语音已发送" else "语音发送失败")
+                        onResult(sent)
+                    }
                 }
             }
         }
@@ -60,20 +59,6 @@ object VoiceReply {
                 ?.second
                 ?: TextToSpeech.EMOTIONS.first().second
             TextToSpeech.generateVoice(content, voiceId, emotion, TextToSpeech.apiKey, callback)
-        }
-    }
-
-    private fun durationMs(path: String): Int {
-        val retriever = MediaMetadataRetriever()
-        return try {
-            retriever.setDataSource(path)
-            val ms = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
-                ?.toLongOrNull() ?: 0L
-            ms.toInt().coerceIn(1000, 60_000)
-        } catch (t: Throwable) {
-            0
-        } finally {
-            runCatching { retriever.release() }
         }
     }
 }
