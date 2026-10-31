@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Handler
 import android.os.HandlerThread
+import android.os.Looper
 import android.os.SystemClock
 import android.view.MenuItem
 import android.view.View
@@ -240,6 +241,9 @@ object ConversationAggregation : ClickableFeature(),
     private val pendingRefreshMembers = ConcurrentHashMap.newKeySet<String>()
     private val pendingRefreshLock = Any()
     private val refreshAllFolders = AtomicBoolean(false)
+
+    /** 主线程 Handler：所有触碰微信会话列表 adapter 的动作都必须回到 UI 线程。 */
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     @Volatile
     private var refreshThread: HandlerThread? = null
@@ -1037,7 +1041,14 @@ object ConversationAggregation : ClickableFeature(),
                             "elapsed=${SystemClock.elapsedRealtime() - startedAt}ms"
                 )
             }
-            if (databaseChanged) WeConversationApi.reloadConversations()
+            if (databaseChanged) {
+                // reloadConversations 会重建微信会话列表的 adapter 数据。若在
+                // wekit-folder-refresh 后台线程直接调用，ListView 在 UI 线程渲染时
+                // 会撞上 "The content of the adapter has changed but ListView did not
+                // receive a notification"，主线程随后卡死在 ListView.onLayout 直到
+                // 系统判 ANR（实测卡住 22s 后被 reason=6 杀死）。必须切主线程。
+                mainHandler.post { runCatching { WeConversationApi.reloadConversations() } }
+            }
         }.onFailure {
             WeLogger.e(TAG, "failed to sync folders", it)
         }
