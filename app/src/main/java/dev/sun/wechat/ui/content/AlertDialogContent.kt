@@ -33,7 +33,7 @@ fun AlertDialogContent(
     dismissButton: (@Composable () -> Unit)? = null,
     textTopSpacing: Dp = 12.dp,
     /** 卡片底色；传带 alpha 的颜色就能做「半透明」弹窗（见应用全局背景页）。 */
-    containerColor: Color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
+    containerColor: Color = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
 ) {
     Surface(
         shape = MaterialTheme.shapes.extraLarge,

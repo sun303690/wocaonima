@@ -35,7 +35,7 @@ fun MiuixModuleTheme(
 }
 
 /** 模块页面底色不透明度（1f = 完全不透明）。 */
-private const val GLASS_ALPHA = 0.92f
+private const val GLASS_ALPHA = 0.68f
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this

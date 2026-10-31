@@ -452,7 +452,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
 
             val dialogSurface = MiuixTheme.colorScheme.surface
             AlertDialogContent(
-                containerColor = dialogSurface.copy(alpha = 0.86f),
+                containerColor = dialogSurface.copy(alpha = 0.66f),
                 title = { Text(stringResource(R.string.beautify_global_background_title)) },
                 text = {
                     MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
