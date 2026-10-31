@@ -71,15 +71,18 @@ object SnowOverlay {
         )
     }
 
-    /** Wren SnowView 的 Kotlin 还原：75 粒子、圆点/线段两种雪花、风力摆动、越界回绕。 */
+    /**
+     * 雪花层：部分画六角雪花（三根交叉的线 + 侧枝），部分画圆点；
+     * 白色主体下面垫一层半透明黑阴影，浅色背景上也看得清。
+     */
     class SnowView(context: android.content.Context) : View(context) {
 
         private val particles = Array(COUNT) { Particle() }
-        private val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-        private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
             strokeCap = Paint.Cap.ROUND
         }
+        private val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG)
         private var lastFrame = System.nanoTime()
         private var seed = System.nanoTime().toInt()
         private var seed2 = (System.nanoTime() ushr 32).toInt() or 1
@@ -93,7 +96,7 @@ object SnowOverlay {
             var swayPhase = 0f
             var swayAmp = 0f
             var alpha = 0f
-            var line = false
+            var spokes = 0
         }
 
         private fun rnd(): Float {
@@ -104,14 +107,14 @@ object SnowOverlay {
 
         private fun reset(p: Particle, fromTop: Boolean) {
             p.x = rnd() * maxOf(1, width)
-            p.y = if (fromTop) -10f else rnd() * maxOf(1, height)
-            p.vy = 40f + rnd() * 120f
-            p.vx = (rnd() - 0.5f) * 20f
-            p.size = 2f + rnd() * 6f
-            p.swayAmp = p.size * 1.5f
+            p.y = if (fromTop) -20f else rnd() * maxOf(1, height)
+            p.vy = 26f + rnd() * 70f
+            p.vx = (rnd() - 0.5f) * 14f
+            p.size = 5f + rnd() * 11f
+            p.swayAmp = p.size * 1.2f
             p.swayPhase = rnd() * (Math.PI.toFloat() * 2f)
-            p.alpha = 0.4f + rnd() * 0.6f
-            p.line = rnd() < 0.35f
+            p.alpha = 0.55f + rnd() * 0.40f
+            p.spokes = if (rnd() < 0.62f) 6 else 0
         }
 
         override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -125,27 +128,50 @@ object SnowOverlay {
             val w = width.toFloat()
             val h = height.toFloat()
             for (p in particles) {
-                p.swayPhase += dt * 2f
+                p.swayPhase += dt * 1.6f
                 p.x += (p.vx + kotlin.math.sin(p.swayPhase) * p.swayAmp) * dt
                 p.y += p.vy * dt
-                if (p.y - p.size > h) reset(p, true)
-                if (p.x < -20f) p.x = w + 20f
-                if (p.x > w + 20f) p.x = -20f
-                val color = ((p.alpha * 255).toInt() shl 24) or 0xFFFFFF
-                if (p.line) {
-                    linePaint.color = color
-                    linePaint.strokeWidth = p.size * 0.8f
-                    canvas.drawLine(
-                        p.x, p.y - p.size,
-                        p.x + kotlin.math.sin(p.swayPhase) * p.size, p.y + p.size,
-                        linePaint,
-                    )
+                if (p.y - p.size * 2f > h) reset(p, true)
+                if (p.x < -30f) p.x = w + 30f
+                if (p.x > w + 30f) p.x = -30f
+                val white = ((p.alpha * 255).toInt() shl 24) or 0xFFFFFF
+                // 先画阴影层（向下偏移一点），再画白色主体：浅色背景上不会“消失”。
+                if (p.spokes > 0) {
+                    drawFlake(canvas, p, 0x40000000, p.x + 0.9f, p.y + 1.4f)
+                    drawFlake(canvas, p, white, p.x, p.y)
                 } else {
-                    dotPaint.color = color
-                    canvas.drawCircle(p.x, p.y, p.size, dotPaint)
+                    dotPaint.color = 0x40000000
+                    canvas.drawCircle(p.x + 0.9f, p.y + 1.4f, p.size * 0.55f, dotPaint)
+                    dotPaint.color = white
+                    canvas.drawCircle(p.x, p.y, p.size * 0.55f, dotPaint)
                 }
             }
             if (windowVisibility == VISIBLE) postInvalidateOnAnimation()
+        }
+
+        private fun drawFlake(canvas: Canvas, p: Particle, color: Int, cx: Float, cy: Float) {
+            strokePaint.color = color
+            strokePaint.strokeWidth = (p.size * 0.22f).coerceAtLeast(1.6f)
+            val r = p.size
+            for (i in 0 until 3) {
+                val angle = i * (Math.PI / 3.0).toFloat() + p.swayPhase * 0.15f
+                val dx = kotlin.math.cos(angle) * r
+                val dy = kotlin.math.sin(angle) * r
+                canvas.drawLine(cx - dx, cy - dy, cx + dx, cy + dy, strokePaint)
+                // 侧枝：靠近端点处向外张开的短枝
+                for (side in intArrayOf(1, -1)) {
+                    val bx = cx + dx * 0.62f
+                    val by = cy + dy * 0.62f
+                    val branchAngle = angle + side * 0.9f
+                    val bl = r * 0.34f
+                    canvas.drawLine(
+                        bx, by,
+                        bx + kotlin.math.cos(branchAngle) * bl,
+                        by + kotlin.math.sin(branchAngle) * bl,
+                        strokePaint,
+                    )
+                }
+            }
         }
 
         private companion object {
