@@ -1,5 +1,8 @@
 package dev.sun.wechat.ui.content.miuix
 
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -118,7 +121,22 @@ class MiuixSegmentedColumnScope {
 @Composable
 fun MiuixSegmentedColumn(modifier: Modifier = Modifier, title: String = "", contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 8.dp), titlePadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 4.dp), content: MiuixSegmentedColumnScope.() -> Unit) {
     val scope = MiuixSegmentedColumnScope().apply(content)
-    Column(modifier.fillMaxWidth().padding(contentPadding)) {
+    val inDialog = dev.sun.wechat.ui.utils.LocalInComposeDialog.current
+    // 二级页统一「主题工坊」的圆角卡片：22dp 圆角 + 轻投影 + surface 底。
+    // 弹窗内容不套（弹窗本身已经是卡片），避免双层圆角。
+    val cardShape = androidx.compose.foundation.shape.RoundedCornerShape(22.dp)
+    val outer = if (inDialog) {
+        Modifier.fillMaxWidth().padding(contentPadding)
+    } else {
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .shadow(2.dp, cardShape, ambientColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.06f), spotColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.06f))
+            .clip(cardShape)
+            .background(top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface)
+            .padding(contentPadding)
+    }
+    Column(outer) {
         if (title.isNotEmpty()) SmallTitle(text = title, modifier = Modifier.padding(titlePadding))
         scope.Render()
     }

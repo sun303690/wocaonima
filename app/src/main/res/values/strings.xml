@@ -614,6 +614,8 @@
     <string name="feature_beautify_conversation_list_description">Apply translucent rounded card style to all lists (contacts, discovery, settings)</string>
     <string name="feature_beautify_view_press_effect_name">Customize press effects</string>
     <string name="feature_beautify_view_press_effect_description">Replace the background of View with RippleDrawable (not finished yet)</string>
+    <string name="feature_snow_effect_name">Snowing on every WeChat page</string>
+    <string name="feature_snow_effect_description">Draw drifting snowflakes over WeChat screens (pure Canvas, no blur)</string>
     <string name="feature_center_profile_card_name">Center profile card</string>
     <string name="feature_center_profile_card_description">Data card in the center of the "Me" interface</string>
     <string name="feature_custom_message_bubbles_name">Custom message bubble</string>

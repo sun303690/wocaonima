@@ -66,7 +66,9 @@ fun showComposeDialog(
                                     modifier = Modifier.wrapContentSize(),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    scope.content()
+                                    androidx.compose.runtime.CompositionLocalProvider(LocalInComposeDialog provides true) {
+                                        scope.content()
+                                    }
                                 }
                             }
                         }
@@ -101,3 +103,6 @@ fun View.setLifecycleOwner(lifecycleOwner: XposedLifecycleOwner) {
     setViewTreeViewModelStoreOwner(lifecycleOwner)
     setViewTreeSavedStateRegistryOwner(lifecycleOwner)
 }
+
+/** 标记当前组合位于 showComposeDialog 的弹窗里（弹窗已有自己的卡片，内容不再套圆角卡片）。 */
+val LocalInComposeDialog = androidx.compose.runtime.staticCompositionLocalOf { false }

@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -31,9 +32,12 @@ fun AlertDialogContent(
     confirmButton: (@Composable () -> Unit)? = null,
     dismissButton: (@Composable () -> Unit)? = null,
     textTopSpacing: Dp = 12.dp,
+    /** 卡片底色；传带 alpha 的颜色就能做「半透明」弹窗（见应用全局背景页）。 */
+    containerColor: Color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
 ) {
     Surface(
         shape = MaterialTheme.shapes.extraLarge,
+        color = containerColor,
         tonalElevation = 6.dp,
         modifier = modifier
             .padding(4.dp)

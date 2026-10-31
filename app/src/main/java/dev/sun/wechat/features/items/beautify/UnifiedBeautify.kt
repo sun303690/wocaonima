@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -449,7 +450,9 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                 }
             }
 
+            val dialogSurface = MiuixTheme.colorScheme.surface
             AlertDialogContent(
+                containerColor = dialogSurface.copy(alpha = 0.86f),
                 title = { Text(stringResource(R.string.beautify_global_background_title)) },
                 text = {
                     MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {

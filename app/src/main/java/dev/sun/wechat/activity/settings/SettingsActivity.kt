@@ -115,6 +115,8 @@ val LocalComponentActivity = staticCompositionLocalOf<ComponentActivity> { error
 class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // 页面本身是半透明底，窗口也必须透明，否则透出的是窗口底色而不是下层画面。
+        window?.setBackgroundDrawableResource(android.R.color.transparent)
         enableEdgeToEdge()
 
         setContent {
