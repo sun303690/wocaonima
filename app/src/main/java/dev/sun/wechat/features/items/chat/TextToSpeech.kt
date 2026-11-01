@@ -290,7 +290,7 @@ object TextToSpeech :
 
     private fun showMainDialog(context: android.content.Context, talker: String, initialText: String) {
         // 点弹窗外面不关（避免误触丢掉已生成的语音），但返回键仍可关；显式出口是底部「关闭」
-        showComposeDialog(context, dismissOnTouchOutside = false) {
+        showComposeDialog(context, directlyDismissable = false) {
             var inputText by remember { mutableStateOf(initialText) }
             var backendMode by remember { mutableIntStateOf(backend) }
             val isDoubao = backendMode == BACKEND_DOUBAO
@@ -759,7 +759,7 @@ object TextToSpeech :
     }
 
     fun showPreviewDialog(context: android.content.Context, talker: String, wavPath: String) {
-        showComposeDialog(context, dismissOnTouchOutside = false) {
+        showComposeDialog(context, directlyDismissable = false) {
             var playing by remember { mutableStateOf(false) }
             var durationMs by remember { mutableIntStateOf(0) }
             var positionMs by remember { mutableIntStateOf(0) }

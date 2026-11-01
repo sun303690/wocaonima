@@ -4,19 +4,19 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import androidx.activity.ComponentActivity
-import com.composables.icons.materialsymbols.outlined.Graphic_eq
+import com.composables.icons.materialsymbols.MaterialSymbols
 import dev.sun.wechat.R
-import dev.sun.wechat.features.api.core.MessageType
-import dev.sun.wechat.features.api.core.WeChatMessageContextMenuApi
+import dev.sun.wechat.features.api.core.models.MessageType
+import dev.sun.wechat.features.api.ui.WeChatMessageContextMenuApi
 import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.features.api.core.WeServiceApi
 import dev.sun.wechat.features.api.core.models.MessageInfo
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.utils.AudioUtils
-import dev.sun.wechat.utils.KnownPaths
+import dev.sun.wechat.utils.fs.KnownPaths
 import dev.sun.wechat.utils.WeLogger
-import dev.sun.wechat.utils.showToast
+import dev.sun.wechat.utils.android.showToast
 import dev.sun.wechat.ui.utils.MicIcon
 import java.io.File
 
@@ -56,7 +56,7 @@ object VideoToVoice : ClickableFeature(), WeChatMessageContextMenuApi.IMenuItems
                 id = MENU_ID,
                 text = localizedChatString(R.string.video_to_voice_menu),
                 drawable = MicIcon,
-                imageVector = Graphic_eq,
+                imageVector = MaterialSymbols.Outlined.Graphic_eq,
                 isSupported = { msgInfo ->
                     val type = msgInfo.type
                     type != null && (type.code == MessageType.VIDEO.code || type.code == MessageType.MICRO_VIDEO.code)
