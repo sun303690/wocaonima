@@ -45,7 +45,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.roundToPx
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -261,7 +260,7 @@ object ParseVideo : ClickableFeature() {
                                         Icon(
                                             MaterialSymbols.Outlined.Chevron_right,
                                             contentDescription = null,
-                                            tint = MiuixTheme.colorScheme.onSurfaceVariant,
+                                            tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                         )
                                     },
                                 )
@@ -1425,7 +1424,7 @@ object ParseVideo : ClickableFeature() {
                             if (routeMenuExpanded) {
                                 Popup(
                                     alignment = Alignment.TopEnd,
-                                    offset = IntOffset(0, 8.dp.roundToPx()),
+                                    offset = IntOffset(0, with(LocalDensity.current) { 8.dp.roundToPx() }),
                                     onDismissRequest = { routeMenuExpanded = false },
                                 ) {
                                     Surface(
@@ -1643,7 +1642,7 @@ object ParseVideo : ClickableFeature() {
                             color = if (downloadedFiles.isNotEmpty() && !busy) {
                                 MiuixTheme.colorScheme.primary
                             } else {
-                                MiuixTheme.colorScheme.onSurfaceVariant
+                                MiuixTheme.colorScheme.onSurfaceVariantSummary
                             },
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
@@ -1680,7 +1679,7 @@ object ParseVideo : ClickableFeature() {
                                             stringResource(
                                                 if (gallery) R.string.parse_video_download_all_files
                                                 else R.string.parse_video_download,
-                                            ),
+                                            )
                                         },
                                     )
                                 }
@@ -1738,7 +1737,7 @@ object ParseVideo : ClickableFeature() {
                         insideMargin = PaddingValues(0.dp),
                         colors = ButtonDefaults.buttonColors(
                             color = MiuixTheme.colorScheme.surfaceContainer,
-                            contentColor = MiuixTheme.colorScheme.onSurfaceVariant,
+                            contentColor = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         ),
                     ) {
                         Text(n.toString(), style = MiuixTheme.textStyles.footnote1)
@@ -1866,7 +1865,7 @@ object ParseVideo : ClickableFeature() {
                     Text(
                         text = detail,
                         style = MiuixTheme.textStyles.footnote1,
-                        color = MiuixTheme.colorScheme.onSurfaceVariant,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
@@ -1929,7 +1928,7 @@ object ParseVideo : ClickableFeature() {
                         Text(
                             text = author.name,
                             style = MiuixTheme.textStyles.footnote1,
-                            color = MiuixTheme.colorScheme.onSurfaceVariant,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
                     }
                     if (directCoverUrl.isNotBlank()) {
@@ -1941,7 +1940,7 @@ object ParseVideo : ClickableFeature() {
                             insideMargin = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                             colors = ButtonDefaults.buttonColors(
                                 color = MiuixTheme.colorScheme.surfaceContainer,
-                                contentColor = MiuixTheme.colorScheme.onSurfaceVariant,
+                                contentColor = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                             ),
                         ) {
                             Text(
@@ -1979,7 +1978,7 @@ object ParseVideo : ClickableFeature() {
                                 insideMargin = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     color = MiuixTheme.colorScheme.surfaceContainer,
-                                    contentColor = MiuixTheme.colorScheme.onSurfaceVariant,
+                                    contentColor = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                 ),
                             ) {
                                 Text(label, style = MiuixTheme.textStyles.footnote1)
