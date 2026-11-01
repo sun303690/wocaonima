@@ -129,11 +129,15 @@ object TextToSpeech :
     var apiKey by prefOption("tts_api_key", "")
     var selectedVoice by prefOption("tts_voice_id", "琅琊榜-梅长苏")
     var selectedEmotion by prefOption("tts_emotion", "平静")
+    var customVoiceId by prefOption("tts_custom_voice_id", "")
 
-    private var backend by prefOption("tts_backend", BACKEND_BREEZE)
-    private var doubaoCookie by prefOption("tts_doubao_cookie", "")
-    private var doubaoSpeaker by prefOption("tts_doubao_speaker", "zh_female_shuangkuai_emo_v3_wvae_bigtts")
-    private var doubaoSpeakerName by prefOption("tts_doubao_speaker_name", "爽快 · 女声")
+    var backend by prefOption("tts_backend", BACKEND_BREEZE)
+    var doubaoCookie by prefOption("tts_doubao_cookie", "")
+    var doubaoSpeaker by prefOption("tts_doubao_speaker", "zh_female_shuangkuai_emo_v3_wvae_bigtts")
+    var doubaoSpeakerName by prefOption("tts_doubao_speaker_name", "爽快 · 女声")
+
+    /** 在候选结果中生成并发送语音（VoiceReply 使用）。 */
+    var voiceReplyEnabled by prefOption("ai_reply_tts_enabled", true)
 
     private var breezeKey by prefOption("tts_breeze_api_key", "brz_XCLJf64j70U0nL-M6LOikfTsQfV4Pt2r")
     private var breezeModel by prefOption("tts_breeze_model_id", BreezeTtsClient.DEFAULT_MODEL)
@@ -611,6 +615,11 @@ object TextToSpeech :
                 }
             )
         }
+    }
+
+    /** 供 AI 回复面板等处打开的语音配置弹窗。 */
+    fun showVoiceConfig(context: android.content.Context, onSaved: () -> Unit = {}) {
+        showSettingsDialog(context, onSaved)
     }
 
     private fun showSettingsDialog(context: android.content.Context, onApiKeySaved: () -> Unit = {}) {
