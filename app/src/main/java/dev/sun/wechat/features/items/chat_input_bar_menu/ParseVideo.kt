@@ -18,26 +18,21 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.LocalMinimumInteractiveComponentSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
+import top.yukonga.miuix.kmp.basic.HorizontalDivider
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
+import top.yukonga.miuix.kmp.basic.Surface
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -48,6 +43,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.roundToPx
+import androidx.compose.ui.window.Popup
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -262,7 +261,7 @@ object ParseVideo : ClickableFeature() {
                                         Icon(
                                             MaterialSymbols.Outlined.Chevron_right,
                                             contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            tint = MiuixTheme.colorScheme.onSurfaceVariant,
                                         )
                                     },
                                 )
@@ -991,7 +990,7 @@ object ParseVideo : ClickableFeature() {
                             Text(
                                 text = "+$hidden",
                                 color = Color.White,
-                                style = MaterialTheme.typography.titleSmall,
+                                style = MiuixTheme.textStyles.body1,
                                 fontWeight = FontWeight.Bold,
                             )
                         }
@@ -1373,8 +1372,8 @@ object ParseVideo : ClickableFeature() {
             }
 
             Surface(
-                shape = MaterialTheme.shapes.extraLarge,
-                tonalElevation = 6.dp,
+                shape = RoundedCornerShape(20.dp),
+                shadowElevation = 6.dp,
                 modifier = Modifier
                     .padding(4.dp)
                     .fillMaxWidth()
@@ -1391,86 +1390,106 @@ object ParseVideo : ClickableFeature() {
                     ) {
                         Text(
                             text = stringResource(R.string.feature_parse_video_name),
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            style = MiuixTheme.textStyles.main.copy(fontWeight = FontWeight.Bold),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
                         Spacer(Modifier.weight(1f))
                         Box {
-                            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
-                                FilledTonalButton(
-                                    onClick = { routeMenuExpanded = true },
-                                    modifier = Modifier.height(30.dp),
-                                    contentPadding = PaddingValues(horizontal = 10.dp),
-                                ) {
-                                    Icon(
-                                        MaterialSymbols.Outlined.Tune,
-                                        contentDescription = stringResource(R.string.parse_video_route_settings),
-                                        modifier = Modifier.size(15.dp),
-                                    )
-                                    Spacer(Modifier.width(5.dp))
-                                    Text(
-                                        text = routePillLabel(selectedRoute, selectedPid),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.widthIn(max = 150.dp),
-                                    )
-                                    Icon(
-                                        MaterialSymbols.Outlined.Keyboard_arrow_down,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp),
-                                    )
-                                }
-                            }
-                            DropdownMenu(
-                                expanded = routeMenuExpanded,
-                                onDismissRequest = { routeMenuExpanded = false },
+                            Button(
+                                onClick = { routeMenuExpanded = true },
+                                modifier = Modifier.height(30.dp),
+                                minHeight = 30.dp,
+                                insideMargin = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
                             ) {
-                                routeOptions.forEach { (value, labelRes) ->
-                                    val label = stringResource(labelRes)
-                                    DropdownMenuItem(
-                                        text = { Text(label) },
-                                        trailingIcon = {
-                                            if (selectedRoute == value) {
-                                                Icon(
-                                                    MaterialSymbols.Outlined.Check_circle,
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.primary,
-                                                )
+                                Icon(
+                                    MaterialSymbols.Outlined.Tune,
+                                    contentDescription = stringResource(R.string.parse_video_route_settings),
+                                    modifier = Modifier.size(15.dp),
+                                )
+                                Spacer(Modifier.width(5.dp))
+                                Text(
+                                    text = routePillLabel(selectedRoute, selectedPid),
+                                    style = MiuixTheme.textStyles.footnote1,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.widthIn(max = 150.dp),
+                                )
+                                Icon(
+                                    MaterialSymbols.Outlined.Keyboard_arrow_down,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                            }
+                            // 线路下拉：Miuix 无 DropdownMenu，这里用 Popup 自建一个 Miuix 风格菜单
+                            if (routeMenuExpanded) {
+                                Popup(
+                                    alignment = Alignment.TopEnd,
+                                    offset = IntOffset(0, 8.dp.roundToPx()),
+                                    onDismissRequest = { routeMenuExpanded = false },
+                                ) {
+                                    Surface(
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = MiuixTheme.colorScheme.surfaceContainerHigh,
+                                        shadowElevation = 8.dp,
+                                        modifier = Modifier.widthIn(min = 160.dp),
+                                    ) {
+                                        Column {
+                                            routeOptions.forEach { (value, labelRes) ->
+                                                val label = stringResource(labelRes)
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clickable {
+                                                            selectedRoute = value
+                                                            parseRoute = value
+                                                            routeMenuExpanded = false
+                                                            showToast(
+                                                                localizedChatInputString(R.string.parse_video_route_changed, label),
+                                                            )
+                                                        }
+                                                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                ) {
+                                                    Text(
+                                                        text = label,
+                                                        style = MiuixTheme.textStyles.main,
+                                                        modifier = Modifier.weight(1f),
+                                                    )
+                                                    if (selectedRoute == value) {
+                                                        Icon(
+                                                            MaterialSymbols.Outlined.Check_circle,
+                                                            contentDescription = null,
+                                                            tint = MiuixTheme.colorScheme.primary,
+                                                            modifier = Modifier.size(18.dp),
+                                                        )
+                                                    }
+                                                }
+                                                // 线路N 只属于自动/主线路：内联在选中项下面，选完不关菜单
+                                                if (selectedRoute == value && (value == ROUTE_AUTO || value == ROUTE_PRIMARY)) {
+                                                    RoutePidRow(selectedPid) { n ->
+                                                        selectedPid = n
+                                                        parsePid = n
+                                                    }
+                                                }
                                             }
-                                        },
-                                        onClick = {
-                                            selectedRoute = value
-                                            parseRoute = value
-                                            routeMenuExpanded = false
-                                            showToast(
-                                                localizedChatInputString(R.string.parse_video_route_changed, label),
-                                            )
-                                        },
-                                    )
-                                    // 线路N 只属于自动/主线路：内联在选中项下面，选完不关菜单
-                                    if (selectedRoute == value && (value == ROUTE_AUTO || value == ROUTE_PRIMARY)) {
-                                        RoutePidRow(selectedPid) { n ->
-                                            selectedPid = n
-                                            parsePid = n
                                         }
                                     }
                                 }
                             }
                         }
-                        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
-                            IconButton(
-                                onClick = onDismiss,
-                                enabled = !loading && !sending,
-                                modifier = Modifier.size(34.dp),
-                            ) {
-                                Icon(
-                                    MaterialSymbols.Outlined.Close,
-                                    contentDescription = stringResource(R.string.dialog_close),
-                                    modifier = Modifier.size(20.dp),
-                                )
-                            }
+                        IconButton(
+                            onClick = onDismiss,
+                            enabled = !loading && !sending,
+                            modifier = Modifier.size(34.dp),
+                            minWidth = 34.dp,
+                            minHeight = 34.dp,
+                        ) {
+                            Icon(
+                                MaterialSymbols.Outlined.Close,
+                                contentDescription = stringResource(R.string.dialog_close),
+                                modifier = Modifier.size(20.dp),
+                            )
                         }
                     }
 
@@ -1488,8 +1507,8 @@ object ParseVideo : ClickableFeature() {
                             value = link,
                             onValueChange = { link = it },
                             enabled = !loading,
-                            label = { Text(stringResource(R.string.parse_video_link_hint)) },
-                            placeholder = { Text(stringResource(R.string.parse_video_link_placeholder)) },
+                            label = stringResource(R.string.parse_video_link_hint),
+                            useLabelAsPlaceholder = true,
                             trailingIcon = {
                                 IconButton(onClick = { pasteFromClipboard() }, enabled = !loading) {
                                     Icon(
@@ -1498,55 +1517,46 @@ object ParseVideo : ClickableFeature() {
                                     )
                                 }
                             },
-                            shape = RoundedCornerShape(16.dp),
-                            // 填充式输入框自带一条贴底的下划线指示器（未聚焦 = onSurfaceVariant，近黑）。
-                            // 它是画满整宽的直线条，而这里把容器改成了 16dp 圆角，圆角把底边收进去、线还留在原处，
-                            // 于是看着像浮在输入框下面的一道黑线。设计稿要的是无边线的圆角块，直接把指示器关掉。
-                            colors = TextFieldDefaults.colors(
-                                unfocusedIndicatorColor = Color.Transparent,
-                                focusedIndicatorColor = Color.Transparent,
-                                disabledIndicatorColor = Color.Transparent,
-                                errorIndicatorColor = Color.Transparent,
-                            ),
                             minLines = 1,
                             maxLines = 3,
                             modifier = Modifier.fillMaxWidth(),
                         )
 
-                        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Button(
+                                onClick = { doConvert() },
+                                modifier = Modifier.weight(1f).height(34.dp),
+                                minHeight = 34.dp,
+                                insideMargin = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                enabled = !loading && !downloading && !sending,
                             ) {
-                                FilledTonalButton(
-                                    onClick = { doConvert() },
-                                    modifier = Modifier.weight(1f).height(34.dp),
-                                    contentPadding = ButtonDefaults.ExtraSmallContentPadding,
-                                    enabled = !loading && !downloading && !sending,
-                                ) {
-                                    Text(
-                                        stringResource(R.string.parse_video_convert),
-                                        style = MaterialTheme.typography.labelMedium,
-                                    )
-                                }
-                                Button(
-                                    onClick = { doSendNow() },
-                                    modifier = Modifier.weight(1f).height(34.dp),
-                                    contentPadding = ButtonDefaults.ExtraSmallContentPadding,
-                                    enabled = !loading && !downloading && !sending,
-                                ) {
-                                    Text(
-                                        stringResource(R.string.parse_video_send),
-                                        style = MaterialTheme.typography.labelMedium,
-                                    )
-                                }
+                                Text(
+                                    stringResource(R.string.parse_video_convert),
+                                    style = MiuixTheme.textStyles.footnote1,
+                                )
+                            }
+                            Button(
+                                onClick = { doSendNow() },
+                                modifier = Modifier.weight(1f).height(34.dp),
+                                minHeight = 34.dp,
+                                insideMargin = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                colors = ButtonDefaults.buttonColorsPrimary(),
+                                enabled = !loading && !downloading && !sending,
+                            ) {
+                                Text(
+                                    stringResource(R.string.parse_video_send),
+                                    style = MiuixTheme.textStyles.footnote1,
+                                )
                             }
                         }
 
                         if (loading) {
                             Surface(
                                 shape = RoundedCornerShape(16.dp),
-                                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                                color = MiuixTheme.colorScheme.surfaceContainer,
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
                                 Row(
@@ -1560,7 +1570,7 @@ object ParseVideo : ClickableFeature() {
                                     )
                                     Text(
                                         stringResource(R.string.parse_video_loading),
-                                        style = MaterialTheme.typography.bodySmall,
+                                        style = MiuixTheme.textStyles.footnote1,
                                     )
                                 }
                             }
@@ -1569,7 +1579,7 @@ object ParseVideo : ClickableFeature() {
                         errorMsg?.let { err ->
                             Surface(
                                 shape = RoundedCornerShape(16.dp),
-                                color = MaterialTheme.colorScheme.errorContainer,
+                                color = MiuixTheme.colorScheme.errorContainer,
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
                                 Row(
@@ -1580,13 +1590,13 @@ object ParseVideo : ClickableFeature() {
                                     Icon(
                                         MaterialSymbols.Outlined.Error,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                                        tint = MiuixTheme.colorScheme.onErrorContainer,
                                         modifier = Modifier.size(18.dp),
                                     )
                                     Text(
                                         text = err,
-                                        color = MaterialTheme.colorScheme.onErrorContainer,
-                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MiuixTheme.colorScheme.onErrorContainer,
+                                        style = MiuixTheme.textStyles.footnote1,
                                     )
                                 }
                             }
@@ -1614,10 +1624,9 @@ object ParseVideo : ClickableFeature() {
                     val busy = downloading || sending
                     if (busy) {
                         LinearProgressIndicator(
-                            progress = { downloadProgress },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(4.dp),
+                            progress = downloadProgress,
+                            height = 4.dp,
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
                     HorizontalDivider()
@@ -1630,52 +1639,50 @@ object ParseVideo : ClickableFeature() {
                     ) {
                         Text(
                             text = footerStatus,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MiuixTheme.textStyles.footnote1,
                             color = if (downloadedFiles.isNotEmpty() && !busy) {
-                                MaterialTheme.colorScheme.primary
+                                MiuixTheme.colorScheme.primary
                             } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
+                                MiuixTheme.colorScheme.onSurfaceVariant
                             },
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f),
                         )
-                        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
-                            if (downloadedFiles.isNotEmpty()) {
-                                IconButton(onClick = { deleteDownloadedFile() }, enabled = !busy) {
-                                    Icon(
-                                        MaterialSymbols.Outlined.Delete,
-                                        contentDescription = stringResource(R.string.parse_video_delete),
-                                    )
-                                }
+                        if (downloadedFiles.isNotEmpty()) {
+                            IconButton(onClick = { deleteDownloadedFile() }, enabled = !busy) {
+                                Icon(
+                                    MaterialSymbols.Outlined.Delete,
+                                    contentDescription = stringResource(R.string.parse_video_delete),
+                                )
+                            }
+                            Button(
+                                onClick = { sendDownloadedFiles() },
+                                enabled = !busy,
+                                modifier = Modifier.height(40.dp),
+                            ) {
+                                Text(stringResource(R.string.parse_video_send_files))
+                            }
+                        } else {
+                            parseResult?.let { r ->
+                                val gallery = r.imageList.isNotEmpty()
                                 Button(
-                                    onClick = { sendDownloadedFiles() },
+                                    onClick = {
+                                        if (gallery) doDownloadAll() else doDownload(images = false)
+                                    },
                                     enabled = !busy,
                                     modifier = Modifier.height(40.dp),
                                 ) {
-                                    Text(stringResource(R.string.parse_video_send_files))
-                                }
-                            } else {
-                                parseResult?.let { r ->
-                                    val gallery = r.imageList.isNotEmpty()
-                                    Button(
-                                        onClick = {
-                                            if (gallery) doDownloadAll() else doDownload(images = false)
+                                    Text(
+                                        if (downloading) {
+                                            stringResource(R.string.parse_video_downloading)
+                                        } else {
+                                            stringResource(
+                                                if (gallery) R.string.parse_video_download_all_files
+                                                else R.string.parse_video_download,
+                                            ),
                                         },
-                                        enabled = !busy,
-                                        modifier = Modifier.height(40.dp),
-                                    ) {
-                                        Text(
-                                            if (downloading) {
-                                                stringResource(R.string.parse_video_downloading)
-                                            } else {
-                                                stringResource(
-                                                    if (gallery) R.string.parse_video_download_all_files
-                                                    else R.string.parse_video_download,
-                                                )
-                                            },
-                                        )
-                                    }
+                                    )
                                 }
                             }
                         }
@@ -1706,28 +1713,35 @@ object ParseVideo : ClickableFeature() {
     /** 线路N（主线路 pid 1~7）：跟在选中线路那一行下面，点完不关菜单。 */
     @Composable
     private fun RoutePidRow(selectedPid: Int, onPick: (Int) -> Unit) {
-        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
-            Row(
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                (1..7).forEach { n ->
-                    if (n == selectedPid) {
-                        Button(
-                            onClick = { onPick(n) },
-                            modifier = Modifier.size(30.dp),
-                            contentPadding = PaddingValues(0.dp),
-                        ) {
-                            Text(n.toString(), style = MaterialTheme.typography.labelMedium)
-                        }
-                    } else {
-                        OutlinedButton(
-                            onClick = { onPick(n) },
-                            modifier = Modifier.size(30.dp),
-                            contentPadding = PaddingValues(0.dp),
-                        ) {
-                            Text(n.toString(), style = MaterialTheme.typography.labelMedium)
-                        }
+        Row(
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            (1..7).forEach { n ->
+                if (n == selectedPid) {
+                    Button(
+                        onClick = { onPick(n) },
+                        modifier = Modifier.size(30.dp),
+                        minWidth = 30.dp,
+                        minHeight = 30.dp,
+                        insideMargin = PaddingValues(0.dp),
+                        colors = ButtonDefaults.buttonColorsPrimary(),
+                    ) {
+                        Text(n.toString(), style = MiuixTheme.textStyles.footnote1)
+                    }
+                } else {
+                    Button(
+                        onClick = { onPick(n) },
+                        modifier = Modifier.size(30.dp),
+                        minWidth = 30.dp,
+                        minHeight = 30.dp,
+                        insideMargin = PaddingValues(0.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            color = MiuixTheme.colorScheme.surfaceContainer,
+                            contentColor = MiuixTheme.colorScheme.onSurfaceVariant,
+                        ),
+                    ) {
+                        Text(n.toString(), style = MiuixTheme.textStyles.footnote1)
                     }
                 }
             }
@@ -1753,7 +1767,7 @@ object ParseVideo : ClickableFeature() {
         val mixed = result.hasVideo() && gallery.isNotEmpty()
         Surface(
             shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            color = MiuixTheme.colorScheme.surfaceContainer,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(
@@ -1832,7 +1846,7 @@ object ParseVideo : ClickableFeature() {
     ) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            color = MiuixTheme.colorScheme.surfaceContainerHigh,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(
@@ -1846,13 +1860,13 @@ object ParseVideo : ClickableFeature() {
                 ) {
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MiuixTheme.textStyles.body1,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
                         text = detail,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
@@ -1866,11 +1880,12 @@ object ParseVideo : ClickableFeature() {
 
     @Composable
     private fun SectionAction(label: String, enabled: Boolean, onClick: () -> Unit) {
-        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
-            TextButton(onClick = onClick, enabled = enabled) {
-                Text(label, style = MaterialTheme.typography.labelMedium)
-            }
-        }
+        TextButton(
+            text = label,
+            onClick = onClick,
+            enabled = enabled,
+            textStyle = MiuixTheme.textStyles.footnote1,
+        )
     }
 
     @Composable
@@ -1904,7 +1919,7 @@ object ParseVideo : ClickableFeature() {
                     if (data.video_title.isNotBlank()) {
                         Text(
                             text = data.video_title,
-                            style = MaterialTheme.typography.titleSmall,
+                            style = MiuixTheme.textStyles.body1,
                             fontWeight = FontWeight.SemiBold,
                             maxLines = 3,
                             overflow = TextOverflow.Ellipsis,
@@ -1913,27 +1928,30 @@ object ParseVideo : ClickableFeature() {
                     data.author?.let { author ->
                         Text(
                             text = author.name,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MiuixTheme.textStyles.footnote1,
+                            color = MiuixTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     if (directCoverUrl.isNotBlank()) {
-                        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
-                            OutlinedButton(
-                                onClick = onSaveCover,
-                                enabled = !savingCover,
-                                modifier = Modifier.height(34.dp),
-                                contentPadding = ButtonDefaults.ExtraSmallContentPadding,
-                            ) {
-                                Text(
-                                    if (savingCover) {
-                                        stringResource(R.string.parse_video_saving_cover)
-                                    } else {
-                                        stringResource(R.string.parse_video_save_cover)
-                                    },
-                                    style = MaterialTheme.typography.labelMedium,
-                                )
-                            }
+                        Button(
+                            onClick = onSaveCover,
+                            enabled = !savingCover,
+                            modifier = Modifier.height(34.dp),
+                            minHeight = 34.dp,
+                            insideMargin = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                color = MiuixTheme.colorScheme.surfaceContainer,
+                                contentColor = MiuixTheme.colorScheme.onSurfaceVariant,
+                            ),
+                        ) {
+                            Text(
+                                if (savingCover) {
+                                    stringResource(R.string.parse_video_saving_cover)
+                                } else {
+                                    stringResource(R.string.parse_video_save_cover)
+                                },
+                                style = MiuixTheme.textStyles.footnote1,
+                            )
                         }
                     }
                 }
@@ -1945,11 +1963,28 @@ object ParseVideo : ClickableFeature() {
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     qualityList.forEach { (label, url) ->
-                        FilterChip(
-                            selected = url == selectedQualityUrl,
-                            onClick = { onQuality(url) },
-                            label = { Text(label, style = MaterialTheme.typography.labelMedium) },
-                        )
+                        if (url == selectedQualityUrl) {
+                            Button(
+                                onClick = { onQuality(url) },
+                                minHeight = 30.dp,
+                                insideMargin = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                colors = ButtonDefaults.buttonColorsPrimary(),
+                            ) {
+                                Text(label, style = MiuixTheme.textStyles.footnote1)
+                            }
+                        } else {
+                            Button(
+                                onClick = { onQuality(url) },
+                                minHeight = 30.dp,
+                                insideMargin = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    color = MiuixTheme.colorScheme.surfaceContainer,
+                                    contentColor = MiuixTheme.colorScheme.onSurfaceVariant,
+                                ),
+                            ) {
+                                Text(label, style = MiuixTheme.textStyles.footnote1)
+                            }
+                        }
                     }
                 }
             }
