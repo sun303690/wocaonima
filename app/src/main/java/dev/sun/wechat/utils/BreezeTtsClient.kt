@@ -280,7 +280,9 @@ object BreezeTtsClient {
 
     private fun queryString(query: Map<String, String>?): String {
         if (query.isNullOrEmpty()) return ""
-        return query.entries.joinToString(prefix = "?") { (name, value) ->
+        // joinToString 的默认分隔符是 ", "，不显式写 & 就会拼出
+        // `?voice_type=default, page=1` 这种串，服务端直接 400。
+        return query.entries.joinToString(separator = "&", prefix = "?") { (name, value) ->
             "$name=${URLEncoder.encode(value, "UTF-8")}"
         }
     }
