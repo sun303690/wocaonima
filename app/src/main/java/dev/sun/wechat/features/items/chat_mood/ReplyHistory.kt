@@ -2,7 +2,9 @@ package dev.sun.wechat.features.items.chat_mood
 
 import com.tencent.mm.pluginsdk.ui.chat.ChatFooter
 import dev.sun.wechat.features.api.core.WeDatabaseApi
+import dev.sun.wechat.features.api.core.models.MessageInfo
 import dev.sun.wechat.features.api.ui.WeChatInputBarApi
+import dev.sun.wechat.features.api.ui.WeMessageApi
 import dev.sun.wechat.utils.WeLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -45,7 +47,22 @@ object ReplyHistory {
     )
 
     suspend fun load(talker: String, limit: Int): Page = withContext(Dispatchers.IO) {
-        val rows = WeDatabaseApi.getMessages(talker, 1, limit).reversed()
+        // ReplyMessageSupport / ReplyProtocol 消费的是 MessageInfo（反射微信 msgInfo
+        // 实例包装，能读到语音转写等 runtime 字段），而 WeDatabaseApi.getMessages
+        // 返回的是数据库行模型 WeMessage，二者不互通。这里直接 rawQuery 整行，
+        // 用微信自身的 convertFrom(Cursor) 构造 msgInfo 实例。
+        val rows = WeDatabaseApi.rawQuery(
+            "SELECT * FROM message WHERE talker=? ORDER BY createTime DESC LIMIT ?",
+            arrayOf(talker, limit.toString()),
+        ).use { cursor ->
+            buildList {
+                while (cursor.moveToNext()) {
+                    runCatching { MessageInfo(WeMessageApi.convertMsgInfoInstanceFromCursor(cursor)) }
+                        .onFailure { WeLogger.w(TAG, "convert message row failed", it) }
+                        .getOrNull()?.let(::add)
+                }
+            }
+        }.asReversed()
         val displayName = runCatching { WeDatabaseApi.getDisplayName(talker) }
             .getOrDefault("")
             .ifBlank { talker }
