@@ -4461,6 +4461,13 @@
 <string name="feature_script_center_description">Master switch for Java/Python scripting, local plugin management and online plugin market</string>
     <string name="feature_text_to_speech_name">Text to speech</string>
     <string name="feature_text_to_speech_description">Turn text into a voice message; choose which menu entry to enable in its settings</string>
+    <string name="feature_video_to_voice_name">Extract audio from video</string>
+    <string name="feature_video_to_voice_description">Long-press a video message to extract its audio track and send it as a voice message</string>
+    <string name="video_to_voice_menu">Video to voice</string>
+    <string name="video_to_voice_no_video">Video file not found</string>
+    <string name="video_to_voice_extracting">Extracting audio track...</string>
+    <string name="video_to_voice_sent">Voice message sent</string>
+    <string name="video_to_voice_failed">Failed to extract audio</string>
     <string name="tts_entry_group_title">Menu entries</string>
     <string name="tts_entry_bubble">Long-press message bubble</string>
     <string name="tts_entry_bubble_description">Add the \"Text to speech\" entry to the long-press menu of text messages</string>

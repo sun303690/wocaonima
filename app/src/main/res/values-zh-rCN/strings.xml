@@ -4488,6 +4488,13 @@
 <string name="feature_script_center_description">Java/Python 脚本总开关、本地插件管理与在线插件市场</string>
     <string name="feature_text_to_speech_name">文字转语音</string>
     <string name="feature_text_to_speech_description">将文本转为语音消息发送, 需在设置中选择启用哪个入口</string>
+    <string name="feature_video_to_voice_name">视频提取声音</string>
+    <string name="feature_video_to_voice_description">长按视频消息, 提取音轨并发送为语音</string>
+    <string name="video_to_voice_menu">视频转语音</string>
+    <string name="video_to_voice_no_video">未找到视频文件</string>
+    <string name="video_to_voice_extracting">正在提取音轨...</string>
+    <string name="video_to_voice_sent">已发送语音</string>
+    <string name="video_to_voice_failed">提取失败</string>
     <string name="tts_entry_group_title">菜单入口</string>
     <string name="tts_entry_bubble">长按聊天气泡</string>
     <string name="tts_entry_bubble_description">在文本消息的长按菜单中添加「转语音」功能</string>
