@@ -407,7 +407,7 @@ fun FeatureRow(
     val localizedDescription = item.localizedDescription(localizedContext)
 
     DisposableEffect(configKey) {
-        (item as SwitchFeature).setToggleCompletionCallback {
+        (item as? SwitchFeature)?.setToggleCompletionCallback {
             FeatureCategoryState.notifyToggleChanged()
             onCheckedChange(item.isEnabled)
         }
@@ -415,10 +415,10 @@ fun FeatureRow(
     }
 
     fun toggle(requested: Boolean) {
-        item as SwitchFeature
-        if (item.onBeforeToggle(requested, context)) {
+        val switch = item as? SwitchFeature ?: return
+        if (switch.onBeforeToggle(requested, context)) {
             KvStore.putBool(configKey, requested)
-            item.isEnabled = requested
+            switch.isEnabled = requested
             FeatureCategoryState.notifyToggleChanged()
             onCheckedChange(requested)
         }
@@ -467,6 +467,13 @@ fun FeatureRow(
             description = localizedDescription,
             checked = checked,
             onCheckedChange = { toggle(it) },
+        )
+
+        // API 等无开关功能：只展示名称与说明，不提供开关。
+        else -> BaseWidget(
+            iconPlaceholder = false,
+            title = localizedName,
+            description = localizedDescription,
         )
     }
 }
