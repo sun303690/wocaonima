@@ -385,6 +385,56 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
             }
         }
 
+        // 发送：语音开关开着就自动合成语音并发送（生成回复 → 自动转语音），否则发文字
+        fun sendReply(text: String) {
+            if (text.isEmpty()) {
+                error = localizedChatString(R.string.ai_reply_empty_draft)
+                return
+            }
+            if (!ttsOn) {
+                scope.launch {
+                    val sent = withContext(Dispatchers.IO) { WeMessageApi.sendText(talker, text) }
+                    if (sent) onDismiss() else error = localizedChatString(R.string.ai_reply_send_failed)
+                }
+                return
+            }
+            val existing = audioPath
+            if (existing != null) {
+                TextToSpeech.sendVoiceTo(talker, existing) { ok ->
+                    if (ok) onDismiss() else error = localizedChatString(R.string.ai_reply_send_failed)
+                }
+                return
+            }
+            if (!ttsCredentialsReady()) {
+                error = localizedChatString(R.string.ai_reply_tts_missing_credentials)
+                return
+            }
+            voiceBusy = true
+            error = null
+            val callback: (String?, String) -> Unit = { path, failure ->
+                voiceBusy = false
+                if (path != null) {
+                    TextToSpeech.sendVoiceTo(talker, path) { ok ->
+                        if (ok) onDismiss() else error = localizedChatString(R.string.ai_reply_send_failed)
+                    }
+                } else {
+                    WeLogger.w(TAG, "reply voice generation failed: $failure")
+                    error = failure
+                }
+            }
+            when {
+                isDoubaoBackend() -> {
+                    TextToSpeech.generateVoiceDoubao(text, effectiveVoiceId(), cookie = ttsDoubaoCookie, cb = callback)
+                }
+                isBreezeBackend() -> {
+                    TextToSpeech.generateVoiceBreeze(text, effectiveVoiceId(), ttsEmotion, key = ttsApiKey, cb = callback)
+                }
+                else -> {
+                    TextToSpeech.generateVoice(text, effectiveVoiceId(), emotionVector(), key = ttsApiKey, cb = callback)
+                }
+            }
+        }
+
         // 语气并进标题行：整页少一行控件，候选区拿到更多高度
         var styleMenuExpanded by remember { mutableStateOf(false) }
 
@@ -703,34 +753,22 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                             ),
                         )
                     }
-                    if (selected >= 0 && audioPath != null) {
-                        Button(
-                            onClick = {
-                                val path = audioPath ?: return@Button
-                                TextToSpeech.sendVoiceTo(talker, path) { ok ->
-                                    if (ok) onDismiss()
-                                    else error = localizedChatString(R.string.ai_reply_send_failed)
-                                }
-                            },
-                            enabled = !busy && !voiceBusy,
-                        ) { Text(stringResource(R.string.ai_reply_send_voice)) }
-                    }
                     if (selected >= 0) {
                         Button(
                             onClick = {
-                                val text = draft.trim()
-                                if (text.isEmpty()) {
-                                    error = localizedChatString(R.string.ai_reply_empty_draft)
-                                    return@Button
-                                }
-                                scope.launch {
-                                    val sent = withContext(Dispatchers.IO) { WeMessageApi.sendText(talker, text) }
-                                    if (sent) onDismiss()
-                                    else error = localizedChatString(R.string.ai_reply_send_failed)
-                                }
+                                val text = draft.trim().ifEmpty { candidates.getOrElse(selected) { "" } }
+                                sendReply(text)
                             },
                             enabled = !busy && !voiceBusy,
-                        ) { Text(stringResource(R.string.ai_reply_send)) }
+                        ) {
+                            Text(
+                                stringResource(
+                                    if (ttsOn && voiceBusy) R.string.ai_reply_tts_generating
+                                    else if (ttsOn) R.string.ai_reply_send_voice
+                                    else R.string.ai_reply_send,
+                                ),
+                            )
+                        }
                     }
                     if (selected >= 0 && ttsOn) {
                         Button(

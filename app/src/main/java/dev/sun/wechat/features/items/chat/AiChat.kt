@@ -68,7 +68,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.resume
 import androidx.lifecycle.lifecycleScope
 import dev.sun.wechat.ui.utils.showComposeDialog
 import kotlin.time.Duration.Companion.milliseconds
@@ -123,6 +125,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     internal var monitorOnly by KvStore.prefOption("ai_chat_monitor_only", false)
     internal var historyBackfillCount by KvStore.prefOption("ai_chat_history_backfill_count", 10)
     internal var groupMaxReplyChars by KvStore.prefOption("ai_chat_group_max_reply_chars", 500)
+    var voiceReplyEnabled by KvStore.prefOption("ai_chat_voice_reply_enabled", false)
 
     internal var whitelist: Set<String>
         get() = KvStore.getStringSetOrDef("ai_chat_whitelist", emptySet())
@@ -368,7 +371,8 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
             val rawText = reply.getOrThrow().trim()
             if (rawText.isEmpty()) return
             val text = if (isGroupTalker(talker)) sanitizeGroupReply(rawText, config.groupMaxReplyChars) else rawText
-            if (!WeMessageApi.sendText(talker, text)) {
+            val sent = if (voiceReplyEnabled) sendReplyAsVoice(talker, text) else WeMessageApi.sendText(talker, text)
+            if (!sent) {
                 lastFailure = "微信发送 API 返回失败"
                 WeLogger.e(TAG, "failed to send AI reply to talker=$talker")
                 return
@@ -387,6 +391,23 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         }.onFailure {
             lastFailure = it.message ?: it.javaClass.simpleName
             WeLogger.e(TAG, "AI chat processing failed", it)
+        }
+    }
+
+    /** 语音发送：先生成 mp3（同文本+音色+情绪命中缓存则不联网不扣额度），转 silk 后发语音。
+     *  生成失败或没有音色时自动降级为发文字，保证 AI 回复不丢。 */
+    private suspend fun sendReplyAsVoice(talker: String, text: String): Boolean {
+        if (TextToSpeech.breezeVoice.isBlank()) return WeMessageApi.sendText(talker, text)
+        val mp3 = suspendCancellableCoroutine<String?> { cont ->
+            TextToSpeech.generateVoiceBreeze(
+                text = text,
+                voiceId = TextToSpeech.breezeVoice,
+                instructions = TextToSpeech.selectedEmotion,
+            ) { path, _ -> cont.resume(path) }
+        }
+        if (mp3.isNullOrEmpty()) return WeMessageApi.sendText(talker, text)
+        return suspendCancellableCoroutine { cont ->
+            TextToSpeech.sendVoiceTo(talker, mp3) { ok -> cont.resume(ok) }
         }
     }
 
