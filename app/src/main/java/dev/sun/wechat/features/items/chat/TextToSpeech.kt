@@ -784,7 +784,7 @@ object TextToSpeech :
                     put("text", text)
                     val emotion = EMOTIONS.firstOrNull { it.second.contentEquals(emoVec) }?.first
                     if (emotion != null && emotion != "平静") {
-                        put("instructions", EMOTION_INSTRUCTIONS[emotion] ?: "用$emotion的语气朗读")
+                        put("instructions", EMOTION_INSTRUCTIONS[emotion] ?: "用${emotion}的语气朗读")
                     }
                 }.toString()
                 val audioBytes = httpPostBinary(
