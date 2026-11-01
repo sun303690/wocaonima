@@ -148,21 +148,33 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
     private var candidateCount by prefOption("ai_reply_count", DEFAULT_CANDIDATES)
     private var lastStyle by prefOption("ai_reply_style", STYLES.first().first)
 
-    // 语音回复只复用文字转语音的合成/发送/试听实现，凭据与音色设置各自独立一套键。
-    private var ttsEnabled by prefOption("ai_reply_tts_enabled", false)
-    private var ttsBackend by prefOption("ai_reply_tts_backend", TextToSpeech.BACKEND_MOFA)
-    private var ttsApiKey by prefOption("ai_reply_tts_api_key", "")
-    private var ttsDoubaoCookie by prefOption("ai_reply_tts_doubao_cookie", "")
-    private var ttsVoiceId by prefOption("ai_reply_tts_voice_id", "")
-    private var ttsDoubaoSpeaker by prefOption("ai_reply_tts_doubao_speaker", "")
-    private var ttsDoubaoSpeakerName by prefOption("ai_reply_tts_doubao_speaker_name", "")
-    private var ttsEmotion by prefOption("ai_reply_tts_emotion", TextToSpeech.EMOTIONS.first().first)
+    // 语音回复直接复用「文字转语音」的设置：配置页写 TextToSpeech.*（tts_* 键），
+    // 这里不再维护独立的一套 ai_reply_tts_* 凭据，避免出现「配置了却报未配置」。
+    private val ttsEnabled: Boolean
+        get() = TextToSpeech.voiceReplyEnabled
+    private val ttsBackend: Int
+        get() = TextToSpeech.backend
+    private val ttsApiKey: String
+        get() = TextToSpeech.breezeKey
+    private val ttsDoubaoCookie: String
+        get() = TextToSpeech.doubaoCookie
+    private val ttsVoiceId: String
+        get() = TextToSpeech.breezeVoice
+    private val ttsDoubaoSpeaker: String
+        get() = TextToSpeech.doubaoSpeaker
+    private val ttsDoubaoSpeakerName: String
+        get() = TextToSpeech.doubaoSpeakerName
+    private val ttsEmotion: String
+        get() = TextToSpeech.selectedEmotion
 
     private fun isDoubaoBackend(): Boolean = ttsBackend == TextToSpeech.BACKEND_DOUBAO
+    private fun isBreezeBackend(): Boolean = ttsBackend == TextToSpeech.BACKEND_BREEZE
 
-    private fun effectiveVoiceId(): String =
-        if (isDoubaoBackend()) ttsDoubaoSpeaker.ifBlank { TextToSpeech.DOUBAO_VOICES.first().id }
-        else ttsVoiceId.ifBlank { TextToSpeech.DEFAULT_VOICES.first().voiceId }
+    private fun effectiveVoiceId(): String = when {
+        isDoubaoBackend() -> TextToSpeech.customVoiceId.ifBlank { ttsDoubaoSpeaker.ifBlank { TextToSpeech.DOUBAO_VOICES.first().id } }
+        isBreezeBackend() -> TextToSpeech.customVoiceId.ifBlank { ttsVoiceId }
+        else -> TextToSpeech.customVoiceId.ifBlank { TextToSpeech.selectedVoice }
+    }
 
     /** 联网音色只有 id，行里要显示名字；名字与所选 id 不匹配时退回内置表标签，再退回 id 本身。 */
     private fun doubaoSpeakerLabel(id: String): String =
@@ -173,8 +185,11 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
         TextToSpeech.EMOTIONS.firstOrNull { it.first == ttsEmotion }?.second
             ?: TextToSpeech.EMOTIONS.first().second
 
-    private fun ttsCredentialsReady(): Boolean =
-        if (isDoubaoBackend()) ttsDoubaoCookie.isNotBlank() else ttsApiKey.isNotBlank()
+    private fun ttsCredentialsReady(): Boolean = when {
+        isDoubaoBackend() -> ttsDoubaoCookie.isNotBlank()
+        isBreezeBackend() -> ttsApiKey.isNotBlank() && ttsVoiceId.isNotBlank()
+        else -> ttsApiKey.isNotBlank()
+    }
 
     private fun defaultPromptFor(style: String): String =
         STYLES.firstOrNull { it.first == style }?.second ?: STYLES.first().second
@@ -338,7 +353,7 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
             }
         }
 
-        // 语音合成走文字转语音的实现，但凭据/音色/语气用的是本功能自己那套偏好
+        // 语音合成直接复用文字转语音的设置（同一套 tts_* 偏好）
         fun synthesize(text: String) {
             if (voiceBusy || text.isEmpty()) return
             if (!ttsCredentialsReady()) {
@@ -357,10 +372,16 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                     error = failure
                 }
             }
-            if (isDoubaoBackend()) {
-                TextToSpeech.generateVoiceDoubao(text, effectiveVoiceId(), cookie = ttsDoubaoCookie, cb = callback)
-            } else {
-                TextToSpeech.generateVoice(text, effectiveVoiceId(), emotionVector(), key = ttsApiKey, cb = callback)
+            when {
+                isDoubaoBackend() -> {
+                    TextToSpeech.generateVoiceDoubao(text, effectiveVoiceId(), cookie = ttsDoubaoCookie, cb = callback)
+                }
+                isBreezeBackend() -> {
+                    TextToSpeech.generateVoiceBreeze(text, effectiveVoiceId(), ttsEmotion, key = ttsApiKey, cb = callback)
+                }
+                else -> {
+                    TextToSpeech.generateVoice(text, effectiveVoiceId(), emotionVector(), key = ttsApiKey, cb = callback)
+                }
             }
         }
 
@@ -884,10 +905,12 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
         var mofangVoices by remember { mutableStateOf(TextToSpeech.DEFAULT_VOICES) }
         var mofangCustomVoices by remember { mutableStateOf<List<TextToSpeech.TtsVoice>>(emptyList()) }
         val doubaoTts = ttsBackendState == TextToSpeech.BACKEND_DOUBAO
+        val breezeTts = ttsBackendState == TextToSpeech.BACKEND_BREEZE
+        val mofaTts = ttsBackendState == TextToSpeech.BACKEND_MOFA
 
-        // 魔方音色要按这套独立凭据现拉；失败就保留内置列表，与文字转语音的降级一致
+        // 只有旧「魔方」后端才需要按这套凭据现拉音色列表；失败就保留内置列表，与文字转语音的降级一致
         LaunchedEffect(ttsOn, ttsBackendState, ttsApiKeyState) {
-            if (!ttsOn || doubaoTts || ttsApiKeyState.isBlank()) return@LaunchedEffect
+            if (!ttsOn || !mofaTts || ttsApiKeyState.isBlank()) return@LaunchedEffect
             val key = ttsApiKeyState
             val loaded = withContext(Dispatchers.IO) {
                 runCatching { TextToSpeech.fetchVoices(key) to TextToSpeech.fetchUserVoices(key) }.getOrNull()
@@ -896,7 +919,7 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
             mofangCustomVoices = loaded.second
         }
 
-        // 豆包走联网音色选择器，这里只剩魔方的系统音色列表
+        // 豆包/Breeze 走联网音色选择器，这里只剩旧「魔方」后端的系统音色列表
         val systemVoiceOptions = (mofangVoices.map { DropdownOption(it.voiceId, it.label) } +
             DropdownOption(ttsVoiceState, ttsVoiceState)).distinctBy { it.value }
         val customVoiceOptions = mofangCustomVoices.map { DropdownOption(it.voiceId, it.label) }
@@ -1004,7 +1027,7 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                                 checked = ttsOn,
                                 onCheckedChange = {
                                     ttsOn = it
-                                    ttsEnabled = it
+                                    TextToSpeech.voiceReplyEnabled = it
                                     onTtsChanged(it)
                                 },
                             )
@@ -1017,8 +1040,8 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                                         description = stringResource(R.string.ai_reply_tts_backend_mofang_summary),
                                         selected = !doubaoTts,
                                         onSelect = {
-                                            ttsBackendState = TextToSpeech.BACKEND_MOFA
-                                            ttsBackend = TextToSpeech.BACKEND_MOFA
+                                            ttsBackendState = TextToSpeech.BACKEND_BREEZE
+                                            TextToSpeech.backend = TextToSpeech.BACKEND_BREEZE
                                             ttsVoiceState = effectiveVoiceId()
                                         },
                                     )
@@ -1028,7 +1051,7 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                                         selected = doubaoTts,
                                         onSelect = {
                                             ttsBackendState = TextToSpeech.BACKEND_DOUBAO
-                                            ttsBackend = TextToSpeech.BACKEND_DOUBAO
+                                            TextToSpeech.backend = TextToSpeech.BACKEND_DOUBAO
                                             ttsVoiceState = effectiveVoiceId()
                                         },
                                     )
@@ -1040,7 +1063,7 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                                     value = ttsApiKeyState,
                                     onValueChange = {
                                         ttsApiKeyState = it.trim()
-                                        ttsApiKey = ttsApiKeyState
+                                        TextToSpeech.breezeKey = ttsApiKeyState
                                     },
                                     dialogTitle = stringResource(R.string.ai_reply_tts_api_key),
                                     confirmLabel = stringResource(R.string.dialog_confirm),
@@ -1055,7 +1078,7 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                                     value = ttsCookieState,
                                     onValueChange = {
                                         ttsCookieState = it.trim()
-                                        ttsDoubaoCookie = ttsCookieState
+                                        TextToSpeech.doubaoCookie = ttsCookieState
                                     },
                                     dialogTitle = stringResource(R.string.ai_reply_tts_cookie),
                                     confirmLabel = stringResource(R.string.dialog_confirm),
@@ -1066,15 +1089,15 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                                 )
                             }
                             item {
-                                if (doubaoTts) {
-                                    BaseWidget(
+                                when {
+                                    doubaoTts -> BaseWidget(
                                         title = stringResource(R.string.ai_reply_tts_voice),
                                         description = doubaoSpeakerLabel(ttsVoiceState),
                                         onClick = {
                                             showDoubaoVoicePicker(context, ttsVoiceState, ttsCookieState) { id, name ->
                                                 ttsVoiceState = id
-                                                ttsDoubaoSpeaker = id
-                                                ttsDoubaoSpeakerName = name
+                                                TextToSpeech.doubaoSpeaker = id
+                                                TextToSpeech.doubaoSpeakerName = name
                                             }
                                         },
                                         trailingContent = {
@@ -1084,15 +1107,31 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                                             )
                                         },
                                     )
-                                } else {
-                                    DropDownMenuWidget(
+                                    breezeTts -> BaseWidget(
+                                        title = stringResource(R.string.ai_reply_tts_voice),
+                                        description = TextToSpeech.breezeVoiceName.ifBlank { ttsVoiceState },
+                                        onClick = {
+                                            showBreezeVoicePicker(context, ttsVoiceState, ttsApiKeyState) { id, name ->
+                                                ttsVoiceState = id
+                                                TextToSpeech.breezeVoice = id
+                                                TextToSpeech.breezeVoiceName = name
+                                            }
+                                        },
+                                        trailingContent = {
+                                            Icon(
+                                                imageVector = MaterialSymbols.Outlined.Chevron_right,
+                                                contentDescription = null,
+                                            )
+                                        },
+                                    )
+                                    else -> DropDownMenuWidget(
                                         title = stringResource(R.string.ai_reply_tts_voice),
                                         description = null,
                                         value = ttsVoiceState,
                                         options = systemVoiceOptions,
                                         onValueChange = {
                                             ttsVoiceState = it
-                                            ttsVoiceId = it
+                                            TextToSpeech.selectedVoice = it
                                         },
                                     )
                                 }
@@ -1106,9 +1145,9 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                                         .distinctBy { it.value },
                                     onValueChange = {
                                         ttsVoiceState = it
-                                        ttsVoiceId = it
+                                        TextToSpeech.customVoiceId = it
                                     },
-                                    enabled = !doubaoTts && customVoiceOptions.isNotEmpty(),
+                                    enabled = mofaTts && customVoiceOptions.isNotEmpty(),
                                 )
                             }
                             item {
@@ -1119,7 +1158,7 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                                     options = emotionOptions,
                                     onValueChange = {
                                         ttsEmotionState = it
-                                        ttsEmotion = it
+                                        TextToSpeech.selectedEmotion = it
                                     },
                                     enabled = !doubaoTts,
                                 )

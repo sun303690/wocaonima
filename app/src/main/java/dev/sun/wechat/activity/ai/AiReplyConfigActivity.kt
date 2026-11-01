@@ -46,6 +46,7 @@ import dev.sun.wechat.activity.agent.WeAgentSettingsActivity
 import dev.sun.wechat.agent.data.WeAgentRepository
 import dev.sun.wechat.features.items.chat.TextToSpeech
 import dev.sun.wechat.features.items.chat.doubaoVoiceLabel
+import dev.sun.wechat.features.items.chat.showBreezeVoicePicker
 import dev.sun.wechat.features.items.chat.showDoubaoVoicePicker
 import dev.sun.wechat.features.items.chat_mood.AgentLlm
 import dev.sun.wechat.i18n.LocaleResourceMode
@@ -96,9 +97,11 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
 
     var voiceReply by remember { mutableStateOf(TextToSpeech.voiceReplyEnabled) }
     var backend by remember { mutableStateOf(TextToSpeech.backend) }
-    var apiKey by remember { mutableStateOf(TextToSpeech.apiKey) }
+    var apiKey by remember { mutableStateOf(TextToSpeech.breezeKey) }
     var cookie by remember { mutableStateOf(TextToSpeech.doubaoCookie) }
     var mofaVoice by remember { mutableStateOf(TextToSpeech.selectedVoice) }
+    var breezeVoice by remember { mutableStateOf(TextToSpeech.breezeVoice) }
+    var breezeVoiceName by remember { mutableStateOf(TextToSpeech.breezeVoiceName) }
     var doubaoVoice by remember { mutableStateOf(TextToSpeech.doubaoSpeaker) }
     var emotion by remember { mutableStateOf(TextToSpeech.selectedEmotion) }
     var customVoice by remember { mutableStateOf(TextToSpeech.customVoiceId) }
@@ -112,13 +115,16 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
     }
 
     val isDoubao = backend == TextToSpeech.BACKEND_DOUBAO
+    val isBreeze = backend == TextToSpeech.BACKEND_BREEZE
     val voiceLabel = when {
         customVoice.isNotBlank() -> "自定义：$customVoice"
         isDoubao -> doubaoVoiceLabel(doubaoVoice)
+        isBreeze -> breezeVoiceName.ifBlank { breezeVoice.ifBlank { "未选择（点击选择 Breeze 音色）" } }
         else -> mofaVoice
     }
     val effectiveMofaVoice = customVoice.ifBlank { mofaVoice }
     val effectiveDoubaoVoice = customVoice.ifBlank { doubaoVoice }
+    val effectiveBreezeVoice = customVoice.ifBlank { breezeVoice }
 
     Column(
         modifier = Modifier
@@ -207,8 +213,8 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
                     desc = "API Key 已内置，可自行替换",
                     selected = !isDoubao,
                 ) {
-                    backend = TextToSpeech.BACKEND_MOFA
-                    TextToSpeech.backend = TextToSpeech.BACKEND_MOFA
+                    backend = TextToSpeech.BACKEND_BREEZE
+                    TextToSpeech.backend = TextToSpeech.BACKEND_BREEZE
                 }
                 BackendRow(
                     title = "豆包",
@@ -243,6 +249,15 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
                             TextToSpeech.doubaoSpeaker = id
                             TextToSpeech.doubaoSpeakerName = name
                         }
+                    } else if (isBreeze) {
+                        showBreezeVoicePicker(context, breezeVoice, apiKey) { id, name ->
+                            breezeVoice = id
+                            breezeVoiceName = name
+                            customVoice = ""
+                            TextToSpeech.customVoiceId = ""
+                            TextToSpeech.breezeVoice = id
+                            TextToSpeech.breezeVoiceName = name
+                        }
                     } else {
                         showMofaPicker = true
                     }
@@ -269,6 +284,19 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
                                 toast(context, "请先填写豆包 Cookie")
                             } else {
                                 TextToSpeech.generateVoiceDoubao(sample, effectiveDoubaoVoice, cookie) { path, err ->
+                                    voiceBusy = false
+                                    if (path != null) playWav(path) else toast(context, "合成失败：$err")
+                                }
+                            }
+                        } else if (isBreeze) {
+                            if (apiKey.isBlank()) {
+                                voiceBusy = false
+                                toast(context, "请先填写 Breeze API Key")
+                            } else if (effectiveBreezeVoice.isBlank()) {
+                                voiceBusy = false
+                                toast(context, "请先选择 Breeze 音色")
+                            } else {
+                                TextToSpeech.generateVoiceBreeze(sample, effectiveBreezeVoice, emotion, key = apiKey) { path, err ->
                                     voiceBusy = false
                                     if (path != null) playWav(path) else toast(context, "合成失败：$err")
                                 }
@@ -341,7 +369,7 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
                         when (field) {
                             "key" -> {
                                 apiKey = v
-                                TextToSpeech.apiKey = v
+                                TextToSpeech.breezeKey = v
                             }
 
                             "cookie" -> {

@@ -139,10 +139,10 @@ object TextToSpeech :
     /** 在候选结果中生成并发送语音（VoiceReply 使用）。 */
     var voiceReplyEnabled by prefOption("ai_reply_tts_enabled", true)
 
-    private var breezeKey by prefOption("tts_breeze_api_key", "brz_XCLJf64j70U0nL-M6LOikfTsQfV4Pt2r")
-    private var breezeModel by prefOption("tts_breeze_model_id", BreezeTtsClient.DEFAULT_MODEL)
-    private var breezeVoice by prefOption("tts_breeze_voice", "")
-    private var breezeVoiceName by prefOption("tts_breeze_voice_name", "")
+    var breezeKey by prefOption("tts_breeze_api_key", "brz_XCLJf64j70U0nL-M6LOikfTsQfV4Pt2r")
+    var breezeModel by prefOption("tts_breeze_model_id", BreezeTtsClient.DEFAULT_MODEL)
+    var breezeVoice by prefOption("tts_breeze_voice", "")
+    var breezeVoiceName by prefOption("tts_breeze_voice_name", "")
 
     /** 入口一: 长按聊天消息气泡的菜单 */
     private var entryBubble by prefOption("tts_entry_bubble", false)
