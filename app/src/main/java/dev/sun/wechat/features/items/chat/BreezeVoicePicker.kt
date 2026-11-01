@@ -55,6 +55,7 @@ import com.composables.icons.materialsymbols.outlined.Refresh
 import com.composables.icons.materialsymbols.outlined.Search
 import dev.sun.wechat.features.items.chat.panel.listPanelTreeFiles
 import dev.sun.wechat.features.items.chat.panel.pickPanelDirectory
+import dev.sun.wechat.features.items.chat.panel.pickPanelFile
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.m3.DropDownMenuWidget
@@ -464,6 +465,53 @@ private fun showBreezeCloneDialog(
             sample = null
         }
 
+        /** 直接挑单个音频文件导入：不走目录树，读完落到缓存目录并自动选中，省掉「先想到去建目录」这一步。 */
+        fun importSampleFile() {
+            pickPanelFile(context, arrayOf("audio/*")) { name, uri, activity ->
+                busy = true
+                status = "正在读取 $name…"
+                Thread {
+                    val outcome = runCatching {
+                        val suffix = name.substringAfterLast('.', "mp3").lowercase()
+                        if (suffix !in BreezeTtsClient.CLONE_SUFFIXES) {
+                            throw BreezeTtsClient.BreezeError(
+                                "只支持 ${BreezeTtsClient.CLONE_SUFFIXES.joinToString("/")} 格式",
+                            )
+                        }
+                        val dest = File(breezePreviewDir(), "sample-${System.currentTimeMillis()}.$suffix")
+                        activity.contentResolver.openInputStream(uri)?.use { input ->
+                            dest.outputStream().use(input::copyTo)
+                        } ?: throw BreezeTtsClient.BreezeError("读不到选中的文件")
+                        if (!dest.isFile || dest.length() <= 0L) {
+                            throw BreezeTtsClient.BreezeError("选中的文件是空的")
+                        }
+                        if (dest.length() > BreezeTtsClient.CLONE_MAX_BYTES) {
+                            dest.delete()
+                            throw BreezeTtsClient.BreezeError("文件超过 5 MB，先裁剪一段再导入")
+                        }
+                        CloneSample(
+                            name = name,
+                            detail = "${dest.length() / 1024} KB · 刚导入",
+                            file = dest,
+                            uri = null,
+                        )
+                    }
+                    breezeMainHandler.post {
+                        busy = false
+                        activity.finish()
+                        outcome.fold(
+                            onSuccess = { picked ->
+                                samples = listOf(picked) + samples.filterNot { it.name == picked.name }
+                                sample = picked
+                                status = ""
+                            },
+                            onFailure = { status = "导入失败：${it.message}" },
+                        )
+                    }
+                }.start()
+            }
+        }
+
         fun audition(target: BreezeTtsClient.ClonePreview) {
             if (playing) {
                 stop()
@@ -603,19 +651,22 @@ private fun showBreezeCloneDialog(
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                if (sampleTree == null) "默认目录 Download/WcS/" else "来自自选目录",
+                                if (sampleTree == null) "默认目录 ${defaultDirLabel()}" else "来自自选目录",
                                 style = MiuixTheme.textStyles.footnote1,
                                 modifier = Modifier.weight(1f),
                             )
-                            TextButton(text = "浏览其他目录", onClick = { browseSamples() }, enabled = !busy)
                             if (sampleTree != null) {
                                 TextButton(text = "回默认", onClick = { useDefaultSamples() }, enabled = !busy)
                             }
                         }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            TextButton(text = "导入音频文件", onClick = { importSampleFile() }, enabled = !busy)
+                            TextButton(text = "浏览其他目录", onClick = { browseSamples() }, enabled = !busy)
+                        }
                         if (samples.isEmpty()) {
                             Text(
                                 if (sampleTree == null) {
-                                    "默认目录里还没有可用的音频文件。可以先用「保存语音到本地」导出 mp3，或点「浏览其他目录」。"
+                                    "默认目录里还没有可用的音频文件。点「导入音频文件」直接选一段，或点「浏览其他目录」。"
                                 } else {
                                     "这个目录里没有合规的音频文件。"
                                 },
@@ -739,7 +790,11 @@ private data class CloneSample(
     val stem: String get() = name.substringBeforeLast('.')
 }
 
-/** 默认目录 Download/WcS/：只列格式与体积合规的音频，最新的排前面。 */
+/** 默认目录的显示名跟着 KnownPaths.downloads 走，避免文案写死成别的分支的目录名。 */
+private fun defaultDirLabel(): String =
+    KnownPaths.downloads.toFile().name?.takeIf { it.isNotBlank() }?.let { "Download/$it/" } ?: "Download/"
+
+/** 默认目录里只列格式与体积合规的音频，最新的排前面。 */
 private fun defaultSamples(): List<CloneSample> =
     KnownPaths.downloads.toFile().listFiles()
         ?.filter {
