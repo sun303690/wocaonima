@@ -182,22 +182,46 @@ abstract class BaseFeature {
     fun DexMethodDelegate.hookBefore(
         priority: Int = 50,
         action: HookAction
-    ) = method.hookBefore(priority, action)
+    ) {
+        if (!isAvailable) {
+            WeLogger.w(TAG, "skip hookBefore on unresolved dex method ${this.key}")
+            return
+        }
+        runCatching { method }.getOrNull()?.hookBefore(priority, action)
+    }
 
     fun DexMethodDelegate.hookAfter(
         priority: Int = 50,
         action: HookAction
-    ) = method.hookAfter(priority, action)
+    ) {
+        if (!isAvailable) {
+            WeLogger.w(TAG, "skip hookAfter on unresolved dex method ${this.key}")
+            return
+        }
+        runCatching { method }.getOrNull()?.hookAfter(priority, action)
+    }
 
     fun DexConstructorDelegate.hookBefore(
         priority: Int = 50,
         action: HookAction
-    ) = constructor.hookBefore(priority, action)
+    ) {
+        if (!isAvailable) {
+            WeLogger.w(TAG, "skip hookBefore on unresolved dex constructor ${this.key}")
+            return
+        }
+        runCatching { constructor }.getOrNull()?.hookBefore(priority, action)
+    }
 
     fun DexConstructorDelegate.hookAfter(
         priority: Int = 50,
         action: HookAction
-    ) = constructor.hookAfter(priority, action)
+    ) {
+        if (!isAvailable) {
+            WeLogger.w(TAG, "skip hookAfter on unresolved dex constructor ${this.key}")
+            return
+        }
+        runCatching { constructor }.getOrNull()?.hookAfter(priority, action)
+    }
 
     // --- end dex delegate ---
 
