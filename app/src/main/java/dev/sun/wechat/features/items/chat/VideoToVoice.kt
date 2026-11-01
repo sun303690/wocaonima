@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.Looper
 import androidx.activity.ComponentActivity
 import com.composables.icons.materialsymbols.MaterialSymbols
+import com.composables.icons.materialsymbols.outlined.Graphic_eq
 import dev.sun.wechat.R
 import dev.sun.wechat.features.api.core.models.MessageType
 import dev.sun.wechat.features.api.ui.WeChatMessageContextMenuApi
