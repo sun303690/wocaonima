@@ -44,6 +44,7 @@ import dev.sun.wechat.features.api.core.WeDatabaseApi
 import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.features.api.core.models.MessageInfo
 import dev.sun.wechat.features.api.ui.WeChatMessageContextMenuApi
+import dev.sun.wechat.features.items.chat_mood.ReplyMessageSupport
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
@@ -190,7 +191,8 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
             text = "帮我回",
             drawable = AiSmartReplyIcon,
             imageVector = MaterialSymbols.Outlined.Auto_awesome,
-            isSupported = { msg -> msg.type?.isText == true },
+            // 文字、语音、表情包都可以 AI 回复
+            isSupported = { msg -> ReplyMessageSupport.isReplyEligible(msg) },
         ) { view, ctx, msgInfo ->
             showSmartReplyDialog(ctx.activity, msgInfo)
         },
@@ -311,7 +313,8 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
     }
 
     private fun msgMessageText(msg: MessageInfo): String =
-        msg.actualContent.ifBlank { msg.content }.trim()
+        // 文字用原文；语音用微信转写文本（没有则 [语音]）；表情用 [表情]
+        ReplyMessageSupport.replyText(msg) ?: ""
 
     private fun loadRecentContext(talker: String, limit: Int): String {
         if (talker.isEmpty()) return ""

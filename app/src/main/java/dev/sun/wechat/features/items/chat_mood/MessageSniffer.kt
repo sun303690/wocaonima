@@ -22,9 +22,17 @@ object MessageSniffer {
             try {
                 // 只开「自动帮我回」时也要跑，否则消息下方不会有回复建议卡片
                 if (!MoodAnalyzer.enabled && !ReplyAuto.enabled) return
-                if (message.type?.isText != true) return  // 非纯文字(图片/语音/文件/视频/链接/引用)不参与
+                // 文字、语音、表情包参与；图片/视频/文件/卡片/链接等跳过
+                if (!ReplyMessageSupport.isReplyEligible(message)) return
+                val isPlainText = ReplyMessageSupport.isPlainText(message)
                 val talker = message.talker
-                val text = MessagePolicy.textOrNull(message.humanReadableRepr) ?: return  // 空/超长不算正确文字
+                val text = if (isPlainText) {
+                    // 空/超长不算正确文字
+                    MessagePolicy.textOrNull(ReplyMessageSupport.replyText(message) ?: return) ?: return
+                } else {
+                    // 语音/表情没有可读文字，用占位符代表“对方发来了语音/表情”
+                    ReplyMessageSupport.replyText(message) ?: return
+                }
                 val speaker = if (message.isSend != 0) "我" else "对方"
                 val deque = recentByTalker.getOrPut(talker) { ArrayDeque() }
                 deque.addLast(speaker to text)
@@ -42,7 +50,10 @@ object MessageSniffer {
                     messageId = message.createTime,
                     speaker = speaker,
                 )
-                MoodAnalyzer.submit(input) { view.isShown }
+                // 情绪分析只对文字有意义；语音/表情只出回复建议卡
+                if (isPlainText) {
+                    MoodAnalyzer.submit(input) { view.isShown }
+                }
                 BubbleDecorator.show(view, input)
                 // 自动帮我回：只对对方的新消息触发，生成结果画在同一张卡片里
                 ReplyAuto.request(talker, input.key)
@@ -64,7 +75,8 @@ object MessageSniffer {
         if (talker.isBlank()) return
         if (!ConversationSwitches.isEnabled(talker)) return
         val deque = recentByTalker[talker] ?: return
-        val last = deque.lastOrNull { it.first == "对方" } ?: return
+        // 只补最近一条对方文字消息（语音/表情占位符没有情绪可分析）
+        val last = deque.lastOrNull { it.first == "对方" && !it.second.startsWith("[") } ?: return
         val context = deque.dropLast(1).takeLast(MessagePolicy.MAX_CONTEXT_MESSAGES)
             .map { ContextMessage(it.first, it.second) }
         val input = AnalysisInput(

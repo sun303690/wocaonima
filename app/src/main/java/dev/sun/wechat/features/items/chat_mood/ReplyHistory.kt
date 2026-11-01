@@ -51,9 +51,11 @@ object ReplyHistory {
             .ifBlank { talker }
         val isGroup = talker.endsWith("@chatroom")
         val messages = rows.mapNotNull { message ->
-            if (message.type?.isText != true) return@mapNotNull null
-            var text = message.content
-            if (isGroup && message.isSend == 0) {
+            // 文字、语音、表情包都纳入上下文（语音/表情用占位符表示）
+            if (!ReplyMessageSupport.isReplyEligible(message)) return@mapNotNull null
+            val isPlainText = ReplyMessageSupport.isPlainText(message)
+            var text = ReplyMessageSupport.replyText(message) ?: return@mapNotNull null
+            if (isGroup && message.isSend == 0 && isPlainText) {
                 val index = text.indexOf(":\n")
                 if (index in 1..64) text = text.substring(index + 2)
             }

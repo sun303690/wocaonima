@@ -67,6 +67,7 @@ import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.features.api.ui.WeChatMessageContextMenuApi
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
+import dev.sun.wechat.features.items.chat_mood.ReplyMessageSupport
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
@@ -204,11 +205,12 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                 localizedChatString(R.string.ai_reply_menu),
                 ReplyIcon,
                 MaterialSymbols.Outlined.Auto_awesome,
-                isSupported = { msgInfo -> msgInfo.type?.isText == true },
+                isSupported = { msgInfo -> ReplyMessageSupport.isReplyEligible(msgInfo) },
                 multiSelect = WeChatMessageContextMenuApi.MultiSelectSupport.Unsupported,
                 onClick = { view, _, msgInfo ->
-                    val text = msgInfo.humanReadableRepr.trim()
-                    if (text.isEmpty()) {
+                    // 文字用原文；语音用微信转写文本（没有则 [语音]）；表情用 [表情]
+                    val text = ReplyMessageSupport.replyText(msgInfo)?.trim()
+                    if (text.isNullOrEmpty()) {
                         showToast(view.context, localizedChatString(R.string.ai_reply_no_text))
                         return@MenuItem
                     }
