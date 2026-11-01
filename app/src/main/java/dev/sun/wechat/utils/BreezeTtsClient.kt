@@ -217,6 +217,27 @@ object BreezeTtsClient {
 
     // ---- 账户 ----
 
+    /** 下载试听音频到 [dest]（preview_url 是签名链接，无需认证）。成功一次后本地可离线试听。 */
+    fun downloadAudio(url: String, dest: File) {
+        if (url.isBlank()) throw BreezeError("试听链接为空")
+        val request = Request.Builder()
+            .url(url)
+            .header("Accept", "audio/*, */*")
+            .build()
+        val response = runCatching { http.newCall(request).execute() }
+            .getOrElse {
+                WeLogger.w(TAG, "breeze preview download failed: ${it.message}")
+                throw BreezeError("网络失败：${it.message}")
+            }
+        response.use {
+            val bytes = it.body?.bytes() ?: ByteArray(0)
+            if (!it.isSuccessful) throw BreezeError(describe(it.code, bytes, emptyMap()))
+            if (bytes.isEmpty()) throw BreezeError("试听音频为空")
+            dest.writeBytes(bytes)
+            WeLogger.i(TAG, "breeze preview cached: ${bytes.size} bytes -> ${dest.name}")
+        }
+    }
+
     /** /v1/models 直接返回数组，不包壳。 */
     fun models(key: String): List<Model> {
         val text = String(call("GET", "/v1/models", key, null, null).first, Charsets.UTF_8)

@@ -84,6 +84,7 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -992,7 +993,11 @@ object TextToSpeech :
         }.start()
     }
 
-    /** Breeze 走同步 HTTP 拿 mp3，后面与魔方、豆包共用同一条转 silk 通路。 */
+    /**
+     * Breeze 走同步 HTTP 拿 mp3，后面与魔方、豆包共用同一条转 silk 通路。
+     * 合成结果按「音色+模型+文本+情绪」哈希落盘缓存：同一句生成过一次后，
+     * 离线也能直接复用（发送走微信通道，不依赖 Breeze），也省额度。
+     */
     fun generateVoiceBreeze(
         text: String,
         voiceId: String,
@@ -1006,8 +1011,17 @@ object TextToSpeech :
             var error = ""
             try {
                 val dir = File(KnownPaths.moduleCache.toFile(), "wcs_tts").apply { mkdirs() }
-                val dest = File(dir, "breeze_${System.currentTimeMillis()}.mp3")
-                BreezeTtsClient.synthesize(key, voiceId, model, text, instructions, dest)
+                val cacheDir = File(dir, "cache").apply { mkdirs() }
+                val digest = MessageDigest.getInstance("SHA-256")
+                    .digest("$voiceId|$model|$text|$instructions".toByteArray(Charsets.UTF_8))
+                    .joinToString("") { "%02x".format(it) }
+                val dest = File(cacheDir, "breeze_$digest.mp3")
+                if (!dest.isFile || dest.length() <= 0L) {
+                    BreezeTtsClient.synthesize(key, voiceId, model, text, instructions, dest)
+                    WeLogger.i(TAG, "breeze tts synthesized: ${dest.length()} bytes -> ${dest.name}")
+                } else {
+                    WeLogger.i(TAG, "breeze tts cache hit: ${dest.name}")
+                }
                 path = dest.absolutePath
                 lastWavPath = path
             } catch (e: Exception) {

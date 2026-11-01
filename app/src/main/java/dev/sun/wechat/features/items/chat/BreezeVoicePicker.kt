@@ -2,6 +2,8 @@ package dev.sun.wechat.features.items.chat
 
 import android.content.Context
 import android.media.MediaPlayer
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
@@ -67,6 +69,8 @@ import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToast
 import dev.sun.wechat.utils.fs.KnownPaths
 import dev.sun.wechat.utils.openInSystem
+import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -99,6 +103,12 @@ private val breezeMainHandler = Handler(Looper.getMainLooper())
 private fun breezePreviewDir(): File =
     File(KnownPaths.moduleCache.toFile(), "breeze_previews").apply { mkdirs() }
 
+/** 某个音色试听音频的本地缓存文件：下载成功一次后离线也能直接播。 */
+private fun breezePreviewAudioFile(voiceId: String): File {
+    val safe = voiceId.replace(Regex("[^A-Za-z0-9._-]"), "_")
+    return File(breezePreviewDir(), "preview_$safe.mp3")
+}
+
 fun showBreezeVoicePicker(
     context: Context,
     currentId: String,
@@ -113,6 +123,15 @@ fun showBreezeVoicePicker(
     val loadingState = mutableStateOf(false)
     val statusState = mutableStateOf("")
     val key = apiKey.trim()
+
+    // 先把上次成功拉到的列表读出来铺上：挂梯子拉到过一次之后，不开代理也能看到并能直接选音色，
+    // 不用每次都先翻墙等刷新。
+    val cached = loadVoiceCache(key)
+    if (cached != null) {
+        officialState.value = cached.official
+        mineState.value = cached.mine
+    }
+    var cachedAt = cached?.savedAt ?: 0L
 
     fun refresh(onlyMine: Boolean) {
         if (key.isBlank()) {
@@ -133,13 +152,32 @@ fun showBreezeVoicePicker(
                 loadingState.value = false
                 officialList?.let { officialState.value = it }
                 mineList?.let { mineState.value = it }
-                if (failure.isNotEmpty()) statusState.value = "拉取失败：$failure"
+                if (officialList != null || mineList != null) {
+                    saveVoiceCache(
+                        key = key,
+                        official = officialList ?: officialState.value,
+                        mine = mineList ?: mineState.value,
+                    )
+                    cachedAt = System.currentTimeMillis()
+                }
+                if (failure.isNotEmpty()) {
+                    val hasList = officialState.value.isNotEmpty() || mineState.value.isNotEmpty()
+                    statusState.value = if (hasList && cachedAt > 0L) {
+                        "联网刷新失败（没开代理？），当前显示 ${formatCacheTime(cachedAt)} 的本地缓存列表"
+                    } else {
+                        "拉取失败：$failure"
+                    }
+                }
             }
         }.start()
     }
 
-    // 打开即拉取，不等用户点刷新
-    refresh(onlyMine = false)
+    // 打开即拉取；完全没网就不必等超时，直接把缓存标出来
+    if (cached != null && !hasInternet(context)) {
+        statusState.value = "当前没有网络，显示 ${formatCacheTime(cached.savedAt)} 的本地缓存列表"
+    } else {
+        refresh(onlyMine = false)
+    }
 
     showComposeDialog(context) {
         val official by officialState
@@ -170,18 +208,43 @@ fun showBreezeVoicePicker(
                 showToast(context, "这个音色没有试听音频")
                 return
             }
+            // 优先播本地缓存：成功下载过一次后，不开代理也能试听
+            val cacheFile = breezePreviewAudioFile(tag)
+            if (cacheFile.isFile && cacheFile.length() > 0L) {
+                startPlaying(cacheFile.absolutePath, tag)
+                return
+            }
+            // 第一次需要联网，下载完成后再播，并落盘供下次离线使用
+            playing = tag
+            Thread {
+                val ok = runCatching {
+                    BreezeTtsClient.downloadAudio(url, cacheFile)
+                    true
+                }.getOrDefault(false)
+                breezeMainHandler.post {
+                    if (ok) {
+                        startPlaying(cacheFile.absolutePath, tag)
+                    } else {
+                        playing = null
+                        showToast(context, "试听下载失败（需要联网），这个音色没有可用的本地试听")
+                    }
+                }
+            }.start()
+        }
+
+        fun startPlaying(path: String, tag: String) {
             val next = MediaPlayer()
             player = next
             playing = tag
             next.setOnPreparedListener { it.start() }
             next.setOnErrorListener { _, _, _ ->
                 playing = null
-                showToast(context, "试听失败，链接可能已过期")
+                showToast(context, "试听失败，音频可能已损坏")
                 true
             }
             next.setOnCompletionListener { playing = null }
             runCatching {
-                next.setDataSource(url)
+                next.setDataSource(path)
                 next.prepareAsync()
             }.onFailure {
                 playing = null
@@ -845,4 +908,96 @@ private fun Chip(
             content = content,
         )
     }
+}
+
+/** 音色列表的本地缓存：拉成功一次就落盘，之后没网/没代理也能照旧选。 */
+private fun breezeVoiceCacheFile(): File =
+    File(KnownPaths.moduleCache.toFile(), "breeze_voices_cache.json")
+
+private data class VoiceCache(
+    val savedAt: Long,
+    val official: List<BreezeTtsClient.Voice>,
+    val mine: List<BreezeTtsClient.Voice>,
+)
+
+private fun formatCacheTime(millis: Long): String =
+    SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(millis))
+
+/** 完全没网时不必等请求超时，直接拿缓存顶上；拿不到网络状态就当有网。 */
+private fun hasInternet(context: Context): Boolean = runCatching {
+    val manager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+        ?: return@runCatching true
+    val capabilities = manager.getNetworkCapabilities(manager.activeNetwork) ?: return@runCatching false
+    capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+}.getOrDefault(true)
+
+/** key 变了（换账号/换 token）就当作没有缓存，别把别人的「我的音色」铺出来。 */
+private fun loadVoiceCache(key: String): VoiceCache? {
+    val file = breezeVoiceCacheFile()
+    if (!file.isFile) return null
+
+    fun parse(root: JSONObject, listName: String): List<BreezeTtsClient.Voice> {
+        val array = root.optJSONArray(listName) ?: return emptyList()
+        val result = mutableListOf<BreezeTtsClient.Voice>()
+        for (index in 0 until array.length()) {
+            val item = array.optJSONObject(index) ?: continue
+            val id = item.optString("id")
+            if (id.isBlank()) continue
+            result += BreezeTtsClient.Voice(
+                id = id,
+                name = item.optString("name"),
+                gender = item.optString("gender"),
+                age = item.optString("age"),
+                language = item.optString("language"),
+                accent = item.optString("accent"),
+                tone = item.optString("tone"),
+                previewUrl = item.optString("previewUrl"),
+                personal = item.optBoolean("personal"),
+            )
+        }
+        return result
+    }
+
+    return runCatching {
+        val root = JSONObject(file.readText())
+        if (root.optInt("keyTag") != key.hashCode()) return@runCatching null
+        VoiceCache(
+            savedAt = root.optLong("savedAt"),
+            official = parse(root, "official"),
+            mine = parse(root, "mine"),
+        )
+    }.getOrNull()
+}
+
+private fun saveVoiceCache(
+    key: String,
+    official: List<BreezeTtsClient.Voice>,
+    mine: List<BreezeTtsClient.Voice>,
+) {
+    runCatching {
+        fun dump(list: List<BreezeTtsClient.Voice>): JSONArray {
+            val array = JSONArray()
+            list.forEach { voice ->
+                array.put(
+                    JSONObject()
+                        .put("id", voice.id)
+                        .put("name", voice.name)
+                        .put("gender", voice.gender)
+                        .put("age", voice.age)
+                        .put("language", voice.language)
+                        .put("accent", voice.accent)
+                        .put("tone", voice.tone)
+                        .put("previewUrl", voice.previewUrl)
+                        .put("personal", voice.personal),
+                )
+            }
+            return array
+        }
+        val root = JSONObject()
+            .put("keyTag", key.hashCode())
+            .put("savedAt", System.currentTimeMillis())
+            .put("official", dump(official))
+            .put("mine", dump(mine))
+        breezeVoiceCacheFile().writeText(root.toString())
+    }.onFailure { WeLogger.w("BreezeVoiceCache", "写入缓存失败：${it.message}") }
 }
