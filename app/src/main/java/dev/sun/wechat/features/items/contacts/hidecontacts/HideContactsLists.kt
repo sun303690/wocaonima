@@ -626,38 +626,48 @@ private fun HideContacts.installSearchResultRowHooks() {
         WeLogger.i(TAG, "hiding 主页搜索 rows at ${getView.declaringClass.name}.${getView.name}")
 
         getView.hookAfter {
-            if (isTemporarilyShown || hiddenContacts.isEmpty()) return@hookAfter
-            if (!surfaceOn(SURFACE_SEARCH)) return@hookAfter
+            // 这里在宿主 ListView 的布局流程里改 View，任何意外都不能往外抛，
+            // 否则会把微信主线程打挂（framework 层 NPE 也一样）。
+            try {
+                if (isTemporarilyShown || hiddenContacts.isEmpty()) return@hookAfter
+                if (!surfaceOn(SURFACE_SEARCH)) return@hookAfter
 
-            val view = result as? View ?: return@hookAfter
-            val position = args[0] as Int
-            val adapter = thisObject as Adapter
-            val row = adapter.getItem(position)
-            val baseline = searchRowBaselines[view]
+                val view = result as? View ?: return@hookAfter
+                val position = args[0] as Int
+                val adapter = thisObject as Adapter
+                val row = adapter.getItem(position)
+                val baseline = searchRowBaselines[view]
 
-            if (row != null && containsHiddenId(row, 1)) {
-                // 已经是隐藏态就别再动：滚动时同一个 View 会被反复 bind，否则这条日志会淹掉文件。
-                if (view.visibility == View.GONE && view.layoutParams?.height == 0) return@hookAfter
-                if (baseline == null) {
-                    searchRowBaselines[view] = SearchRowBaseline(
-                        view.visibility,
-                        view.layoutParams?.width ?: ViewGroup.LayoutParams.WRAP_CONTENT,
-                        view.layoutParams?.height ?: ViewGroup.LayoutParams.WRAP_CONTENT,
-                    )
+                if (row != null && containsHiddenId(row, 1)) {
+                    // 已经是隐藏态就别再动：滚动时同一个 View 会被反复 bind，否则这条日志会淹掉文件。
+                    if (view.visibility == View.GONE && view.layoutParams?.height == 0) return@hookAfter
+                    if (baseline == null) {
+                        searchRowBaselines[view] = SearchRowBaseline(
+                            view.visibility,
+                            view.layoutParams?.width ?: ViewGroup.LayoutParams.WRAP_CONTENT,
+                            view.layoutParams?.height ?: ViewGroup.LayoutParams.WRAP_CONTENT,
+                        )
+                    }
+                    view.visibility = View.GONE
+                    // 只原地改 LayoutParams 的宽高，不要再 setLayoutParams：
+                    // 在 ListView 的 getView 布局流程里调 setLayoutParams 会触发 requestLayout 重入，
+                    // 有概率把父 ViewGroup 的 children 数组搞出空位，进而在
+                    // ViewGroup.dispatchCollectViewAttributes 里 NPE（真机 8.0.78 崩过）。
+                    view.layoutParams?.let { lp ->
+                        lp.width = 0
+                        lp.height = 0
+                    }
+                    WeLogger.d(TAG, "hid a 主页搜索 result row in ${adapter.javaClass.name} at $position")
+                } else if (baseline != null) {
+                    searchRowBaselines.remove(view)
+                    view.visibility = baseline.visibility
+                    view.layoutParams?.let { lp ->
+                        lp.width = baseline.width
+                        lp.height = baseline.height
+                    }
                 }
-                view.visibility = View.GONE
-                view.layoutParams?.apply {
-                    width = 0
-                    height = 0
-                }?.let { view.layoutParams = it }
-                WeLogger.d(TAG, "hid a 主页搜索 result row in ${adapter.javaClass.name} at $position")
-            } else if (baseline != null) {
-                searchRowBaselines.remove(view)
-                view.visibility = baseline.visibility
-                view.layoutParams?.apply {
-                    width = baseline.width
-                    height = baseline.height
-                }?.let { view.layoutParams = it }
+            } catch (t: Throwable) {
+                WeLogger.w(TAG, "search row hiding failed", t)
             }
         }
     }
