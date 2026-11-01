@@ -654,8 +654,26 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
         }
     }
 
+    /**
+     * 这些页面不强制透明状态栏。
+     *
+     * 透明状态栏会 setDecorFitsSystemWindows(false)，把内容一直铺到状态栏下面。
+     * 服务号页面顶部是内嵌 webview / 小程序容器，加载前是黑底，被顶到状态栏下
+     * 就露出一道黑边（用户实测：开透明状态栏黑边出现，关掉后消失）。因此这些
+     * 页面跳过透明状态栏，背景遮罩仍然照常应用。
+     */
+    private val transparentStatusBarExcludedPrefixes = listOf(
+        "${PackageNames.WECHAT}.plugin.brandservice."
+    )
+
+    private fun isTransparentStatusBarExcluded(activity: Activity): Boolean {
+        val className = activity.javaClass.name
+        return transparentStatusBarExcludedPrefixes.any { className.startsWith(it) }
+    }
+
     private fun applyTransparentStatusBarIfEnabled(activity: Activity) {
         if (!transparentStatusBar) return
+        if (isTransparentStatusBarExcluded(activity)) return
         applyTransparentStatusBar(activity)
     }
 
