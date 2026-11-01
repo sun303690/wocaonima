@@ -4,7 +4,7 @@ import com.tencent.mm.pluginsdk.ui.chat.ChatFooter
 import dev.sun.wechat.features.api.core.WeDatabaseApi
 import dev.sun.wechat.features.api.core.models.MessageInfo
 import dev.sun.wechat.features.api.ui.WeChatInputBarApi
-import dev.sun.wechat.features.api.ui.WeMessageApi
+import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.utils.WeLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
