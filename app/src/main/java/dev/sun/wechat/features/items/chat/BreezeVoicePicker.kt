@@ -35,7 +35,6 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -105,15 +104,51 @@ fun showBreezeVoicePicker(
     apiKey: String,
     onPicked: (id: String, name: String) -> Unit,
 ) {
+    // 列表状态和拉取动作都提到 composable 外面：函数一被调用就立刻发请求，
+    // 不依赖 LaunchedEffect —— 自建 Dialog 里的副作用启动时机不可靠，
+    // 之前的表现就是打开后必须手动点一下刷新才会有数据。
+    val officialState = mutableStateOf<List<BreezeTtsClient.Voice>>(emptyList())
+    val mineState = mutableStateOf<List<BreezeTtsClient.Voice>>(emptyList())
+    val loadingState = mutableStateOf(false)
+    val statusState = mutableStateOf("")
+    val key = apiKey.trim()
+
+    fun refresh(onlyMine: Boolean) {
+        if (key.isBlank()) {
+            statusState.value = "先在文字转语音设置里填写 Breeze API Key"
+            return
+        }
+        loadingState.value = true
+        statusState.value = ""
+        Thread {
+            val failure = StringBuilder()
+            val officialList = if (onlyMine) null else runCatching { BreezeTtsClient.voices(key, false) }
+                .onFailure { failure.append("官方音色：").append(it.message).append(' ') }
+                .getOrNull()
+            val mineList = runCatching { BreezeTtsClient.voices(key, true) }
+                .onFailure { failure.append("我的音色：").append(it.message).append(' ') }
+                .getOrNull()
+            breezeMainHandler.post {
+                loadingState.value = false
+                officialList?.let { officialState.value = it }
+                mineList?.let { mineState.value = it }
+                if (failure.isNotEmpty()) statusState.value = "拉取失败：$failure"
+            }
+        }.start()
+    }
+
+    // 打开即拉取，不等用户点刷新
+    refresh(onlyMine = false)
+
     showComposeDialog(context) {
-        var official by remember { mutableStateOf<List<BreezeTtsClient.Voice>>(emptyList()) }
-        var mine by remember { mutableStateOf<List<BreezeTtsClient.Voice>>(emptyList()) }
+        val official by officialState
+        val mine by mineState
+        val loading by loadingState
+        val status by statusState
         var tab by remember { mutableStateOf(BreezeVoiceTab.OFFICIAL) }
         var query by remember { mutableStateOf("") }
         var picked by remember { mutableStateOf(currentId) }
         var favorites by remember { mutableStateOf(BreezeVoiceFavorites.load()) }
-        var loading by remember { mutableStateOf(false) }
-        var status by remember { mutableStateOf("") }
         var playing by remember { mutableStateOf<String?>(null) }
         var player by remember { mutableStateOf<MediaPlayer?>(null) }
 
@@ -153,35 +188,6 @@ fun showBreezeVoicePicker(
             }
         }
 
-        fun refresh(onlyMine: Boolean) {
-            if (apiKey.isBlank()) {
-                status = "先在文字转语音设置里填写 Breeze API Key"
-                return
-            }
-            loading = true
-            status = ""
-            Thread {
-                val failure = StringBuilder()
-                val officialList = if (onlyMine) null else runCatching { BreezeTtsClient.voices(apiKey, false) }
-                    .onFailure { failure.append("官方音色：").append(it.message).append(' ') }
-                    .getOrNull()
-                val mineList = runCatching { BreezeTtsClient.voices(apiKey, true) }
-                    .onFailure { failure.append("我的音色：").append(it.message).append(' ') }
-                    .getOrNull()
-                breezeMainHandler.post {
-                    loading = false
-                    officialList?.let { official = it }
-                    mineList?.let { mine = it }
-                    if (failure.isNotEmpty()) status = "拉取失败：$failure"
-                }
-            }.start()
-        }
-
-        LaunchedEffect(Unit) {
-            if (apiKey.isBlank()) status = "先在文字转语音设置里填写 Breeze API Key"
-            else if (official.isEmpty() && mine.isEmpty()) refresh(onlyMine = false)
-        }
-
         val pool = when (tab) {
             BreezeVoiceTab.OFFICIAL -> official
             BreezeVoiceTab.MINE -> mine
@@ -208,6 +214,16 @@ fun showBreezeVoicePicker(
                                 onClick = {
                                     tab = entry
                                     query = ""
+                                    // 切到还没拉过的页签时自动补拉，不用再手动点刷新
+                                    val empty = when (entry) {
+                                        BreezeVoiceTab.OFFICIAL -> officialState.value.isEmpty()
+                                        BreezeVoiceTab.MINE -> mineState.value.isEmpty()
+                                        BreezeVoiceTab.FAVORITE ->
+                                            officialState.value.isEmpty() && mineState.value.isEmpty()
+                                    }
+                                    if (empty && !loadingState.value) {
+                                        refresh(onlyMine = entry == BreezeVoiceTab.MINE)
+                                    }
                                 },
                             ) { Text(entry.label) }
                         }
