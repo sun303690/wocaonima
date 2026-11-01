@@ -35,6 +35,8 @@ abstract class CheckMiuixPurityTask : DefaultTask() {
             "ui/content/miuix/EngineBridge.kt",
             // WCS「AI 候选回复」整屏按上游 Material3 实现移植，待迁 Miuix 后移出。
             "features/items/chat/AiReplyCandidates.kt",
+            // WCS 视频解析界面按上游 Material3 实现移植，待迁 Miuix 后移出。
+            "features/items/chat_input_bar_menu/ParseVideo.kt",
         )
         val offenders = files.filter { file ->
             file.relativeTo(root).path !in allowlist &&
