@@ -202,6 +202,26 @@ fun showBreezeVoicePicker(
             playing = null
         }
 
+        fun startPlaying(path: String, tag: String) {
+            val next = MediaPlayer()
+            player = next
+            playing = tag
+            next.setOnPreparedListener { it.start() }
+            next.setOnErrorListener { _, _, _ ->
+                playing = null
+                showToast(context, "试听失败，音频可能已损坏")
+                true
+            }
+            next.setOnCompletionListener { playing = null }
+            runCatching {
+                next.setDataSource(path)
+                next.prepareAsync()
+            }.onFailure {
+                playing = null
+                showToast(context, "试听失败：${it.message}")
+            }
+        }
+
         fun playUrl(url: String, tag: String) {
             stopPreview()
             if (url.isBlank()) {
@@ -230,26 +250,6 @@ fun showBreezeVoicePicker(
                     }
                 }
             }.start()
-        }
-
-        fun startPlaying(path: String, tag: String) {
-            val next = MediaPlayer()
-            player = next
-            playing = tag
-            next.setOnPreparedListener { it.start() }
-            next.setOnErrorListener { _, _, _ ->
-                playing = null
-                showToast(context, "试听失败，音频可能已损坏")
-                true
-            }
-            next.setOnCompletionListener { playing = null }
-            runCatching {
-                next.setDataSource(path)
-                next.prepareAsync()
-            }.onFailure {
-                playing = null
-                showToast(context, "试听失败：${it.message}")
-            }
         }
 
         val pool = when (tab) {
