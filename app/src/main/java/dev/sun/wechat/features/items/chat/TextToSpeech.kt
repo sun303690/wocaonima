@@ -68,7 +68,6 @@ import dev.sun.wechat.utils.AudioUtils
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToast
 import dev.sun.wechat.utils.fs.KnownPaths
-import org.json.JSONArray
 import org.json.JSONObject
 import kotlinx.coroutines.delay
 import java.io.File
@@ -86,7 +85,8 @@ object TextToSpeech :
     override val descriptionRes = R.string.feature_text_to_speech_description
 
     private const val TAG = "TextToSpeech"
-    private const val API_BASE = "https://peiyinmofang.com"
+    // 魔方后端已整体切换到 Breeze Blue（breezeblue.ai），API 兼容 Bearer 认证
+    private const val API_BASE = "https://api.breeze.blue/v1"
 
     const val BACKEND_MOFA = 0
     const val BACKEND_DOUBAO = 1
@@ -94,8 +94,8 @@ object TextToSpeech :
     // 豆包网页端协议 (Samantha 音频通道) 整体下沉到 DoubaoSamanthaTts:
     // 握手期鉴权、参数拼接、音频接收、30 秒超时、8 秒节流与 180 秒风控冷却都在那边
 
-    var apiKey by prefOption("tts_api_key", "")
-    var selectedVoice by prefOption("tts_voice_id", "琅琊榜-梅长苏")
+    var apiKey by prefOption("tts_api_key", "brz_XCLJf64j70U0nL-M6LOikfTsQfV4Pt2r")
+    var selectedVoice by prefOption("tts_voice_id", "voc_rh6e8hdbraz6")
     var selectedEmotion by prefOption("tts_emotion", "平静")
     /** 自定义音色 ID；非空时优先于 [selectedVoice] / [doubaoSpeaker]。 */
     var customVoiceId by prefOption("tts_custom_voice_id", "")
@@ -120,9 +120,9 @@ object TextToSpeech :
     data class TtsVoice(val voiceId: String, val label: String)
 
     val DEFAULT_VOICES = listOf(
-        TtsVoice("琅琊榜-梅长苏", "琅琊榜-梅长苏"),
-        TtsVoice("琅琊榜-靖王", "琅琊榜-靖王"),
-        TtsVoice("甄嬛传-甄嬛", "甄嬛传-甄嬛"),
+        TtsVoice("voc_rh6e8hdbraz6", "哈基米娘"),
+        TtsVoice("voc_b86bfwct4cjn", "香农小姐"),
+        TtsVoice("voc_reys5un5t4ed", "深思先生"),
     )
 
     data class DoubaoVoice(val id: String, val label: String)
@@ -144,6 +144,16 @@ object TextToSpeech :
         "惊讶" to floatArrayOf(0f, 0f, 0f, 1f, 0f, 0f, 0f, 0f),
         "害怕" to floatArrayOf(0f, 0f, 0f, 0f, 1f, 0f, 0f, 0f),
         "温柔" to floatArrayOf(0f, 0f, 0f, 0f, 0f, 1f, 0f, 0f),
+    )
+
+    /** 情绪名 -> Breeze TTS `instructions` 提示词（语气方向）。 */
+    private val EMOTION_INSTRUCTIONS = mapOf(
+        "开心" to "用开心、轻快、明亮的语气朗读",
+        "悲伤" to "用低沉、悲伤、难过的语气朗读",
+        "愤怒" to "用愤怒、激动、强硬的语气朗读",
+        "惊讶" to "用惊讶、意外的语气朗读",
+        "害怕" to "用紧张、害怕、颤抖的语气朗读",
+        "温柔" to "用温柔、轻柔、和缓的语气朗读",
     )
 
     override fun onEnable() {
@@ -572,7 +582,7 @@ object TextToSpeech :
                 title = { Text("文字转语音设置") },
                 text = {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
-                        SegmentedColumn(title = "配音魔方") {
+                        SegmentedColumn(title = "Breeze Blue（魔方）") {
                             item {
                                 TextFieldDialogWidget(
                                     title = "API Key",
@@ -585,13 +595,13 @@ object TextToSpeech :
                                     dialogTitle = "设置 API Key",
                                     confirmLabel = "确认",
                                     dismissLabel = "取消",
-                                    valueHint = "未设置，请前往 peiyinmofang.com 获取",
+                                    valueHint = "已内置 Breeze Blue API Key，可自行替换",
                                     password = true,
                                 )
                             }
                         }
                         Text(
-                            "用于调用配音魔方 TTS 接口，在官网「API Key 管理」中创建",
+                            "Breeze Blue TTS 接口（breezeblue.ai），API Key 已内置；如在「API Key 管理」创建了新 Key，可在此替换",
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.fillMaxWidth(),
                         )
@@ -767,30 +777,29 @@ object TextToSpeech :
             var wavPath: String? = null
             var error = ""
             try {
+                // Breeze Blue: POST /v1/text-to-speech/{voice_id}?output_format=wav_24000
+                // 响应体就是 WAV 二进制，直接落盘；emoVec 是老魔方协议的情绪向量，
+                // 这里反查回情绪名映射成 instructions 继续生效。
                 val body = JSONObject().apply {
-                    put("voiceId", voiceId)
                     put("text", text)
-                    put("emoVec", JSONArray(emoVec.map { it.toDouble() }))
+                    val emotion = EMOTIONS.firstOrNull { it.second.contentEquals(emoVec) }?.first
+                    if (emotion != null && emotion != "平静") {
+                        put("instructions", EMOTION_INSTRUCTIONS[emotion] ?: "用$emotion的语气朗读")
+                    }
                 }.toString()
-                val resp = httpPostJson("$API_BASE/api/open/v1/tts/simple-generate", body, key)
-                if (resp.isEmpty()) {
+                val audioBytes = httpPostBinary(
+                    "$API_BASE/text-to-speech/$voiceId?output_format=wav_24000",
+                    body,
+                    key,
+                )
+                if (audioBytes == null || audioBytes.isEmpty()) {
                     error = "接口无响应 (HTTP 非 200 或网络异常)"
                 } else {
-                    val root = JSONObject(resp)
-                    val audioUrl = root.optJSONObject("data")?.optString("audio").orEmpty()
-                    if (audioUrl.isEmpty()) {
-                        val msg = root.optString("msg").ifEmpty { root.optString("message") }
-                        error = "code=${root.opt("code")} ${msg.ifEmpty { "未返回音频地址" }}"
-                    } else {
-                        val dir = File(KnownPaths.moduleCache.toFile(), "wcs_tts").apply { mkdirs() }
-                        val dest = File(dir, "tts_${System.currentTimeMillis()}.wav")
-                        if (download(audioUrl, dest)) {
-                            wavPath = dest.absolutePath
-                            lastWavPath = wavPath
-                        } else {
-                            error = "音频下载失败"
-                        }
-                    }
+                    val dir = File(KnownPaths.moduleCache.toFile(), "wcs_tts").apply { mkdirs() }
+                    val dest = File(dir, "tts_${System.currentTimeMillis()}.wav")
+                    dest.outputStream().use { it.write(audioBytes) }
+                    wavPath = dest.absolutePath
+                    lastWavPath = wavPath
                 }
             } catch (e: Exception) {
                 error = e.message ?: "exception"
@@ -833,24 +842,17 @@ object TextToSpeech :
     fun fetchVoices(key: String = apiKey): List<TtsVoice> {
         if (key.isBlank()) return DEFAULT_VOICES
         return try {
-            val resp = httpGet("$API_BASE/api/open/v1/voices", key)
+            val resp = httpGet("$API_BASE/voices?voice_type=default&page_size=100", key)
             val root = JSONObject(resp)
-            val data = root.optJSONArray("data") ?: return DEFAULT_VOICES
+            val data = root.optJSONArray("voices") ?: return DEFAULT_VOICES
             val list = DEFAULT_VOICES.toMutableList()
             for (i in 0 until data.length()) {
-                val group = data.getJSONObject(i)
-                val title = group.optString("title")
-                val chars = group.optJSONArray("characters") ?: continue
-                for (j in 0 until chars.length()) {
-                    val c = chars.getJSONObject(j)
-                    val vid = c.optString("voice_id")
-                    if (vid.isEmpty()) continue
-                    if (list.any { it.voiceId == vid }) continue
-                    val name = c.optString("name")
-                    val actor = c.optString("actor")
-                    val label = if (title.isNotEmpty()) "$title-$name" else name
-                    list.add(TtsVoice(vid, if (actor.isNotEmpty()) "$label($actor)" else label))
-                }
+                val v = data.getJSONObject(i)
+                val vid = v.optString("voice_id")
+                if (vid.isEmpty()) continue
+                if (list.any { it.voiceId == vid }) continue
+                val name = v.optString("name")
+                list.add(TtsVoice(vid, if (name.isEmpty()) vid else name))
             }
             list
         } catch (e: Exception) {
@@ -862,15 +864,15 @@ object TextToSpeech :
     fun fetchUserVoices(key: String = apiKey): List<TtsVoice> {
         if (key.isBlank()) return emptyList()
         return try {
-            val resp = httpGet("$API_BASE/api/open/v1/user-voices", key)
+            val resp = httpGet("$API_BASE/voices?voice_type=personal&page_size=100", key)
             val root = JSONObject(resp)
-            val data = root.optJSONArray("data") ?: return emptyList()
+            val data = root.optJSONArray("voices") ?: return emptyList()
             buildList {
                 for (i in 0 until data.length()) {
-                    val item = data.getJSONObject(i)
-                    val vid = item.optString("voice_id")
+                    val v = data.getJSONObject(i)
+                    val vid = v.optString("voice_id")
                     if (vid.isEmpty()) continue
-                    val name = item.optString("name")
+                    val name = v.optString("name")
                     add(TtsVoice(vid, if (name.isEmpty()) vid else name))
                 }
             }
@@ -893,36 +895,28 @@ object TextToSpeech :
         }
     }
 
-    private fun httpPostJson(urlStr: String, jsonBody: String, key: String = apiKey): String {
-        val c = URL(urlStr).openConnection() as HttpURLConnection
-        c.requestMethod = "POST"
-        c.connectTimeout = 15000
-        c.readTimeout = 30000
-        c.doOutput = true
-        c.setRequestProperty("Content-Type", "application/json")
-        c.setRequestProperty("Authorization", "Bearer $key")
-        c.outputStream.use { it.write(jsonBody.toByteArray(Charsets.UTF_8)) }
-        return if (c.responseCode == 200) {
-            c.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
-        } else {
-            ""
-        }
-    }
-
-    private fun download(urlStr: String, dest: File): Boolean {
+    /** POST JSON，返回二进制响应体（Breeze TTS 直接回音频字节）；非 200 返回 null。 */
+    private fun httpPostBinary(urlStr: String, jsonBody: String, key: String = apiKey): ByteArray? {
         return runCatching {
             val c = URL(urlStr).openConnection() as HttpURLConnection
+            c.requestMethod = "POST"
             c.connectTimeout = 15000
             c.readTimeout = 60000
-            c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36")
-            c.inputStream.use { input ->
-                dest.outputStream().use { output -> input.copyTo(output) }
+            c.doOutput = true
+            c.setRequestProperty("Content-Type", "application/json")
+            c.setRequestProperty("Authorization", "Bearer $key")
+            c.outputStream.use { it.write(jsonBody.toByteArray(Charsets.UTF_8)) }
+            if (c.responseCode == 200) {
+                c.inputStream.use { it.readBytes() }
+            } else {
+                c.errorStream?.use { it.readBytes() }?.let { err ->
+                    WeLogger.w(TAG, "TTS HTTP ${c.responseCode}: ${String(err, Charsets.UTF_8)}")
+                }
+                null
             }
-            c.disconnect()
-            true
-        }.getOrElse {
-            WeLogger.w(TAG, "download wav failed: ${it.message}")
-            false
+        }.getOrElse { e ->
+            WeLogger.w(TAG, "TTS HTTP failed: ${e.message}")
+            null
         }
     }
 }

@@ -70,6 +70,7 @@ import com.composables.icons.materialsymbols.outlined.Account_circle
 import com.composables.icons.materialsymbols.outlined.Auto_delete
 import com.composables.icons.materialsymbols.outlined.Block
 import com.composables.icons.materialsymbols.outlined.Brightness_medium
+import com.composables.icons.materialsymbols.outlined.Bug_report
 import com.composables.icons.materialsymbols.outlined.Build_circle
 import com.composables.icons.materialsymbols.outlined.Chevron_right
 import com.composables.icons.materialsymbols.outlined.Close
@@ -103,6 +104,7 @@ import com.mikepenz.aboutlibraries.ui.compose.variant.LibraryDetailMode
 import com.mikepenz.aboutlibraries.ui.compose.variant.LibraryRow
 import dev.sun.wechat.BuildConfig
 import dev.sun.wechat.R
+import dev.sun.wechat.activity.self_check.SelfCheckSettingsActivity
 import dev.sun.wechat.constants.Preferences
 import dev.sun.wechat.features.api.core.WeApi
 import dev.sun.wechat.features.items.debug.ResetDexCache
@@ -289,6 +291,18 @@ fun SettingsPager(onOpenLicense: () -> Unit) {
                                 context = { currentLocalizedContext.value },
                                 onAvailable = { updateInfo = it },
                                 onError = { updateError = it },
+                            )
+                        },
+                    )
+                }
+                item {
+                    PrefArrow(
+                        title = stringResource(R.string.settings_self_check_title),
+                        summary = stringResource(R.string.settings_self_check_summary),
+                        icon = MaterialSymbols.Outlined.Bug_report,
+                        onClick = {
+                            context.startActivity(
+                                Intent(context, SelfCheckSettingsActivity::class.java)
                             )
                         },
                     )

@@ -1,13 +1,21 @@
 package dev.sun.wechat.features.items.contacts.hidecontacts
 
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Adapter
 import dev.ujhhgtg.reflekt.reflekt
 import dev.ujhhgtg.reflekt.utils.makeAccessible
 import dev.sun.wechat.constants.PackageNames
+import dev.sun.wechat.dexkit.dsl.DexClassDelegate
 import dev.sun.wechat.dexkit.dsl.DexMethodDelegate
 import dev.sun.wechat.features.api.core.WeDatabaseApi
 import dev.sun.wechat.features.items.contacts.HideContacts
 import dev.sun.wechat.utils.WeLogger
+import java.lang.reflect.Field
+import java.lang.reflect.Method
 import java.util.LinkedList
+import java.util.WeakHashMap
+import java.util.concurrent.ConcurrentHashMap
 
 private const val TAG = "HideContacts.Lists"
 
@@ -42,10 +50,12 @@ internal fun HideContacts.installListHooks() {
     if (surfaceOn(SURFACE_CONTACTS)) {
         installMvvmListHooks()
         installContactCountHook()
+        installLabelMemberHooks()
     }
     if (surfaceOn(SURFACE_GROUP_MEMBERS)) installGroupMemberHooks()
     if (surfaceOn(SURFACE_FAVORITES)) installFavoriteHooks()
     if (surfaceOn(SURFACE_FINDER_LIKE)) installFinderLikeHooks()
+    if (surfaceOn(SURFACE_SEARCH)) installSearchResultRowHooks()
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -322,6 +332,50 @@ private fun filterHiddenUsernames(members: List<*>): ArrayList<Any?>? {
 }
 
 // ---------------------------------------------------------------------------------------------
+// 标签成员
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * 通讯录 -> 标签 -> 某个标签的成员。**打在存储层那一次读上** —— 同类密友模块也挂在同一处。
+ *
+ * 为什么不是 UI 也不是 SQL：
+ * - SQL 侧证否：标签页成员读的是全量映射 `SELECT user, label_id FROM FTS5ContactLabels`
+ *   （`plugin/fts/logic/c0` = LoadLabelCacheTask），而 `WHERE label_id=?` 那条出自
+ *   MarkLabelDirtyTask（`h0.smali:109`）—— 刷索引用的，筛它等于让宿主把「这个标签没有文档」缓存进
+ *   `l.p:HashMap`；`labelIDList` 在真机全天 0 次，`contact-label` 那条规则钉的是宿主不走的路径。
+ * - UI 侧也证否了：上一版按 `ContactListExpandPreference` 的 `void (List)` 入口挂（钩子是挂上了，
+ *   `label member setters: V, X`），但 `out of a label list` 在多轮真机日志里 **0 次** —— 标签页
+ *   根本不走那个控件。这一版把它换掉，不留死钩子。
+ *
+ * 落点 `ContactLabelStorage.getUserNameListById(String)`（8.0.76 是 `storage/g4.smali:3114` 的
+ * `s2`，字面量 `getUserNameListById() called with: id = [`）：一个方法服务所有消费方 ——
+ * `ba3/{q5,j3,m1,s1,b3,k0}`、`fa3/{e2,n1}` 都在调它（标签成员页、标签选择器、LabelHelper…），
+ * 在源头筛一次就都对了，不用一个页面一个页面地追。返回的是用户名字符串的 ArrayList，元素直接比。
+ *
+ * 换表而不原地删（同类实现同样是这条：新建 ArrayList 逐元素过滤，**只在 size 变了才返回新表**）：
+ * `g4.g:HashMap` 把这个列表缓存着，原地删会让「临时显示」和三击喊不回来。
+ *
+ * 明确接受的代价：存储层这条不只喂显示 —— 按标签群发/标签消息也读它，所以隐藏联系人会一起收不到。
+ * 这是挂在这一层必然带来的语义，不是显示层能两全的位置；要分开得再拆一层。
+ */
+private fun HideContacts.installLabelMemberHooks() {
+    if (methodLabelUserNamesById.isPlaceholder) {
+        WeLogger.w(TAG, "getUserNameListById wasn't resolved; 标签成员 stays unfiltered")
+        return
+    }
+
+    methodLabelUserNamesById.hookAfter {
+        if (isTemporarilyShown) return@hookAfter
+        if (!surfaceOn(SURFACE_CONTACTS)) return@hookAfter
+
+        val members = result as? List<*> ?: return@hookAfter
+        val filtered = filterHiddenUsernames(members) ?: return@hookAfter
+        WeLogger.d(TAG, "filtered ${members.size - filtered.size} hidden member(s) out of a label")
+        result = filtered
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
 // 收藏
 // ---------------------------------------------------------------------------------------------
 
@@ -478,3 +532,154 @@ private fun protoGetString(proto: Any, fieldIndex: Int): String? = runCatching {
     }
     null
 }.getOrNull()
+
+// ---------------------------------------------------------------------------------------------
+// 主页搜索的结果行（视图级）
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * 结果行/条目的字段表，按类缓存一次：这些判据跑在每次敲字的每一条结果上，不能每行都反射。
+ * 键是宿主类，一个进程内就那么几个类，不需要回收。
+ *
+ * 要沿父类链收：联系人行是 `com.tencent.mm.storage.y3`，它的 `field_username` 声明在生成出来的基类上
+ * （`dm/f2.smali:223`），只看叶子类自己会一个字段也找不到 —— 这也是本仓 通讯录 那条钩子用
+ * `superclass()` 的同一个原因。停在 `java.*` / `android.*` 之前，否则会扫进
+ * `android.view.View` 自带的那一堆成员，造出假命中。
+ */
+private val searchFieldsByClass = ConcurrentHashMap<Class<*>, List<Field>>()
+
+private fun declaredSearchFields(cls: Class<*>): List<Field> =
+    searchFieldsByClass.getOrPut(cls) {
+        buildList {
+            var current: Class<*>? = cls
+            while (current != null && !current.name.startsWith("java.") && !current.name.startsWith("android.")) {
+                current.reflekt().fields().forEach { add(it.self.makeAccessible()) }
+                current = current.superclass
+            }
+        }
+    }
+
+/**
+ * 这个对象（或往下 [depth] 层）里有没有哪个 String 字段正好等于一个隐藏 id。
+ *
+ * 为什么不钉字段名：条目类与字段名每版都改（8.0.76 聊天记录段的条目是 `j23.y`，id 在 `y.e`，
+ * 靠 `z23/u1.smali:52-62` 把它交给 `storage.j4.n(String,Z)` 才坐实），而真机 2026-10-31 的第三轮
+ * 显示判据太窄也不够用 —— 联系人那一行到底把 id 放在哪一层还没量出来。
+ *
+ * 只有两个值类型会继续下钻：`List` 和宿主自己的类（`com.tencent.mm.*`）。框架对象（View、
+ * Context、Bundle…）不下钻 —— 里面什么都有，钻进去会把无关行判成隐藏。
+ *
+ * wxid 与群 id 形态都很特别（`wxid_…` / `…@chatroom`），昵称/摘要/时间串都不会等于一个 id，
+ * 所以按值比对不会误伤别人。
+ */
+private fun HideContacts.containsHiddenId(obj: Any, depth: Int): Boolean {
+    declaredSearchFields(obj.javaClass).forEach { field ->
+        when (val value = field.get(obj)) {
+            null -> Unit
+            is String -> if (isHiddenNow(value)) return true
+            is List<*> -> if (depth > 0 && value.any { it != null && containsHiddenId(it, depth - 1) }) return true
+            else -> if (depth > 0 && value.javaClass.name.startsWith("${PackageNames.WECHAT}.")) {
+                if (containsHiddenId(value, depth - 1)) return true
+            }
+        }
+    }
+    return false
+}
+
+/** 被我们改过的行 View，以及它本来的 visibility 与宽高。 */
+private class SearchRowBaseline(val visibility: Int, val width: Int, val height: Int)
+
+/**
+ * View 是复用的：这次画隐藏联系人的那个 View，下一次可能拿去画别人。所以基线按 View 存，命中就改，
+ * 没命中且被我们改过就必须还原 —— 漏了还原会留下「别人那条也变成空行」的空洞，比不隐藏更糟。
+ * 用 WeakHashMap：滚出屏幕被回收的 View 自己掉出去，不用我们清。
+ */
+private val searchRowBaselines = WeakHashMap<View, SearchRowBaseline>()
+
+/**
+ * 把主页搜索里属于隐藏联系人的结果行从屏幕上摘掉。
+ *
+ * 层次是三轮真机读数选出来的：SQL 文本改不到（身份在绑定参数里，而且同级模块早就在给 FTS 查询套
+ * `aux_index NOT IN` 了，界面照旧）；FTS 段基类 `a.o0` 只管「结果真从 FTS 查询来」的段（聊天记录段
+ * `e33.u` 实测能少一条），联系人那一整段一次都没经过它。剩下能兜住这行的就是渲染那一下 ——
+ * `fm5.u` / `fm5.e` 的 `getView`。同类密友模块在 8.0.76 上走的也正是这一层：命中就 `setVisibility(GONE)`
+ * 并把 `LayoutParams` 宽高写 0（ListView 里单靠 GONE 不收回高度），原尺寸存 WeakHashMap 以便还原。
+ *
+ * 「这一行是谁」用宿主自己的映射，不再自己数下标：`getItem(position)` 是 `com.tencent.mm.ui.z9`
+ * （两者的共同父类，`super android.widget.BaseAdapter`）在 `z9.smali:177` 的实现 —— 它会先用
+ * `o(position)` 判掉 header/分隔行，再从 map 或 cursor 取那一行。`fm5.u.getView` 开头也调同一个
+ * `o(I)Z`，可见位置与条目下标本来就不是一对一的。
+ *
+ * 明确接受的边界：
+ * - 只改屏幕上这一行，段计数与「查看全部 N 条」那类文案不动（能改的 SQL 面照旧在改）；点进行为本来
+ *   就被 `HideContactsBlock` 静默挡住，这里不会新开出入口。
+ * - `fts/ui/f0` 那一族不挂：它没有覆盖 `getItem(int)`，`BaseAdapter` 的默认实现返回 null，拿不到
+ *   「这一行是谁」；那条通路由上面 `a.o0` 管。
+ */
+private fun HideContacts.installSearchResultRowHooks() {
+    listOf(classSearchResultAdapter, classSearchConversationAdapter).forEach { anchor ->
+        val getView = anchor.resolveGetView()
+        if (getView == null) {
+            WeLogger.w(TAG, "search result getView wasn't resolved; 主页搜索 stays visible")
+            return@forEach
+        }
+        WeLogger.i(TAG, "hiding 主页搜索 rows at ${getView.declaringClass.name}.${getView.name}")
+
+        getView.hookAfter {
+            if (isTemporarilyShown || hiddenContacts.isEmpty()) return@hookAfter
+            if (!surfaceOn(SURFACE_SEARCH)) return@hookAfter
+
+            val view = result as? View ?: return@hookAfter
+            val position = args[0] as Int
+            val adapter = thisObject as Adapter
+            val row = adapter.getItem(position)
+            val baseline = searchRowBaselines[view]
+
+            if (row != null && containsHiddenId(row, 1)) {
+                // 已经是隐藏态就别再动：滚动时同一个 View 会被反复 bind，否则这条日志会淹掉文件。
+                if (view.visibility == View.GONE && view.layoutParams?.height == 0) return@hookAfter
+                if (baseline == null) {
+                    searchRowBaselines[view] = SearchRowBaseline(
+                        view.visibility,
+                        view.layoutParams?.width ?: ViewGroup.LayoutParams.WRAP_CONTENT,
+                        view.layoutParams?.height ?: ViewGroup.LayoutParams.WRAP_CONTENT,
+                    )
+                }
+                view.visibility = View.GONE
+                view.layoutParams?.apply {
+                    width = 0
+                    height = 0
+                }?.let { view.layoutParams = it }
+                WeLogger.d(TAG, "hid a 主页搜索 result row in ${adapter.javaClass.name} at $position")
+            } else if (baseline != null) {
+                searchRowBaselines.remove(view)
+                view.visibility = baseline.visibility
+                view.layoutParams?.apply {
+                    width = baseline.width
+                    height = baseline.height
+                }?.let { view.layoutParams = it }
+            }
+        }
+    }
+}
+
+/**
+ * 找 `getView(int, View, ViewGroup)`：子类覆盖了就取子类那一份，没覆盖就沿父链上溯到真正声明它的
+ * 那一层（8.0.76 上 `fm5.u` 与 `fm5.e` 各自都声明了，见 `fm5/u.smali:202`、`fm5/e.smali:246`）。
+ */
+private fun DexClassDelegate.resolveGetView(): Method? {
+    if (isPlaceholder) return null
+    var cls: Class<*>? = clazz
+    while (cls != null && cls != Any::class.java) {
+        val declared: Class<*> = cls
+        val method = declared.declaredMethods.firstOrNull { candidate ->
+            candidate.name == "getView" && candidate.parameterCount == 3 &&
+                candidate.parameterTypes[0] == Int::class.javaPrimitiveType &&
+                candidate.parameterTypes[1] == View::class.java &&
+                candidate.parameterTypes[2] == ViewGroup::class.java
+        }
+        if (method != null) return method.makeAccessible()
+        cls = declared.superclass
+    }
+    return null
+}

@@ -203,8 +203,8 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
                 HorizontalDivider()
 
                 BackendRow(
-                    title = "魔方（配音魔方）",
-                    desc = "需要单独填写 API Key",
+                    title = "魔方（Breeze Blue）",
+                    desc = "API Key 已内置，可自行替换",
                     selected = !isDoubao,
                 ) {
                     backend = TextToSpeech.BACKEND_MOFA
@@ -325,7 +325,7 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
                     )
                     Text(
                         when (field) {
-                            "key" -> "配音魔方控制台「API Key 管理」里创建"
+                            "key" -> "breezeblue.ai 控制台「API Key 管理」里创建"
                             "cookie" -> "doubao.com 开发者工具里复制 sessionid / sid_guard / uid_tt 三段"
                             else -> "留空则用预设音色；魔方与豆包共用此值"
                         },

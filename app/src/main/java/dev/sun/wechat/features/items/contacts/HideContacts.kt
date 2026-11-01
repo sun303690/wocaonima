@@ -3,6 +3,7 @@ package dev.sun.wechat.features.items.contacts
 import dev.sun.wechat.R
 
 import android.app.Activity
+import android.app.Application
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -36,6 +37,7 @@ import com.tencent.mm.ui.chatting.ChattingUI
 import dev.ujhhgtg.reflekt.reflekt
 import dev.ujhhgtg.reflekt.utils.isSubclassOf
 import dev.sun.wechat.dexkit.abc.IResolveDex
+import dev.sun.wechat.dexkit.dsl.dexClass
 import dev.sun.wechat.dexkit.dsl.dexMethod
 import dev.sun.wechat.features.api.core.WeConversationApi
 import dev.sun.wechat.features.api.core.WeDatabaseApi
@@ -44,6 +46,7 @@ import dev.sun.wechat.features.api.ui.WeChatInputBarApi
 import dev.sun.wechat.features.api.ui.WeMainActivityBeautifyApi
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
+import dev.sun.wechat.features.items.contacts.SplitGroupCall
 
 import dev.sun.wechat.features.items.contacts.hidecontacts.installBlockHooks
 import dev.sun.wechat.features.items.contacts.hidecontacts.installSearchCommandHook
@@ -201,6 +204,55 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
             .onFailure { WeLogger.w(TAG, "failed to unregister screen off receiver", it) }
     }
 
+    // ── 微信切后台自动恢复隐藏 ─────────────────────────────────────────────
+    //
+    // 「三击标题临时显示」只负责显示；一旦微信整个退到后台（没有任何前台 Activity），
+    // 立即恢复隐藏，避免隐藏联系人留在屏幕上被旁人看到。用 started/stopped 计数判断
+    // 前后台，和 WeChatForegroundTracker 同一套标准做法（旋转等 Activity 切换不会误判）。
+
+    private object BackgroundLifecycleCallbacks : Application.ActivityLifecycleCallbacks {
+
+        private var startedCount = 0
+
+        override fun onActivityStarted(activity: Activity) {
+            startedCount++
+        }
+
+        override fun onActivityStopped(activity: Activity) {
+            startedCount = (startedCount - 1).coerceAtLeast(0)
+            if (startedCount == 0) hideOnBackground()
+        }
+
+        override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
+        override fun onActivityResumed(activity: Activity) {}
+        override fun onActivityPaused(activity: Activity) {}
+        override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+        override fun onActivityDestroyed(activity: Activity) {}
+    }
+
+    private var backgroundCallbacksRegistered = false
+
+    private fun registerBackgroundCallbacks() {
+        if (backgroundCallbacksRegistered) return
+        HostInfo.application.registerActivityLifecycleCallbacks(BackgroundLifecycleCallbacks)
+        backgroundCallbacksRegistered = true
+        WeLogger.d(TAG, "registered background lifecycle callbacks")
+    }
+
+    private fun unregisterBackgroundCallbacks() {
+        if (!backgroundCallbacksRegistered) return
+        HostInfo.application.unregisterActivityLifecycleCallbacks(BackgroundLifecycleCallbacks)
+        backgroundCallbacksRegistered = false
+    }
+
+    /** 微信整体退到后台时把临时显示收掉，恢复隐藏联系人。 */
+    private fun hideOnBackground() {
+        if (!temporarilyShown) return
+        WeLogger.d(TAG, "WeChat went background; restoring hidden contacts")
+        temporarilyShown = false
+        WeConversationApi.reloadConversations()
+    }
+
     private object ShakeDetector : SensorEventListener {
 
         private var sensorManager: SensorManager? = null
@@ -287,8 +339,9 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
                 .get()!! as Activity
 
             registerScreenOffReceiver()
+            registerBackgroundCallbacks()
 
-            // Triple-click on the main-screen title to toggle temporary show/hide.
+            // Triple-click on the main-screen title to temporarily reveal hidden contacts.
             val titleView = context.window?.decorView
                 ?.findViewById<TextView>(android.R.id.text1) ?: return@hookAfter
             var clickCount = 0
@@ -300,7 +353,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
                 lastClickTime = now
                 if (clickCount >= 3) {
                     clickCount = 0
-                    toggleTemporarilyShown(context)
+                    revealTemporarily(context)
                 }
             }
         }
@@ -399,6 +452,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
     override fun onDisable() {
         uninstallSchedules()
         unregisterScreenOffReceiver()
+        unregisterBackgroundCallbacks()
         ShakeDetector.stop()
         chattingUi?.clear()
         chattingUi = null
@@ -438,14 +492,19 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
         showToast(app, "已临时显示 $minutes 分钟，输入 #hide 可提前恢复隐藏")
     }
 
-    internal fun toggleTemporarilyShown(context: Context) {
+    /**
+     * 三击标题触发的临时显示：只负责「显示」，不再负责「隐藏」。
+     *
+     * 隐藏统一交给「微信切后台」自动恢复（见 [hideOnBackground]），这样三击看过后
+     * 只要把微信退到后台，联系人列表就会自动恢复隐藏，不用再找标题栏点一次。
+     */
+    internal fun revealTemporarily(context: Context) {
         if (temporarilyShown) {
-            temporarilyShown = false
-            showToast(context, ("已恢复隐藏联系人"))
-        } else {
-            temporarilyShown = true
-            showToast(context, ("已临时显示所有隐藏的联系人"))
+            showToast(context, "已经是临时显示状态")
+            return
         }
+        temporarilyShown = true
+        showToast(context, "已临时显示所有隐藏的联系人，微信切后台自动恢复隐藏")
         WeConversationApi.reloadConversations()
     }
 
@@ -454,7 +513,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
      * 定时显示/隐藏 scheduler, whose startup catch-up runs at process attach where no Activity (and
      * therefore no Toast) exists.
      *
-     * Goes through the same refresh path as [toggleTemporarilyShown] and the `#show` / `#hide`
+     * Goes through the same refresh path as [revealTemporarily] and the `#show` / `#hide`
      * commands: `WeConversationApi.reloadConversations()` is what makes the query-time SQL filter
      * re-run, so skipping it would leave the list showing the previous state until the next full
      * re-query. It does **not** lock the flag — a manual toggle afterwards wins until the next
@@ -805,8 +864,8 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
                         )
                         SwitchWidget(
                             iconPlaceholder = false,
-                            title = "三击标题切换显隐",
-                            description = "连续三击主页顶部标题栏，可临时显示或恢复隐藏联系人",
+                            title = "三击标题临时显示",
+                            description = "连续三击主页顶部标题栏临时显示隐藏联系人；微信切后台后自动恢复隐藏",
                             checked = tripleClickTitleInput,
                             onCheckedChange = {
                                 tripleClickTitleInput = it
@@ -1015,6 +1074,69 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
     }
 
     /**
+     * `ContactLabelStorage.getUserNameListById(String)` —— 一个标签的成员用户名列表。8.0.76 是
+     * `storage/g4.smali:3114` 的 `s2(String): ArrayList`，方法体里那条日志字面量
+     * `getUserNameListById() called with: id = [` 是它的身份（类名与方法名都混淆，日志串没混淆）。
+     *
+     * 标签这一面的所有消费方都汇到这一个方法（`ba3/{q5,j3,m1,s1,b3,k0}`、`fa3/{e2,n1}` 共 8 处在调），
+     * 所以筛这一处就够，不用一页一页追；为什么不能筛 SQL、也不能筛上一版那个 UI 控件，
+     * 见 `HideContactsLists.installLabelMemberHooks` 的读数。
+     */
+    internal val methodLabelUserNamesById by dexMethod(allowFailure = true) {
+        matcher {
+            usingStrings("getUserNameListById() called with")
+            paramTypes("java.lang.String")
+            returnType = "java.util.ArrayList"
+        }
+    }
+
+    /**
+     * 主页搜索「联系人」那几行的适配器（`fm5/u`，tag 在 `fm5/u.smali:540`），以及同族的「会话」结果
+     * 适配器（`fm5/e`，tag `MicroMsg.SearchConversationAdapter`）。
+     *
+     * 为什么必须换到这一层：三轮真机读数把上面那条 `a.o0` 的覆盖面钉住了 —— 它只管「结果从 FTS 查询里
+     * 来的段」（聊天记录段 `e33.u` 实测少了一条），联系人那一整段一次都没经过它，而且整场搜索里连一条
+     * 按关键词读 `rcontact` 的语句都没出现。`fm5/e`、`fm5/w` 才是调 `e01/jb.smali:154`（按关键词
+     * LIKE 找人）的地方，`fm5/u` 就是那份结果的适配器 —— 行在这里 bind 成 View，绕不过去。
+     *
+     * 类名混淆、tag 没混淆，但**光靠 tag 钉不住**：真机 8.0.76 上 `usingEqStrings` 这两个字面量各自都
+     * 命中两个类（`fm5.p` 与 `fm5.u`、`fm5.b` 与 `fm5.e` —— 前两个是回调/监听类，也打了同一个 tag），
+     * DexKit 报 `Multiple classes found for key: classSearchResultAdapter, count: 2, classes: fm5.p,fm5.u`。
+     * 所以要再加一条结构约束：这个类必须**自己声明** `getView(int, View, ViewGroup)`。方法名是覆写
+     * Android SDK 的，混淆改不掉；而 `getView` 恰好只有适配器有、监听类没有（`fm5/p:1` 是
+     * `super Object + implements ic5.e`，一个 getView 都不声明）—— 这是唯一能把两者分开的判据。
+     *
+     * 两者都 extends `com.tencent.mm.ui.z9`（`smali_classes8/com/tencent/mm/ui/z9.smali:2`，
+     * `super android.widget.BaseAdapter`），它的 `getItem(int)`（`:177`）会按 `o(position)` 跳过 header
+     * 再从 map/cursor 取行，所以拿 `getItem` 定位「这一行是谁」是宿主自己的映射，比我们再数一遍位置可靠。
+     */
+    internal val classSearchResultAdapter by dexClass(allowFailure = true) {
+        matcher {
+            usingEqStrings("MicroMsg.SearchResultAdapter")
+            methods {
+                add {
+                    name = "getView"
+                    paramTypes("int", "android.view.View", "android.view.ViewGroup")
+                    returnType = "android.view.View"
+                }
+            }
+        }
+    }
+
+    internal val classSearchConversationAdapter by dexClass(allowFailure = true) {
+        matcher {
+            usingEqStrings("MicroMsg.SearchConversationAdapter")
+            methods {
+                add {
+                    name = "getView"
+                    paramTypes("int", "android.view.View", "android.view.ViewGroup")
+                    returnType = "android.view.View"
+                }
+            }
+        }
+    }
+
+    /**
      * `ContactStorage.getNormalContactCount(boolean includeBlack, String[], String...) -> int`
      * (`j4.O` on 8.0.76 `storage/j4.java:460`, `l3.O` on 8.0.69 `storage/l3.java:434`) — the
      * 通讯录 「N 位联系人」 footer.
@@ -1171,6 +1293,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
     /** `v0.G(MultiTalkGroup)` — MultiTalkManager.onInviteMultiTalk. */
     internal val methodMultiTalkOnInvite by dexMethod(allowFailure = true) {
         matcher {
+            declaredClass(SplitGroupCall.methodExitMultiTalk.data.declaredClassName)
             usingEqStrings(
                 "MicroMsg.MT.MultiTalkManager",
                 "onInviteMultiTalk All Var Value:\n isMute: %b isHandsFree: %b isCameraFace: %b multiTalkStatus: %s groupIsNull: %b",
