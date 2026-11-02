@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
 import dev.ujhhgtg.reflekt.reflekt
 import dev.sun.wechat.R
+import dev.sun.wechat.features.api.core.models.MessageInfo
 import dev.sun.wechat.features.api.ui.WeChatMessageViewApi
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
@@ -86,12 +87,21 @@ object DisplayMessageTimeByAvatar : ClickableFeature(),
         param: HookParam,
         view: View
     ) {
-        try {
-            val msgInfo = WeChatMessageViewApi.getMsgInfoFromParam(param)
-            if (msgInfo.type?.isSystem == true) return
+        val msgInfo = runCatching { WeChatMessageViewApi.getMsgInfoFromParam(param) }.getOrNull() ?: return
+        if (msgInfo.type?.isSystem == true) return
+        val boundTag = view.tag ?: return
 
-            val tag = view.tag ?: return
-            val avatar = tag.reflekt()
+        // 绑定回调跑在 RecyclerView 的布局流程内：此时把头像搬进 wrapper 会改动行内层级，
+        // RecyclerView 回收 scrap 时 `ViewGroup.dispatchDetachedFromWindow` 会撞上 null 子视图
+        // （8.0.78 实机崩溃）。故整段推迟到下一帧，并校验这一行没被回收复用。
+        view.post { applyAvatarTime(view, boundTag, msgInfo) }
+    }
+
+    @SuppressLint("SetTextI18n")
+    private fun applyAvatarTime(view: View, boundTag: Any, msgInfo: MessageInfo) {
+        if (!view.isAttachedToWindow || view.tag !== boundTag) return
+        try {
+            val avatar = boundTag.reflekt()
                 .firstField {
                     name = "avatarIV"
                     superclass()
@@ -130,7 +140,9 @@ object DisplayMessageTimeByAvatar : ClickableFeature(),
         if (existing != null) return existing
 
         val holderIndex = rowParent.indexOfChild(avatarHolder)
-        val holderLp = avatarHolder.layoutParams
+        // 注意：wrapper 与 avatarHolder 绝不能共用同一个 LayoutParams 实例——两个父容器
+        // 各自写同一个对象会让布局参数互相踩踏，这里各复制一份。
+        val holderLp = copyLayoutParams(avatarHolder.layoutParams)
 
         val wrapper = LinearLayout(avatarHolder.context).apply {
             tag = TAG_AVATAR_TIME_WRAPPER
@@ -146,12 +158,22 @@ object DisplayMessageTimeByAvatar : ClickableFeature(),
 
         // 把头像 holder 移入 wrapper，再放 wrapper 回原位置
         rowParent.removeView(avatarHolder)
-        wrapper.addView(avatarHolder, holderLp)
+        wrapper.addView(avatarHolder, copyLayoutParams(holderLp))
         rowParent.addView(wrapper, holderIndex, holderLp)
         wrapper.layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
 
         return wrapper
     }
+
+    private fun copyLayoutParams(src: ViewGroup.LayoutParams?): ViewGroup.LayoutParams =
+        if (src == null) {
+            ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            )
+        } else {
+            ViewGroup.LayoutParams(src.width, src.height)
+        }
 
     /** 在 wrapper 中找到/创建头像下方的 TextView。 */
     private fun ensureTimeText(wrapper: LinearLayout, rowView: View): TextView {

@@ -358,17 +358,33 @@ object BreezeTtsClient {
             .header("Accept", "application/json, audio/mpeg, */*")
         builder.method(method, body)
 
-        val response = runCatching { http.newCall(builder.build()).execute() }
-            .getOrElse {
-                WeLogger.w(TAG, "breeze request failed: ${it.message}")
-                throw BreezeError("网络失败：${it.message}")
-            }
+        val response = execute(builder)
         response.use {
             val bytes = it.body?.bytes() ?: ByteArray(0)
             val headers = it.headers.toMultimap().mapValues { entry -> entry.value.joinToString(",") }
             if (!it.isSuccessful) throw BreezeError(describe(it.code, bytes, headers))
             return bytes to headers
         }
+    }
+
+    /**
+     * 执行请求，偶发失败重试一次。
+     *
+     * 日志里出现过 `breeze request failed: connection closed`——服务端（或中间层）在
+     * 长耗时合成/列表请求里提前关掉连接，属于瞬时故障，隔 350ms 重发基本都能成功；
+     * 无限重试无益，故只重试一次。
+     */
+    private fun execute(builder: Request.Builder): okhttp3.Response {
+        val request = builder.build()
+        var lastError: Throwable? = null
+        repeat(2) { attempt ->
+            val result = runCatching { http.newCall(request).execute() }
+            result.getOrNull()?.let { return it }
+            lastError = result.exceptionOrNull()
+            WeLogger.w(TAG, "breeze request failed: ${lastError?.message} (attempt=${attempt + 1})")
+            if (attempt == 0) runCatching { Thread.sleep(350) }
+        }
+        throw BreezeError("网络失败：${lastError?.message}")
     }
 
     private fun queryString(query: Map<String, String>?): String {
