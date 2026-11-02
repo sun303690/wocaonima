@@ -32,7 +32,17 @@ object BreezeTtsClient {
 
     /** 文档硬约束：一条样本，3 秒以上、5 MB 以内。 */
     const val CLONE_MAX_BYTES = 5L * 1024 * 1024
+    const val CLONE_MIN_MS = 3_000L
     val CLONE_SUFFIXES = setOf("mp3", "wav", "m4a", "flac", "aac", "ogg", "opus", "webm", "wma", "aiff", "aif")
+
+    /** 参考语言文档只点名支持中文，其余一律交给服务端自动检测。 */
+    val CLONE_LANGUAGES = listOf("" to "自动检测", "zh" to "中文")
+
+    /** 指令上限：文档要求写在 1000 字以内。 */
+    const val INSTRUCTION_MAX = 1000
+
+    /** 一页多少个音色。文档上限 100、默认 50，界面按这个数换算页数。 */
+    const val VOICE_PAGE_SIZE = 50
 
     private const val PAGE_SIZE = 100
     private const val MAX_PAGES = 20
@@ -98,6 +108,68 @@ object BreezeTtsClient {
             if (arr.length() == 0) break
             for (i in 0 until arr.length()) out += parseVoice(arr.getJSONObject(i), personal)
             if (!json.optBoolean("has_more", arr.length() >= PAGE_SIZE)) break
+            page++
+        }
+        return out
+    }
+
+    /**
+     * 一页音色。[total] 是整个筛选集的数量，界面靠它算「共几页」。
+     * 翻页用数字页码而不是文档更推荐的 `next_page_token`：游标只能一路往前翻，
+     * 而这里的翻页条要能点「上一页」退回去。
+     */
+    data class VoicePage(
+        val voices: List<Voice>,
+        val hasMore: Boolean,
+        val total: Int,
+    )
+
+    /**
+     * [search] 非空时走服务端搜索（公开目录是语义+文本混合匹配，本地筛不到没拉下来的音色）。
+     * 三个分类参数照 docs.breezeblue.ai 的 list-voices 取值：gender 为 male/female/neutral，
+     * languageCode 用 ISO 639-1 两字母，primaryCategory 取 narration/social-media/ads-brand/
+     * podcast/learning/support-agents/roleplay/gaming/animation/cinematic/wellness/stylized。
+     * 筛选是服务端做的，所以总数与页数会跟着缩小。
+     */
+    fun voicesPage(
+        key: String,
+        personal: Boolean,
+        search: String = "",
+        page: Int = 1,
+        gender: String? = null,
+        languageCode: String? = null,
+        primaryCategory: String? = null,
+    ): VoicePage {
+        val query = LinkedHashMap<String, String>()
+        query["voice_type"] = if (personal) "personal" else "default"
+        query["page_size"] = VOICE_PAGE_SIZE.toString()
+        query["page"] = page.coerceAtLeast(1).toString()
+        if (search.isNotBlank()) {
+            query["search"] = search
+        }
+        // 刻意不发 sort：服务端规定 sort=trend 只能走 next_page_token 游标、page 必须是 1，
+        // 而选择器要能上一页/下一页，只能用默认的稳定顺序（created_at_unix 倒序）。
+        if (!gender.isNullOrEmpty()) query["gender"] = gender
+        if (!languageCode.isNullOrEmpty()) query["language_code"] = languageCode
+        if (!primaryCategory.isNullOrEmpty()) query["primary_category_code"] = primaryCategory
+
+        val json = json("GET", "/v1/voices", key, query, null)
+        val arr = json.optJSONArray("voices") ?: JSONArray()
+        return VoicePage(
+            voices = (0 until arr.length()).map { parseVoice(arr.getJSONObject(it), personal) },
+            hasMore = json.optBoolean("has_more"),
+            total = json.optInt("total"),
+        )
+    }
+
+    /** 自建音色就那几个，跟着游标一次翻完；官方目录太大，不走这条路。 */
+    fun allVoices(key: String, personal: Boolean): List<Voice> {
+        val out = ArrayList<Voice>()
+        var page = 1
+        while (true) {
+            val result = voicesPage(key, personal, "", page)
+            out += result.voices
+            if (!result.hasMore || result.voices.isEmpty()) break
             page++
         }
         return out

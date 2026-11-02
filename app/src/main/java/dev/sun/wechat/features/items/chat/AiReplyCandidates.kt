@@ -19,18 +19,22 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Icon
+import com.composables.icons.materialsymbols.outlined.Autorenew
+import com.composables.icons.materialsymbols.outlined.Graphic_eq
+import com.composables.icons.materialsymbols.outlined.Play_arrow
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -44,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
@@ -55,6 +60,7 @@ import com.composables.icons.materialsymbols.outlined.Auto_awesome
 import com.composables.icons.materialsymbols.outlined.Chevron_right
 import com.composables.icons.materialsymbols.outlined.Keyboard_arrow_down
 import com.composables.icons.materialsymbols.outlined.Settings
+import com.composables.icons.materialsymbols.outlined.Tune
 import dev.sun.wechat.R
 import dev.sun.wechat.agent.data.entity.ModelEntity
 import dev.sun.wechat.agent.data.entity.ModelProviderEntity
@@ -70,6 +76,7 @@ import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.items.chat_mood.ReplyMessageSupport
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.data.KvStore.prefOption
+import dev.sun.wechat.utils.BreezeTtsClient
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.m3.BaseItemContainer
 import dev.sun.wechat.ui.content.m3.BaseWidget
@@ -166,9 +173,23 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
         get() = TextToSpeech.doubaoSpeakerName
     private val ttsEmotion: String
         get() = TextToSpeech.selectedEmotion
+    private val ttsBreezeInstructions: String
+        get() = TextToSpeech.breezeInstructions
 
     private fun isDoubaoBackend(): Boolean = ttsBackend == TextToSpeech.BACKEND_DOUBAO
     private fun isBreezeBackend(): Boolean = ttsBackend == TextToSpeech.BACKEND_BREEZE
+
+    private val TTS_BACKEND_ORDER = listOf(
+        TextToSpeech.BACKEND_BREEZE,
+        TextToSpeech.BACKEND_DOUBAO,
+        TextToSpeech.BACKEND_MOFA,
+    )
+
+    private fun backendLabelRes(mode: Int): Int = when (mode) {
+        TextToSpeech.BACKEND_BREEZE -> R.string.ai_reply_tts_backend_breeze
+        TextToSpeech.BACKEND_DOUBAO -> R.string.ai_reply_tts_backend_doubao
+        else -> R.string.ai_reply_tts_backend_mofang
+    }
 
     private fun effectiveVoiceId(): String = when {
         isDoubaoBackend() -> TextToSpeech.customVoiceId.ifBlank { ttsDoubaoSpeaker.ifBlank { TextToSpeech.DOUBAO_VOICES.first().id } }
@@ -310,7 +331,6 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
         }
     }
 
-    @OptIn(ExperimentalLayoutApi::class)
     @Composable
     private fun ShowComposeDialogScope.CandidateContent(talker: String, source: String) {
         val scope = rememberCoroutineScope()
@@ -377,7 +397,7 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                     TextToSpeech.generateVoiceDoubao(text, effectiveVoiceId(), cookie = ttsDoubaoCookie, cb = callback)
                 }
                 isBreezeBackend() -> {
-                    TextToSpeech.generateVoiceBreeze(text, effectiveVoiceId(), ttsEmotion, key = ttsApiKey, cb = callback)
+                    TextToSpeech.generateVoiceBreeze(text, effectiveVoiceId(), ttsBreezeInstructions.ifBlank { ttsEmotion }, key = ttsApiKey, cb = callback)
                 }
                 else -> {
                     TextToSpeech.generateVoice(text, effectiveVoiceId(), emotionVector(), key = ttsApiKey, cb = callback)
@@ -386,54 +406,7 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
         }
 
         // 发送：语音开关开着就自动合成语音并发送（生成回复 → 自动转语音），否则发文字
-        fun sendReply(text: String) {
-            if (text.isEmpty()) {
-                error = localizedChatString(R.string.ai_reply_empty_draft)
-                return
-            }
-            if (!ttsOn) {
-                scope.launch {
-                    val sent = withContext(Dispatchers.IO) { WeMessageApi.sendText(talker, text) }
-                    if (sent) onDismiss() else error = localizedChatString(R.string.ai_reply_send_failed)
-                }
-                return
-            }
-            val existing = audioPath
-            if (existing != null) {
-                TextToSpeech.sendVoiceTo(talker, existing) { ok ->
-                    if (ok) onDismiss() else error = localizedChatString(R.string.ai_reply_send_failed)
-                }
-                return
-            }
-            if (!ttsCredentialsReady()) {
-                error = localizedChatString(R.string.ai_reply_tts_missing_credentials)
-                return
-            }
-            voiceBusy = true
-            error = null
-            val callback: (String?, String) -> Unit = { path, failure ->
-                voiceBusy = false
-                if (path != null) {
-                    TextToSpeech.sendVoiceTo(talker, path) { ok ->
-                        if (ok) onDismiss() else error = localizedChatString(R.string.ai_reply_send_failed)
-                    }
-                } else {
-                    WeLogger.w(TAG, "reply voice generation failed: $failure")
-                    error = failure
-                }
-            }
-            when {
-                isDoubaoBackend() -> {
-                    TextToSpeech.generateVoiceDoubao(text, effectiveVoiceId(), cookie = ttsDoubaoCookie, cb = callback)
-                }
-                isBreezeBackend() -> {
-                    TextToSpeech.generateVoiceBreeze(text, effectiveVoiceId(), ttsEmotion, key = ttsApiKey, cb = callback)
-                }
-                else -> {
-                    TextToSpeech.generateVoice(text, effectiveVoiceId(), emotionVector(), key = ttsApiKey, cb = callback)
-                }
-            }
-        }
+
 
         // 语气并进标题行：整页少一行控件，候选区拿到更多高度
         var styleMenuExpanded by remember { mutableStateOf(false) }
@@ -508,6 +481,36 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                         }
                     }
                     Spacer(Modifier.weight(1f))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { ttsOn = !ttsOn; TextToSpeech.voiceReplyEnabled = ttsOn }
+                            .padding(horizontal = 4.dp),
+                    ) {
+                        Switch(
+                            checked = ttsOn,
+                            onCheckedChange = { v -> ttsOn = v; TextToSpeech.voiceReplyEnabled = v },
+                            modifier = Modifier.scale(0.7f),
+                        )
+                        Text(
+                            text = stringResource(R.string.ai_reply_tts_switch_short),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (ttsOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        IconButton(
+                            onClick = { showInstructionDialog(context) },
+                            enabled = ttsOn,
+                            modifier = Modifier.size(28.dp),
+                        ) {
+                            Icon(
+                                imageVector = MaterialSymbols.Outlined.Tune,
+                                contentDescription = stringResource(R.string.ai_reply_tts_breeze_instructions),
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
+                    }
                     IconButton(onClick = { showApiSettingsDialog(context) { ttsOn = it } }) {
                         Icon(
                             imageVector = MaterialSymbols.Outlined.Settings,
@@ -739,56 +742,147 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                 }
             },
             confirmButton = {
-                // 一行放不下就换行，避免按钮文字被挤成竖排（同短视频解析的 FlowRow 做法）
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    // 生成/重新生成常驻原位；发送入口只在选中某条候选后出现
-                    Button(onClick = { generate() }, enabled = !busy && !voiceBusy) {
-                        Text(
-                            stringResource(
-                                if (candidates.isEmpty()) R.string.ai_reply_generate
-                                else R.string.ai_reply_regenerate,
-                            ),
+                // 页脚固定两行：主行发送/生成，次行重新生成与试听；无取消按钮，返回键退出
+                val footerPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
+                val twoRows = selected >= 0 && ttsOn
+                val audioReady = audioPath?.takeUnless { voiceBusy }
+                val redo: @Composable (Modifier) -> Unit = { m ->
+                    FilledTonalButton(
+                        onClick = { generate() },
+                        enabled = !busy && !voiceBusy,
+                        modifier = m,
+                        contentPadding = footerPadding,
+                    ) {
+                        Text(stringResource(R.string.ai_reply_regenerate), maxLines = 1)
+                    }
+                }
+                val preview: @Composable (String, Modifier) -> Unit = { path, m ->
+                    FilledTonalButton(
+                        onClick = { TextToSpeech.showPreviewDialog(context, talker, path) },
+                        modifier = m,
+                        contentPadding = footerPadding,
+                    ) {
+                        Icon(
+                            imageVector = MaterialSymbols.Outlined.Play_arrow,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.ai_reply_tts_preview), maxLines = 1)
+                    }
+                }
+                val redoVoice: @Composable (Modifier) -> Unit = { m ->
+                    FilledTonalButton(
+                        onClick = {
+                            val text = draft.trim().ifEmpty { candidates.getOrElse(selected) { "" } }
+                            if (text.isEmpty()) {
+                                error = localizedChatString(R.string.ai_reply_empty_draft)
+                                return@FilledTonalButton
+                            }
+                            synthesize(text)
+                        },
+                        enabled = !busy,
+                        modifier = m,
+                        contentPadding = PaddingValues(0.dp),
+                    ) {
+                        Icon(
+                            imageVector = MaterialSymbols.Outlined.Autorenew,
+                            contentDescription = stringResource(R.string.ai_reply_regenerate_voice),
+                            modifier = Modifier.size(18.dp),
                         )
                     }
-                    if (selected >= 0) {
-                        Button(
-                            onClick = {
-                                val text = draft.trim().ifEmpty { candidates.getOrElse(selected) { "" } }
-                                sendReply(text)
-                            },
-                            enabled = !busy && !voiceBusy,
+                }
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    if (twoRows) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(
-                                stringResource(
-                                    if (ttsOn && voiceBusy) R.string.ai_reply_tts_generating
-                                    else if (ttsOn) R.string.ai_reply_send_voice
-                                    else R.string.ai_reply_send,
-                                ),
-                            )
+                            redo(Modifier.weight(1f))
+                            audioReady?.let { path ->
+                                preview(path, Modifier.weight(1f))
+                                redoVoice(Modifier.weight(0.5f))
+                            }
                         }
                     }
-                    if (selected >= 0 && ttsOn) {
-                        Button(
-                            onClick = {
-                                val text = draft.trim().ifEmpty { candidates.getOrElse(selected) { "" } }
-                                if (text.isEmpty()) {
-                                    error = localizedChatString(R.string.ai_reply_empty_draft)
-                                    return@Button
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (!twoRows && selected >= 0) redo(Modifier.weight(1f))
+                        if (selected >= 0) {
+                            Button(
+                                onClick = {
+                                    val text = draft.trim().ifEmpty { candidates.getOrElse(selected) { "" } }
+                                    if (text.isEmpty()) {
+                                        error = localizedChatString(R.string.ai_reply_empty_draft)
+                                        return@Button
+                                    }
+                                    scope.launch {
+                                        val sent = withContext(Dispatchers.IO) { WeMessageApi.sendText(talker, text) }
+                                        if (sent) onDismiss() else error = localizedChatString(R.string.ai_reply_send_failed)
+                                    }
+                                },
+                                enabled = !busy && !voiceBusy,
+                                modifier = Modifier.weight(1f),
+                                contentPadding = footerPadding,
+                            ) {
+                                Text(stringResource(R.string.ai_reply_send), maxLines = 1)
+                            }
+                            if (ttsOn) {
+                                Button(
+                                    onClick = {
+                                        val text = draft.trim().ifEmpty { candidates.getOrElse(selected) { "" } }
+                                        if (text.isEmpty()) {
+                                            error = localizedChatString(R.string.ai_reply_empty_draft)
+                                            return@Button
+                                        }
+                                        if (audioPath == null) synthesize(text) else TextToSpeech.sendVoiceTo(talker, audioPath) { ok ->
+                                            if (ok) onDismiss() else error = localizedChatString(R.string.ai_reply_send_failed)
+                                        }
+                                    },
+                                    enabled = !busy && !voiceBusy,
+                                    modifier = Modifier.weight(1f),
+                                    contentPadding = footerPadding,
+                                ) {
+                                    Icon(
+                                        imageVector = if (voiceBusy) MaterialSymbols.Outlined.Autorenew else MaterialSymbols.Outlined.Graphic_eq,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        stringResource(
+                                            when {
+                                                voiceBusy -> R.string.ai_reply_tts_generating
+                                                audioPath == null -> R.string.ai_reply_generate_voice
+                                                else -> R.string.ai_reply_send_voice
+                                            },
+                                        ),
+                                        maxLines = 1,
+                                    )
                                 }
-                                synthesize(text)
-                            },
-                            enabled = !busy && !voiceBusy,
-                        ) {
-                            Text(
-                                stringResource(
-                                    if (voiceBusy) R.string.ai_reply_tts_generating
-                                    else if (audioPath == null) R.string.ai_reply_generate_voice
-                                    else R.string.ai_reply_regenerate_voice,
-                                ),
-                            )
+                            }
+                        } else {
+                            Button(
+                                onClick = { generate() },
+                                enabled = !busy && !voiceBusy,
+                                modifier = Modifier.weight(1f),
+                                contentPadding = footerPadding,
+                            ) {
+                                Text(
+                                    stringResource(
+                                        if (candidates.isEmpty()) R.string.ai_reply_generate
+                                        else R.string.ai_reply_regenerate,
+                                    ),
+                                    maxLines = 1,
+                                )
+                            }
                         }
                     }
                 }
@@ -804,6 +898,49 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
         onTtsChanged: (Boolean) -> Unit = {},
     ) {
         showComposeDialog(context) { ApiSettingsContent(onTtsChanged) }
+    }
+
+    private fun showInstructionDialog(context: android.content.Context) {
+        var instruction by remember { mutableStateOf(ttsBreezeInstructions) }
+        showComposeDialog(context, directlyDismissable = false) {
+            AlertDialogContent(
+                title = {
+                    Text(text = stringResource(R.string.ai_reply_tts_breeze_instructions))
+                },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.ai_reply_tts_breeze_instructions_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        OutlinedTextField(
+                            value = instruction,
+                            onValueChange = { instruction = it.take(BreezeTtsClient.INSTRUCTION_MAX) },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 3,
+                            maxLines = 6,
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            TextToSpeech.breezeInstructions = instruction.trim()
+                            onDismiss()
+                        },
+                    ) { Text(stringResource(R.string.dialog_confirm)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = onDismiss) {
+                        Text(stringResource(R.string.dialog_cancel))
+                    }
+                },
+            )
+        }
     }
 
     private fun showModelPickerDialog(
@@ -946,15 +1083,29 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
         val breezeTts = ttsBackendState == TextToSpeech.BACKEND_BREEZE
         val mofaTts = ttsBackendState == TextToSpeech.BACKEND_MOFA
 
-        // 只有旧「魔方」后端才需要按这套凭据现拉音色列表；失败就保留内置列表，与文字转语音的降级一致
+        // 旧「魔方」后端现拉系统/自定义音色；Breeze 后端现拉模型列表；失败保留默认值
         LaunchedEffect(ttsOn, ttsBackendState, ttsApiKeyState) {
-            if (!ttsOn || !mofaTts || ttsApiKeyState.isBlank()) return@LaunchedEffect
-            val key = ttsApiKeyState
-            val loaded = withContext(Dispatchers.IO) {
-                runCatching { TextToSpeech.fetchVoices(key) to TextToSpeech.fetchUserVoices(key) }.getOrNull()
-            } ?: return@LaunchedEffect
-            mofangVoices = loaded.first
-            mofangCustomVoices = loaded.second
+            if (!ttsOn) return@LaunchedEffect
+            when {
+                mofaTts && ttsApiKeyState.isNotBlank() -> {
+                    val key = ttsApiKeyState
+                    val loaded = withContext(Dispatchers.IO) {
+                        runCatching { TextToSpeech.fetchVoices(key) to TextToSpeech.fetchUserVoices(key) }.getOrNull()
+                    } ?: return@LaunchedEffect
+                    mofangVoices = loaded.first
+                    mofangCustomVoices = loaded.second
+                }
+                breezeTts && ttsApiKeyState.isNotBlank() -> {
+                    val models = withContext(Dispatchers.IO) {
+                        runCatching { BreezeTtsClient.models(ttsApiKeyState) }.getOrNull()
+                    }
+                    if (!models.isNullOrEmpty()) {
+                        breezeModelOptions = models.map { DropdownOption(it.id, it.name) } +
+                            DropdownOption(TextToSpeech.breezeModel, TextToSpeech.breezeModel)
+                        breezeModelState = TextToSpeech.breezeModel
+                    }
+                }
+            }
         }
 
         // 豆包/Breeze 走联网音色选择器，这里只剩旧「魔方」后端的系统音色列表
@@ -962,6 +1113,12 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
             DropdownOption(ttsVoiceState, ttsVoiceState)).distinctBy { it.value }
         val customVoiceOptions = mofangCustomVoices.map { DropdownOption(it.voiceId, it.label) }
         val emotionOptions = TextToSpeech.EMOTIONS.map { DropdownOption(it.first, it.first) }
+        var mofaApiKeyState by remember { mutableStateOf(TextToSpeech.apiKey) }
+        var breezeModelState by remember { mutableStateOf(TextToSpeech.breezeModel) }
+        var breezeModelOptions by remember {
+            mutableStateOf(listOf(DropdownOption(TextToSpeech.breezeModel, TextToSpeech.breezeModel)))
+        }
+        var ttsInstructionState by remember { mutableStateOf(TextToSpeech.breezeInstructions) }
 
         AlertDialogContent(
             title = {
@@ -1072,59 +1229,60 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                         }
                         if (ttsOn) {
                             item {
-                                Column {
-                                    RadioButtonWidget(
-                                        title = stringResource(R.string.ai_reply_tts_backend_mofang),
-                                        description = stringResource(R.string.ai_reply_tts_backend_mofang_summary),
-                                        selected = !doubaoTts,
-                                        onSelect = {
-                                            ttsBackendState = TextToSpeech.BACKEND_BREEZE
-                                            TextToSpeech.backend = TextToSpeech.BACKEND_BREEZE
-                                            ttsVoiceState = effectiveVoiceId()
+                                DropDownMenuWidget(
+                                    title = stringResource(R.string.ai_reply_tts_backend),
+                                    description = null,
+                                    value = ttsBackendState,
+                                    options = TTS_BACKEND_ORDER.map { DropdownOption(it, backendLabelRes(it)) },
+                                    onValueChange = {
+                                        ttsBackendState = it
+                                        TextToSpeech.backend = it
+                                        ttsVoiceState = effectiveVoiceId()
+                                    },
+                                )
+                            }
+                            item {
+                                when {
+                                    doubaoTts -> TextFieldDialogWidget(
+                                        title = stringResource(R.string.ai_reply_tts_cookie),
+                                        value = ttsCookieState,
+                                        onValueChange = {
+                                            ttsCookieState = it.trim()
+                                            TextToSpeech.doubaoCookie = ttsCookieState
                                         },
+                                        dialogTitle = stringResource(R.string.ai_reply_tts_cookie),
+                                        confirmLabel = stringResource(R.string.dialog_confirm),
+                                        dismissLabel = stringResource(R.string.dialog_cancel),
+                                        valueHint = stringResource(R.string.ai_reply_tts_cookie_hint),
+                                        password = true,
                                     )
-                                    RadioButtonWidget(
-                                        title = stringResource(R.string.ai_reply_tts_backend_doubao),
-                                        description = stringResource(R.string.ai_reply_tts_backend_doubao_summary),
-                                        selected = doubaoTts,
-                                        onSelect = {
-                                            ttsBackendState = TextToSpeech.BACKEND_DOUBAO
-                                            TextToSpeech.backend = TextToSpeech.BACKEND_DOUBAO
-                                            ttsVoiceState = effectiveVoiceId()
+                                    breezeTts -> TextFieldDialogWidget(
+                                        title = stringResource(R.string.ai_reply_tts_api_key),
+                                        value = ttsApiKeyState,
+                                        onValueChange = {
+                                            ttsApiKeyState = it.trim()
+                                            TextToSpeech.breezeKey = ttsApiKeyState
                                         },
+                                        dialogTitle = stringResource(R.string.ai_reply_tts_api_key),
+                                        confirmLabel = stringResource(R.string.dialog_confirm),
+                                        dismissLabel = stringResource(R.string.dialog_cancel),
+                                        valueHint = stringResource(R.string.ai_reply_tts_breeze_key_hint),
+                                        password = true,
+                                    )
+                                    else -> TextFieldDialogWidget(
+                                        title = stringResource(R.string.ai_reply_tts_api_key),
+                                        value = mofaApiKeyState,
+                                        onValueChange = {
+                                            mofaApiKeyState = it.trim()
+                                            TextToSpeech.apiKey = mofaApiKeyState
+                                        },
+                                        dialogTitle = stringResource(R.string.ai_reply_tts_api_key),
+                                        confirmLabel = stringResource(R.string.dialog_confirm),
+                                        dismissLabel = stringResource(R.string.dialog_cancel),
+                                        valueHint = stringResource(R.string.ai_reply_tts_api_key_hint),
+                                        password = true,
                                     )
                                 }
-                            }
-                            item {
-                                TextFieldDialogWidget(
-                                    title = stringResource(R.string.ai_reply_tts_api_key),
-                                    value = ttsApiKeyState,
-                                    onValueChange = {
-                                        ttsApiKeyState = it.trim()
-                                        TextToSpeech.breezeKey = ttsApiKeyState
-                                    },
-                                    dialogTitle = stringResource(R.string.ai_reply_tts_api_key),
-                                    confirmLabel = stringResource(R.string.dialog_confirm),
-                                    dismissLabel = stringResource(R.string.dialog_cancel),
-                                    valueHint = stringResource(R.string.ai_reply_tts_api_key_hint),
-                                    password = true,
-                                )
-                            }
-                            item {
-                                TextFieldDialogWidget(
-                                    title = stringResource(R.string.ai_reply_tts_cookie),
-                                    value = ttsCookieState,
-                                    onValueChange = {
-                                        ttsCookieState = it.trim()
-                                        TextToSpeech.doubaoCookie = ttsCookieState
-                                    },
-                                    dialogTitle = stringResource(R.string.ai_reply_tts_cookie),
-                                    confirmLabel = stringResource(R.string.dialog_confirm),
-                                    dismissLabel = stringResource(R.string.dialog_cancel),
-                                    valueHint = stringResource(R.string.ai_reply_tts_cookie_hint),
-                                    password = true,
-                                    enabled = doubaoTts,
-                                )
                             }
                             item {
                                 when {
@@ -1147,7 +1305,8 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                                     )
                                     breezeTts -> BaseWidget(
                                         title = stringResource(R.string.ai_reply_tts_voice),
-                                        description = TextToSpeech.breezeVoiceName.ifBlank { ttsVoiceState },
+                                        description = TextToSpeech.breezeVoiceName.ifBlank { ttsVoiceState }
+                                            .ifBlank { stringResource(R.string.ai_reply_tts_breeze_unselected) },
                                         onClick = {
                                             showBreezeVoicePicker(context, ttsVoiceState, ttsApiKeyState) { id, name ->
                                                 ttsVoiceState = id
@@ -1174,32 +1333,64 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                                     )
                                 }
                             }
-                            item {
-                                DropDownMenuWidget(
-                                    title = stringResource(R.string.ai_reply_tts_custom_voice),
-                                    description = null,
-                                    value = ttsVoiceState,
-                                    options = (customVoiceOptions + DropdownOption(ttsVoiceState, ttsVoiceState))
-                                        .distinctBy { it.value },
-                                    onValueChange = {
-                                        ttsVoiceState = it
-                                        TextToSpeech.customVoiceId = it
-                                    },
-                                    enabled = mofaTts && customVoiceOptions.isNotEmpty(),
-                                )
+                            if (mofaTts) {
+                                item {
+                                    DropDownMenuWidget(
+                                        title = stringResource(R.string.ai_reply_tts_custom_voice),
+                                        description = null,
+                                        value = ttsVoiceState,
+                                        options = (customVoiceOptions + DropdownOption(ttsVoiceState, ttsVoiceState))
+                                            .distinctBy { it.value },
+                                        onValueChange = {
+                                            ttsVoiceState = it
+                                            TextToSpeech.customVoiceId = it
+                                        },
+                                        enabled = customVoiceOptions.isNotEmpty(),
+                                    )
+                                }
                             }
-                            item {
-                                DropDownMenuWidget(
-                                    title = stringResource(R.string.ai_reply_tts_emotion),
-                                    description = null,
-                                    value = ttsEmotionState,
-                                    options = emotionOptions,
-                                    onValueChange = {
-                                        ttsEmotionState = it
-                                        TextToSpeech.selectedEmotion = it
-                                    },
-                                    enabled = !doubaoTts,
-                                )
+                            if (breezeTts) {
+                                item {
+                                    DropDownMenuWidget(
+                                        title = stringResource(R.string.ai_reply_tts_breeze_model),
+                                        description = null,
+                                        value = breezeModelState,
+                                        options = breezeModelOptions,
+                                        onValueChange = {
+                                            breezeModelState = it
+                                            TextToSpeech.breezeModel = it
+                                        },
+                                    )
+                                }
+                                item {
+                                    TextFieldDialogWidget(
+                                        title = stringResource(R.string.ai_reply_tts_breeze_instructions),
+                                        value = ttsInstructionState,
+                                        onValueChange = {
+                                            ttsInstructionState = it
+                                            TextToSpeech.breezeInstructions = it
+                                        },
+                                        dialogTitle = stringResource(R.string.ai_reply_tts_breeze_instructions),
+                                        confirmLabel = stringResource(R.string.dialog_confirm),
+                                        dismissLabel = stringResource(R.string.dialog_cancel),
+                                        valueHint = stringResource(R.string.ai_reply_tts_breeze_instructions_hint),
+                                        singleLine = false,
+                                    )
+                                }
+                            }
+                            if (mofaTts) {
+                                item {
+                                    DropDownMenuWidget(
+                                        title = stringResource(R.string.ai_reply_tts_emotion),
+                                        description = null,
+                                        value = ttsEmotionState,
+                                        options = emotionOptions,
+                                        onValueChange = {
+                                            ttsEmotionState = it
+                                            TextToSpeech.selectedEmotion = it
+                                        },
+                                    )
+                                }
                             }
                         }
                     }

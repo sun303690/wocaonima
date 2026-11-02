@@ -37,6 +37,7 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -75,6 +76,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.delay
 
 /** Breeze 的收藏与豆包那套分开存——两边音色 id 不在同一个空间里。 */
 object BreezeVoiceFavorites {
@@ -95,6 +97,31 @@ private enum class BreezeVoiceTab(val label: String) {
     OFFICIAL("官方"),
     MINE("我的"),
     FAVORITE("收藏"),
+}
+
+private enum class BreezeCategory(
+    val label: String,
+    val gender: String?,
+    val language: String?,
+    val category: String?,
+) {
+    ALL("全部", null, null, null),
+    MALE("男性", "male", null, null),
+    FEMALE("女性", "female", null, null),
+    CHINESE("中文", null, "zh", null),
+    ENGLISH("英文", null, "en", null),
+    ANIMATION("动画", null, null, "animation"),
+    GAMING("游戏", null, null, "gaming"),
+    CINEMATIC("影视", null, null, "cinematic"),
+    STYLIZED("风格化", null, null, "stylized"),
+    NARRATION("旁白叙述", null, null, "narration"),
+    SOCIAL("社交媒体", null, null, "social-media"),
+    LEARNING("教育学习", null, null, "learning"),
+    WELLNESS("疗愈冥想", null, null, "wellness"),
+    ADS("广告与品牌", null, null, "ads-brand"),
+    PODCAST("播客与主持", null, null, "podcast"),
+    SUPPORT("客服与助理", null, null, "support-agents"),
+    ROLEPLAY("角色扮演与陪伴", null, null, "roleplay"),
 }
 
 private val breezeMainHandler = Handler(Looper.getMainLooper())
@@ -124,6 +151,14 @@ fun showBreezeVoicePicker(
     val statusState = mutableStateOf("")
     val key = apiKey.trim()
 
+    // 官方栏服务端筛选/翻页的状态：切到「全部」且没搜词时回到本地全量缓存，其余走 voicesPage
+    val categoryState = mutableStateOf(BreezeCategory.ALL)
+    val officialTotalState = mutableStateOf(0)
+    val officialPageState = mutableStateOf(1)
+    val officialSearchState = mutableStateOf("")
+    val filteringState = mutableStateOf(false)
+    var officialGen = 0
+
     // 先把上次成功拉到的列表读出来铺上：挂梯子拉到过一次之后，不开代理也能看到并能直接选音色，
     // 不用每次都先翻墙等刷新。
     val cached = loadVoiceCache(key)
@@ -132,6 +167,40 @@ fun showBreezeVoicePicker(
         mineState.value = cached.mine
     }
     var cachedAt = cached?.savedAt ?: 0L
+
+    /** 官方栏服务端分页：分类/搜索时用。每次调用自增代数，旧包回来直接丢弃。 */
+    fun loadOfficialFiltered(search: String, page: Int) {
+        if (key.isBlank()) {
+            statusState.value = "先在文字转语音设置里填写 Breeze API Key"
+            return
+        }
+        val gen = ++officialGen
+        val filter = categoryState.value
+        loadingState.value = true
+        statusState.value = ""
+        Thread {
+            val outcome = runCatching {
+                BreezeTtsClient.voicesPage(
+                    key, false, search, page,
+                    filter.gender, filter.language, filter.category,
+                )
+            }
+            breezeMainHandler.post {
+                if (gen != officialGen) return@post
+                loadingState.value = false
+                outcome.fold(
+                    onSuccess = { result ->
+                        officialState.value = result.voices
+                        officialTotalState.value = result.total
+                        officialPageState.value = page
+                        officialSearchState.value = search
+                        filteringState.value = true
+                    },
+                    onFailure = { statusState.value = "拉取失败：${it.message}" },
+                )
+            }
+        }.start()
+    }
 
     fun refresh(onlyMine: Boolean) {
         if (key.isBlank()) {
@@ -150,7 +219,14 @@ fun showBreezeVoicePicker(
                 .getOrNull()
             breezeMainHandler.post {
                 loadingState.value = false
-                officialList?.let { officialState.value = it }
+                officialList?.let {
+                    officialState.value = it
+                    // 全量刷新后回到本地过滤模式
+                    filteringState.value = false
+                    officialTotalState.value = it.size
+                    officialPageState.value = 1
+                    officialSearchState.value = ""
+                }
                 mineList?.let { mineState.value = it }
                 if (officialList != null || mineList != null) {
                     saveVoiceCache(
@@ -184,6 +260,11 @@ fun showBreezeVoicePicker(
         val mine by mineState
         val loading by loadingState
         val status by statusState
+        val category by categoryState
+        val officialTotal by officialTotalState
+        val officialPage by officialPageState
+        val officialSearch by officialSearchState
+        val filtering by filteringState
         var tab by remember { mutableStateOf(BreezeVoiceTab.OFFICIAL) }
         var query by remember { mutableStateOf("") }
         var picked by remember { mutableStateOf(currentId) }
@@ -193,6 +274,21 @@ fun showBreezeVoicePicker(
 
         DisposableEffect(Unit) {
             onDispose { player?.release() }
+        }
+
+        // 官方栏服务端搜索防抖：停手 400ms 再发；清空搜索时回到「全部」本地全量缓存
+        LaunchedEffect(query, tab) {
+            if (tab != BreezeVoiceTab.OFFICIAL || key.isBlank()) return@LaunchedEffect
+            if (query.isBlank()) {
+                if (categoryState.value != BreezeCategory.ALL) {
+                    loadOfficialFiltered("", 1)
+                } else if (!filteringState.value) {
+                    refresh(onlyMine = false)
+                }
+                return@LaunchedEffect
+            }
+            delay(400)
+            if (query != officialSearchState.value) loadOfficialFiltered(query, 1)
         }
 
         fun stopPreview() {
@@ -313,6 +409,33 @@ fun showBreezeVoicePicker(
 
                     Spacer(Modifier.height(8.dp))
 
+                    // 第二行只在官方栏出现：数据源 × 分类，两个维度不混在同一排里
+                    if (tab == BreezeVoiceTab.OFFICIAL) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            BreezeCategory.entries.forEach { entry ->
+                                Chip(
+                                    selected = entry == category,
+                                    onClick = {
+                                        // 再点一次已选中的那颗 = 取消筛选，回到「全部」
+                                        val next = if (entry == category) BreezeCategory.ALL else entry
+                                        if (next != categoryState.value) {
+                                            categoryState.value = next
+                                            if (next == BreezeCategory.ALL && query.isBlank()) {
+                                                refresh(onlyMine = false)
+                                            } else {
+                                                loadOfficialFiltered(query, 1)
+                                            }
+                                        }
+                                    },
+                                ) { Text(entry.label) }
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                    }
+
                     TextField(
                         value = query,
                         onValueChange = { query = it },
@@ -329,6 +452,10 @@ fun showBreezeVoicePicker(
                         when {
                             status.isNotBlank() -> status
                             loading -> "正在拉取音色列表…"
+                            tab == BreezeVoiceTab.OFFICIAL && filtering ->
+                                "官方共 $officialTotal 个 · " +
+                                    (if (category == BreezeCategory.ALL) "" else "${category.label} · ") +
+                                    (if (officialSearch.isBlank()) "按创建时间倒序" else "搜索「$officialSearch」")
                             else -> "官方 ${official.size} 个 · 我的 ${mine.size} 个"
                         },
                         style = MiuixTheme.textStyles.footnote1,
@@ -382,6 +509,33 @@ fun showBreezeVoicePicker(
                                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                 )
                             }
+                        }
+                    }
+
+                    // 翻页条只管官方那栏且处于服务端筛选时；本地全量缓存没有下一页
+                    if (tab == BreezeVoiceTab.OFFICIAL && filtering && officialTotal > 0) {
+                        val officialPages =
+                            (officialTotal + BreezeTtsClient.VOICE_PAGE_SIZE - 1) / BreezeTtsClient.VOICE_PAGE_SIZE
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            TextButton(
+                                text = "上一页",
+                                onClick = { loadOfficialFiltered(officialSearch, officialPage - 1) },
+                                enabled = officialPage > 1 && !loading,
+                            )
+                            Text(
+                                "第 $officialPage / $officialPages 页",
+                                style = MiuixTheme.textStyles.footnote1,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                            )
+                            TextButton(
+                                text = "下一页",
+                                onClick = { loadOfficialFiltered(officialSearch, officialPage + 1) },
+                                enabled = officialPage < officialPages && !loading,
+                            )
                         }
                     }
 
@@ -645,7 +799,7 @@ private fun showBreezeCloneDialog(
                                 "预览已生成，先试听再决定保存"
                             }
                         },
-                        onFailure = { status = "克隆失败：${it.message}" },
+                        onFailure = { status = "克隆失败：${friendlyBreezeError(it)}" },
                     )
                 }
             }.start()
@@ -1000,4 +1154,13 @@ private fun saveVoiceCache(
             .put("mine", dump(mine))
         breezeVoiceCacheFile().writeText(root.toString())
     }.onFailure { WeLogger.w("BreezeVoiceCache", "写入缓存失败：${it.message}") }
+}
+
+/** 把克隆/试听等网络异常转成用户能看懂的中文提示。 */
+private fun friendlyBreezeError(e: Throwable): String = when (e) {
+    is java.net.UnknownHostException -> "网络异常（域名解析失败），请检查网络或代理后重试"
+    is java.net.ConnectException -> "网络异常（连接被拒绝），请检查网络或代理后重试"
+    is java.net.SocketTimeoutException -> "网络超时，请检查网络后重试"
+    is java.io.IOException -> "网络异常（${e.message ?: "连接中断"}），请检查网络或代理后重试"
+    else -> e.message ?: "未知错误"
 }

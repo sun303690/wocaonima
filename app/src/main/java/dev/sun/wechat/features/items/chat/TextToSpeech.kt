@@ -12,11 +12,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -67,6 +69,7 @@ import dev.sun.wechat.ui.content.m3.TextFieldDialogWidget
 import dev.sun.wechat.ui.utils.MicIcon
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.AudioUtils
+import dev.sun.wechat.utils.BreezeCreditsClient
 import dev.sun.wechat.utils.BreezeTtsClient
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToast
@@ -85,6 +88,9 @@ import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
+import java.time.OffsetDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -109,9 +115,9 @@ object TextToSpeech :
 
     /** 底部「切换后端」菜单的顺序与文案 */
     private val BACKEND_LABELS = listOf(
-        BACKEND_MOFA to "魔方",
-        BACKEND_DOUBAO to "豆包",
         BACKEND_BREEZE to "Breeze",
+        BACKEND_DOUBAO to "豆包",
+        BACKEND_MOFA to "魔方",
     )
 
     // 豆包网页端逆向协议: 鉴权在 WebSocket 握手阶段完成, 依赖登录态 Cookie
@@ -141,6 +147,8 @@ object TextToSpeech :
     var voiceReplyEnabled by prefOption("ai_reply_tts_enabled", true)
 
     var breezeKey by prefOption("tts_breeze_api_key", "brz_XCLJf64j70U0nL-M6LOikfTsQfV4Pt2r")
+    private var breezeCookie by prefOption("tts_breeze_cookie", "")
+    var breezeInstructions by prefOption("tts_breeze_instructions", "")
     var breezeModel by prefOption("tts_breeze_model_id", BreezeTtsClient.DEFAULT_MODEL)
     var breezeVoice by prefOption("tts_breeze_voice", "")
     var breezeVoiceName by prefOption("tts_breeze_voice_name", "")
@@ -320,6 +328,8 @@ object TextToSpeech :
             var customVoices by remember { mutableStateOf(emptyList<TtsVoice>()) }
             var generating by remember { mutableStateOf(false) }
             var credentialsRevision by remember { mutableIntStateOf(0) }
+            // lastWavPath 是裸成员，Compose 观察不到；生成成功后镜像到这里才能驱动试听按钮显隐
+            var previewPath by remember { mutableStateOf<String?>(null) }
 
             LaunchedEffect(backendMode, credentialsRevision) {
                 // 魔方音色列表按后端重新拉取: 从豆包切回魔方时不能沿用旧快照;
@@ -384,40 +394,39 @@ object TextToSpeech :
                                     )
                                 },
                             )
+                        } else if (isDoubao) {
+                            // 豆包音色单列占满：自定义音色、语气是魔方/Breeze 的概念，豆包模式整行不出现
+                            BaseWidget(
+                                title = "豆包音色",
+                                description = doubaoSpeakerName,
+                                onClick = {
+                                    showDoubaoVoicePicker(context, voiceId, doubaoCookie) { id, name ->
+                                        voiceId = id
+                                        doubaoSpeaker = id
+                                        doubaoSpeakerName = name
+                                    }
+                                },
+                                trailingContent = {
+                                    Icon(
+                                        imageVector = MaterialSymbols.Outlined.Chevron_right,
+                                        contentDescription = null,
+                                    )
+                                },
+                            )
                         } else {
                             Row(Modifier.fillMaxWidth()) {
                                 Box(Modifier.weight(1f)) {
-                                    if (isDoubao) {
-                                        BaseWidget(
-                                            title = "豆包音色",
-                                            description = doubaoSpeakerName,
-                                            onClick = {
-                                                showDoubaoVoicePicker(context, voiceId, doubaoCookie) { id, name ->
-                                                    voiceId = id
-                                                    doubaoSpeaker = id
-                                                    doubaoSpeakerName = name
-                                                }
-                                            },
-                                            trailingContent = {
-                                                Icon(
-                                                    imageVector = MaterialSymbols.Outlined.Chevron_right,
-                                                    contentDescription = null,
-                                                )
-                                            },
-                                        )
-                                    } else {
-                                        DropDownMenuWidget(
-                                            title = "系统音色",
-                                            description = null,
-                                            value = voiceId,
-                                            options = if (mainOptions.any { it.value == voiceId }) mainOptions
-                                                else mainOptions + DropdownOption(voiceId, voiceId),
-                                            onValueChange = {
-                                                voiceId = it
-                                                selectedVoice = it
-                                            },
-                                        )
-                                    }
+                                    DropDownMenuWidget(
+                                        title = "系统音色",
+                                        description = null,
+                                        value = voiceId,
+                                        options = if (mainOptions.any { it.value == voiceId }) mainOptions
+                                            else mainOptions + DropdownOption(voiceId, voiceId),
+                                        onValueChange = {
+                                            voiceId = it
+                                            selectedVoice = it
+                                        },
+                                    )
                                 }
                                 Spacer(Modifier.width(8.dp))
                                 Box(Modifier.weight(1f)) {
@@ -428,7 +437,7 @@ object TextToSpeech :
                                         options = if (customCurrent) customOptions
                                             else customOptions + DropdownOption(voiceId, ""),
                                         onValueChange = { voiceId = it; selectedVoice = it },
-                                        enabled = !isDoubao && customVoices.isNotEmpty(),
+                                        enabled = customVoices.isNotEmpty(),
                                     )
                                 }
                             }
@@ -436,15 +445,15 @@ object TextToSpeech :
 
                         Spacer(Modifier.height(8.dp))
 
-                        DropDownMenuWidget(
-                            title = "语气",
-                            description = if (isDoubao) emotion else null,
-                            value = emotion,
-                            options = if (isDoubao) listOf(DropdownOption(emotion, emotion))
-                                else EMOTIONS.map { DropdownOption(it.first, it.first) },
-                            onValueChange = { emotion = it; selectedEmotion = it },
-                            enabled = !isDoubao,
-                        )
+                        if (!isDoubao) {
+                            DropDownMenuWidget(
+                                title = "语气",
+                                description = null,
+                                value = emotion,
+                                options = EMOTIONS.map { DropdownOption(it.first, it.first) },
+                                onValueChange = { emotion = it; selectedEmotion = it },
+                            )
+                        }
 
                         Spacer(Modifier.height(12.dp))
 
@@ -454,6 +463,21 @@ object TextToSpeech :
                         }
 
                         Row(Modifier.fillMaxWidth()) {
+                            previewPath?.takeUnless { generating }?.let { path ->
+                                FilledTonalButton(
+                                    onClick = { showPreviewDialog(context, talker, path) },
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    Icon(
+                                        MaterialSymbols.Outlined.Play_arrow,
+                                        contentDescription = "试听",
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("试听")
+                                }
+                                Spacer(Modifier.width(12.dp))
+                            }
                             Button(
                                 onClick = {
                                     if (inputText.trim().isEmpty()) {
@@ -470,6 +494,7 @@ object TextToSpeech :
                                         generateVoiceDoubao(inputText.trim(), voiceId) { path, err ->
                                             generating = false
                                             if (path != null) {
+                                                previewPath = path
                                                 showPreviewDialog(context, talker, path)
                                             } else {
                                                 showToast(context, "生成失败：$err")
@@ -492,6 +517,7 @@ object TextToSpeech :
                                         generateVoiceBreeze(inputText.trim(), voiceId, emotion) { path, err ->
                                             generating = false
                                             if (path != null) {
+                                                previewPath = path
                                                 showPreviewDialog(context, talker, path)
                                             } else {
                                                 showToast(context, "生成失败：$err")
@@ -512,6 +538,7 @@ object TextToSpeech :
                                     ) { wavPath, err ->
                                         generating = false
                                         if (wavPath != null) {
+                                            previewPath = wavPath
                                             showPreviewDialog(context, talker, wavPath)
                                         } else {
                                             showToast(context, "生成失败：$err")
@@ -662,30 +689,134 @@ object TextToSpeech :
             LaunchedEffect(breezeKeyState) {
                 if (breezeKeyState.isNotBlank()) loadBreezeAccount()
             }
+
+            var breezeCookieState by remember { mutableStateOf(breezeCookie) }
+            var creditsText by remember {
+                mutableStateOf(if (breezeCookie.isBlank()) "未填写登录 Cookie" else "未获取")
+            }
+            var claiming by remember { mutableStateOf(false) }
+
+            fun loadCredits() {
+                if (breezeCookieState.isBlank()) {
+                    creditsText = "未填写登录 Cookie"
+                    return
+                }
+                creditsText = "拉取中…"
+                Thread {
+                    val outcome = runCatching { BreezeCreditsClient.summary(breezeCookieState) }
+                    mh.post {
+                        val s = outcome.getOrNull()
+                        creditsText = if (s == null) {
+                            "拉取失败：${outcome.exceptionOrNull()?.message}"
+                        } else {
+                            val state = when {
+                                s.available -> "可领 +${s.amount.toInt()}"
+                                s.claimedToday -> "今日已领"
+                                else -> "暂不可领"
+                            }
+                            "余额 ${s.balance.toInt()} · $state · 重置时间 ${beijingTime(s.nextResetAt)}"
+                        }
+                    }
+                }.start()
+            }
+
+            fun claimCredits() {
+                if (claiming) return
+                if (breezeCookieState.isBlank()) {
+                    showToast(context, "请先填写 breezeblue.ai 登录 Cookie")
+                    return
+                }
+                claiming = true
+                Thread {
+                    val outcome = runCatching { BreezeCreditsClient.claim(breezeCookieState) }
+                    mh.post {
+                        claiming = false
+                        val c = outcome.getOrNull()
+                        showToast(context, when {
+                            c == null -> "领取失败：${outcome.exceptionOrNull()?.message}"
+                            c.claimed -> "已领取 +${c.creditsIssued.toInt()} 积分，余额 ${c.balance.toInt()}"
+                            c.alreadyClaimed -> "今天已经领过了"
+                            else -> "未领取：档位 ${c.rewardTier.ifBlank { "未知" }}"
+                        })
+                        loadCredits()
+                    }
+                }.start()
+            }
+
+            LaunchedEffect(breezeCookieState) {
+                if (breezeCookieState.isNotBlank()) loadCredits()
+            }
             AlertDialogContent(
                 title = { Text("文字转语音设置") },
                 text = {
-                    Column {
-                        SegmentedColumn(title = "配音魔方") {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 420.dp)
+                            .verticalScroll(rememberScrollState()),
+                    ) {
+                        SegmentedColumn(title = "Breeze Blue") {
                             item {
                                 TextFieldDialogWidget(
                                     title = "API Key",
-                                    value = apiKeyState,
+                                    value = breezeKeyState,
                                     onValueChange = {
-                                        apiKeyState = it
-                                        apiKey = it
-                                        onApiKeySaved()
+                                        breezeKeyState = it
+                                        breezeKey = it
                                     },
-                                    dialogTitle = "设置 API Key",
+                                    dialogTitle = "设置 Breeze API Key",
                                     confirmLabel = "确认",
                                     dismissLabel = "取消",
-                                    valueHint = "未设置，请前往 peiyinmofang.com 获取",
+                                    valueHint = "未设置，在 breezeblue.ai 的 Developer → API Keys 创建",
                                     password = true,
+                                )
+                            }
+                            item {
+                                TextFieldDialogWidget(
+                                    title = "登录 Cookie",
+                                    value = breezeCookieState,
+                                    onValueChange = {
+                                        breezeCookieState = it
+                                        breezeCookie = it
+                                    },
+                                    dialogTitle = "设置 breezeblue.ai 登录 Cookie",
+                                    confirmLabel = "确认",
+                                    dismissLabel = "取消",
+                                    valueHint = "未设置，仅领取每日积分需要",
+                                    password = true,
+                                )
+                            }
+                            item {
+                                DropDownMenuWidget(
+                                    title = "模型",
+                                    description = null,
+                                    value = breezeModelState,
+                                    options = modelOptions,
+                                    onValueChange = {
+                                        breezeModelState = it
+                                        breezeModel = it
+                                    },
+                                )
+                            }
+                            item {
+                                BaseWidget(
+                                    title = "余额",
+                                    description = quotaText,
+                                    onClick = { loadBreezeAccount() },
+                                )
+                            }
+                            item {
+                                BaseWidget(
+                                    title = "每日积分",
+                                    description = creditsText,
+                                    enabled = !claiming,
+                                    onClick = { claimCredits() },
                                 )
                             }
                         }
                         Text(
-                            "用于调用配音魔方 TTS 接口，在官网「API Key 管理」中创建",
+                            "API Key 管合成与音色；登录 Cookie 只用于领取每日积分，从已登录浏览器的开发者工具里复制整条。" +
+                                "点「每日积分」即领取，领过只会提示今天已经领过了。",
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.fillMaxWidth(),
                         )
@@ -711,44 +842,26 @@ object TextToSpeech :
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.fillMaxWidth(),
                         )
-                        SegmentedColumn(title = "Breeze Blue") {
+                        SegmentedColumn(title = "配音魔方") {
                             item {
                                 TextFieldDialogWidget(
                                     title = "API Key",
-                                    value = breezeKeyState,
+                                    value = apiKeyState,
                                     onValueChange = {
-                                        breezeKeyState = it
-                                        breezeKey = it
+                                        apiKeyState = it
+                                        apiKey = it
+                                        onApiKeySaved()
                                     },
-                                    dialogTitle = "设置 Breeze API Key",
+                                    dialogTitle = "设置 API Key",
                                     confirmLabel = "确认",
                                     dismissLabel = "取消",
-                                    valueHint = "未设置，在 breezeblue.ai 的 Developer → API Keys 创建",
+                                    valueHint = "未设置，请前往 peiyinmofang.com 获取",
                                     password = true,
-                                )
-                            }
-                            item {
-                                DropDownMenuWidget(
-                                    title = "模型",
-                                    description = null,
-                                    value = breezeModelState,
-                                    options = modelOptions,
-                                    onValueChange = {
-                                        breezeModelState = it
-                                        breezeModel = it
-                                    },
-                                )
-                            }
-                            item {
-                                BaseWidget(
-                                    title = "余额",
-                                    description = quotaText,
-                                    onClick = { loadBreezeAccount() },
                                 )
                             }
                         }
                         Text(
-                            "Breeze 按额度计费，合成与造音色都会扣减；换 Key 后点「余额」重新拉取模型与额度。",
+                            "用于调用配音魔方 TTS 接口，在官网「API Key 管理」中创建",
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.fillMaxWidth(),
                         )
@@ -757,6 +870,15 @@ object TextToSpeech :
                 confirmButton = { Button(onDismiss) { Text("完成") } }
             )
         }
+    }
+
+    private fun beijingTime(iso: String): String {
+        return runCatching {
+            OffsetDateTime.parse(iso)
+                .toInstant()
+                .atZone(ZoneId.of("Asia/Shanghai"))
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+        }.getOrDefault(iso)
     }
 
     fun showPreviewDialog(context: android.content.Context, talker: String, wavPath: String) {

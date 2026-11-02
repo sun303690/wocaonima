@@ -4549,8 +4549,17 @@
     <string name="ai_reply_tts_emotion">语气</string>
     <string name="ai_reply_tts_generating">生成语音中…</string>
     <string name="ai_reply_tts_missing_credentials">未配置语音凭据，请在「AI回复配置」的语音配置中填写</string>
+    <string name="ai_reply_tts_switch_short">语音回复</string>
     <string name="ai_reply_tts_switch">开启语音回复</string>
     <string name="ai_reply_tts_switch_summary">在候选结果中生成并发送语音</string>
+    <string name="ai_reply_tts_backend">语音合成后端</string>
+    <string name="ai_reply_tts_backend_breeze">Breeze</string>
+    <string name="ai_reply_tts_breeze_key_hint">未设置，在 breezeblue.ai 的 Developer → API Keys 创建</string>
+    <string name="ai_reply_tts_breeze_unselected">未选择</string>
+    <string name="ai_reply_tts_breeze_model">模型</string>
+    <string name="ai_reply_tts_breeze_instructions">指令</string>
+    <string name="ai_reply_tts_breeze_instructions_hint">未设置。用自然语言描述怎么念，例如：开心地说，带点惊喜的上扬</string>
+    <string name="ai_reply_tts_preview">试听</string>
     <string name="ai_reply_tts_voice">音色</string>
     <string name="ai_reply_voice_group">语音配置</string>
     <string name="ui_group_ai_model_picker_summary">共 %1$d 个模型，滚动点击选择</string>

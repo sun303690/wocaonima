@@ -22,7 +22,6 @@ object ReplyEntry :
     WeChatMessageContextMenuApi.IMenuItemsProvider {
 
     private const val REPLY_MENU_ID = 777101
-    private const val TOPIC_MENU_ID = 777102
 
     private fun open(context: Context, talker: String) {
         val activity = context as? Activity
@@ -48,16 +47,7 @@ object ReplyEntry :
     override fun getMenuItems(): List<WeChatMessageContextMenuApi.MenuItem> = listOf(
         WeChatMessageContextMenuApi.MenuItem(
             id = REPLY_MENU_ID,
-            text = "帮我回",
-            drawable = ReplyEntryIcon,
-            imageVector = MaterialSymbols.Outlined.Auto_awesome,
-            isSupported = { message -> message.type?.isText == true },
-        ) { _, ctx, message ->
-            open(ctx.activity, message.talker)
-        },
-        WeChatMessageContextMenuApi.MenuItem(
-            id = TOPIC_MENU_ID,
-            text = "找话题",
+            text = "帮我回 · 找话题",
             drawable = ReplyEntryIcon,
             imageVector = MaterialSymbols.Outlined.Auto_awesome,
             isSupported = { message -> message.type?.isText == true },

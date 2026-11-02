@@ -4522,8 +4522,17 @@
     <string name="ai_reply_tts_emotion">Emotion</string>
     <string name="ai_reply_tts_generating">Generating voice…</string>
     <string name="ai_reply_tts_missing_credentials">Voice credentials are missing. Open AI reply settings and fill in the voice section.</string>
+    <string name="ai_reply_tts_switch_short">Voice reply</string>
     <string name="ai_reply_tts_switch">Voice replies</string>
     <string name="ai_reply_tts_switch_summary">Generate and send a voice reply from a candidate</string>
+    <string name="ai_reply_tts_backend">Voice backend</string>
+    <string name="ai_reply_tts_backend_breeze">Breeze Blue</string>
+    <string name="ai_reply_tts_breeze_key_hint">Created on the breezeblue.ai developer API keys page</string>
+    <string name="ai_reply_tts_breeze_unselected">No voice selected</string>
+    <string name="ai_reply_tts_breeze_model">Model</string>
+    <string name="ai_reply_tts_breeze_instructions">Instruction</string>
+    <string name="ai_reply_tts_breeze_instructions_hint">Describe in plain words how the text should be read</string>
+    <string name="ai_reply_tts_preview">Preview</string>
     <string name="ai_reply_tts_voice">Voice</string>
     <string name="ai_reply_voice_group">Voice</string>
     <string name="ui_group_ai_model_picker_summary">%1$d models available, scroll and tap to select</string>
