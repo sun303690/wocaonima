@@ -110,7 +110,7 @@ object RepeatMessages : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItemsP
     }
 
     private fun repeatVideo(msgInfo: MessageInfo): Boolean {
-        val mp4Path = WeServiceApi.getVideoMp4PathFromMsgInfo(msgInfo)
+        val mp4Path = WeServiceApi.getVideoMp4PathFromMsgInfo(msgInfo) ?: return false
         return WeMessageApi.sendVideo(msgInfo.talker, mp4Path)
     }
 

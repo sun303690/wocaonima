@@ -155,7 +155,7 @@ object ForwardMessages : SwitchFeature(),
     }
 
     private fun forwardVideo(toUser: String, msgInfo: MessageInfo): Boolean {
-        val mp4Path = WeServiceApi.getVideoMp4PathFromMsgInfo(msgInfo)
+        val mp4Path = WeServiceApi.getVideoMp4PathFromMsgInfo(msgInfo) ?: return false
         return WeMessageApi.sendVideo(toUser, mp4Path)
     }
 

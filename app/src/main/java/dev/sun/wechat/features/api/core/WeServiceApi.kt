@@ -12,6 +12,7 @@ import dev.sun.wechat.features.api.core.models.MessageInfo
 import dev.sun.wechat.features.core.ApiFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.utils.HostInfo
+import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.reflection.BString
 import org.luckypray.dexkit.DexKitBridge
 import java.lang.reflect.Modifier
@@ -22,6 +23,8 @@ object WeServiceApi : ApiFeature(), IResolveDex {
     override val nameRes = R.string.feature_we_service_api_name
     override val categoryIds = listOf(FeatureCategoryIds.API)
     override val descriptionRes = R.string.feature_we_service_api_description
+
+    private const val TAG = "WeServiceApi"
 
     private val methodServiceManagerGetService by dexMethod {
         matcher {
@@ -236,10 +239,25 @@ object WeServiceApi : ApiFeature(), IResolveDex {
                 .interfaces[0]
         )
 
-    fun getVideoMp4PathFromMsgInfo(msgInfo: MessageInfo): String {
-        return methodVideoPathFeatureServiceRestoreMp4Path.method.invoke(
-            videoPathFeatureService, msgInfo.imagePath!!
-        ) as String
+    /**
+     * 取视频消息对应的本地 mp4 路径。
+     *
+     * 旧实现直接 `msgInfo.imagePath!!`：8.0.78 上视频消息的 `field_imgPath` 可能为 null，
+     * 一抛 NPE 就被调用方 runCatching 吞成「未找到视频」。此处改为可空返回并留日志。
+     */
+    fun getVideoMp4PathFromMsgInfo(msgInfo: MessageInfo): String? {
+        val imagePath = msgInfo.imagePath
+        if (imagePath.isNullOrBlank()) {
+            WeLogger.w(TAG, "视频消息缺少 field_imgPath，无法还原 mp4 路径 id=${msgInfo.id}")
+            return null
+        }
+        return runCatching {
+            methodVideoPathFeatureServiceRestoreMp4Path.method.invoke(
+                videoPathFeatureService, imagePath
+            ) as? String
+        }.onFailure {
+            WeLogger.e(TAG, "还原视频路径失败 imagePath=$imagePath", it)
+        }.getOrNull()?.takeIf { it.isNotBlank() }
     }
 
     override fun resolveDex(dexKit: DexKitBridge) {

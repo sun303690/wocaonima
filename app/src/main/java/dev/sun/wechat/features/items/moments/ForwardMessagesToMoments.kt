@@ -64,7 +64,7 @@ object ForwardMessagesToMoments : SwitchFeature(), WeChatMessageContextMenuApi.I
     // 微信朋友圈的 KSightPath(sight) 只认短视频，长视频必须经系统相册选择才能上传。
     private fun postVideoToMoments(activity: android.app.Activity, video: MessageInfo, text: String? = null) {
         val mp4Path = WeServiceApi.getVideoMp4PathFromMsgInfo(video)
-        if (mp4Path.isBlank()) {
+        if (mp4Path.isNullOrBlank()) {
             dev.sun.wechat.utils.android.showToast(activity, "无法解析视频文件")
             return
         }

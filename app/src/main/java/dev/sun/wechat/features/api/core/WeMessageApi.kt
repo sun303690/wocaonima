@@ -1438,6 +1438,9 @@ object WeMessageApi : ApiFeature(), IResolveDex {
     /**
      * 动态解析 AccPath 获取方法
      */
+    /** 公开访问器：供需要拼接 acc 目录下资源的特性使用（私有的 [getAccPath] 保持原样）。 */
+    fun accPath(): String = getAccPath()
+
     private fun getAccPath(): String {
         val storageObj = WeDatabaseApi.methodGetStorage.method.invoke(null)
             ?: error("Kernel.getStorage() failed (returned null)")

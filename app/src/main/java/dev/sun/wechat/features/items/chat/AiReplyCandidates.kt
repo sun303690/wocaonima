@@ -842,7 +842,8 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                                             error = localizedChatString(R.string.ai_reply_empty_draft)
                                             return@Button
                                         }
-                                        if (audioPath == null) synthesize(text) else TextToSpeech.sendVoiceTo(talker, audioPath) { ok ->
+                                        val path = audioPath
+                                        if (path == null) synthesize(text) else TextToSpeech.sendVoiceTo(talker, path) { ok ->
                                             if (ok) onDismiss() else error = localizedChatString(R.string.ai_reply_send_failed)
                                         }
                                     },
@@ -901,8 +902,8 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
     }
 
     private fun showInstructionDialog(context: android.content.Context) {
-        var instruction by remember { mutableStateOf(ttsBreezeInstructions) }
         showComposeDialog(context, directlyDismissable = false) {
+            var instruction by remember { mutableStateOf(ttsBreezeInstructions) }
             AlertDialogContent(
                 title = {
                     Text(text = stringResource(R.string.ai_reply_tts_breeze_instructions))
@@ -1082,6 +1083,12 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
         val doubaoTts = ttsBackendState == TextToSpeech.BACKEND_DOUBAO
         val breezeTts = ttsBackendState == TextToSpeech.BACKEND_BREEZE
         val mofaTts = ttsBackendState == TextToSpeech.BACKEND_MOFA
+        var mofaApiKeyState by remember { mutableStateOf(TextToSpeech.apiKey) }
+        var breezeModelState by remember { mutableStateOf(TextToSpeech.breezeModel) }
+        var breezeModelOptions by remember {
+            mutableStateOf(listOf(DropdownOption(TextToSpeech.breezeModel, TextToSpeech.breezeModel)))
+        }
+        var ttsInstructionState by remember { mutableStateOf(TextToSpeech.breezeInstructions) }
 
         // 旧「魔方」后端现拉系统/自定义音色；Breeze 后端现拉模型列表；失败保留默认值
         LaunchedEffect(ttsOn, ttsBackendState, ttsApiKeyState) {
@@ -1113,13 +1120,6 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
             DropdownOption(ttsVoiceState, ttsVoiceState)).distinctBy { it.value }
         val customVoiceOptions = mofangCustomVoices.map { DropdownOption(it.voiceId, it.label) }
         val emotionOptions = TextToSpeech.EMOTIONS.map { DropdownOption(it.first, it.first) }
-        var mofaApiKeyState by remember { mutableStateOf(TextToSpeech.apiKey) }
-        var breezeModelState by remember { mutableStateOf(TextToSpeech.breezeModel) }
-        var breezeModelOptions by remember {
-            mutableStateOf(listOf(DropdownOption(TextToSpeech.breezeModel, TextToSpeech.breezeModel)))
-        }
-        var ttsInstructionState by remember { mutableStateOf(TextToSpeech.breezeInstructions) }
-
         AlertDialogContent(
             title = {
                 Text(
@@ -1233,7 +1233,7 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                                     title = stringResource(R.string.ai_reply_tts_backend),
                                     description = null,
                                     value = ttsBackendState,
-                                    options = TTS_BACKEND_ORDER.map { DropdownOption(it, backendLabelRes(it)) },
+                                    options = TTS_BACKEND_ORDER.map { DropdownOption(it, stringResource(backendLabelRes(it))) },
                                     onValueChange = {
                                         ttsBackendState = it
                                         TextToSpeech.backend = it
