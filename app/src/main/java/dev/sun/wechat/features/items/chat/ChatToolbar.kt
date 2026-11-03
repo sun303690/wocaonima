@@ -444,9 +444,17 @@ object ChatToolbar : ClickableFeature(), IResolveDex {
             // R8 staticizes initAppGrid on current builds, which is why the hooks read the panel out
             // of args[0]; tolerate the instance shape too, since this call is outside a hook and an
             // argument mismatch would take the process down.
-            val method = methodAppPanelInitAppGrid.method
-            if (java.lang.reflect.Modifier.isStatic(method.modifiers)) method.invoke(null, appPanel)
-            else method.invoke(appPanel)
+            // 注意：锚点在某些微信版本上解析不到（8.0.78 的 AppPanel 已换实现），.method 会抛
+            // IllegalStateException；这段跑在主线程 Handler 里，不兜住就是直接崩。
+            if (!methodAppPanelInitAppGrid.isAvailable) {
+                WeLogger.w(TAG, "initAppGrid anchor unresolved on this WeChat build, skip forced grid init")
+                return@postDelayed
+            }
+            runCatching {
+                val method = methodAppPanelInitAppGrid.method
+                if (java.lang.reflect.Modifier.isStatic(method.modifiers)) method.invoke(null, appPanel)
+                else method.invoke(appPanel)
+            }.onFailure { WeLogger.w(TAG, "forced initAppGrid failed", it) }
         }, GRID_INIT_WATCHDOG_DELAY_MS)
     }
 
