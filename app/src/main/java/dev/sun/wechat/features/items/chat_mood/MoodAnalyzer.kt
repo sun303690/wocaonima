@@ -44,10 +44,6 @@ object MoodAnalyzer {
      */
     fun submit(input: AnalysisInput, stillVisible: (() -> Boolean)? = null): String? {
         if (!enabled) return null
-        // Jev/TypeSafe 模型关着的时候没必要提交：以前会一路走到传输层才抛
-        // 「Jev 模型已关闭」，于是每条消息都打一条 E 日志、气泡上还挂一张
-        // 「分析失败，点击重试」的卡。没开就不打扰。
-        if (!MoodTransport.jevEnabled) return null
         if (MessagePolicy.textOrNull(input.text) == null) return null
         val key = input.key
         if (System.currentTimeMillis() - (failures[key] ?: 0L) < 30_000L) return key

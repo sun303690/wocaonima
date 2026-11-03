@@ -112,57 +112,25 @@ object VideoToVoice : ClickableFeature(), WeChatMessageContextMenuApi.IMenuItems
         WeLogger.w(TAG, "restore 服务未取到视频，imagePath=${msgInfo.imagePath} 返回=$direct")
 
         val imagePath = msgInfo.imagePath
-        val accPath = runCatching { WeMessageApi.accPath() }.getOrDefault("")
         if (!imagePath.isNullOrBlank()) {
             val asFile = File(imagePath)
             if (asFile.isFile) return asFile.absolutePath
-            val name = imagePath.substringAfterLast('/')
+            val accPath = runCatching { WeMessageApi.accPath() }.getOrDefault("")
             if (accPath.isNotBlank()) {
-                // 微信把视频落成 <acc>/video/<imgPath>.mp4；imgPath 有时带 chatroom 等后缀，
-                // 有时又存的是别的扩展名，故先按全名找，再按「去掉扩展名相同的任意扩展名」找。
-                val candidates = listOf("video/", "video/thumb/", "sight/", "")
+                val candidates = listOf("video/", "video/thumb/", "")
                 for (prefix in candidates) {
-                    val f = File(accPath + prefix + name)
+                    val f = File(accPath + prefix + imagePath.substringAfterLast('/'))
                     if (f.isFile) return f.absolutePath
                 }
-                val base = name.substringBeforeLast('.')
-                for (prefix in candidates) {
-                    val hit = runCatching {
-                        File(accPath + prefix).listFiles()?.firstOrNull {
-                            it.isFile && it.name.substringBeforeLast('.') == base
-                        }
-                    }.getOrNull()
-                    if (hit != null) {
-                        WeLogger.i(TAG, "按同名不同扩展名命中视频 ${hit.absolutePath}")
-                        return hit.absolutePath
-                    }
-                }
-                // 群聊视频的 imgPath 会带 chatroom 后缀，去掉后缀再试一次。
-                if (base.endsWith("chatroom")) {
-                    val trimmed = base.removeSuffix("chatroom")
-                    val hit = runCatching {
-                        File(accPath, "video").listFiles()?.firstOrNull {
-                            it.isFile && it.name.substringBeforeLast('.').startsWith(trimmed)
-                        }
-                    }.getOrNull()
-                    if (hit != null) {
-                        WeLogger.i(TAG, "去掉 chatroom 后缀命中视频 ${hit.absolutePath}")
-                        return hit.absolutePath
-                    }
-                }
-                // 仍找不到就把目录样本打进日志，便于判断是命名变了还是根本没下载。
-                val sample = runCatching {
-                    File(accPath, "video").listFiles()?.take(8)?.joinToString { it.name }
-                }.getOrNull()
-                WeLogger.d(TAG, "video 目录样本 name=$name 文件=$sample")
             }
         }
 
         val md5 = runCatching { XmlUtils.extractXmlAttr(msgInfo.content, "md5") }.getOrNull()
         if (md5.isNullOrBlank()) {
-            WeLogger.w(TAG, "消息 XML 里没有 md5，无法按文件名兜底 id=${msgInfo.id}（视频多半还没下载到本地，先在微信里点开播放一次再提取）")
+            WeLogger.w(TAG, "消息 XML 里没有 md5，无法按文件名兜底 id=${msgInfo.id}")
             return null
         }
+        val accPath = runCatching { WeMessageApi.accPath() }.getOrDefault("")
         if (accPath.isBlank()) {
             WeLogger.w(TAG, "取不到微信 acc 目录，无法按 md5 兜底 md5=$md5")
             return null
