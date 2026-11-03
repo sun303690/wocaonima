@@ -666,7 +666,18 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
         "${PackageNames.WECHAT}.plugin.brandservice.",
         // 联系人资料页（ContactInfoUI/ContactProfileUI 等）没有适配沉浸式布局，
         // 透明状态栏会把头像顶到状态栏下面被遮住，因此资料页跳过透明状态栏。
-        "${PackageNames.WECHAT}.plugin.profile."
+        "${PackageNames.WECHAT}.plugin.profile.",
+        // 群聊资料页 / 企业聊天室资料页：顶部有群头像，同样未适配沉浸式。
+        "${PackageNames.WECHAT}.chatroom.",
+        "${PackageNames.WECHAT}.ui.bizchat.",
+        // 朋友圈个人主页：顶部有背景图 + 头像，透明状态栏会遮挡。
+        "${PackageNames.WECHAT}.plugin.sns.ui.SnsUserUI",
+        // 视频号主页 / 视频号+公众号合并主页：顶部有封面 + 头像。
+        "${PackageNames.WECHAT}.plugin.finder.feed.ui.FinderProfileUI",
+        "${PackageNames.WECHAT}.plugin.finder.ui.FinderAndBizProfileUI",
+        "${PackageNames.WECHAT}.plugin.finder.activity.FinderActivityProfileUI",
+        // 微信设置页（MainSettingsUI/CommonSettingsUI 等）同样未适配沉浸式。
+        "${PackageNames.WECHAT}.plugin.setting."
     )
 
     private fun isTransparentStatusBarExcluded(activity: Activity): Boolean {
