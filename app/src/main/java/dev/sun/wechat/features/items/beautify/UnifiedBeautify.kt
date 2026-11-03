@@ -688,6 +688,10 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     private fun applyTransparentStatusBarIfEnabled(activity: Activity) {
         if (!transparentStatusBar) return
         if (isTransparentStatusBarExcluded(activity)) return
+        // 深色模式下透明状态栏会把状态栏色条透明化，露出浅色 window 背景，形成顶部一条
+        // 灰色遮罩（用户实测：深色模式顶部出现灰条，浅色模式正常）。深色模式下状态栏本就
+        // 是深色、与内容连片，无需透明化，直接跳过。
+        if (activity.isDarkMode) return
         applyTransparentStatusBar(activity)
     }
 
@@ -695,26 +699,20 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     private fun applyTransparentStatusBar(activity: Activity) {
         runCatching {
             val window = activity.window ?: return
-            val decor = window.decorView as? ViewGroup ?: return
 
             window.statusBarColor = Color.TRANSPARENT
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 window.isStatusBarContrastEnforced = false
             }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                window.setDecorFitsSystemWindows(false)
-            } else {
-                @Suppress("DEPRECATION")
-                decor.systemUiVisibility = decor.systemUiVisibility or
-                        View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-                        View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-            }
 
-            // Only make the real Android status bar transparent. Do not collapse WeChat's
-            // edge-to-edge wrapper or clear its internal DrawStatusBarFrameLayout: those views
-            // belong to the same content hierarchy as the wallpaper. Altering both layers makes
-            // the wallpaper appear twice (one copy inside, another outside the title area).
-            clearStatusBarBackground(activity, decor)
+            // 参照主题工坊 ThemeSurface.applyImmersive：只透明化系统状态栏颜色。
+            // 不设置 LAYOUT_FULLSCREEN/LAYOUT_STABLE、不调 setDecorFitsSystemWindows(false)，
+            // 否则会把微信内容顶到状态栏下——服务号 webview 黑边、资料页头像被遮、
+            // 深色模式透明化状态栏色条后露出浅色 window 背景形成灰色遮罩。
+            // 壁纸遮罩 overlay 覆盖 DecorView 全高，视觉上仍是全屏沉浸，不改页面布局。
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = window.decorView.systemUiVisibility or
+                    View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
         }.onFailure {
             WeLogger.w(TAG, "failed to apply transparent status bar", it)
         }
