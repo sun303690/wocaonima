@@ -609,13 +609,13 @@ object ConversationAggregation : ClickableFeature(),
     private fun hookConversationPages() {
         ConvBoxServiceConversationUI::class.hookBeforeOnCreate {
             val activity = thisObject as? Activity ?: return@hookBeforeOnCreate
-            activeFolderId = readFolderIdFromIntent(activity.intent) ?: activeFolderId
+            activeFolderId = readFolderIdFromIntent(activity.intent)
         }
 
         BaseConversationUI::class.reflekt().apply {
             firstMethod("onResume").hookAfter {
                 val activity = thisObject as? BaseConversationUI ?: return@hookAfter
-                activeFolderId = activeFolderId ?: readFolderIdFromIntent(activity.intent)
+                activeFolderId = readFolderIdFromIntent(activity.intent)
                 configureFolderActivity(activity)
             }
 

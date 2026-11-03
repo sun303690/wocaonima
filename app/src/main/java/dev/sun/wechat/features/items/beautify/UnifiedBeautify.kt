@@ -663,7 +663,10 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
      * 页面跳过透明状态栏，背景遮罩仍然照常应用。
      */
     private val transparentStatusBarExcludedPrefixes = listOf(
-        "${PackageNames.WECHAT}.plugin.brandservice."
+        "${PackageNames.WECHAT}.plugin.brandservice.",
+        // 联系人资料页（ContactInfoUI/ContactProfileUI 等）没有适配沉浸式布局，
+        // 透明状态栏会把头像顶到状态栏下面被遮住，因此资料页跳过透明状态栏。
+        "${PackageNames.WECHAT}.plugin.profile."
     )
 
     private fun isTransparentStatusBarExcluded(activity: Activity): Boolean {
