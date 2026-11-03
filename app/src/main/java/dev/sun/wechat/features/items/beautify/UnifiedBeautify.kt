@@ -4,6 +4,8 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.res.ColorStateList
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
@@ -153,6 +155,8 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     private val rowStates = WeakHashMap<View, RowState>()
     private val collapsedStatusBarWrappers = WeakHashMap<View, Boolean>()
     private val loggedStatusBarBands = WeakHashMap<View, Boolean>()
+    private var cachedBackgroundLuminanceKey: String? = null
+    private var cachedBackgroundLuminance: Float = 0.5f
     private val globalTextColors = WeakHashMap<TextView, Int>()
     private val applyingGlobalTextColor = ThreadLocal.withInitial { false }
     private var cachedTextColorValue: String? = null
@@ -697,22 +701,34 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
 
     @Suppress("DEPRECATION")
     private fun applyTransparentStatusBar(activity: Activity) {
+        refreshBackgroundLuminance()
         runCatching {
             val window = activity.window ?: return
+            val decor = window.decorView as? ViewGroup ?: return
 
             window.statusBarColor = Color.TRANSPARENT
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 window.isStatusBarContrastEnforced = false
             }
 
-            // 参照主题工坊 ThemeSurface.applyImmersive：只透明化系统状态栏颜色。
+            // 参照主题工坊 ThemeSurface.applyImmersive：只透明化系统状态栏颜色，
             // 不设置 LAYOUT_FULLSCREEN/LAYOUT_STABLE、不调 setDecorFitsSystemWindows(false)，
-            // 否则会把微信内容顶到状态栏下——服务号 webview 黑边、资料页头像被遮、
-            // 深色模式透明化状态栏色条后露出浅色 window 背景形成灰色遮罩。
-            // 壁纸遮罩 overlay 覆盖 DecorView 全高，视觉上仍是全屏沉浸，不改页面布局。
-            @Suppress("DEPRECATION")
-            window.decorView.systemUiVisibility = window.decorView.systemUiVisibility or
-                    View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+            // 否则会把微信内容顶到状态栏下——服务号 webview 黑边、资料页头像被遮。
+            // 透明化微信自己的状态栏色条（EdgeToEdgeWrapper padding strip + DrawStatusBarFrameLayout），
+            // 否则它们会以灰色显示在壁纸上，形成「灰色状态栏」，且壁纸越清晰越显眼。
+            // 深色模式已在 applyTransparentStatusBarIfEnabled 入口跳过，此处只在浅色模式跑，
+            // 透明化后露出的是壁纸 overlay（干净），不会重演深色模式的浅色 window 背景灰条。
+            collapseStatusBarWrapperInset(decor)
+            clearWeChatStatusBarStrip(decor)
+
+            // 状态栏图标颜色跟随壁纸明暗：深色壁纸用白色图标，浅色壁纸用深色图标，
+            // 否则壁纸越清晰，固定深色图标在深色壁纸上越看不清。
+            val ui = window.decorView.systemUiVisibility
+            window.decorView.systemUiVisibility = if (statusBarIconsShouldBeDark()) {
+                ui or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+            } else {
+                ui and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
+            }
         }.onFailure {
             WeLogger.w(TAG, "failed to apply transparent status bar", it)
         }
@@ -769,6 +785,70 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
             name = "setStatusBarColor"
             parameterCount = 1
         }?.invoke(Color.TRANSPARENT)
+    }
+
+    /**
+     * 状态栏图标是否应为深色（SYSTEM_UI_FLAG_LIGHT_STATUS_BAR）。按背景图平均亮度判断：
+     * 亮背景用深色图标，暗背景用白色图标；无背景图或读取失败时默认浅色背景（深色图标）。
+     */
+    private fun statusBarIconsShouldBeDark(): Boolean = cachedBackgroundLuminance >= 0.45f
+
+    /**
+     * 计算背景图平均亮度（0..1），结果缓存，仅在文件变化时重算。采样到约 64x64 以内，
+     * 开销很小，可在 onResume 路径上调用。
+     */
+    private fun refreshBackgroundLuminance() {
+        val file = runCatching { backgroundImageFile.toFile() }.getOrNull() ?: return
+        if (!file.exists()) {
+            cachedBackgroundLuminanceKey = null
+            cachedBackgroundLuminance = 0.5f
+            return
+        }
+        val key = "${file.absolutePath}#${file.length()}#${file.lastModified()}"
+        if (cachedBackgroundLuminanceKey == key) return
+
+        val luminance = runCatching {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(file.absolutePath, bounds)
+            var sample = 1
+            val longest = maxOf(bounds.outWidth, bounds.outHeight)
+            while (longest / (sample * 2) >= 128) sample *= 2
+            val opts = BitmapFactory.Options().apply { inSampleSize = sample }
+            val bmp = BitmapFactory.decodeFile(file.absolutePath, opts) ?: return@runCatching 0.5f
+            try {
+                averageLuminance(bmp)
+            } finally {
+                if (!bmp.isRecycled) bmp.recycle()
+            }
+        }.getOrDefault(0.5f)
+
+        cachedBackgroundLuminanceKey = key
+        cachedBackgroundLuminance = luminance
+    }
+
+    private fun averageLuminance(bitmap: Bitmap): Float {
+        val w = bitmap.width
+        val h = bitmap.height
+        if (w <= 0 || h <= 0) return 0.5f
+        val stepX = maxOf(1, w / 64)
+        val stepY = maxOf(1, h / 64)
+        var sum = 0.0
+        var count = 0
+        var y = 0
+        while (y < h) {
+            var x = 0
+            while (x < w) {
+                val c = bitmap.getPixel(x, y)
+                val r = (c shr 16) and 0xFF
+                val g = (c shr 8) and 0xFF
+                val b = c and 0xFF
+                sum += (0.299 * r + 0.587 * g + 0.114 * b) / 255.0
+                count++
+                x += stepX
+            }
+            y += stepY
+        }
+        return if (count == 0) 0.5f else (sum / count).toFloat()
     }
 
     /**
