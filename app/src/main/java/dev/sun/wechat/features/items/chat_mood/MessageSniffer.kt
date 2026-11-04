@@ -39,8 +39,9 @@ object MessageSniffer {
                 while (deque.size > 24) deque.removeFirst()
                 // 情绪分析只分析/装饰对方的消息；自己发的消息仅进上下文，不出卡、不分析
                 if (message.isSend != 0) return
-                // 按会话开关（对应言外 isChatEnabled）：只处理显式打开过分析的聊天页，其余会话不自动分析
-                if (!ConversationSwitches.isEnabled(talker)) return
+                // 会话级开关只管「情绪分析」；自动帮我回不受它限制，否则只开自动回复的聊天不出建议卡
+                val chatAnalysisEnabled = ConversationSwitches.isEnabled(talker)
+                if (!chatAnalysisEnabled && !ReplyAuto.enabled) return
                 val context = deque.dropLast(1).takeLast(MessagePolicy.MAX_CONTEXT_MESSAGES)
                     .map { ContextMessage(it.first, it.second) }
                 val input = AnalysisInput(
@@ -50,11 +51,11 @@ object MessageSniffer {
                     messageId = message.createTime,
                     speaker = speaker,
                 )
-                // 情绪分析只对文字有意义；语音/表情只出回复建议卡
-                if (isPlainText) {
+                // 情绪分析只对文字有意义，且只在该会话显式打开过分析时才提交；语音/表情只出回复建议卡
+                if (chatAnalysisEnabled && isPlainText) {
                     MoodAnalyzer.submit(input) { view.isShown }
                 }
-                BubbleDecorator.show(view, input)
+                BubbleDecorator.show(view, input, analysisEnabled = chatAnalysisEnabled)
                 // 自动帮我回：只对对方的新消息触发，生成结果画在同一张卡片里
                 ReplyAuto.request(talker, input.key)
             } catch (t: Throwable) {

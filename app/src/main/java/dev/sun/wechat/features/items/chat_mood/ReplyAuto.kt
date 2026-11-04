@@ -24,6 +24,9 @@ object ReplyAuto {
     private const val LIMIT_KEY = "mood_reply_limit"
     private const val MAX_CACHE = 120
 
+    /** 撞上限流后，自动回复整体歇一阵再说话，免得一封一封往刀口上撞。 */
+    private const val RATE_PAUSE_MS = 90_000L
+
     /** 设置项：对方新消息到达时自动生成可选回复。 */
     var enabled by KvStore.prefOption("mood_reply_auto", false)
 
@@ -34,6 +37,9 @@ object ReplyAuto {
     private val failures = HashMap<String, String>()
     private val talkers = HashMap<String, String>()
     private val latestByTalker = HashMap<String, String>()
+
+    @Volatile
+    private var pausedUntil = 0L
 
     @Volatile
     private var onRefresh: (() -> Unit)? = null
@@ -55,6 +61,11 @@ object ReplyAuto {
     fun request(talker: String, key: String, retry: Boolean = false) {
         if (!enabled && !retry) return
         if (talker.isBlank() || key.isBlank()) return
+        val now = System.currentTimeMillis()
+        if (now < pausedUntil) {
+            WeLogger.d(TAG, "rate pause active, skip auto reply (${(pausedUntil - now) / 1000}s left)")
+            return
+        }
         if (!retry && (results.containsKey(key) || key in pending)) return
         if (jobs[key]?.isActive == true) return
         // 连发几条消息时只保留最后一条：取消上一条还没跑完的生成，避免重复请求
@@ -81,6 +92,23 @@ object ReplyAuto {
                 val page = withContext(Dispatchers.IO) { ReplyHistory.load(talker, limit) }
                 if (page.messages.isEmpty()) throw IllegalStateException("没读到文字消息")
                 val identity = ReplyStorage.load(talker)
+                // 与手动「帮我回」同一套指纹：会话、末条消息、条数、身份、背景、方向。
+                // 自动与手动共用一本落盘账，谁先算过，另一方直接命中，不再向模型要第二遍。
+                val fingerprint = ReplyCache.fingerprint(
+                    talker = talker,
+                    lastText = page.messages.last().text,
+                    count = page.messages.size,
+                    relationship = identity.relationship.id,
+                    custom = identity.custom,
+                    background = identity.background,
+                    direction = "",
+                )
+                val cached = withContext(Dispatchers.IO) { ReplyCache.load(talker, fingerprint) }
+                if (cached != null) {
+                    results[key] = cached
+                    trimCache()
+                    return@launch
+                }
                 val prompts = ReplyProtocol.buildReplyPrompts(
                     messages = page.messages,
                     draft = "",
@@ -91,12 +119,18 @@ object ReplyAuto {
                 )
                 val suggestion = ReplyHttpClient.generateReply(prompts.system, prompts.user)
                 results[key] = suggestion
+                withContext(Dispatchers.IO) { ReplyCache.save(talker, fingerprint, suggestion, page.displayName) }
                 trimCache()
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
                 WeLogger.e(TAG, "auto reply failed", e)
-                failures[key] = e.message ?: "生成失败"
+                val shown = e.message ?: "生成失败"
+                failures[key] = shown
+                if (shown.startsWith(ReplyHttpClient.RATE_LIMITED_MESSAGE)) {
+                    pausedUntil = System.currentTimeMillis() + RATE_PAUSE_MS
+                    WeLogger.w(TAG, "rate limited, pause auto reply ${RATE_PAUSE_MS / 1000}s")
+                }
             } finally {
                 pending -= key
                 notifyRefresh()

@@ -25,13 +25,13 @@ object BubbleDecorator {
     private data class Card(
         val key: String, val container: LinearLayout, val body: TextView, val chips: LinearLayout,
         val parent: ViewGroup, val row: View, val anchor: View, val assignedId: Int?,
-        val input: AnalysisInput, val detach: View.OnAttachStateChangeListener,
+        val input: AnalysisInput, val analysisEnabled: Boolean, val detach: View.OnAttachStateChangeListener,
     )
     private val cards = IdentityHashMap<View, Card>()
     private val unsupported = mutableSetOf<String>()
     private val refreshRegistered = java.util.concurrent.atomic.AtomicBoolean(false)
 
-    fun show(row: View, message: AnalysisInput?): Boolean {
+    fun show(row: View, message: AnalysisInput?, analysisEnabled: Boolean = true): Boolean {
         // 只开「自动帮我回」、没配情绪分析模型时，也允许挂一张只显示回复建议的卡片
         if (message == null || (!MoodAnalyzer.enabled && !ReplyAuto.enabled)) { clear(row); return false }
         // 首次绘制时挂上完成回调，之后结果落地就能直接改这张卡的文字。
@@ -46,7 +46,7 @@ object BubbleDecorator {
             state = null
         }
         if (state == null) {
-            state = attach(row, key, message) ?: return false
+            state = attach(row, key, message, analysisEnabled) ?: return false
             cards[row] = state
         }
         render(state)
@@ -79,7 +79,8 @@ object BubbleDecorator {
     }
 
     private fun render(state: Card) {
-        val hasAnalysis = MoodAnalyzer.enabled || MoodStore.get(state.key) != null
+        // 该会话没开情绪分析时，卡片只显示「帮我回」建议，不占上半截分析位
+        val hasAnalysis = state.analysisEnabled && (MoodAnalyzer.enabled || MoodStore.get(state.key) != null)
         state.body.visibility = if (hasAnalysis) View.VISIBLE else View.GONE
         if (hasAnalysis) {
             val text = cardText(state.key)
@@ -178,7 +179,7 @@ object BubbleDecorator {
         showToast(state.row.context, "已复制")
     }
 
-    private fun attach(row: View, key: String, input: AnalysisInput): Card? {
+    private fun attach(row: View, key: String, input: AnalysisInput, analysisEnabled: Boolean): Card? {
         val root = row as? ViewGroup ?: return null
         val anchor = findBubble(root) ?: return null
         val rowPos = IntArray(2).also { root.getLocationOnScreen(it) }
@@ -261,7 +262,7 @@ object BubbleDecorator {
             override fun onViewDetachedFromWindow(v: View) { clear(v) }
         }
         row.addOnAttachStateChangeListener(detach)
-        return Card(key, container, body, chips, target, row, branch, assignedId, input, detach)
+        return Card(key, container, body, chips, target, row, branch, assignedId, input, analysisEnabled, detach)
     }
 
     private fun findBubble(root: ViewGroup): View? {
