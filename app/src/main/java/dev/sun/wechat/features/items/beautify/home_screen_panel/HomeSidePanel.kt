@@ -1331,8 +1331,18 @@ object HomeSidePanel : SwitchFeature(), IResolveDex {
             outlineProvider.radiusPx = 28.dpToPx(activity).toFloat() * transform.easedProgress
             contentWrapper.invalidateOutline()
 
-            if (p > CLOSED_EPSILON) {
-                fabHostView?.let { moveFabHostIntoContentWrapper(it) }
+            // 树操作不走动画/触摸帧回调：post 到消息队列，避开 ViewRootImpl 遍历窗口，
+            // 否则微信后续遍历（布局/无障碍）会翻到 null 孩子（两份 NPE 崩溃皆源于此）。
+            if (becameVisible) {
+                fabHostView?.let { host ->
+                    if (host.parent !== contentWrapper) {
+                        parent.post {
+                            if (parent.isAttachedToWindow && fabHostView === host && host.parent !== contentWrapper) {
+                                moveFabHostIntoContentWrapper(host)
+                            }
+                        }
+                    }
+                }
             }
             applyActionBarProgress(p, transform)
 
@@ -1342,7 +1352,14 @@ object HomeSidePanel : SwitchFeature(), IResolveDex {
             panelView.translationX = -drawerWidthPx * (1f - p)
             overlayRoot.isClickable = p > CLOSED_EPSILON || dragging
             overlayRoot.visibility = if (p > CLOSED_EPSILON || dragging) View.VISIBLE else View.GONE
-            overlayRoot.bringToFront()
+            // bringToFront 会重排父容器孩子数组，同样只在边界触发一次并 post 出遍历窗口。
+            if (becameVisible) {
+                parent.post {
+                    if (parent.isAttachedToWindow && decorRoot.indexOfChild(overlayRoot) != decorRoot.childCount - 1) {
+                        overlayRoot.bringToFront()
+                    }
+                }
+            }
         }
 
         private fun updateDrawerWidth(): Boolean {
@@ -1438,6 +1455,15 @@ object HomeSidePanel : SwitchFeature(), IResolveDex {
                 fabHostView = host
                 return
             }
+            // 布局途中不动手，改期再办（与 absorbStrayChildren 同一道护栏）
+            if (currentParent.isInLayout || contentWrapper.isInLayout) {
+                parent.post {
+                    if (fabHostView === host) {
+                        moveFabHostIntoContentWrapper(host)
+                    }
+                }
+                return
+            }
             fabOriginalParent = currentParent
             fabOriginalLayoutParams = host.layoutParams
             fabOriginalIndex = currentParent.indexOfChild(host)
@@ -1455,6 +1481,11 @@ object HomeSidePanel : SwitchFeature(), IResolveDex {
         private fun restoreFabHostToOriginalParent() {
             val host = fabHostView ?: return
             val originalParent = fabOriginalParent
+            // 布局途中不动手，改期再办
+            if (contentWrapper.isInLayout || originalParent?.isInLayout == true) {
+                parent.post { restoreFabHostToOriginalParent() }
+                return
+            }
             if (host.parent === contentWrapper) {
                 contentWrapper.removeView(host)
             }
