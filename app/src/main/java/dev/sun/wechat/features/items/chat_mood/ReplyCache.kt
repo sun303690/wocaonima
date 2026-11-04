@@ -23,13 +23,18 @@ object ReplyCache {
     private const val VERSION = 1
     private const val TTL_MS = 20L * 24 * 60 * 60 * 1000
     private const val DIR_NAME = "kite_reply_cache"
-    private const val BASE_DIR = "/sdcard/Android/media/com.tencent.mm/wechat"
+    // 与 WEX、lh、Hchat 这些模块平辈，直接坐在微信的外部媒体目录下；
+    // 早先多写了一层 wechat/，那层本就不存在，改了。
+    private const val BASE_DIR = "/sdcard/Android/media/com.tencent.mm"
     private const val MAX_NAME = 64
 
     private val root: File? by lazy {
         runCatching {
-            File(File(BASE_DIR), DIR_NAME).apply { if (!exists()) mkdirs() }
-                .takeIf { it.isDirectory && it.canWrite() }
+            val dir = File(BASE_DIR, DIR_NAME)
+            if (!dir.isDirectory) dir.mkdirs()
+            // 跟 WEX 学的：压一张 .nomedia，免得被图库或微信自己的清扫当成杂图。
+            runCatching { File(dir, ".nomedia").takeIf { !it.exists() }?.createNewFile() }
+            dir.takeIf { it.isDirectory && it.canWrite() }
         }.onFailure { WeLogger.w(TAG, "cache dir unavailable", it) }.getOrNull()
     }
 

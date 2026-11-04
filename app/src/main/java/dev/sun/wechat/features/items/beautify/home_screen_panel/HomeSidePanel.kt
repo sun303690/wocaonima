@@ -1491,6 +1491,12 @@ object HomeSidePanel : SwitchFeature(), IResolveDex {
         }
 
         private fun absorbStrayChildren() {
+            // 布局途中搬孩子，ViewRootImpl 会在下一次遍历里翻到 null 孩子
+            // （dispatchCollectViewAttributes 的 NPE 就是这么来的）。此刻不动手，改期再办。
+            if (parent.isInLayout || contentWrapper.isInLayout) {
+                requestSync(SYNC_HIERARCHY)
+                return
+            }
             var index = 0
             while (index < parent.childCount) {
                 val child = parent.getChildAt(index)
@@ -1508,6 +1514,10 @@ object HomeSidePanel : SwitchFeature(), IResolveDex {
         }
 
         private fun restoreContent() {
+            if (parent.isInLayout || contentWrapper.isInLayout) {
+                requestSync(SYNC_HIERARCHY)
+                return
+            }
             while (contentWrapper.isNotEmpty()) {
                 val child = contentWrapper.getChildAt(0)
                 val params = child.layoutParams

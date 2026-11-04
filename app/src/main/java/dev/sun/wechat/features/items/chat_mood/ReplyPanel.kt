@@ -30,7 +30,9 @@ import dev.sun.wechat.ui.utils.ShowComposeDialogScope
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.android.showToast
 import dev.sun.wechat.utils.WeLogger
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Text
@@ -96,24 +98,34 @@ object ReplyPanel {
         }
 
         // 启动即读：进面板先翻一遍旧账，命中就直出，一个请求都不发。
+        // 盘上的活儿一律交 IO 线程，主线程只收结果 —— 不在一次遍历里夹带磁盘读。
         LaunchedEffect(talker) {
-            runCatching {
-                val page = ReplyHistory.load(talker, limit)
-                if (page.messages.isEmpty()) return@runCatching
-                val fingerprint = ReplyCache.fingerprint(
-                    talker = talker,
-                    lastText = page.messages.last().text,
-                    count = page.messages.size,
-                    relationship = relationship.id,
-                    custom = customText,
-                    background = background,
-                    direction = direction,
-                )
-                ReplyCache.load(talker, fingerprint)?.let { cached ->
-                    replies = cached
-                    topics = emptyList()
+            val cached = runCatching {
+                withContext(Dispatchers.IO) {
+                    val page = ReplyHistory.load(talker, limit)
+                    if (page.messages.isEmpty()) {
+                        null
+                    } else {
+                        val fingerprint = ReplyCache.fingerprint(
+                            talker = talker,
+                            lastText = page.messages.last().text,
+                            count = page.messages.size,
+                            relationship = relationship.id,
+                            custom = customText,
+                            background = background,
+                            direction = direction,
+                        )
+                        ReplyCache.load(talker, fingerprint)
+                    }
                 }
-            }.onFailure { WeLogger.w("ReplyPanel", "preload cache failed", it) }
+            }.getOrElse {
+                WeLogger.w("ReplyPanel", "preload cache failed", it)
+                null
+            }
+            cached?.let { hit ->
+                replies = hit
+                topics = emptyList()
+            }
         }
 
         fun generateReply(force: Boolean = false) {
@@ -139,7 +151,8 @@ object ReplyPanel {
                     )
                     // 先翻旧账：同一段输入已经算过就直出，不再向模型要一遍。
                     if (!force) {
-                        ReplyCache.load(talker, fingerprint)?.let { cached ->
+                        val cached = withContext(Dispatchers.IO) { ReplyCache.load(talker, fingerprint) }
+                        if (cached != null) {
                             replies = cached
                             topics = emptyList()
                             return@launch
@@ -156,7 +169,7 @@ object ReplyPanel {
                     val fresh = ReplyHttpClient.generateReply(prompts.system, prompts.user)
                     replies = fresh
                     topics = emptyList()
-                    ReplyCache.save(talker, fingerprint, fresh, page.displayName)
+                    withContext(Dispatchers.IO) { ReplyCache.save(talker, fingerprint, fresh, page.displayName) }
                 } catch (e: Exception) {
                     if (e is kotlinx.coroutines.CancellationException) throw e
                     error = e.message ?: "生成失败，请重试"
