@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -94,7 +95,28 @@ object ReplyPanel {
             ReplyStorage.save(talker, ReplyStorage.ContactIdentity(relationship, customText.trim(), background))
         }
 
-        fun generateReply() {
+        // 启动即读：进面板先翻一遍旧账，命中就直出，一个请求都不发。
+        LaunchedEffect(talker) {
+            runCatching {
+                val page = ReplyHistory.load(talker, limit)
+                if (page.messages.isEmpty()) return@runCatching
+                val fingerprint = ReplyCache.fingerprint(
+                    talker = talker,
+                    lastText = page.messages.last().text,
+                    count = page.messages.size,
+                    relationship = relationship.id,
+                    custom = customText,
+                    background = background,
+                    direction = direction,
+                )
+                ReplyCache.load(talker, fingerprint)?.let { cached ->
+                    replies = cached
+                    topics = emptyList()
+                }
+            }.onFailure { WeLogger.w("ReplyPanel", "preload cache failed", it) }
+        }
+
+        fun generateReply(force: Boolean = false) {
             if (loading) return
             loading = true
             error = null
@@ -106,6 +128,23 @@ object ReplyPanel {
                     if (page.messages.isEmpty()) {
                         throw IllegalStateException("没读到文字消息，请先打开该聊天页滚一下再试")
                     }
+                    val fingerprint = ReplyCache.fingerprint(
+                        talker = talker,
+                        lastText = page.messages.last().text,
+                        count = page.messages.size,
+                        relationship = relationship.id,
+                        custom = customText,
+                        background = background,
+                        direction = direction,
+                    )
+                    // 先翻旧账：同一段输入已经算过就直出，不再向模型要一遍。
+                    if (!force) {
+                        ReplyCache.load(talker, fingerprint)?.let { cached ->
+                            replies = cached
+                            topics = emptyList()
+                            return@launch
+                        }
+                    }
                     val prompts = ReplyProtocol.buildReplyPrompts(
                         messages = page.messages,
                         draft = page.draft,
@@ -114,8 +153,10 @@ object ReplyPanel {
                         relationship = relationship,
                         customRelationship = customText.trim(),
                     )
-                    replies = ReplyHttpClient.generateReply(prompts.system, prompts.user)
+                    val fresh = ReplyHttpClient.generateReply(prompts.system, prompts.user)
+                    replies = fresh
                     topics = emptyList()
+                    ReplyCache.save(talker, fingerprint, fresh, page.displayName)
                 } catch (e: Exception) {
                     if (e is kotlinx.coroutines.CancellationException) throw e
                     error = e.message ?: "生成失败，请重试"
