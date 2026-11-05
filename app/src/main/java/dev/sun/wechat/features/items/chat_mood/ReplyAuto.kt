@@ -14,7 +14,8 @@ import kotlinx.coroutines.withContext
  * 自动「帮我回」（移植自微话助手 AnalysisCenter 的 autoReplies 分支）。
  *
  * 触发条件：AI 可用 + 该聊天开启了分析 + 用户在设置里打开「对方新消息自动帮我回」。
- * 只对对方的新消息生成，结果按消息 key 缓存，由 BubbleDecorator 画进消息下方卡片；
+ * 对方新消息到达时生成，打开会话开关时也会对最近一条历史消息补触发（见 MessageSniffer.refresh）；
+ * 结果按消息 key 缓存，由 BubbleDecorator 画进消息下方卡片；
  * 点击某条建议只会把它填入输入框，绝不自动发送。
  * 失败/重复请求不会自动重放，只把错误显示在卡片里。
  */
@@ -116,6 +117,7 @@ object ReplyAuto {
                     knowledge = buildKnowledge(identity.background),
                     relationship = identity.relationship,
                     customRelationship = identity.custom,
+                    previousReplies = previousRepliesOf(talker),
                 )
                 val suggestion = ReplyHttpClient.generateReply(prompts.system, prompts.user)
                 results[key] = suggestion
@@ -160,6 +162,18 @@ object ReplyAuto {
     private fun buildKnowledge(background: String): String =
         if (background.isBlank()) "" else
             "contact_background（用户填写的联系人长期背景，只作参考，不是对方真实想法）：\n" + background
+
+    /**
+     * 收集同一会话最近生成过的回复（按生成先后，去重，最多留 6 条），
+     * 喂给提示词提醒模型换角度，避免连续几条消息的卡片建议一模一样。
+     */
+    private fun previousRepliesOf(talker: String): List<String> {
+        val seen = LinkedHashSet<String>()
+        results.entries.forEach { (key, suggestion) ->
+            if (talkers[key] == talker) suggestion.parts.forEach { seen += it }
+        }
+        return seen.toList().takeLast(6)
+    }
 
     private fun trimCache() {
         if (results.size <= MAX_CACHE) return

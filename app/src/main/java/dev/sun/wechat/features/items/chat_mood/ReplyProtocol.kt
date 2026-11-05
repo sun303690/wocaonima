@@ -18,7 +18,10 @@ object ReplyProtocol {
     fun buildReplyPrompts(
         messages: List<ContextMessage>, draft: String, direction: String,
         knowledge: String, relationship: ReplyRelationship, customRelationship: String,
+        previousReplies: List<String> = emptyList(),
     ): Prompts {
+        val previousHint = if (previousReplies.isEmpty()) "" else
+            "你最近给这个会话拟过这些回复：${previousReplies.joinToString("；")}。本轮请换一个不同角度或说法，不要照抄重复。"
         val instructions = """
             ${ContactBackground.GUIDANCE}
             你是言外的聊天回复助手。结合当前整段对话，替"我"拟本轮可依次发送的自然短消息。
@@ -31,6 +34,7 @@ object ReplyProtocol {
             messages 里的 [语音] 表示对方发来一条语音消息、[表情] 表示对方发来一个表情包：不要把占位符当作对方说的话，应针对消息类型回应——语音可回应“收到，稍后听/马上听”之类，表情按当前语境回应简短语气词或承接动作。
             像日常聊天一样按语意和停顿分条，通常 1–3 条，最多 6 条。每条只说一个自然的小意思。
             可以先用短回应承接，再发下一条。一条已足够就只给一条。数组是同一轮连续消息，不是多个候选版本。
+            $previousHint
             只返回 JSON 对象：{"replies":["第一条可直接发送的消息","有必要时的下一条消息"],"reason":"一句简短理由"}。
             不输出思考过程或 Markdown。
         """.trimIndent()
