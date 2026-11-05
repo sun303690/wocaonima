@@ -19,4 +19,17 @@ object WeMainActivityBeautifyApi : ApiFeature(), IResolveDex {
             usingEqStrings("MicroMsg.LauncherUI.MainTabUI", "doOnCreate")
         }
     }
+
+    /**
+     * 主界面右上角「+」号原生菜单（MMListPopupWindow）的显示入口。
+     * SubMenuHelperBase.a(): 若菜单未显示则调 d.a() 弹出 popup；hook 此处拦截并
+     * 改为弹出卡片面板。PlusMenuCard 使用。
+     */
+    val methodShowPlusMenu by dexMethod {
+        matcher {
+            declaredClass = "com.tencent.mm.ui.tools.hd"
+            name = "a"
+            returnType("void")
+        }
+    }
 }

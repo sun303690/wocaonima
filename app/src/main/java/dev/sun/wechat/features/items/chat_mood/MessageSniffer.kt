@@ -20,6 +20,12 @@ object MessageSniffer {
     /** 打开会话开关时，历史消息补挂卡片的最大条数（只补最近几条可见的，避免批量挂卡卡顿）。 */
     private const val MAX_REFRESH_CARDS = 10
 
+    /** 每会话只保留最新一条待分析消息，滑到底部时补触发。 */
+    private val pendingByTalker = HashMap<String, AnalysisInput>()
+
+    /** 已挂过滚动监听的聊天列表容器（防止重复 addOnScrollChangedListener）。 */
+    private val scrollWatched = HashSet<Int>()
+
     private val lifecycle = object : WeChatMessageViewApi.IMessageViewLifecycleListener {
         override fun onMessageViewAttached(view: View, message: MessageInfo) {
             try {
@@ -53,10 +59,6 @@ object MessageSniffer {
                     messageId = message.createTime,
                     speaker = speaker,
                 )
-                // 情绪分析只对文字有意义；语音/表情只出回复建议卡（MoodAnalyzer 内部自判全局开关）
-                if (isPlainText) {
-                    MoodAnalyzer.submit(input) { view.isShown }
-                }
                 // 挂卡是重量级 UI 操作（找气泡、强制布局、addView），延迟到下一帧执行，
                 // 避免进入聊天页批量绑定时在主线程同步改 View 树导致点击卡顿。
                 view.post {
@@ -64,8 +66,8 @@ object MessageSniffer {
                         BubbleDecorator.show(view, input, analysisEnabled = true)
                     }
                 }
-                // 自动帮我回：对方消息到达时触发；打开开关时也会对最近一条补触发（见 refresh）
-                ReplyAuto.request(talker, input.key)
+                // 滑到底部才真正请求分析/帮我回；未在底部时暂存，等滚动到底再补
+                maybeAnalyze(view, input, isPlainText)
             } catch (t: Throwable) {
                 WeLogger.e(TAG, "onMessageViewAttached failed", t)
             }
@@ -92,6 +94,7 @@ object MessageSniffer {
             m.talker == talker && m.isSend == 0 && ReplyMessageSupport.isReplyEligible(m)
         }
         var lastInput: AnalysisInput? = null
+        var lastView: View? = null
         var shown = 0
         for ((view, message) in bound) {
             val isPlainText = ReplyMessageSupport.isPlainText(message)
@@ -115,11 +118,12 @@ object MessageSniffer {
             }
             if (isPlainText) {
                 lastInput = input
+                lastView = view
                 if (++shown >= MAX_REFRESH_CARDS) break
             }
         }
         // 当前没有已绑定文字消息时，回退到最近一次进过上下文的对方文字消息
-        if (lastInput == null) {
+        if (lastInput == null || lastView == null) {
             val last = deque.lastOrNull { it.first == "对方" && !it.second.startsWith("[") } ?: return
             lastInput = AnalysisInput(
                 text = last.second,
@@ -128,17 +132,88 @@ object MessageSniffer {
                 messageId = System.currentTimeMillis(),
                 speaker = "对方",
             )
+            lastView = bound.firstOrNull()?.first
         }
-        // 补最近一条的情绪分析与帮我回（键与卡片一致，结果会刷到对应卡片上）
+        // 补最近一条的情绪分析与帮我回（键与卡片一致，结果会刷到对应卡片上）；同样受滑到底部约束
         val target = lastInput ?: return
-        MoodAnalyzer.submit(target) { true }
-        ReplyAuto.request(talker, target.key)
+        val anchor = lastView
+        val targetIsPlainText = anchor
+            ?.let { WeChatMessageViewApi.getBoundMessage(it) }
+            ?.let { ReplyMessageSupport.isPlainText(it) }
+            ?: !target.text.startsWith("[")
+        maybeAnalyze(anchor, target, targetIsPlainText)
     }
 
     /** 幂等订阅一次；由 MoodFeature 在启用时调用。 */
     fun ensureSubscribed() {
         if (subscribed.compareAndSet(false, true)) {
             WeChatMessageViewApi.addLifecycleListener(lifecycle)
+        }
+    }
+
+    /**
+     * 滑到底部（最新消息可见）才真正提交情绪分析与「帮我回」；
+     * 否则把该消息记为待分析，并给聊天列表挂滚动监听，等用户滑到底部再补。
+     */
+    private fun maybeAnalyze(view: View?, input: AnalysisInput, isPlainText: Boolean) {
+        try {
+            val container = view?.let(::findScrollContainer)
+            if (view == null || container == null || !container.canScrollVertically(1)) {
+                // 找不到列表容器（非 RecyclerView 场景）或已在底部：直接分析
+                submitAndRequest(input, isPlainText)
+            } else {
+                pendingByTalker[input.talker] = input
+                watchScroll(container)
+            }
+        } catch (t: Throwable) {
+            WeLogger.e(TAG, "maybeAnalyze failed", t)
+        }
+    }
+
+    /** 沿消息行向上找聊天列表滚动容器（RecyclerView 系列）。 */
+    private fun findScrollContainer(view: View): View? {
+        var parent: View? = view.parent as? View
+        while (parent != null) {
+            val name = parent.javaClass.name
+            if (name.contains("RecyclerView") || name.contains("ListView")) return parent
+            parent = parent.parent as? View
+        }
+        return null
+    }
+
+    /** 给列表容器挂滚动监听，滑到底部时把暂存的消息补触发。 */
+    private fun watchScroll(container: View) {
+        val id = System.identityHashCode(container)
+        if (!scrollWatched.add(id)) return
+        container.viewTreeObserver.addOnScrollChangedListener {
+            try {
+                if (container.canScrollVertically(1)) return@addOnScrollChangedListener
+                flushPending()
+            } catch (t: Throwable) {
+                WeLogger.e(TAG, "onScrollChanged failed", t)
+            }
+        }
+    }
+
+    /** 补触发所有暂存的待分析消息（每个会话只保留最新一条）。 */
+    private fun flushPending() {
+        if (pendingByTalker.isEmpty()) return
+        val snapshot = pendingByTalker.values.toList()
+        pendingByTalker.clear()
+        for (input in snapshot) {
+            submitAndRequest(input, !input.text.startsWith("["))
+        }
+    }
+
+    private fun submitAndRequest(input: AnalysisInput, isPlainText: Boolean) {
+        try {
+            // 情绪分析只对文字有意义；语音/表情只出回复建议卡（MoodAnalyzer 内部自判全局开关）
+            if (isPlainText) {
+                MoodAnalyzer.submit(input) { true }
+            }
+            ReplyAuto.request(input.talker, input.key)
+        } catch (t: Throwable) {
+            WeLogger.e(TAG, "submitAndRequest failed", t)
         }
     }
 }

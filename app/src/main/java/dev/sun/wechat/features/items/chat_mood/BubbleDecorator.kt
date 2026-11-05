@@ -3,8 +3,11 @@ package dev.sun.wechat.features.items.chat_mood
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.res.ColorStateList
 import android.content.res.Configuration
+import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.RippleDrawable
 import android.text.TextUtils
 import android.view.View
 import android.view.ViewGroup
@@ -13,7 +16,10 @@ import android.widget.RelativeLayout
 import android.widget.TextView
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToast
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.IdentityHashMap
+import java.util.Locale
 
 /**
  * 在真实文字气泡下方追加一个同级小卡片（不替换宿主行/ViewHolder），
@@ -23,10 +29,32 @@ import java.util.IdentityHashMap
 object BubbleDecorator {
     private val TAG_D = "BubbleDecorator"
     private data class Card(
-        val key: String, val container: LinearLayout, val body: TextView, val chips: LinearLayout,
-        val parent: ViewGroup, val row: View, val anchor: View, val assignedId: Int?,
+        val key: String, val container: LinearLayout, val header: TextView, val body: TextView,
+        val chips: LinearLayout, val parent: ViewGroup, val row: View, val anchor: View, val assignedId: Int?,
         val input: AnalysisInput, val analysisEnabled: Boolean, val detach: View.OnAttachStateChangeListener,
     )
+
+    /** 卡片配色（对齐微话助手清新蓝体系，深浅色自适应）。 */
+    private data class CardColors(
+        val bg: Int, val border: Int, val ink: Int, val muted: Int, val accent: Int, val soft: Int,
+    )
+
+    private fun colors(view: View): CardColors {
+        val dark = isDark(view)
+        return if (dark) CardColors(
+            bg = 0xFF1A2430.toInt(), border = 0xFF2C3D50.toInt(), ink = 0xFFD9E7F7.toInt(),
+            muted = 0xFF93A9C0.toInt(), accent = 0xFF6FB0F2.toInt(), soft = 0xFF22344A.toInt(),
+        ) else CardColors(
+            bg = 0xFFEDF5FF.toInt(), border = 0xFFCFE2F8.toInt(), ink = 0xFF143A5E.toInt(),
+            muted = 0xFF5C7595.toInt(), accent = 0xFF2E7CD6.toInt(), soft = 0xFFDCEAFC.toInt(),
+        )
+    }
+
+    /** 消息时间作为卡片头部时间线；messageId 秒/毫秒兼容。 */
+    private fun timeLine(input: AnalysisInput): String = runCatching {
+        val ms = if (input.messageId > 100_000_000_000L) input.messageId else input.messageId * 1000
+        SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(ms))
+    }.getOrDefault("")
     private val cards = IdentityHashMap<View, Card>()
     private val unsupported = mutableSetOf<String>()
     private val refreshRegistered = java.util.concurrent.atomic.AtomicBoolean(false)
@@ -81,6 +109,7 @@ object BubbleDecorator {
     private fun render(state: Card) {
         // 该会话没开情绪分析时，卡片只显示「帮我回」建议，不占上半截分析位
         val hasAnalysis = state.analysisEnabled && (MoodAnalyzer.enabled || MoodStore.get(state.key) != null)
+        state.header.visibility = if (hasAnalysis) View.VISIBLE else View.GONE
         state.body.visibility = if (hasAnalysis) View.VISIBLE else View.GONE
         if (hasAnalysis) {
             val text = cardText(state.key)
@@ -98,23 +127,14 @@ object BubbleDecorator {
         val pending = ReplyAuto.isPending(state.key)
         when {
             suggestion != null -> {
-                chips.addView(hint(state, "帮我回 · 点一条填入输入框", muted = true))
-                suggestion.parts.forEach { part -> chips.addView(chip(state, part)) }
+                chips.addView(hint(state, "帮我回 · 点一条填入输入框"))
+                suggestion.parts.forEachIndexed { index, part -> chips.addView(chip(state, part, index + 1)) }
                 if (VoiceReply.enabled() && suggestion.parts.isNotEmpty()) {
                     val first = suggestion.parts.first()
-                    val voiceChip = chip(state, "🔊 语音发送：${first.take(18)}")
-                    voiceChip.setOnClickListener {
-                        if (!VoiceReply.ready()) {
-                            showToast(state.row.context, "语音未配置：请到「设置 → AI 回复配置」填写 API Key / Cookie")
-                        } else {
-                            showToast(state.row.context, "正在合成语音…")
-                            VoiceReply.send(state.input.talker, first)
-                        }
-                    }
-                    chips.addView(voiceChip)
+                    chips.addView(voiceChip(state, "🔊 语音发送：${first.take(18)}"))
                 }
                 if (suggestion.reason.isNotBlank()) {
-                    chips.addView(hint(state, suggestion.reason, muted = true))
+                    chips.addView(hint(state, suggestion.reason))
                 }
                 chips.visibility = View.VISIBLE
             }
@@ -135,34 +155,75 @@ object BubbleDecorator {
     private fun isDark(view: View) =
         view.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
 
-    private fun hint(state: Card, text: String, muted: Boolean): TextView = TextView(state.row.context).apply {
+    private fun hint(state: Card, text: String, muted: Boolean = true): TextView = TextView(state.row.context).apply {
         textSize = 11f
         this.text = text
         maxLines = 3
         ellipsize = TextUtils.TruncateAt.END
-        val dark = isDark(state.row)
-        setTextColor(if (dark) 0xFF93A9C0.toInt() else 0xFF5C7595.toInt())
-        if (!muted) setPadding(dp(state.row, 2), dp(state.row, 2), dp(state.row, 2), dp(state.row, 2))
-        else setPadding(dp(state.row, 2), dp(state.row, 2), dp(state.row, 2), dp(state.row, 2))
+        setTextColor(colors(state.row).muted)
+        setPadding(dp(state.row, 2), dp(state.row, 2), dp(state.row, 2), dp(state.row, 2))
     }
 
-    private fun chip(state: Card, text: String): TextView = TextView(state.row.context).apply {
-        textSize = 13f
-        this.text = text
-        maxLines = 4
-        ellipsize = TextUtils.TruncateAt.END
-        val dark = isDark(state.row)
-        setTextColor(if (dark) 0xFFDBE9F7.toInt() else 0xFF1B4F7A.toInt())
-        setPadding(dp(state.row, 8), dp(state.row, 6), dp(state.row, 8), dp(state.row, 6))
-        background = GradientDrawable().apply {
-            cornerRadius = dp(state.row, 6).toFloat()
-            setColor(if (dark) 0xFF24303E.toInt() else 0xFFE7F1FF.toInt())
+    /** 编号回复行：可选中、点击填入、长按复制（对齐微话助手样式）。 */
+    private fun chip(state: Card, text: String, index: Int): TextView {
+        val c = colors(state.row)
+        return TextView(state.row.context).apply {
+            text = "$index. $text"
+            textSize = 13f
+            maxLines = 4
+            ellipsize = TextUtils.TruncateAt.END
+            setTextColor(c.ink)
+            setLineSpacing(dp(state.row, 2).toFloat(), 1f)
+            setPadding(dp(state.row, 10), dp(state.row, 7), dp(state.row, 10), dp(state.row, 7))
+            setTextIsSelectable(true)
+            isClickable = true
+            isFocusable = true
+            background = RippleDrawable(
+                ColorStateList.valueOf((c.accent and 0x00FFFFFF) or 0x33000000),
+                GradientDrawable().apply {
+                    cornerRadius = dp(state.row, 9).toFloat()
+                    setColor(c.soft)
+                },
+                GradientDrawable().apply {
+                    cornerRadius = dp(state.row, 9).toFloat()
+                    setColor(c.ink)
+                }
+            )
+            val margin = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            margin.topMargin = dp(state.row, 4)
+            layoutParams = margin
+            setOnClickListener { fill(state, text) }
+            setOnLongClickListener { copy(state, text); true }
         }
-        val margin = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        margin.topMargin = dp(state.row, 4)
-        layoutParams = margin
-        setOnClickListener { fill(state, text) }
-        setOnLongClickListener { copy(state, text); true }
+    }
+
+    /** 语音发送特殊行：accent 色文字 + 边框，不编号。 */
+    private fun voiceChip(state: Card, text: String): TextView {
+        val c = colors(state.row)
+        return TextView(state.row.context).apply {
+            this.text = text
+            textSize = 13f
+            maxLines = 2
+            ellipsize = TextUtils.TruncateAt.END
+            setTextColor(c.accent)
+            setPadding(dp(state.row, 10), dp(state.row, 7), dp(state.row, 10), dp(state.row, 7))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(state.row, 9).toFloat()
+                setColor(Color.TRANSPARENT)
+                setStroke(dp(state.row, 1), c.accent)
+            }
+            val margin = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            margin.topMargin = dp(state.row, 4)
+            layoutParams = margin
+            setOnClickListener {
+                if (!VoiceReply.ready()) {
+                    showToast(state.row.context, "语音未配置：请到「设置 → AI 回复配置」填写 API Key / Cookie")
+                } else {
+                    showToast(state.row.context, "正在合成语音…")
+                    VoiceReply.send(state.input.talker, text.removePrefix("🔊 语音发送："))
+                }
+            }
+        }
     }
 
     private fun fill(state: Card, text: String) {
@@ -187,16 +248,28 @@ object BubbleDecorator {
         val left = (anchorPos[0] - rowPos[0]).coerceAtLeast(0)
         val width = minOf(dp(row, 300), root.width - left - dp(row, 16))
         if (width < dp(row, 100)) return null
-        val dark = isDark(row)
-        val container = LinearLayout(row.context).apply { orientation = LinearLayout.VERTICAL }
-        val body = TextView(row.context).apply {
-            textSize = 12f
-            setPadding(dp(row, 8), dp(row, 6), dp(row, 8), dp(row, 6))
-            setTextColor(if (dark) 0xFFE2E2E7.toInt() else 0xFF34343A.toInt())
+        val c = colors(row)
+        val container = LinearLayout(row.context).apply {
+            orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
-                cornerRadius = dp(row, 4).toFloat()
-                setColor(if (dark) 0xFF26262B.toInt() else 0xFFDDDEE2.toInt())
+                cornerRadius = dp(row, 12).toFloat()
+                setColor(c.bg)
+                setStroke(dp(row, 1), c.border)
             }
+            setPadding(dp(row, 10), dp(row, 7), dp(row, 10), dp(row, 8))
+        }
+        val header = TextView(row.context).apply {
+            textSize = 11f
+            setTextColor(c.muted)
+            text = timeLine(input)
+            setPadding(dp(row, 2), dp(row, 1), dp(row, 2), dp(row, 2))
+        }
+        val body = TextView(row.context).apply {
+            textSize = 13f
+            setPadding(dp(row, 2), dp(row, 1), dp(row, 2), dp(row, 1))
+            setTextColor(c.ink)
+            setLineSpacing(dp(row, 2).toFloat(), 1f)
+            setTextIsSelectable(true)
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
             setOnClickListener {
                 // 失败或从未分析：点一下重新提交（键稳定，不会因为点击产生重复缓存条目）
@@ -210,6 +283,7 @@ object BubbleDecorator {
             visibility = View.GONE
             setPadding(0, dp(row, 2), 0, 0)
         }
+        container.addView(header, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         container.addView(body, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         container.addView(chips, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
@@ -262,7 +336,7 @@ object BubbleDecorator {
             override fun onViewDetachedFromWindow(v: View) { clear(v) }
         }
         row.addOnAttachStateChangeListener(detach)
-        return Card(key, container, body, chips, target, row, branch, assignedId, input, analysisEnabled, detach)
+        return Card(key, container, header, body, chips, target, row, branch, assignedId, input, analysisEnabled, detach)
     }
 
     private fun findBubble(root: ViewGroup): View? {

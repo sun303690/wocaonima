@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -45,6 +46,7 @@ import dev.sun.wechat.features.items.chat.TextToSpeech
  *
  * 只读上下文、只生成建议，复制后由用户自己发送；不写回微信输入框、不自动发消息。
  * 模型走 WeAgent（默认模型），身份/背景/角色库存本地 KvStore。
+ * 界面默认只露出核心操作（身份/条数/补充/生成），高级设置（背景、语音配置、角色库）折叠收起。
  */
 object ReplyPanel {
 
@@ -92,6 +94,7 @@ object ReplyPanel {
         var error by remember { mutableStateOf<String?>(null) }
         var roles by remember { mutableStateOf(ReplyStorage.roles()) }
         var roleName by remember { mutableStateOf("") }
+        var advancedExpanded by remember { mutableStateOf(false) }
 
         fun saveIdentity() {
             ReplyStorage.save(talker, ReplyStorage.ContactIdentity(relationship, customText.trim(), background))
@@ -256,14 +259,6 @@ object ReplyPanel {
                         minLines = 1,
                         maxLines = 3,
                     )
-                    TextField(
-                        value = background,
-                        onValueChange = { background = it.take(2000) },
-                        label = "对方背景（可选，长期保存到本联系人）",
-                        modifier = Modifier.fillMaxWidth(),
-                        minLines = 1,
-                        maxLines = 3,
-                    )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                         Button(
                             onClick = { generateReply() },
@@ -315,58 +310,78 @@ object ReplyPanel {
                         }
                     }
 
-                    HorizontalDivider()
-                    Text("语音配置", style = MiuixTheme.textStyles.title3)
-                    Text("语音回复的接口、音色与语气", style = MiuixTheme.textStyles.footnote1,
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                    // 高级设置：默认折叠，点按钮才展开，避免面板一开就占满屏幕
                     Button(
-                        onClick = { TextToSpeech.showVoiceConfig(context) },
+                        onClick = { advancedExpanded = !advancedExpanded },
                         modifier = Modifier.fillMaxWidth(),
-                    ) { Text("打开语音配置") }
-                    HorizontalDivider()
-                    Text("角色库", style = MiuixTheme.textStyles.title3)
-                    Text("把当前身份和背景存成角色，下次直接套用", style = MiuixTheme.textStyles.footnote1,
-                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-                    TextField(
-                        value = roleName,
-                        onValueChange = { roleName = it.take(ReplyRelationship.MAX_CUSTOM_LENGTH) },
-                        label = "角色名称（留空则用身份名）",
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                    )
-                    Button(
-                        onClick = {
-                            val name = roleName.ifBlank { relationship.displayLabel(customText) }
-                            if (name.isBlank()) {
-                                showToast(context, "请先选择身份或填写名称")
-                                return@Button
-                            }
-                            roles = ReplyStorage.saveRole(
-                                ReplyStorage.newRole(name, relationship, customText, background)
+                    ) { Text(if (advancedExpanded) "收起高级设置 ▴" else "展开高级设置 ▾") }
+                    AnimatedVisibility(visible = advancedExpanded) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            TextField(
+                                value = background,
+                                onValueChange = { background = it.take(2000) },
+                                label = "对方背景（可选，长期保存到本联系人）",
+                                modifier = Modifier.fillMaxWidth(),
+                                minLines = 1,
+                                maxLines = 3,
                             )
-                            roleName = ""
-                            showToast(context, "已保存角色")
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Text("保存当前身份为角色") }
-                    roles.forEach { role ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(role.name)
-                                if (role.background.isNotBlank()) {
-                                    Text(role.background.take(40), style = MiuixTheme.textStyles.footnote1,
-                                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                            HorizontalDivider()
+                            Text("语音配置", style = MiuixTheme.textStyles.title3)
+                            Text("语音回复的接口、音色与语气", style = MiuixTheme.textStyles.footnote1,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                            Button(
+                                onClick = { TextToSpeech.showVoiceConfig(context) },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) { Text("打开语音配置") }
+                            HorizontalDivider()
+                            Text("角色库", style = MiuixTheme.textStyles.title3)
+                            Text("把当前身份和背景存成角色，下次直接套用", style = MiuixTheme.textStyles.footnote1,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                            TextField(
+                                value = roleName,
+                                onValueChange = { roleName = it.take(ReplyRelationship.MAX_CUSTOM_LENGTH) },
+                                label = "角色名称（留空则用身份名）",
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                            )
+                            Button(
+                                onClick = {
+                                    val name = roleName.ifBlank { relationship.displayLabel(customText) }
+                                    if (name.isBlank()) {
+                                        showToast(context, "请先选择身份或填写名称")
+                                        return@Button
+                                    }
+                                    roles = ReplyStorage.saveRole(
+                                        ReplyStorage.newRole(name, relationship, customText, background)
+                                    )
+                                    roleName = ""
+                                    showToast(context, "已保存角色")
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) { Text("保存当前身份为角色") }
+                            roles.forEach { role ->
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(role.name)
+                                        if (role.background.isNotBlank()) {
+                                            Text(role.background.take(40), style = MiuixTheme.textStyles.footnote1,
+                                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                                        }
+                                    }
+                                    Button(onClick = {
+                                        relationship = role.relationship
+                                        customText = role.custom
+                                        background = role.background
+                                        showToast(context, "已套用 ${role.name}")
+                                    }) { Text("套用") }
+                                    Button(onClick = {
+                                        roles = ReplyStorage.deleteRole(role.id)
+                                    }) { Text("删除") }
                                 }
                             }
-                            Button(onClick = {
-                                relationship = role.relationship
-                                customText = role.custom
-                                background = role.background
-                                showToast(context, "已套用 ${role.name}")
-                            }) { Text("套用") }
-                            Button(onClick = {
-                                roles = ReplyStorage.deleteRole(role.id)
-                            }) { Text("删除") }
                         }
                     }
                 }
