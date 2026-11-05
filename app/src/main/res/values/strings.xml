@@ -604,6 +604,9 @@
     <string name="feature_mass_send_message_description">Create scheduled mass-send tasks: group chats by tags, edit messages anytime, and pick one or more daily send times (HH:mm). Each time fires once per day automatically.</string>
     <string name="feature_add_main_screen_fab_name">Add home-screen FAB</string>
     <string name="feature_add_main_screen_fab_description">Add floating action buttons to WeChat home screen</string>
+    <string name="feature_plus_menu_card_name">Plus menu card</string>
+    <string name="feature_plus_menu_card_description">Show the + menu on the home screen as a card panel</string>
+    <string name="plus_menu_card_title">Quick actions</string>
     <string name="feature_apply_dialog_background_blur_name">Dialog background blur</string>
     <string name="feature_apply_dialog_background_blur_description">Add window-level background blur to module and WeChat dialogs [requires SDK &gt;= 31]</string>
     <string name="feature_apply_global_background_name">Apply global background</string>
