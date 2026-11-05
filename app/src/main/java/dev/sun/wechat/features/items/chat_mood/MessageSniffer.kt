@@ -17,6 +17,9 @@ object MessageSniffer {
     private val subscribed = AtomicBoolean(false)
     private val recentByTalker = HashMap<String, ArrayDeque<Pair<String, String>>>()
 
+    /** 打开会话开关时，历史消息补挂卡片的最大条数（只补最近几条可见的，避免批量挂卡卡顿）。 */
+    private const val MAX_REFRESH_CARDS = 10
+
     private val lifecycle = object : WeChatMessageViewApi.IMessageViewLifecycleListener {
         override fun onMessageViewAttached(view: View, message: MessageInfo) {
             try {
@@ -54,7 +57,13 @@ object MessageSniffer {
                 if (isPlainText) {
                     MoodAnalyzer.submit(input) { view.isShown }
                 }
-                BubbleDecorator.show(view, input, analysisEnabled = true)
+                // 挂卡是重量级 UI 操作（找气泡、强制布局、addView），延迟到下一帧执行，
+                // 避免进入聊天页批量绑定时在主线程同步改 View 树导致点击卡顿。
+                view.post {
+                    if (view.isAttachedToWindow) {
+                        BubbleDecorator.show(view, input, analysisEnabled = true)
+                    }
+                }
                 // 自动帮我回：对方消息到达时触发；打开开关时也会对最近一条补触发（见 refresh）
                 ReplyAuto.request(talker, input.key)
             } catch (t: Throwable) {
@@ -83,6 +92,7 @@ object MessageSniffer {
             m.talker == talker && m.isSend == 0 && ReplyMessageSupport.isReplyEligible(m)
         }
         var lastInput: AnalysisInput? = null
+        var shown = 0
         for ((view, message) in bound) {
             val isPlainText = ReplyMessageSupport.isPlainText(message)
             val text = if (isPlainText) {
@@ -97,8 +107,16 @@ object MessageSniffer {
                 messageId = message.createTime,
                 speaker = "对方",
             )
-            BubbleDecorator.show(view, input, analysisEnabled = true)
-            if (isPlainText) lastInput = input
+            // 同样延迟到下一帧，且只补最近若干条可见消息，避免一次性全量挂卡卡顿
+            view.post {
+                if (view.isAttachedToWindow) {
+                    BubbleDecorator.show(view, input, analysisEnabled = true)
+                }
+            }
+            if (isPlainText) {
+                lastInput = input
+                if (++shown >= MAX_REFRESH_CARDS) break
+            }
         }
         // 当前没有已绑定文字消息时，回退到最近一次进过上下文的对方文字消息
         if (lastInput == null) {
