@@ -179,7 +179,10 @@ object AutoSpeechToText : SwitchFeature(),
                     WeLogger.e(TAG, "找不到触发转文字的方法（五参 b），自动转文字不可用 id=$id")
                     return@runCatching
                 }
-                trigger.invoke(msgInfo.instance, true, position, 1, 0)
+                // trigger 是 vo 实例（api）的成员方法：receiver 必须是 api（vo），
+                // 第一个实参才是消息对象（e9）。旧写法把消息对象当 receiver，
+                // 直接抛 IllegalArgumentException: Expected receiver of type vo, but got e9。
+                trigger.invoke(api, msgInfo.instance, true, position, 1, 0)
                 WeLogger.i(TAG, "已触发语音转文字 id=$id position=$position")
             }.onFailure { ex ->
                 if (ex is InvocationTargetException) {
