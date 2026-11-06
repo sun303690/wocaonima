@@ -95,7 +95,7 @@ object LiquidGlassFrame {
         runCatching {
             View::class.java.getDeclaredMethod("onAttachedToWindow").apply { isAccessible = true }
         }.onSuccess { method ->
-            handles += method.hookAfter {
+            handles += method.hookAfterDirectly {
                 val view = thisObject as? View ?: return@hookAfter
                 handleAttached(view)
             }
@@ -109,7 +109,7 @@ object LiquidGlassFrame {
                 BooleanArray::class.java
             ).apply { isAccessible = true }
         }.onSuccess { method ->
-            handles += method.hookAfter {
+            handles += method.hookAfterDirectly {
                 maybeWrapView(result as? View ?: return@hookAfter)
             }
         }.onFailure { WeLogger.e(TAG, "hook obtainView 失败", it) }
@@ -123,7 +123,7 @@ object LiquidGlassFrame {
                 ViewGroup.LayoutParams::class.java
             ).apply { isAccessible = true }
         }.onSuccess { method ->
-            handles += method.hookAfter {
+            handles += method.hookAfterDirectly {
                 maybeWrapView(args.getOrNull(0) as? View ?: return@hookAfter)
             }
         }.onFailure { WeLogger.e(TAG, "hook addView 失败", it) }
@@ -135,7 +135,7 @@ object LiquidGlassFrame {
                 View::class.java.getDeclaredMethod(name, Drawable::class.java)
                     .apply { isAccessible = true }
             }.onSuccess { method ->
-                handles += method.hookAfter {
+                handles += method.hookAfterDirectly {
                     val view = thisObject as? View ?: return@hookAfter
                     val newBg = args.getOrNull(0) as? Drawable ?: return@hookAfter
                     if (newBg is GlassMinSizeWrapper) return@hookAfter
