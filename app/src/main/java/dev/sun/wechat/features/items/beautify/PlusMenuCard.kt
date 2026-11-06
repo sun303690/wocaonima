@@ -37,6 +37,11 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
+import android.content.ContextWrapper
+import androidx.activity.ComponentActivity
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -193,6 +198,9 @@ object PlusMenuCard : SwitchFeature() {
                 popupShowing = false
                 runCatching { clickMethod.invoke(helper, null, null, position, 0L) }
                     .onFailure { WeLogger.e(TAG, "invoke wg.onItemClick failed", it) }
+            } ?: run {
+                popupShowing = false
+                return@hookAfter
             }
             popup.setOnDismissListener { popupShowing = false }
 
@@ -289,10 +297,22 @@ object PlusMenuCard : SwitchFeature() {
         context: Context,
         items: List<PlusItem>,
         onItemClick: (Int) -> Unit,
-    ): PopupWindow {
+    ): PopupWindow? {
         val density = context.resources.displayMetrics.density
         val width = (PANEL_WIDTH_DP * density).toInt()
+        // PopupWindow 的 PopupDecorView 不在 Activity 的 View 树里，Compose 拿不到
+        // ViewTreeLifecycleOwner/SavedStateRegistryOwner/ViewModelStoreOwner，会抛
+        // "ViewTreeLifecycleOwner not found from PopupWindow$PopupDecorView" 直接崩微信。
+        // 这里从 context 沿 ContextWrapper 找宿主 Activity，手动挂上三个 owner。
+        val owner = findComposeOwner(context)
+        if (owner == null) {
+            WeLogger.e(TAG, "PopupWindow 找不到宿主 ComponentActivity，放弃 Compose 卡片")
+            return null
+        }
         val composeView = ComposeView(context).apply {
+            setViewTreeLifecycleOwner(owner)
+            setViewTreeViewModelStoreOwner(owner)
+            setViewTreeSavedStateRegistryOwner(owner)
             setContent {
                 PlusMenuCardContent(context = context, items = items, onItemClick = onItemClick)
             }
@@ -308,6 +328,16 @@ object PlusMenuCard : SwitchFeature() {
             elevation = (8 * density).toFloat()
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         }
+    }
+
+
+    private fun findComposeOwner(context: Context): ComponentActivity? {
+        var ctx: Context? = context
+        while (ctx != null) {
+            if (ctx is ComponentActivity) return ctx
+            ctx = (ctx as? ContextWrapper)?.baseContext
+        }
+        return (context as? android.app.Activity) as? ComponentActivity
     }
 
     private fun readField(obj: Any, name: String): Any? = runCatching {
