@@ -914,7 +914,12 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(
-                            text = stringResource(R.string.ai_reply_tts_breeze_instructions_hint),
+                            // 有值时不要继续显示「未设置」，否则看起来像没保存成功
+                            text = if (instruction.isBlank()) {
+                                stringResource(R.string.ai_reply_tts_breeze_instructions_hint)
+                            } else {
+                                "当前指令：$instruction"
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

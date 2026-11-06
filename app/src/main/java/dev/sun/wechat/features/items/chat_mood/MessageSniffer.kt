@@ -31,7 +31,7 @@ object MessageSniffer {
             try {
                 // 只开「自动帮我回」时也要跑，否则消息下方不会有回复建议卡片
                 if (!MoodAnalyzer.enabled && !ReplyAuto.enabled) return
-                // 文字、语音、表情包参与；图片/视频/文件/卡片/链接等跳过
+                // 除撤回/系统提示外全部参与（图片、视频、文件、链接、卡片用占位描述入上下文）
                 if (!ReplyMessageSupport.isReplyEligible(message)) return
                 val isPlainText = ReplyMessageSupport.isPlainText(message)
                 val talker = message.talker

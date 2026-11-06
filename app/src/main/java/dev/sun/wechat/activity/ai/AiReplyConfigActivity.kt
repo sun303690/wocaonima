@@ -97,7 +97,10 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
 
     var voiceReply by remember { mutableStateOf(TextToSpeech.voiceReplyEnabled) }
     var backend by remember { mutableStateOf(TextToSpeech.backend) }
-    var apiKey by remember { mutableStateOf(TextToSpeech.breezeKey) }
+    // 配音魔方与 Breeze Blue 是两套凭据，之前共用 apiKey 并把值写进 breezeKey，
+    // 导致 TextToSpeech.apiKey 永远为空，VoiceReply.ready() 判定未配置。
+    var mofaKey by remember { mutableStateOf(TextToSpeech.apiKey) }
+    var breezeKeyState by remember { mutableStateOf(TextToSpeech.breezeKey) }
     var cookie by remember { mutableStateOf(TextToSpeech.doubaoCookie) }
     var mofaVoice by remember { mutableStateOf(TextToSpeech.selectedVoice) }
     var breezeVoice by remember { mutableStateOf(TextToSpeech.breezeVoice) }
@@ -116,11 +119,12 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
 
     val isDoubao = backend == TextToSpeech.BACKEND_DOUBAO
     val isBreeze = backend == TextToSpeech.BACKEND_BREEZE
+    val apiKey = if (isBreeze) breezeKeyState else mofaKey
     val voiceLabel = when {
         customVoice.isNotBlank() -> "自定义：$customVoice"
         isDoubao -> doubaoVoiceLabel(doubaoVoice)
         isBreeze -> breezeVoiceName.ifBlank { breezeVoice.ifBlank { "未选择（点击选择 Breeze 音色）" } }
-        else -> mofaVoice
+        else -> mofaVoice.ifBlank { "未选择（点击选择配音魔方音色）" }
     }
     val effectiveMofaVoice = customVoice.ifBlank { mofaVoice }
     val effectiveDoubaoVoice = customVoice.ifBlank { doubaoVoice }
@@ -227,7 +231,7 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
                 HorizontalDivider()
 
                 SettingsRow(
-                    title = "语音 API Key",
+                    title = if (isBreeze) "Breeze API Key" else "配音魔方 API Key",
                     value = if (apiKey.isBlank()) "未填写" else "••••••••",
                     actionText = "编辑",
                 ) { editField = "key" }
@@ -353,7 +357,8 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
                     )
                     Text(
                         when (field) {
-                            "key" -> "breezeblue.ai 控制台「API Key 管理」里创建"
+                            "key" -> if (isBreeze) "breezeblue.ai 控制台「API Key 管理」里创建，用于合成语音"
+                            else "peiyinmofang.com「API Key 管理」里创建，用于合成语音"
                             "cookie" -> "doubao.com 开发者工具里复制 sessionid / sid_guard / uid_tt 三段"
                             else -> "留空则用预设音色；魔方与豆包共用此值"
                         },
@@ -367,9 +372,12 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
                     onClick = {
                         val v = buffer.trim()
                         when (field) {
-                            "key" -> {
-                                apiKey = v
+                            "key" -> if (isBreeze) {
+                                breezeKeyState = v
                                 TextToSpeech.breezeKey = v
+                            } else {
+                                mofaKey = v
+                                TextToSpeech.apiKey = v
                             }
 
                             "cookie" -> {

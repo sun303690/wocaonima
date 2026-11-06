@@ -350,7 +350,10 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
                 val contextText = loadRecentContext(talker, contextLimit.coerceIn(1, 50))
                 val systemPrompt = buildString {
                     append("你是微信聊天助手。语气要求：$stylePrompt\n")
-                    append("根据对方最后一条消息，生成${count}条回复。每条单独一行，不要序号，不要多余解释。")
+                    append("根据对方最后一条消息和最近聊天记录，生成${count}条可以直接发出去的回复。\n")
+                    append("每条 15–45 字，要有实质内容：先接住对方说的具体内容，再带一点自己的态度、关心、补充或追问；\n")
+                    append("不要出现只回“嗯”“好的”“在”“收到”“哈哈”这类一两个字的敷衍回复，也不要写成书面语、长段作文或分点说明。\n")
+                    append("每条单独一行，不要序号，不要多余解释。")
                     if (contextText.isNotBlank()) append("\n\n最近聊天记录参考：\n$contextText")
                 }
                 // 从输入栏打开时没有选中具体消息，content 为空；空 content 会被服务端以
