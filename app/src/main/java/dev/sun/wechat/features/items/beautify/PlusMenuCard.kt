@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -348,7 +349,7 @@ object PlusMenuCard : SwitchFeature() {
                     .then(
                         if (skin.bgImage == null) {
                             Modifier.background(
-                                color = Color(skin.bgColor),
+                                color = ComposeColor(skin.bgColor),
                                 shape = RoundedCornerShape(12.dp)
                             )
                         } else {
@@ -375,14 +376,14 @@ object PlusMenuCard : SwitchFeature() {
                             Image(
                                 bitmap = icon,
                                 contentDescription = item.label,
-                                colorFilter = ColorFilter.tint(Color(skin.textColor)),
+                                colorFilter = ColorFilter.tint(ComposeColor(skin.textColor)),
                                 modifier = Modifier.size(24.dp)
                             )
                         }
                         Text(
                             text = item.label,
                             modifier = Modifier.padding(start = 12.dp),
-                            color = Color(skin.textColor),
+                            color = ComposeColor(skin.textColor),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Medium
                         )

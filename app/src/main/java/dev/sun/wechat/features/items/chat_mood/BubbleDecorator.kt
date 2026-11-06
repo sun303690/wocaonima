@@ -168,7 +168,7 @@ object BubbleDecorator {
     private fun chip(state: Card, text: String, index: Int): TextView {
         val c = colors(state.row)
         return TextView(state.row.context).apply {
-            text = "$index. $text"
+            this.text = "$index. $text"
             textSize = 13f
             maxLines = 4
             ellipsize = TextUtils.TruncateAt.END
