@@ -39,10 +39,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
 import android.content.ContextWrapper
 import androidx.activity.ComponentActivity
+import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeLifecycleOwner
-import androidx.lifecycle.ViewTreeLifecycleOwner
-import androidx.lifecycle.ViewTreeViewModelStoreOwner
-import androidx.savedstate.ViewTreeSavedStateRegistryOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import androidx.compose.ui.platform.LocalContext
@@ -338,7 +336,7 @@ object PlusMenuCard : SwitchFeature() {
      * 取法按可靠性排序：锚点 View 的 ViewTree（微信首页一定挂了）→ context 链上的 ComponentActivity。
      */
     private fun resolveComposeOwner(anchor: View?, context: Context): ComponentActivity {
-        (anchor?.let { ViewTreeLifecycleOwner.get(it) } as? ComponentActivity)?.let { return it }
+        (anchor?.findViewTreeLifecycleOwner() as? ComponentActivity)?.let { return it }
         findComposeOwner(anchor?.context)?.let { return it }
         findComposeOwner(context)?.let { return it }
         // 微信里 anchor.context / context 必然是 Activity 或其 ContextWrapper，走到这里说明
