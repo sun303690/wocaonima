@@ -19,6 +19,7 @@ import android.widget.AbsListView
 import android.widget.TextView
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.utils.WeLogger
+import dev.sun.wechat.utils.hookAfterDirectly
 
 /**
  * 液态玻璃框（移植自 WePeak 2.8.0 LiquidGlassFrame）。
