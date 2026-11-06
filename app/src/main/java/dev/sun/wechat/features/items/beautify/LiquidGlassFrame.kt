@@ -97,7 +97,7 @@ object LiquidGlassFrame {
             View::class.java.getDeclaredMethod("onAttachedToWindow").apply { isAccessible = true }
         }.onSuccess { method ->
             handles += method.hookAfterDirectly {
-                val view = thisObject as? View ?: return@hookAfter
+                val view = thisObject as? View ?: return@hookAfterDirectly
                 handleAttached(view)
             }
         }.onFailure { WeLogger.e(TAG, "hook onAttachedToWindow 失败", it) }
@@ -111,7 +111,7 @@ object LiquidGlassFrame {
             ).apply { isAccessible = true }
         }.onSuccess { method ->
             handles += method.hookAfterDirectly {
-                maybeWrapView(result as? View ?: return@hookAfter)
+                maybeWrapView(result as? View ?: return@hookAfterDirectly)
             }
         }.onFailure { WeLogger.e(TAG, "hook obtainView 失败", it) }
 
@@ -125,7 +125,7 @@ object LiquidGlassFrame {
             ).apply { isAccessible = true }
         }.onSuccess { method ->
             handles += method.hookAfterDirectly {
-                maybeWrapView(args.getOrNull(0) as? View ?: return@hookAfter)
+                maybeWrapView(args.getOrNull(0) as? View ?: return@hookAfterDirectly)
             }
         }.onFailure { WeLogger.e(TAG, "hook addView 失败", it) }
 
@@ -137,10 +137,10 @@ object LiquidGlassFrame {
                     .apply { isAccessible = true }
             }.onSuccess { method ->
                 handles += method.hookAfterDirectly {
-                    val view = thisObject as? View ?: return@hookAfter
-                    val newBg = args.getOrNull(0) as? Drawable ?: return@hookAfter
-                    if (newBg is GlassMinSizeWrapper) return@hookAfter
-                    if (!viewQualifies(view)) return@hookAfter
+                    val view = thisObject as? View ?: return@hookAfterDirectly
+                    val newBg = args.getOrNull(0) as? Drawable ?: return@hookAfterDirectly
+                    if (newBg is GlassMinSizeWrapper) return@hookAfterDirectly
+                    if (!viewQualifies(view)) return@hookAfterDirectly
                     view.background = buildWrappedBackground(view)
                 }
             }.onFailure { WeLogger.e(TAG, "hook $name 失败", it) }
