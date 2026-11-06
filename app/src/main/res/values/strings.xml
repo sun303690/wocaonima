@@ -606,6 +606,13 @@
     <string name="feature_add_main_screen_fab_description">Add floating action buttons to WeChat home screen</string>
     <string name="feature_plus_menu_card_name">Plus menu card</string>
     <string name="feature_plus_menu_card_description">Show the + menu on the home screen as a card panel</string>
+    <string name="feature_liquid_glass_frame_name">Liquid glass frame</string>
+    <string name="feature_liquid_glass_frame_description">Wrap list cards with a translucent liquid-glass background (mutually exclusive with Beautify conversation list; restart WeChat to take full effect)</string>
+    <string name="plus_menu_text_light">Menu text color (light mode, hex)</string>
+    <string name="plus_menu_text_dark">Menu text color (dark mode, hex)</string>
+    <string name="plus_menu_bg_light">Menu background color (light mode, hex)</string>
+    <string name="plus_menu_bg_dark">Menu background color (dark mode, hex)</string>
+    <string name="plus_menu_bg_image_hint">Optional background image: put plus_menu_bg.png into Android/data/com.tencent.mm/files/wekit/ (re-open the menu to apply)</string>
     <string name="plus_menu_card_title">Quick actions</string>
     <string name="feature_apply_dialog_background_blur_name">Dialog background blur</string>
     <string name="feature_apply_dialog_background_blur_description">Add window-level background blur to module and WeChat dialogs [requires SDK &gt;= 31]</string>

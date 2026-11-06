@@ -567,6 +567,13 @@
     <string name="feature_add_main_screen_fab_description">向微信主屏幕添加浮動操作按鈕</string>
     <string name="feature_plus_menu_card_name">加號選單卡片化</string>
     <string name="feature_plus_menu_card_description">將主介面右上角加號的原生選單換成卡片面板</string>
+    <string name="feature_liquid_glass_frame_name">液態玻璃框</string>
+    <string name="feature_liquid_glass_frame_description">給列表卡片包一層半透明液態玻璃背景（與美化對話列表互斥；重啟微信後完全生效）</string>
+    <string name="plus_menu_text_light">選單文字顏色（淺色模式，十六進位）</string>
+    <string name="plus_menu_text_dark">選單文字顏色（深色模式，十六進位）</string>
+    <string name="plus_menu_bg_light">選單背景顏色（淺色模式，十六進位）</string>
+    <string name="plus_menu_bg_dark">選單背景顏色（深色模式，十六進位）</string>
+    <string name="plus_menu_bg_image_hint">可選背景圖：把 plus_menu_bg.png 放進 Android/data/com.tencent.mm/files/wekit/（重開選單即生效）</string>
     <string name="plus_menu_card_title">快捷操作</string>
     <string name="feature_apply_dialog_background_blur_name">對話框窗口級背景模糊</string>
     <string name="feature_apply_dialog_background_blur_description">爲模塊與微信的對話框添加窗口級模糊處理 [需 SDK &gt;= 31]</string>

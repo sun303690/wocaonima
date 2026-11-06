@@ -2,8 +2,10 @@ package dev.sun.wechat.features.items.beautify
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.util.SparseArray
@@ -15,6 +17,7 @@ import android.widget.PopupWindow
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,20 +25,30 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.sun.wechat.R
+import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.features.api.ui.WeMainActivityBeautifyApi
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature
+import dev.sun.wechat.ui.content.miuix.MiuixCompatTextField
 import dev.sun.wechat.utils.WeLogger
+import java.io.File
 import top.yukonga.miuix.kmp.basic.Text
 
 /**
@@ -57,6 +70,66 @@ object PlusMenuCard : SwitchFeature() {
 
     private const val TAG = "PlusMenuCard"
     private const val PANEL_WIDTH_DP = 192
+
+    // ---- 自定义加号菜单（对标 WePeak CustomizePlusMenu）----
+    // 文字/背景色分深浅色两套；可选背景图 plus_menu_bg.png（模块 wekit 目录）。
+    private const val KEY_TEXT_LIGHT = "plus_menu_text_light"
+    private const val KEY_TEXT_DARK = "plus_menu_text_dark"
+    private const val KEY_BG_LIGHT = "plus_menu_bg_light"
+    private const val KEY_BG_DARK = "plus_menu_bg_dark"
+    private const val DEF_TEXT_LIGHT = "#000000"
+    private const val DEF_TEXT_DARK = "#ffffff"
+    private const val DEF_BG_LIGHT = "#ffffff"
+    private const val DEF_BG_DARK = "#2E2E2E"
+
+    /** 背景图缓存：(lastModified:length, drawable)；与 WePeak 同款指纹缓存 */
+    @Volatile
+    private var cachedBgImage: Pair<String, BitmapDrawable?>? = null
+
+    private data class PlusMenuSkin(
+        val textColor: Int,
+        val bgColor: Int,
+        val bgImage: BitmapDrawable?,
+    )
+
+    private fun parseColorOrDef(value: String?, def: Int): Int =
+        value?.trim()?.let { runCatching { Color.parseColor(it) }.getOrNull() } ?: def
+
+    private fun readSkin(context: Context): PlusMenuSkin {
+        val dark = (context.resources.configuration.uiMode and 48) == 32
+        val textColor = parseColorOrDef(
+            KvStore.getStringOrDef(if (dark) KEY_TEXT_DARK else KEY_TEXT_LIGHT, if (dark) DEF_TEXT_DARK else DEF_TEXT_LIGHT),
+            if (dark) Color.WHITE else Color.BLACK
+        )
+        val bgColor = parseColorOrDef(
+            KvStore.getStringOrDef(if (dark) KEY_BG_DARK else KEY_BG_LIGHT, if (dark) DEF_BG_DARK else DEF_BG_LIGHT),
+            if (dark) Color.parseColor(DEF_BG_DARK) else Color.parseColor(DEF_BG_LIGHT)
+        )
+        return PlusMenuSkin(textColor, bgColor, loadBgImage(context))
+    }
+
+    private fun bgImageFile(context: Context): File {
+        val base = context.getExternalFilesDir(null) ?: context.filesDir
+        return File(base, "wekit/plus_menu_bg.png")
+    }
+
+    private fun loadBgImage(context: Context): BitmapDrawable? {
+        val file = bgImageFile(context)
+        if (!file.exists()) return null
+        val key = "${file.lastModified()}:${file.length()}"
+        cachedBgImage?.let { (k, d) -> if (k == key) return d }
+        val drawable = runCatching {
+            val bmp = BitmapFactory.decodeFile(file.absolutePath)
+            if (bmp == null) {
+                WeLogger.e(TAG, "背景图解码失败：${file.absolutePath}")
+                null
+            } else {
+                BitmapDrawable(context.resources, bmp)
+            }
+        }.onFailure { WeLogger.e(TAG, "背景图加载失败", it) }.getOrNull()
+        cachedBgImage = key to drawable
+        return drawable
+    }
 
     @Volatile
     private var popupShowing = false
@@ -147,6 +220,70 @@ object PlusMenuCard : SwitchFeature() {
         WeLogger.i(TAG, "hook 已注册")
     }
 
+    /** 自定义加号菜单配置：四个色值输入 + 背景图说明（对标 WePeak CustomizePlusMenu） */
+    @Composable
+    override fun Ui() {
+        val context = LocalContext.current
+        var textLight by remember {
+            mutableStateOf(KvStore.getStringOrDef(KEY_TEXT_LIGHT, DEF_TEXT_LIGHT))
+        }
+        var textDark by remember {
+            mutableStateOf(KvStore.getStringOrDef(KEY_TEXT_DARK, DEF_TEXT_DARK))
+        }
+        var bgLight by remember {
+            mutableStateOf(KvStore.getStringOrDef(KEY_BG_LIGHT, DEF_BG_LIGHT))
+        }
+        var bgDark by remember {
+            mutableStateOf(KvStore.getStringOrDef(KEY_BG_DARK, DEF_BG_DARK))
+        }
+        MiuixCompatTextField(
+            value = textLight,
+            onValueChange = {
+                textLight = it
+                KvStore.putString(KEY_TEXT_LIGHT, it)
+            },
+            label = stringResource(R.string.plus_menu_text_light),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+        MiuixCompatTextField(
+            value = textDark,
+            onValueChange = {
+                textDark = it
+                KvStore.putString(KEY_TEXT_DARK, it)
+            },
+            label = stringResource(R.string.plus_menu_text_dark),
+            singleLine = true,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+        MiuixCompatTextField(
+            value = bgLight,
+            onValueChange = {
+                bgLight = it
+                KvStore.putString(KEY_BG_LIGHT, it)
+            },
+            label = stringResource(R.string.plus_menu_bg_light),
+            singleLine = true,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+        MiuixCompatTextField(
+            value = bgDark,
+            onValueChange = {
+                bgDark = it
+                KvStore.putString(KEY_BG_DARK, it)
+            },
+            label = stringResource(R.string.plus_menu_bg_dark),
+            singleLine = true,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+        Text(
+            text = stringResource(R.string.plus_menu_bg_image_hint) +
+                "\n" + bgImageFile(context).absolutePath,
+            modifier = Modifier.padding(top = 8.dp),
+            fontSize = 12.sp
+        )
+    }
+
     private fun buildPopup(
         context: Context,
         items: List<PlusItem>,
@@ -195,43 +332,61 @@ object PlusMenuCard : SwitchFeature() {
         items: List<PlusItem>,
         onItemClick: (Int) -> Unit,
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    color = Color(0xFF2E2E2E),
-                    shape = RoundedCornerShape(12.dp)
+        val skin = remember { readSkin(context) }
+        Box(modifier = Modifier.fillMaxWidth()) {
+            skin.bgImage?.let { bg ->
+                Image(
+                    bitmap = bg.bitmap.asImageBitmap(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.matchParentSize()
                 )
-                .padding(vertical = 6.dp)
-        ) {
-            items.forEach { item ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onItemClick(item.position) }
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val icon = remember(item.iconRes) {
-                        runCatching {
-                            val drawable = context.resources.getDrawable(item.iconRes, context.theme)
-                            drawableToImageBitmap(drawable)
-                        }.getOrNull()
-                    }
-                    if (icon != null) {
-                        Image(
-                            bitmap = icon,
-                            contentDescription = item.label,
-                            modifier = Modifier.size(24.dp)
+            }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(
+                        if (skin.bgImage == null) {
+                            Modifier.background(
+                                color = Color(skin.bgColor),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                        } else {
+                            Modifier
+                        }
+                    )
+                    .padding(vertical = 6.dp)
+            ) {
+                items.forEach { item ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onItemClick(item.position) }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val icon = remember(item.iconRes) {
+                            runCatching {
+                                val drawable = context.resources.getDrawable(item.iconRes, context.theme)
+                                drawableToImageBitmap(drawable)
+                            }.getOrNull()
+                        }
+                        if (icon != null) {
+                            Image(
+                                bitmap = icon,
+                                contentDescription = item.label,
+                                colorFilter = ColorFilter.tint(Color(skin.textColor)),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Text(
+                            text = item.label,
+                            modifier = Modifier.padding(start = 12.dp),
+                            color = Color(skin.textColor),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium
                         )
                     }
-                    Text(
-                        text = item.label,
-                        modifier = Modifier.padding(start = 12.dp),
-                        color = Color.White,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Medium
-                    )
                 }
             }
         }
