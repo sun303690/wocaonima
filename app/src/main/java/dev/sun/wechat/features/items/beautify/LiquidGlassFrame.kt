@@ -17,10 +17,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.AbsListView
 import android.widget.TextView
-import dev.sun.wechat.R
 import dev.sun.wechat.data.KvStore
-import dev.sun.wechat.features.core.FeatureCategoryIds
-import dev.sun.wechat.features.core.SwitchFeature
 import dev.sun.wechat.utils.WeLogger
 
 /**
@@ -29,8 +26,8 @@ import dev.sun.wechat.utils.WeLogger
  * 给微信界面里的列表卡片/大块视图包一层半透明「液态玻璃」背景：主体半透明圆角矩形
  * + 顶部高光渐变 + 浅色模式底部阴影 + 描边，深浅色自适应。
  *
- * 与 WePeak 同款互斥逻辑：若「美化对话列表」已启用则不挂载（避免双重改写对话列表
- * 背景），关闭美化对话列表并重启微信后本功能生效。
+ * 归属：「应用全局背景」面板下的子项（global_bg_glass_*），由该 feature 的开关
+ * 驱动 install()/uninstall()，不再作为独立的注册 feature 出现在功能列表。
  *
  * hook 面（与 WePeak 一致，均为框架方法 hookAfter）：
  * - View.onAttachedToWindow：ViewGroup 递归套玻璃
@@ -40,22 +37,18 @@ import dev.sun.wechat.utils.WeLogger
  *
  * 说明：本功能改写的是视图背景，无法逐个还原；关闭后需重启微信才完全恢复原样。
  */
-object LiquidGlassFrame : SwitchFeature() {
-
-    override val technicalId = "液态玻璃框"
-    override val nameRes = R.string.feature_liquid_glass_frame_name
-    override val categoryIds = listOf(FeatureCategoryIds.BEAUTIFY)
-    override val descriptionRes = R.string.feature_liquid_glass_frame_description
+object LiquidGlassFrame {
 
     private const val TAG = "LiquidGlassFrame"
 
-    // 配置项（与 WePeak 同名同默认值）
-    private const val KEY_OPACITY = "liquid_glass_opacity"
-    private const val KEY_RADIUS_DP = "liquid_glass_radius"
-    private const val KEY_MARGIN_H_DP = "liquid_glass_margin_h"
-    private const val DEF_OPACITY = 0.55f
-    private const val DEF_RADIUS_DP = 16f
-    private const val DEF_MARGIN_H_DP = 12f
+    // 配置项（全局背景面板：global_bg_glass_*，默认值与 WePeak 同源）
+    const val KEY_ENABLED = "global_bg_glass_enabled"
+    const val KEY_OPACITY = "global_bg_glass_opacity"
+    const val KEY_RADIUS_DP = "global_bg_glass_radius"
+    const val KEY_MARGIN_H_DP = "global_bg_glass_margin_h"
+    const val DEF_OPACITY = 0.55f
+    const val DEF_RADIUS_DP = 16f
+    const val DEF_MARGIN_H_DP = 12f
 
     /** 命中高度阈值：40dp（与 WePeak 一致） */
     private const val MIN_HEIGHT_DP = 40f
@@ -89,20 +82,20 @@ object LiquidGlassFrame : SwitchFeature() {
     /** TaskBar 文字染色记录（原色），与 WePeak b0 的 WeakHashMap 同义 */
     private val taskBarOriginalTextColors = HashMap<View, Int>()
 
-    override fun onEnable() {
-        if (BeautifyConversationList.isEnabled) {
-            WeLogger.i(
-                TAG,
-                "美化对话列表已启用，液态玻璃框本次不挂载（关闭美化对话列表并重启微信后生效）"
-            )
-            return
-        }
+    /** 已挂载的 hook 句柄（由「应用全局背景」开关驱动挂/卸） */
+    private val handles = mutableListOf<me.hd.wauxv.hook.HookHandle>()
+
+    fun isActive(): Boolean = handles.isNotEmpty()
+
+    /** 挂载全部框架 hook；重复调用无副作用 */
+    fun install() {
+        if (handles.isNotEmpty()) return
 
         // View.onAttachedToWindow（protected，反射取出）
         runCatching {
             View::class.java.getDeclaredMethod("onAttachedToWindow").apply { isAccessible = true }
         }.onSuccess { method ->
-            method.hookAfter {
+            handles += method.hookAfter {
                 val view = thisObject as? View ?: return@hookAfter
                 handleAttached(view)
             }
@@ -116,7 +109,7 @@ object LiquidGlassFrame : SwitchFeature() {
                 BooleanArray::class.java
             ).apply { isAccessible = true }
         }.onSuccess { method ->
-            method.hookAfter {
+            handles += method.hookAfter {
                 maybeWrapView(result as? View ?: return@hookAfter)
             }
         }.onFailure { WeLogger.e(TAG, "hook obtainView 失败", it) }
@@ -130,7 +123,7 @@ object LiquidGlassFrame : SwitchFeature() {
                 ViewGroup.LayoutParams::class.java
             ).apply { isAccessible = true }
         }.onSuccess { method ->
-            method.hookAfter {
+            handles += method.hookAfter {
                 maybeWrapView(args.getOrNull(0) as? View ?: return@hookAfter)
             }
         }.onFailure { WeLogger.e(TAG, "hook addView 失败", it) }
@@ -142,7 +135,7 @@ object LiquidGlassFrame : SwitchFeature() {
                 View::class.java.getDeclaredMethod(name, Drawable::class.java)
                     .apply { isAccessible = true }
             }.onSuccess { method ->
-                method.hookAfter {
+                handles += method.hookAfter {
                     val view = thisObject as? View ?: return@hookAfter
                     val newBg = args.getOrNull(0) as? Drawable ?: return@hookAfter
                     if (newBg is GlassMinSizeWrapper) return@hookAfter
@@ -152,7 +145,21 @@ object LiquidGlassFrame : SwitchFeature() {
             }.onFailure { WeLogger.e(TAG, "hook $name 失败", it) }
         }
 
-        WeLogger.i(TAG, "hook 已注册")
+        WeLogger.i(TAG, "液态玻璃框已挂载（句柄 ${handles.size}）")
+    }
+
+    /** 卸下全部 hook；已套用的玻璃背景要等微信重启才完全复原 */
+    fun uninstall() {
+        if (handles.isEmpty()) return
+        val n = handles.size
+        handles.forEach { runCatching { it.unhook() } }
+        handles.clear()
+        WeLogger.i(TAG, "液态玻璃框已卸载（$n 个句柄，重启微信后背景复原）")
+    }
+
+    /** 「应用全局背景」开关联动：总开关关闭或液体玻璃开关关闭时卸载 */
+    fun syncInstallState(enabled: Boolean) {
+        if (enabled) install() else uninstall()
     }
 
     // ---- 挂载判定与遍历（对应 WePeak Z/d0） ----

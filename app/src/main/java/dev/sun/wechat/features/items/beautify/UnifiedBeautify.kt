@@ -20,6 +20,11 @@ import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.layout.PaddingValues
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -135,6 +140,12 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     private var globalTextColorEnabled by prefOption("global_bg_text_color_enabled", false)
     private var globalTextColor by prefOption("global_bg_text_color", "#FF000000")
 
+    // 液态玻璃框（WePeak 移植）并入本 feature：作为「应用全局背景」的子项
+    private var glassEnabled by prefOption(LiquidGlassFrame.KEY_ENABLED, false)
+    private var glassOpacity by prefOption(LiquidGlassFrame.KEY_OPACITY, LiquidGlassFrame.DEF_OPACITY)
+    private var glassRadius by prefOption(LiquidGlassFrame.KEY_RADIUS_DP, LiquidGlassFrame.DEF_RADIUS_DP)
+    private var glassMarginH by prefOption(LiquidGlassFrame.KEY_MARGIN_H_DP, LiquidGlassFrame.DEF_MARGIN_H_DP)
+
     private const val BACKGROUND_IMAGE_FILE = "global_background.png"
 
     // The picked image is copied here instead of keeping a SAF content:// uri whose
@@ -198,6 +209,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
     override fun onEnable() {
         migrateLegacyBackgroundUri()
         if (listCards) WeConversationListViewApi.addListener(conversationBindListener)
+        LiquidGlassFrame.syncInstallState(isEnabled && glassEnabled)
 
         Activity::class.reflekt().apply {
             firstMethod {
@@ -438,6 +450,10 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
             var horizontalInput by remember { mutableIntStateOf(listHorizontalInset) }
             var spacingInput by remember { mutableIntStateOf(listVerticalSpacing) }
             var heightInput by remember { mutableIntStateOf(listHeight) }
+            var glassInput by remember { mutableStateOf(glassEnabled) }
+            var glassOpacityInput by remember { mutableIntStateOf((glassOpacity * 100f).roundToInt().coerceIn(10, 95)) }
+            var glassRadiusInput by remember { mutableIntStateOf(glassRadius.toInt()) }
+            var glassMarginInput by remember { mutableIntStateOf(glassMarginH.toInt()) }
             var restartRequired by remember { mutableStateOf(false) }
             val currentRestartRequired by rememberUpdatedState(restartRequired)
             val localizedContext by rememberUpdatedState(LocalWeKitLocalizedContext.current)
@@ -452,9 +468,16 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
 
             val dialogSurface = MiuixTheme.colorScheme.surface
             AlertDialogContent(
+                modifier = Modifier.widthIn(max = 340.dp),
                 containerColor = dialogSurface.copy(alpha = 0.66f),
                 title = { Text(stringResource(R.string.beautify_global_background_title)) },
                 text = {
+                    val dialogMaxHeight = LocalConfiguration.current.screenHeightDp.dp * 0.64f
+                    Column(
+                        modifier = Modifier
+                            .heightIn(max = dialogMaxHeight)
+                            .verticalScroll(rememberScrollState())
+                    ) {
                     MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
                         item {
                             MiuixBaseWidget(
@@ -645,6 +668,77 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
                                 }
                             }
                         }
+                        item {
+                            MiuixSwitchWidget(
+                                iconPlaceholder = false,
+                                title = stringResource(R.string.beautify_global_background_glass),
+                                description = stringResource(R.string.beautify_global_background_glass_summary),
+                                checked = glassInput,
+                                onCheckedChange = { enabled ->
+                                    glassInput = enabled
+                                    glassEnabled = enabled
+                                    LiquidGlassFrame.syncInstallState(enabled)
+                                    restartRequired = enabled
+                                },
+                            )
+                        }
+                        if (glassInput) {
+                            item {
+                                MiuixBaseItemContainer {
+                                    MiuixIntNumberPickerWidget(
+                                        iconPlaceholder = false,
+                                        title = stringResource(R.string.beautify_global_background_glass_opacity),
+                                        value = glassOpacityInput,
+                                        startInt = 10,
+                                        endInt = 95,
+                                        stepSize = 5,
+                                        valueSuffix = "%",
+                                        onValueChange = {
+                                            glassOpacityInput = it
+                                            glassOpacity = it / 100f
+                                            restartRequired = true
+                                        },
+                                    )
+                                }
+                            }
+                            item {
+                                MiuixBaseItemContainer {
+                                    MiuixIntNumberPickerWidget(
+                                        iconPlaceholder = false,
+                                        title = stringResource(R.string.beautify_global_background_glass_radius),
+                                        value = glassRadiusInput,
+                                        startInt = 0,
+                                        endInt = 40,
+                                        stepSize = 1,
+                                        valueSuffix = "dp",
+                                        onValueChange = {
+                                            glassRadiusInput = it
+                                            glassRadius = it.toFloat()
+                                            restartRequired = true
+                                        },
+                                    )
+                                }
+                            }
+                            item {
+                                MiuixBaseItemContainer {
+                                    MiuixIntNumberPickerWidget(
+                                        iconPlaceholder = false,
+                                        title = stringResource(R.string.beautify_global_background_glass_margin),
+                                        value = glassMarginInput,
+                                        startInt = 0,
+                                        endInt = 40,
+                                        stepSize = 1,
+                                        valueSuffix = "dp",
+                                        onValueChange = {
+                                            glassMarginInput = it
+                                            glassMarginH = it.toFloat()
+                                            restartRequired = true
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
                     }
                 },
                 dismissButton = {
@@ -979,6 +1073,7 @@ object ApplyGlobalBackground : ClickableFeature(), IResolveDex {
             applyingGlobalTextColor.set(false)
         }
         globalTextColors.clear()
+        LiquidGlassFrame.uninstall()
     }
 
     private fun View.makeTransparent() {

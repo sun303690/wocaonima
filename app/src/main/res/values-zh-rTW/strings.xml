@@ -567,8 +567,6 @@
     <string name="feature_add_main_screen_fab_description">向微信主屏幕添加浮動操作按鈕</string>
     <string name="feature_plus_menu_card_name">加號選單卡片化</string>
     <string name="feature_plus_menu_card_description">將主介面右上角加號的原生選單換成卡片面板</string>
-    <string name="feature_liquid_glass_frame_name">液態玻璃框</string>
-    <string name="feature_liquid_glass_frame_description">給列表卡片包一層半透明液態玻璃背景（與美化對話列表互斥；重啟微信後完全生效）</string>
     <string name="plus_menu_text_light">選單文字顏色（淺色模式，十六進位）</string>
     <string name="plus_menu_text_dark">選單文字顏色（深色模式，十六進位）</string>
     <string name="plus_menu_bg_light">選單背景顏色（淺色模式，十六進位）</string>
@@ -4558,4 +4556,9 @@
     <string name="ui_group_ai_settings_test_ok">連線成功</string>
     <string name="ui_group_ai_settings_testing">測試中…</string>
     <string name="ui_group_ai_settings_title">API 設定</string>
+    <string name="beautify_global_background_glass">液態玻璃卡片</string>
+    <string name="beautify_global_background_glass_summary">給列表大卡片包一層半透明液態玻璃背景（WePeak 移植）。關閉後需重啟微信才完全復原。</string>
+    <string name="beautify_global_background_glass_opacity">玻璃透明度</string>
+    <string name="beautify_global_background_glass_radius">玻璃圓角</string>
+    <string name="beautify_global_background_glass_margin">玻璃左右邊距</string>
 </resources>
