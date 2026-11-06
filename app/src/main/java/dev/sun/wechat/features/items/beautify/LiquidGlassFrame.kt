@@ -84,7 +84,7 @@ object LiquidGlassFrame {
     private val taskBarOriginalTextColors = HashMap<View, Int>()
 
     /** 已挂载的 hook 句柄（由「应用全局背景」开关驱动挂/卸） */
-    private val handles = mutableListOf<me.hd.wauxv.hook.HookHandle>()
+    private val handles = mutableListOf<dev.sun.wechat.utils.HookHandle>()
 
     fun isActive(): Boolean = handles.isNotEmpty()
 
@@ -96,10 +96,10 @@ object LiquidGlassFrame {
         runCatching {
             View::class.java.getDeclaredMethod("onAttachedToWindow").apply { isAccessible = true }
         }.onSuccess { method ->
-            handles += method.hookAfterDirectly {
+            handles.add(method.hookAfterDirectly {
                 val view = thisObject as? View ?: return@hookAfterDirectly
                 handleAttached(view)
-            }
+            })
         }.onFailure { WeLogger.e(TAG, "hook onAttachedToWindow 失败", it) }
 
         // AbsListView.obtainView(int, boolean[])
@@ -110,9 +110,9 @@ object LiquidGlassFrame {
                 BooleanArray::class.java
             ).apply { isAccessible = true }
         }.onSuccess { method ->
-            handles += method.hookAfterDirectly {
+            handles.add(method.hookAfterDirectly {
                 maybeWrapView(result as? View ?: return@hookAfterDirectly)
-            }
+            })
         }.onFailure { WeLogger.e(TAG, "hook obtainView 失败", it) }
 
         // ViewGroup.addView(View, int, LayoutParams)
@@ -124,9 +124,9 @@ object LiquidGlassFrame {
                 ViewGroup.LayoutParams::class.java
             ).apply { isAccessible = true }
         }.onSuccess { method ->
-            handles += method.hookAfterDirectly {
+            handles.add(method.hookAfterDirectly {
                 maybeWrapView(args.getOrNull(0) as? View ?: return@hookAfterDirectly)
-            }
+            })
         }.onFailure { WeLogger.e(TAG, "hook addView 失败", it) }
 
         // View.setBackground(Drawable) / setBackgroundDrawable(Drawable)
@@ -136,13 +136,13 @@ object LiquidGlassFrame {
                 View::class.java.getDeclaredMethod(name, Drawable::class.java)
                     .apply { isAccessible = true }
             }.onSuccess { method ->
-                handles += method.hookAfterDirectly {
+                handles.add(method.hookAfterDirectly {
                     val view = thisObject as? View ?: return@hookAfterDirectly
                     val newBg = args.getOrNull(0) as? Drawable ?: return@hookAfterDirectly
                     if (newBg is GlassMinSizeWrapper) return@hookAfterDirectly
                     if (!viewQualifies(view)) return@hookAfterDirectly
                     view.background = buildWrappedBackground(view)
-                }
+                })
             }.onFailure { WeLogger.e(TAG, "hook $name 失败", it) }
         }
 
