@@ -40,6 +40,9 @@ import androidx.compose.ui.platform.ComposeView
 import android.content.ContextWrapper
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.ViewTreeLifecycleOwner
+import androidx.lifecycle.ViewTreeViewModelStoreOwner
+import androidx.savedstate.ViewTreeSavedStateRegistryOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import androidx.compose.ui.platform.LocalContext
@@ -194,14 +197,16 @@ object PlusMenuCard : SwitchFeature() {
             val homeUI = readField(helper, "u")
             val anchor = homeUI?.let { readField(it, "x") as? View }
 
-            val popup = buildPopup(context, items) { position ->
+            val popup = runCatching {
+                buildPopup(context, anchor, items) { position ->
+                    popupShowing = false
+                    runCatching { clickMethod.invoke(helper, null, null, position, 0L) }
+                        .onFailure { WeLogger.e(TAG, "invoke wg.onItemClick failed", it) }
+                }
+            }.onFailure {
                 popupShowing = false
-                runCatching { clickMethod.invoke(helper, null, null, position, 0L) }
-                    .onFailure { WeLogger.e(TAG, "invoke wg.onItemClick failed", it) }
-            } ?: run {
-                popupShowing = false
-                return@hookAfter
-            }
+                WeLogger.e(TAG, "构建卡片面板异常", it)
+            }.getOrNull() ?: return@hookAfter
             popup.setOnDismissListener { popupShowing = false }
 
             val density = context.resources.displayMetrics.density
@@ -295,20 +300,17 @@ object PlusMenuCard : SwitchFeature() {
 
     private fun buildPopup(
         context: Context,
+        anchor: View?,
         items: List<PlusItem>,
         onItemClick: (Int) -> Unit,
-    ): PopupWindow? {
+    ): PopupWindow {
         val density = context.resources.displayMetrics.density
         val width = (PANEL_WIDTH_DP * density).toInt()
         // PopupWindow 的 PopupDecorView 不在 Activity 的 View 树里，Compose 拿不到
         // ViewTreeLifecycleOwner/SavedStateRegistryOwner/ViewModelStoreOwner，会抛
         // "ViewTreeLifecycleOwner not found from PopupWindow$PopupDecorView" 直接崩微信。
         // 这里从 context 沿 ContextWrapper 找宿主 Activity，手动挂上三个 owner。
-        val owner = findComposeOwner(context)
-        if (owner == null) {
-            WeLogger.e(TAG, "PopupWindow 找不到宿主 ComponentActivity，放弃 Compose 卡片")
-            return null
-        }
+        val owner = resolveComposeOwner(anchor, context)
         val composeView = ComposeView(context).apply {
             setViewTreeLifecycleOwner(owner)
             setViewTreeViewModelStoreOwner(owner)
@@ -331,13 +333,26 @@ object PlusMenuCard : SwitchFeature() {
     }
 
 
-    private fun findComposeOwner(context: Context): ComponentActivity? {
+    /**
+     * PopupWindow 的 PopupDecorView 不在 Activity 的 View 树里，Compose 必须手动拿到三个 owner。
+     * 取法按可靠性排序：锚点 View 的 ViewTree（微信首页一定挂了）→ context 链上的 ComponentActivity。
+     */
+    private fun resolveComposeOwner(anchor: View?, context: Context): ComponentActivity {
+        (anchor?.let { ViewTreeLifecycleOwner.get(it) } as? ComponentActivity)?.let { return it }
+        findComposeOwner(anchor?.context)?.let { return it }
+        findComposeOwner(context)?.let { return it }
+        // 微信里 anchor.context / context 必然是 Activity 或其 ContextWrapper，走到这里说明
+        // 调用方给的上下文异常；抛出来让 hook 层记日志，而不是静默不弹。
+        throw IllegalStateException("PopupWindow 无法解析 ComponentActivity owner")
+    }
+
+    private fun findComposeOwner(context: Context?): ComponentActivity? {
         var ctx: Context? = context
         while (ctx != null) {
             if (ctx is ComponentActivity) return ctx
             ctx = (ctx as? ContextWrapper)?.baseContext
         }
-        return (context as? android.app.Activity) as? ComponentActivity
+        return null
     }
 
     private fun readField(obj: Any, name: String): Any? = runCatching {
