@@ -4474,13 +4474,6 @@
 <string name="feature_script_center_description">Java/Python 腳本總開關、本地插件管理與線上插件市場</string>
     <string name="feature_text_to_speech_name">文字轉語音</string>
     <string name="feature_text_to_speech_description">將文字轉為語音訊息傳送, 需在設定中選擇啟用哪個入口</string>
-    <string name="feature_video_to_voice_name">影片提取聲音</string>
-    <string name="feature_video_to_voice_description">長按影片訊息, 提取音軌並發送為語音</string>
-    <string name="video_to_voice_menu">影片轉語音</string>
-    <string name="video_to_voice_no_video">找不到影片檔案</string>
-    <string name="video_to_voice_extracting">正在提取音軌...</string>
-    <string name="video_to_voice_sent">已發送語音</string>
-    <string name="video_to_voice_failed">提取失敗</string>
     <string name="tts_entry_group_title">選單入口</string>
     <string name="tts_entry_bubble">長按聊天氣泡</string>
     <string name="tts_entry_bubble_description">在文字訊息的長按選單中新增「轉語音」功能</string>
