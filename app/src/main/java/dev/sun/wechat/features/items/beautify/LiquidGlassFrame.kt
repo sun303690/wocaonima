@@ -237,18 +237,25 @@ object LiquidGlassFrame {
     private fun isDarkMode(context: Context): Boolean =
         (context.resources.configuration.uiMode and 48) == 32
 
-    /** 小程序（AppBrand）与排除清单内的界面一律不动（对应 WePeak d0 + 排除集） */
+    /**
+     * 只允许主页四个 tab（会话/通讯录/发现/我，都在 LauncherUI）玻璃化；
+     * context 链里找不到 LauncherUI 的界面一律不动（小程序照旧排除）。
+     * EXCLUDED_ACTIVITIES 保留兜底：万一某界面 context 链没走到 LauncherUI，
+     * 黑名单仍能拦住相册/视频号等不适合玻璃化的界面。
+     */
     private fun isExcludedContext(view: View): Boolean {
         var ctx: Context? = view.context
         var hops = 0
+        var inLauncher = false
         while (ctx != null && hops < 8) {
             val name = ctx.javaClass.name
             if (name.contains("appbrand", ignoreCase = true)) return true
             if (name in EXCLUDED_ACTIVITIES) return true
+            if (name == "com.tencent.mm.ui.LauncherUI") inLauncher = true
             ctx = (ctx as? ContextWrapper)?.baseContext
             hops++
         }
-        return false
+        return !inLauncher
     }
 
     /** TaskBar 文字染黑一次（对应 WePeak b0，记录原色便于排查） */
