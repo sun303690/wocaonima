@@ -1,5 +1,7 @@
 package dev.sun.wechat.features.items.chat_mood
 
+import android.os.Handler
+import android.os.Looper
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.utils.WeLogger
 import kotlinx.coroutines.CoroutineScope
@@ -32,6 +34,7 @@ object ReplyAuto {
     var enabled by KvStore.prefOption("mood_reply_auto", false)
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val mainHandler = Handler(Looper.getMainLooper())
     private val jobs = HashMap<String, Job>()
     private val pending = HashSet<String>()
     private val results = LinkedHashMap<String, ReplySuggestion>()
@@ -186,6 +189,9 @@ object ReplyAuto {
     }
 
     private fun notifyRefresh() {
-        onRefresh?.invoke()
+        // 刷新一律投递到下一轮主线程消息循环：request/cancel 可能发生在消息列表布局遍历中
+        // （onMessageViewAttached 内联路径），原地刷新会在遍历中途改卡片 View 树（chips.removeAllViews），
+        // 触发系统 NPE（ViewGroup.removeAllViewsInLayout unFocus null child）。
+        mainHandler.post { onRefresh?.invoke() }
     }
 }

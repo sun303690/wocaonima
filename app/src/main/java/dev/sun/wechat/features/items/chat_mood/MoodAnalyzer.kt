@@ -1,5 +1,7 @@
 package dev.sun.wechat.features.items.chat_mood
 
+import android.os.Handler
+import android.os.Looper
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.utils.WeLogger
 import kotlinx.coroutines.CancellationException
@@ -20,6 +22,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 object MoodAnalyzer {
     private val TAG = "MoodAnalyzer"
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val mainHandler = Handler(Looper.getMainLooper())
     // Semaphore(1) 串行化：低 RPM 的 API 并发分析(每次2轮调用)也易打爆，先全串行
     private val slots = Semaphore(1)
     private val failures = ConcurrentHashMap<String, Long>()
@@ -31,7 +34,14 @@ object MoodAnalyzer {
 
     /** 界面层注册：某条消息分析完成/失败时触发重绘。 */
     fun onRefresh(l: () -> Unit) { refreshListeners.add(l) }
-    fun refresh() { refreshListeners.forEach { runCatching { it.invoke() } } }
+    fun refresh() {
+        // 刷新要改卡片 View 树（chips.removeAllViews），scope 是 IO 线程——必须投递回主线程异步执行：
+        // ①IO 线程直接改 View 是线程违规；②若调用恰发生在布局遍历中（cancel 的 finally 内联），
+        // 原地改树会触发系统 NPE（ViewGroup.removeAllViewsInLayout unFocus null child）。
+        mainHandler.post {
+            refreshListeners.forEach { runCatching { it.invoke() } }
+        }
+    }
 
     fun failure(key: String): String? = failureMessages[key]
     fun retryFailure(key: String) {

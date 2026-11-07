@@ -55,31 +55,6 @@ object LiquidGlassFrame {
     private const val MIN_HEIGHT_DP = 40f
 
     /** WePeak 的全局排除 Activity 清单（相册/视频/扫描/视频号等不适合玻璃化的界面） */
-    private val EXCLUDED_ACTIVITIES = setOf(
-        "com.tencent.mm.plugin.sns.ui.SnsOnlineVideoActivity",
-        "com.tencent.mm.plugin.recordvideo.activity.MMRecordUI",
-        "com.tencent.mm.plugin.fav.ui.detail.FavoriteImgDetailUI",
-        "com.tencent.mm.plugin.scanner.ui.BaseScanUI",
-        "com.tencent.mm.plugin.finder.ui.FinderHomeAffinityUI",
-        "com.tencent.mm.plugin.lite.ui.WxaLiteAppLiteUI",
-        "com.tencent.mm.ui.chatting.gallery.ImageGalleryUI",
-        "com.tencent.mm.ui.chatting.gallery.ImageGalleryGridUI",
-        "com.tencent.mm.ui.chatting.gallery.MediaHistoryGalleryUI",
-        "com.tencent.mm.plugin.subapp.ui.gallery.GestureGalleryUI",
-        "com.tencent.mm.plugin.gallery.picker.view.ImageCropUI",
-        "com.tencent.mm.plugin.sns.ui.SnsBrowseUI",
-        "com.tencent.mm.plugin.finder.feed.ui.FinderShareFeedRelUI",
-        "com.tencent.mm.plugin.gallery.ui.ImagePreviewUI",
-        "com.tencent.mm.plugin.gallery.ui.AlbumPreviewUI",
-        "com.tencent.mm.plugin.luckymoney.ui.LuckyMoneyBeforeDetailUI",
-        "com.tencent.mm.plugin.location_soso.SoSoProxyUI",
-        "com.tencent.mm.plugin.finder.feed.ui.FinderProfileTimeLineUI",
-        "com.tencent.mm.plugin.sns.ui.SnsGalleryUI",
-        "com.tencent.mm.pluginsdk.ui.ProfileHdHeadImg",
-        "com.tencent.mm.plugin.brandservice.ui.timeline.preload.ui.TmplWebViewMMUI",
-        "com.tencent.mm.plugin.voip.ui.VideoActivity",
-    )
-
     /** TaskBar 文字染色记录（原色），与 WePeak b0 的 WeakHashMap 同义 */
     private val taskBarOriginalTextColors = HashMap<View, Int>()
 
@@ -211,6 +186,10 @@ object LiquidGlassFrame {
 
     private fun viewQualifies(view: View): Boolean {
         if (isExcludedContext(view)) return false
+        // 下拉小程序面板等视图挂在 LauncherUI 名下，但类名在 appbrand 包，
+        // context 白名单拦不住，按类名再拦一道（反编译 8.0.78 实证：
+        // 下拉面板容器 com.tencent.mm.ui.appbrand.NewPullDownView）。
+        if (view.javaClass.name.contains("appbrand", ignoreCase = true)) return false
         val density = view.resources.displayMetrics.density
         if (view.height < (MIN_HEIGHT_DP * density).toInt()) return false
         if (view.javaClass.simpleName == "ConversationListView") return false
@@ -240,8 +219,6 @@ object LiquidGlassFrame {
     /**
      * 只允许主页四个 tab（会话/通讯录/发现/我，都在 LauncherUI）玻璃化；
      * context 链里找不到 LauncherUI 的界面一律不动（小程序照旧排除）。
-     * EXCLUDED_ACTIVITIES 保留兜底：万一某界面 context 链没走到 LauncherUI，
-     * 黑名单仍能拦住相册/视频号等不适合玻璃化的界面。
      */
     private fun isExcludedContext(view: View): Boolean {
         var ctx: Context? = view.context
@@ -250,7 +227,6 @@ object LiquidGlassFrame {
         while (ctx != null && hops < 8) {
             val name = ctx.javaClass.name
             if (name.contains("appbrand", ignoreCase = true)) return true
-            if (name in EXCLUDED_ACTIVITIES) return true
             if (name == "com.tencent.mm.ui.LauncherUI") inLauncher = true
             ctx = (ctx as? ContextWrapper)?.baseContext
             hops++
