@@ -159,7 +159,7 @@ object PlusMenuCard : SwitchFeature() {
                 }
 
                 // 1. 容器背景：优先字段里的 ListView，其次按类型扫 PopupWindow（字段名漂移也扫得到）
-                val container = listView ?: run {
+                val container: android.view.View? = listView ?: run {
                     var popup: android.widget.PopupWindow? = null
                     for (f in helper.javaClass.declaredFields) {
                         if (popup != null) break
