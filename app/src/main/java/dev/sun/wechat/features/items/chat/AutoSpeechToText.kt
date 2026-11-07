@@ -53,6 +53,8 @@ object AutoSpeechToText : SwitchFeature(),
             .onFailure { WeLogger.e(TAG, "无法从绑定参数取到消息，getMsgInfoFromParam 失败", it) }
             .getOrNull() ?: return
         if (msgInfo.typeCode != MessageType.VOICE.code) return
+        // 只转「对方」的语音：自己发的语音微信本就不提供转写，转了也无意义
+        if (msgInfo.isSend != 0) return
 
         val id = msgInfo.id
         if (processedMessages[id] == true) {

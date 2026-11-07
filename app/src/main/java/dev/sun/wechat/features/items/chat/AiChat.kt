@@ -230,13 +230,14 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         if (!isEnabled) return
         if (table != "message") return
         val type = values.getAsInteger("type") ?: return
-        if (MessageType.fromCode(type)?.isText != true) return
+        val messageType = MessageType.fromCode(type)
+        // 语音也放行：对方语音经微信转写后（VoiceTranscriptStore）同样能自动回复
+        val isVoice = messageType == MessageType.VOICE
+        if (messageType?.isText != true && !isVoice) return
         val isSend = values.getAsInteger("isSend") ?: return
         if (isSend != 0) return
         val talker = values.getAsString("talker").orEmpty()
         if (talker.isBlank() || talker.startsWith("gh_")) return
-        val content = values.getAsString("content").orEmpty()
-        if (content.isBlank()) return
 
         // 微信同一条消息可能插入多次，按 msgSvrId/localId 去重
         val dedupeKey = values.getAsString("msgSvrId")?.takeIf { it.isNotBlank() && it != "0" }
@@ -244,6 +245,35 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         if (dedupeKey != null && handledIds.putIfAbsent(dedupeKey, true) != null) return
         pruneHandledIds()
 
+        if (isVoice) {
+            // 转写文本只活在微信内存 bean（不落数据库），由消息行绑定（MessageSniffer）
+            // 记进 VoiceTranscriptStore。这里延迟等自动转写落地再取；取不到（没开
+            // 自动转写/一直没转完）就放弃这条语音，绝不拿 voicemsg 的 XML 当正文瞎回复。
+            val localId = values.getAsInteger("localId")?.toLong()
+            if (localId == null) return
+            scope.launch {
+                var transcript: String? = null
+                repeat(16) {
+                    transcript = VoiceTranscriptStore.get(localId)
+                    if (!transcript.isNullOrBlank()) return@repeat
+                    delay(500)
+                }
+                if (transcript.isNullOrBlank()) {
+                    WeLogger.i(TAG, "AI reply skipped: voice without transcript, talker=$talker, localId=$localId")
+                    return@launch
+                }
+                dispatchNewMessage(talker, transcript!!)
+            }
+            return
+        }
+
+        val content = values.getAsString("content").orEmpty()
+        if (content.isBlank()) return
+        dispatchNewMessage(talker, content)
+    }
+
+    /** 新消息（文字原文或语音转写文本）统一入口：观察/群触发/冷却/限流后交给模型。 */
+    private fun dispatchNewMessage(talker: String, content: String) {
         val config = snapshot()
         if (!config.allowsTalker(talker)) return
         val isGroup = isGroupTalker(talker)
@@ -259,7 +289,6 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         }
         lastReceiveAt = now
 
-        val version = configVersion.get()
         scope.launch {
             var next: String? = triggeredContent
             try {

@@ -15,11 +15,20 @@ object ReplyHttpClient {
     /** 上游限流时的统一话术；上层据此判定是否需要冷却。 */
     const val RATE_LIMITED_MESSAGE = "请求过于频繁，请稍后重试"
 
+    /** 上游内容安全拦截的统一话术；解析失败命中它时按更长的冷却处理。 */
+    const val HIGH_RISK_MESSAGE = "上游内容安全拦截了这次请求，请调整提示词或降低发送频次"
+
     /** 被限流后全局静默的时间，防止连珠炮把孩子送进封禁窗口。 */
     private const val RATE_COOLDOWN_MS = 30_000L
 
+    /** 内容安全拦截的冷却：一分钟足够风头过去，久了反而耽误正事。 */
+    private const val HIGH_RISK_COOLDOWN_MS = 60_000L
+
     @Volatile
     private var cooldownUntil = 0L
+
+    @Volatile
+    private var cooldownHighRisk = false
 
     /** 生成回复建议 */
     suspend fun generateReply(system: String, user: String): ReplySuggestion = withContext(Dispatchers.IO) {
@@ -28,8 +37,7 @@ object ReplyHttpClient {
         try {
             ReplyProtocol.parseReplyText(text)
         } catch (e: Exception) {
-            WeLogger.e(TAG, "parse reply failed: $text", e)
-            throw IllegalStateException(nonJsonHint(text) ?: "模型输出格式不对，请重试或换个模型", e)
+            throw parseFailure("reply", text, e)
         }
     }
 
@@ -40,9 +48,24 @@ object ReplyHttpClient {
         try {
             ReplyProtocol.parseTopicsText(text)
         } catch (e: Exception) {
-            WeLogger.e(TAG, "parse topics failed: $text", e)
-            throw IllegalStateException(nonJsonHint(text) ?: "模型输出格式不对，请重试或换个模型", e)
+            throw parseFailure("topics", text, e)
         }
+    }
+
+    /**
+     * 解析失败统一走这里：命中内容安全拦截就冷却 5 分钟；
+     * 日志只留一句人话，不再把上游英文原文整个砸进日志刷屏。
+     */
+    private fun parseFailure(where: String, text: String, e: Exception): IllegalStateException {
+        val hint = nonJsonHint(text)
+        if (hint == HIGH_RISK_MESSAGE) {
+            cooldownUntil = System.currentTimeMillis() + HIGH_RISK_COOLDOWN_MS
+            cooldownHighRisk = true
+            WeLogger.w(TAG, "parse $where: high-risk rejection, cool down ${HIGH_RISK_COOLDOWN_MS / 1000}s")
+        } else {
+            WeLogger.e(TAG, "parse $where failed", e)
+        }
+        return IllegalStateException(hint ?: "模型输出格式不对，请重试或换个模型", e)
     }
 
     private suspend fun complete(system: String, user: String): String {
@@ -51,7 +74,9 @@ object ReplyHttpClient {
         val now = System.currentTimeMillis()
         if (now < cooldownUntil) {
             val left = (cooldownUntil - now) / 1000 + 1
-            throw IllegalStateException("$RATE_LIMITED_MESSAGE（还需 ${left} 秒）")
+            val reason = if (cooldownHighRisk) "上游内容安全拦截，冷却中（还需 ${left} 秒）"
+            else "$RATE_LIMITED_MESSAGE（还需 ${left} 秒）"
+            throw IllegalStateException(reason)
         }
         return try {
             AgentLlm.completeWithPrompts(modelId, system, user)
@@ -62,6 +87,7 @@ object ReplyHttpClient {
             val shown = friendly(e)
             if (shown.startsWith(RATE_LIMITED_MESSAGE)) {
                 cooldownUntil = System.currentTimeMillis() + RATE_COOLDOWN_MS
+                cooldownHighRisk = false
                 WeLogger.w(TAG, "rate limited, cool down ${RATE_COOLDOWN_MS / 1000}s")
             }
             throw IllegalStateException(shown, e)

@@ -29,6 +29,10 @@ object MoodAnalyzer {
     private val failureMessages = ConcurrentHashMap<String, String>()
     private val refreshListeners = CopyOnWriteArrayList<() -> Unit>()
 
+    /** Jev 模型未接通时只提示一次，别让每条消息的失败都刷一遍日志。 */
+    @Volatile
+    private var jevOffLogged = false
+
     var enabled by KvStore.prefOption("mood_enabled", false)
     val header = "情绪分析"
 
@@ -55,6 +59,16 @@ object MoodAnalyzer {
     fun submit(input: AnalysisInput, stillVisible: (() -> Boolean)? = null): String? {
         if (!enabled) return null
         if (MessagePolicy.textOrNull(input.text) == null) return null
+        // Jev 模型未接通时直接静默跳过：不占槽位、不写失败账、不刷「分析失败」日志。
+        // 否则 MoodTransport.analyze 每条消息都抛「Jev 模型已关闭」，一天能刷出上百条。
+        if (!MoodTransport.jevEnabled) {
+            if (!jevOffLogged) {
+                jevOffLogged = true
+                WeLogger.w(TAG, "Jev 模型未接通，情绪分析暂停提交；在「情绪分析」设置里接通后自动恢复")
+            }
+            return null
+        }
+        jevOffLogged = false
         val key = input.key
         if (System.currentTimeMillis() - (failures[key] ?: 0L) < 30_000L) return key
         if (!MoodStore.claim(key)) return key

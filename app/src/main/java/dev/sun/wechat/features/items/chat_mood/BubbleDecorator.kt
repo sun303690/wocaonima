@@ -107,8 +107,10 @@ object BubbleDecorator {
     }
 
     private fun render(state: Card) {
-        // 该会话没开情绪分析时，卡片只显示「帮我回」建议，不占上半截分析位
-        val hasAnalysis = state.analysisEnabled && (MoodAnalyzer.enabled || MoodStore.get(state.key) != null)
+        // 该会话没开情绪分析时，卡片只显示「帮我回」建议，不占上半截分析位；
+        // Jev 模型未接通同理：没有结果可画，分析区整个藏掉，chips（帮我回）照常显示。
+        val hasAnalysis = state.analysisEnabled && MoodTransport.jevEnabled &&
+            (MoodAnalyzer.enabled || MoodStore.get(state.key) != null)
         state.header.visibility = if (hasAnalysis) View.VISIBLE else View.GONE
         state.body.visibility = if (hasAnalysis) View.VISIBLE else View.GONE
         if (hasAnalysis) {

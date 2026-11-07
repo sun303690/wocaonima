@@ -30,6 +30,9 @@ object ReplyAuto {
     /** 撞上限流后，自动回复整体歇一阵再说话，免得一封一封往刀口上撞。 */
     private const val RATE_PAUSE_MS = 90_000L
 
+    /** 上游内容安全拦截不是抖动，是上游在盯：自动回复歇一分钟，等风头过去。 */
+    private const val HIGH_RISK_PAUSE_MS = 60_000L
+
     /** 设置项：对方新消息到达时自动生成可选回复。 */
     var enabled by KvStore.prefOption("mood_reply_auto", false)
 
@@ -135,6 +138,11 @@ object ReplyAuto {
                 if (shown.startsWith(ReplyHttpClient.RATE_LIMITED_MESSAGE)) {
                     pausedUntil = System.currentTimeMillis() + RATE_PAUSE_MS
                     WeLogger.w(TAG, "rate limited, pause auto reply ${RATE_PAUSE_MS / 1000}s")
+                }
+                // 冷却期的报错话术（「上游内容安全拦截，冷却中…」）与直出话术都含这五个字，一并接住
+                if (shown.contains("内容安全拦截")) {
+                    pausedUntil = System.currentTimeMillis() + HIGH_RISK_PAUSE_MS
+                    WeLogger.w(TAG, "high-risk rejection, pause auto reply ${HIGH_RISK_PAUSE_MS / 1000}s")
                 }
             } finally {
                 pending -= key

@@ -2,8 +2,10 @@ package dev.sun.wechat.features.items.chat_mood
 
 import android.view.View
 import dev.sun.wechat.features.api.core.models.MessageInfo
+import dev.sun.wechat.features.api.core.models.MessageType
 import dev.sun.wechat.features.api.ui.WeChatMessageViewApi
 import dev.sun.wechat.features.api.ui.WeCurrentConversationApi
+import dev.sun.wechat.features.items.chat.VoiceTranscriptStore
 import dev.sun.wechat.utils.WeLogger
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.collections.ArrayDeque
@@ -33,6 +35,13 @@ object MessageSniffer {
                 if (!MoodAnalyzer.enabled && !ReplyAuto.enabled) return
                 // 除撤回/系统提示外全部参与（图片、视频、文件、链接、卡片用占位描述入上下文）
                 if (!ReplyMessageSupport.isReplyEligible(message)) return
+                // 语音消息：转写文本只活在微信内存 bean 里，绑定顺手记进缓存，
+                // 供 AI 回复（AiChat）被语音触发时按消息 id 取用
+                if (message.typeCode == MessageType.VOICE.code) {
+                    ReplyMessageSupport.voiceTranscript(message)?.let {
+                        VoiceTranscriptStore.put(message.id, it)
+                    }
+                }
                 val isPlainText = ReplyMessageSupport.isPlainText(message)
                 val talker = message.talker
                 val text = if (isPlainText) {
@@ -48,8 +57,9 @@ object MessageSniffer {
                 while (deque.size > 24) deque.removeFirst()
                 // 情绪分析只分析/装饰对方的消息；自己发的消息仅进上下文，不出卡、不分析
                 if (message.isSend != 0) return
-                // 会话级开关是唯一门槛：只有显式开启过「情绪分析」的会话才出卡片、才跑帮我回
-                if (!ConversationSwitches.isEnabled(talker)) return
+                // 会话级开关只管「情绪分析」；自动帮我回不受它限制，否则只开自动回复的聊天不出建议卡
+                val chatAnalysisEnabled = ConversationSwitches.isEnabled(talker)
+                if (!chatAnalysisEnabled && !ReplyAuto.enabled) return
                 val context = deque.dropLast(1).takeLast(MessagePolicy.MAX_CONTEXT_MESSAGES)
                     .map { ContextMessage(it.first, it.second) }
                 val input = AnalysisInput(
@@ -63,7 +73,7 @@ object MessageSniffer {
                 // 避免进入聊天页批量绑定时在主线程同步改 View 树导致点击卡顿。
                 view.post {
                     if (view.isAttachedToWindow) {
-                        BubbleDecorator.show(view, input, analysisEnabled = true)
+                        BubbleDecorator.show(view, input, analysisEnabled = chatAnalysisEnabled)
                     }
                 }
                 // 滑到底部才真正请求分析/帮我回；未在底部时暂存，等滚动到底再补

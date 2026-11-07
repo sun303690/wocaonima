@@ -17,6 +17,7 @@ import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.utils.WeLogger
 import java.lang.reflect.Constructor
 import java.lang.reflect.Field
+import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.util.WeakHashMap
 import java.util.concurrent.CopyOnWriteArrayList
@@ -101,7 +102,7 @@ object WeContactPrefsScreenApi : ApiFeature() {
                                     setKeyMethod.invoke(pref, key)
                                     setTitleMethod.invoke(pref, item.title)
                                     item.summary?.let { summary -> setSummaryMethod.invoke(pref, summary) }
-                                    addPreferenceMethod.invoke(adapterInstance, pref, item.position)
+                                    addPrefSafe(adapterInstance, pref, item.position)
                                 }
                             } catch (ex: Exception) {
                                 WeLogger.e(
@@ -180,5 +181,22 @@ object WeContactPrefsScreenApi : ApiFeature() {
 
         setSummaryMethod = charSeqMethods.getOrElse(0) { error("setSummary method not found") }
         setTitleMethod = charSeqMethods.getOrElse(1) { error("setTitle method not found") }
+    }
+
+    /**
+     * 微信的偏好列表是 LinkedList 按位置插：ChatroomInfoUI 的 initView 时列表常常还是空的，
+     * provider 给的位置（多为 1）直接越界（IndexOutOfBoundsException: Index: 1, Size: 0）。
+     * 越界就退回头部插入，条目顺序可能差一位，但一定挂得上。
+     */
+    private fun addPrefSafe(adapterInstance: Any, pref: Any, position: Int) {
+        try {
+            addPreferenceMethod.invoke(adapterInstance, pref, position)
+        } catch (ex: InvocationTargetException) {
+            if (ex.cause is IndexOutOfBoundsException) {
+                addPreferenceMethod.invoke(adapterInstance, pref, 0)
+            } else {
+                throw ex
+            }
+        }
     }
 }
