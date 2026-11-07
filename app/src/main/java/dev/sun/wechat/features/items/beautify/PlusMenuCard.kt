@@ -180,9 +180,9 @@ object PlusMenuCard : SwitchFeature() {
                     }
                 }
 
-                // 2. adapter 兜底：字段 → 容器当前 adapter
+                // 2. adapter 兜底：字段 → ListView 当前 adapter
                 if (adapter == null) {
-                    adapter = runCatching { container?.adapter as? BaseAdapter }.getOrNull()
+                    adapter = runCatching { listView?.adapter as? BaseAdapter }.getOrNull()
                 }
                 if (adapter == null) {
                     WeLogger.d(TAG, "加号菜单容器已换底，adapter 暂不可得（字段 ${helper.javaClass.simpleName}），等下次显示入口再挂")
