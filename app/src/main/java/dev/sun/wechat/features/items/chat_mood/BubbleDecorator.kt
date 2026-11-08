@@ -132,8 +132,16 @@ object BubbleDecorator {
                 chips.addView(hint(state, "帮我回 · 点一条填入输入框"))
                 suggestion.parts.forEachIndexed { index, part -> chips.addView(chip(state, part, index + 1)) }
                 if (VoiceReply.enabled() && suggestion.parts.isNotEmpty()) {
-                    val first = suggestion.parts.first()
-                    chips.addView(voiceChip(state, "🔊 语音发送：${first.take(18)}"))
+                    // 语音要把这一整轮建议念完：卡片上的「语音发送」过去只把第 1 条的
+                    // 前 18 个字送去合成，听起来话没说完。这里把各组建议按顺序拼起来。
+                    val parts = suggestion.parts.map { it.trim() }.filter { it.isNotEmpty() }
+                    if (parts.isNotEmpty()) {
+                        val spoken = parts.joinToString("。") { part ->
+                            part.trimEnd('。', '，', '、', '！', '？', '!', '?', '.')
+                        }
+                        val countHint = if (parts.size > 1) "（共 ${parts.size} 条）" else ""
+                        chips.addView(voiceChip(state, "🔊 语音发送$countHint：${parts.first().take(18)}", spoken))
+                    }
                 }
                 if (suggestion.reason.isNotBlank()) {
                     chips.addView(hint(state, suggestion.reason))
@@ -199,11 +207,11 @@ object BubbleDecorator {
         }
     }
 
-    /** 语音发送特殊行：accent 色文字 + 边框，不编号。 */
-    private fun voiceChip(state: Card, text: String): TextView {
+    /** 语音发送特殊行：accent 色文字 + 边框，不编号。[label] 是卡片上的短标签，[spoken] 才是送去合成的全文。 */
+    private fun voiceChip(state: Card, label: String, spoken: String): TextView {
         val c = colors(state.row)
         return TextView(state.row.context).apply {
-            this.text = text
+            this.text = label
             textSize = 13f
             maxLines = 2
             ellipsize = TextUtils.TruncateAt.END
@@ -222,7 +230,7 @@ object BubbleDecorator {
                     showToast(state.row.context, "语音未配置：请到「设置 → AI 回复配置」填写 API Key / Cookie")
                 } else {
                     showToast(state.row.context, "正在合成语音…")
-                    VoiceReply.send(state.input.talker, text.removePrefix("🔊 语音发送："))
+                    VoiceReply.send(state.input.talker, spoken)
                 }
             }
         }
