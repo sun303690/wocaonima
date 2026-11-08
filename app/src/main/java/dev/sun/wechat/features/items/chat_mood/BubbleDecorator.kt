@@ -226,12 +226,13 @@ object BubbleDecorator {
         return row
     }
 
-    /** 单条语音按钮：只合成这一条建议，不再把整轮拼成一条长语音。 */
+    /** 单条语音按钮：只合成这一条建议，不再把整轮拼成一条长语音。
+     *  文案只写「🔊 语音」——点一下就是发送，不用再标“发送”二字。 */
     private fun voiceButton(state: Card, spoken: String): TextView {
         val c = colors(state.row)
         return TextView(state.row.context).apply {
-            text = "🔊"
-            textSize = 15f
+            text = "🔊 语音"
+            textSize = 13f
             gravity = Gravity.CENTER
             setTextColor(c.accent)
             background = GradientDrawable().apply {
@@ -239,10 +240,10 @@ object BubbleDecorator {
                 setColor(Color.TRANSPARENT)
                 setStroke(dp(state.row, 1), c.accent)
             }
-            val lp = LinearLayout.LayoutParams(dp(state.row, 42), ViewGroup.LayoutParams.WRAP_CONTENT)
+            val lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             lp.marginStart = dp(state.row, 6)
             layoutParams = lp
-            setPadding(0, dp(state.row, 7), 0, dp(state.row, 7))
+            setPadding(dp(state.row, 8), dp(state.row, 7), dp(state.row, 8), dp(state.row, 7))
             contentDescription = "语音发送这一条"
             setOnClickListener { sendVoice(state, spoken) }
         }
