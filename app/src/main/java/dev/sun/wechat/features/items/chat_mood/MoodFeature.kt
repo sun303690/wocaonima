@@ -177,7 +177,13 @@ object MoodFeature : ClickableFeature() {
                         MoodTransport.jevModel = jevModel.trim()
                         ReplyAuto.enabled = autoReply
                         // 打开自动帮我回时确保消息卡片监听已订阅，不依赖「情绪分析」模块是否整体启用
-                        if (autoReply) MessageSniffer.ensureSubscribed()
+                        if (autoReply) {
+                            MessageSniffer.ensureSubscribed()
+                        } else {
+                            // 关掉时清掉缓存的建议并重画，别让消息下方继续挂着旧的回复建议
+                            ReplyAuto.clear()
+                            BubbleDecorator.refreshCards()
+                        }
                         onDismiss()
                     }) { Text(stringResource(R.string.dialog_confirm)) }
                 },

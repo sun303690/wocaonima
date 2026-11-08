@@ -106,6 +106,9 @@ object BubbleDecorator {
         }
     }
 
+    /** 外部开关变化（例如关掉自动帮我回）后重画已挂载的卡片，清掉过期的建议。 */
+    fun refreshCards() = refreshAll()
+
     private fun render(state: Card) {
         // 该会话没开情绪分析时，卡片只显示「帮我回」建议，不占上半截分析位；
         // Jev 模型未接通同理：没有结果可画，分析区整个藏掉，chips（帮我回）照常显示。

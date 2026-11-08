@@ -84,7 +84,13 @@ object AutoReplyEntry : ClickableFeature() {
                 confirmButton = {
                     Button(onClick = {
                         ReplyAuto.enabled = autoReply
-                        if (autoReply) MessageSniffer.ensureSubscribed()
+                        if (autoReply) {
+                            MessageSniffer.ensureSubscribed()
+                        } else {
+                            // 关掉时清掉缓存的建议并重画，别让消息下方继续挂着旧的回复建议
+                            ReplyAuto.clear()
+                            BubbleDecorator.refreshCards()
+                        }
                         showToast(
                             context,
                             if (autoReply) "已开启，请在目标聊天里用「自动帮我回」开关该聊天" else "已关闭自动帮我回",
