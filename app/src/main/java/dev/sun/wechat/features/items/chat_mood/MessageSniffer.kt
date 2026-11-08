@@ -99,7 +99,8 @@ object MessageSniffer {
         val talker = WeCurrentConversationApi.value
         if (talker.isBlank()) return
         val chatAnalysisEnabled = MoodAnalyzer.enabled && ConversationSwitches.isEnabled(talker)
-        if (!chatAnalysisEnabled && !(ReplyAuto.enabled && ConversationSwitches.isReplyEnabled(talker))) return
+        val chatReplyEnabled = ReplyAuto.enabled && ConversationSwitches.isReplyEnabled(talker)
+        if (!chatAnalysisEnabled && !chatReplyEnabled) return
         val deque = recentByTalker[talker] ?: ArrayDeque()
         val context = deque.dropLast(1).takeLast(MessagePolicy.MAX_CONTEXT_MESSAGES)
             .map { ContextMessage(it.first, it.second) }
@@ -124,16 +125,22 @@ object MessageSniffer {
                 messageId = message.createTime,
                 speaker = "对方",
             )
-            // 同样延迟到下一帧，且只补最近若干条可见消息，避免一次性全量挂卡卡顿
-            view.post {
-                if (view.isAttachedToWindow) {
-                    BubbleDecorator.show(view, input, analysisEnabled = chatAnalysisEnabled)
+            // 分析开着才给历史消息补分析卡；只开帮回时先不挂，等最后一条拿到建议再挂一张，
+            // 否则这些消息下方会留下一张空白卡片
+            if (chatAnalysisEnabled) {
+                view.post {
+                    if (view.isAttachedToWindow) {
+                        BubbleDecorator.show(view, input, analysisEnabled = true)
+                    }
                 }
-            }
-            if (isPlainText) {
+                if (isPlainText) {
+                    lastInput = input
+                    lastView = view
+                    if (++shown >= MAX_REFRESH_CARDS) break
+                }
+            } else {
                 lastInput = input
                 lastView = view
-                if (++shown >= MAX_REFRESH_CARDS) break
             }
         }
         // 当前没有已绑定文字消息时，回退到最近一次进过上下文的对方文字消息
@@ -151,6 +158,15 @@ object MessageSniffer {
         // 补最近一条的情绪分析与帮我回（键与卡片一致，结果会刷到对应卡片上）；同样受滑到底部约束
         val target = lastInput ?: return
         val anchor = lastView
+        if (!chatAnalysisEnabled && anchor != null) {
+            // 只开帮回：只给最近一条挂卡，建议生成后由 ReplyAuto.onRefresh 刷进这张卡
+            val replyAnchor = anchor
+            replyAnchor.post {
+                if (replyAnchor.isAttachedToWindow) {
+                    BubbleDecorator.show(replyAnchor, target, analysisEnabled = false)
+                }
+            }
+        }
         val targetIsPlainText = anchor
             ?.let { WeChatMessageViewApi.getBoundMessage(it) }
             ?.let { ReplyMessageSupport.isPlainText(it) }
