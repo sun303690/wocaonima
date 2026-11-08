@@ -258,6 +258,20 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                     if (!transcript.isNullOrBlank()) return@repeat
                     delay(500)
                 }
+                // 微信没给转写文本时，用模块自己接的 ASR 识别一遍（失败就放弃这条语音）
+                if (transcript.isNullOrBlank()) {
+                    val encPath = values.getAsString("imgPath")
+                    if (AsrEngine.ready() && !encPath.isNullOrBlank()) {
+                        WeLogger.i(TAG, "语音无微信转写，改用 ASR：talker=$talker, localId=$localId")
+                        transcript = runCatching {
+                            withContext(Dispatchers.IO) { AsrEngine.transcribeEncPath(encPath) }
+                        }.getOrElse {
+                            WeLogger.w(TAG, "ASR 识别失败：${it.message}")
+                            null
+                        }
+                        transcript?.takeIf { it.isNotBlank() }?.let { VoiceTranscriptStore.put(localId, it) }
+                    }
+                }
                 if (transcript.isNullOrBlank()) {
                     WeLogger.i(TAG, "AI reply skipped: voice without transcript, talker=$talker, localId=$localId")
                     return@launch

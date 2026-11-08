@@ -43,6 +43,7 @@ import dev.sun.wechat.agent.model.ModelProviderManager
 import dev.sun.wechat.features.api.core.WeDatabaseApi
 import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.features.api.core.models.MessageInfo
+import dev.sun.wechat.features.api.core.models.MessageType
 import dev.sun.wechat.features.api.ui.WeChatMessageContextMenuApi
 import dev.sun.wechat.features.items.chat_mood.ReplyMessageSupport
 import dev.sun.wechat.features.items.chat_mood.VoiceReply
@@ -114,6 +115,9 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
     private fun ShowComposeDialogScope.SettingsDialogContent(context: android.content.Context) {
         var contextInput by remember { mutableStateOf(contextLimit.toString()) }
         var countInput by remember { mutableStateOf(replyCount.toString()) }
+        var asrUrlInput by remember { mutableStateOf(AsrEngine.baseUrl) }
+        var asrKeyInput by remember { mutableStateOf(AsrEngine.apiKey) }
+        var asrModelInput by remember { mutableStateOf(AsrEngine.model) }
         AlertDialogContent(
             title = { Text(stringResource(R.string.feature_ai_smart_reply_name)) },
             text = {
@@ -143,6 +147,53 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
                                 )
                             }
                         }
+                        // 语音识别（ASR）：OpenAI 兼容的 /audio/transcriptions，让 AI 能听懂对方语音
+                        item {
+                            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
+                                Text("语音识别接口", style = MiuixTheme.textStyles.footnote1)
+                                TextField(
+                                    value = asrUrlInput,
+                                    onValueChange = { asrUrlInput = it.trim() },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true,
+                                    label = "如 https://api.siliconflow.cn/v1",
+                                )
+                            }
+                        }
+                        item {
+                            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
+                                Text("语音识别 Key", style = MiuixTheme.textStyles.footnote1)
+                                TextField(
+                                    value = asrKeyInput,
+                                    onValueChange = { asrKeyInput = it.trim() },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true,
+                                    label = "sk-...",
+                                )
+                            }
+                        }
+                        item {
+                            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
+                                Text("语音识别模型", style = MiuixTheme.textStyles.footnote1)
+                                TextField(
+                                    value = asrModelInput,
+                                    onValueChange = { asrModelInput = it.trim() },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true,
+                                    label = "whisper-1 / FunAudioLLM/SenseVoiceSmall",
+                                )
+                            }
+                        }
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                            ) {
+                                TextButton(onClick = {
+                                    AsrEngine.clearCache()
+                                    showToast(context, "已清空语音识别缓存")
+                                }) { Text("清空识别缓存") }
+                            }
+                        }
                     }
                 }
             },
@@ -150,6 +201,9 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
                 Button(onClick = {
                     contextLimit = contextInput.toIntOrNull()?.coerceIn(1, 50) ?: 10
                     replyCount = countInput.toIntOrNull()?.coerceIn(1, 20) ?: 20
+                    AsrEngine.baseUrl = asrUrlInput.trim()
+                    AsrEngine.apiKey = asrKeyInput.trim()
+                    AsrEngine.model = asrModelInput.trim().ifBlank { "whisper-1" }
                     onDismiss()
                 }) { Text(stringResource(R.string.dialog_confirm)) }
             },
@@ -171,9 +225,27 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
     }
 
     private fun showSmartReplyDialog(activity: Activity, msgInfo: MessageInfo) {
+        // 语音消息：微信自带转写拿不到时，先用模块接的 ASR 识别，再拿识别结果生成回复
+        val isVoice = msgInfo.type?.code == MessageType.VOICE.code
+        val needAsr = isVoice && ReplyMessageSupport.voiceTranscript(msgInfo).isNullOrBlank() &&
+            AsrEngine.ready()
+        if (needAsr) {
+            showToast(activity, "正在识别语音…")
+            AsrEngine.transcribeMessage(msgInfo) { text, error ->
+                activity.runOnUiThread {
+                    if (text.isNullOrBlank()) showToast(activity, error ?: "语音识别失败")
+                    openSmartReplyDialog(activity, msgInfo, text ?: msgMessageText(msgInfo))
+                }
+            }
+            return
+        }
+        openSmartReplyDialog(activity, msgInfo, msgMessageText(msgInfo))
+    }
+
+    private fun openSmartReplyDialog(activity: Activity, msgInfo: MessageInfo, content: String) {
         showComposeDialog(activity) {
             tuneImeForEditing(this)
-            SmartReplyDialogContent(msgInfo.talker, msgMessageText(msgInfo))
+            SmartReplyDialogContent(msgInfo.talker, content)
         }
     }
 
