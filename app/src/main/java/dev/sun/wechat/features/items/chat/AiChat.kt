@@ -423,20 +423,15 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         }
     }
 
-    /** 语音发送：先生成 mp3（同文本+音色+情绪命中缓存则不联网不扣额度），转 silk 后发语音。
-     *  生成失败或没有音色时自动降级为发文字，保证 AI 回复不丢。 */
+    /** 语音发送：按「文字转语音」里选的后端合成（Breeze/豆包/魔方），转 silk 后发语音。
+     *  生成失败或没配好凭据时自动降级为发文字，保证 AI 回复不丢。 */
     private suspend fun sendReplyAsVoice(talker: String, text: String): Boolean {
-        if (TextToSpeech.breezeVoice.isBlank()) return WeMessageApi.sendText(talker, text)
-        val mp3 = suspendCancellableCoroutine<String?> { cont ->
-            TextToSpeech.generateVoiceBreeze(
-                text = text,
-                voiceId = TextToSpeech.breezeVoice,
-                instructions = TextToSpeech.selectedEmotion,
-            ) { path, _ -> cont.resume(path) }
+        val audio = suspendCancellableCoroutine<String?> { cont ->
+            TextToSpeech.synthesizeByBackend(text) { path, _ -> cont.resume(path) }
         }
-        if (mp3.isNullOrEmpty()) return WeMessageApi.sendText(talker, text)
+        if (audio.isNullOrEmpty()) return WeMessageApi.sendText(talker, text)
         return suspendCancellableCoroutine { cont ->
-            TextToSpeech.sendVoiceTo(talker, mp3) { ok -> cont.resume(ok) }
+            TextToSpeech.sendVoiceTo(talker, audio) { ok -> cont.resume(ok) }
         }
     }
 

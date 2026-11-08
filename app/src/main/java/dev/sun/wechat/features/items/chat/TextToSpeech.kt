@@ -1168,6 +1168,56 @@ object TextToSpeech :
         }.start()
     }
 
+    /**
+     * 按当前所选后端合成语音，成功给出音频文件路径（Breeze/魔方是 mp3，豆包是 aac），
+     * 失败给出原因。AI 自动回复、候选回复、气泡卡等调用方统一走这里，
+     * 免得各处自己判后端时漏掉豆包/魔方，或用了别的后端的音色。
+     */
+    fun synthesizeByBackend(text: String, cb: (String?, String) -> Unit) {
+        when (backend) {
+            BACKEND_DOUBAO -> {
+                if (doubaoCookie.isBlank()) {
+                    cb(null, "未填写豆包 Cookie")
+                    return
+                }
+                val speaker = customVoiceId.ifBlank {
+                    doubaoSpeaker.ifBlank { DOUBAO_VOICES.first().id }
+                }
+                generateVoiceDoubao(text, speaker, doubaoCookie, cb)
+            }
+
+            BACKEND_BREEZE -> {
+                if (breezeKey.isBlank()) {
+                    cb(null, "未填写 Breeze API Key")
+                    return
+                }
+                val voice = customVoiceId.ifBlank { breezeVoice }
+                if (voice.isBlank()) {
+                    cb(null, "未选择 Breeze 音色")
+                    return
+                }
+                generateVoiceBreeze(
+                    text = text,
+                    voiceId = voice,
+                    instructions = breezeInstructions.ifBlank { selectedEmotion },
+                    key = breezeKey,
+                    cb = cb,
+                )
+            }
+
+            else -> {
+                if (apiKey.isBlank()) {
+                    cb(null, "未填写魔方 API Key")
+                    return
+                }
+                val voice = customVoiceId.ifBlank { selectedVoice }
+                val emotion = EMOTIONS.firstOrNull { it.first == selectedEmotion }?.second
+                    ?: EMOTIONS.first().second
+                generateVoice(text, voice, emotion, apiKey, cb)
+            }
+        }
+    }
+
     fun fetchVoices(key: String = apiKey): List<TtsVoice> {
         if (key.isBlank()) return DEFAULT_VOICES
         return try {

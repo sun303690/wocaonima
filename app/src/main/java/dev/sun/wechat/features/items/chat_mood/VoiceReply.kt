@@ -18,10 +18,13 @@ object VoiceReply {
 
     fun enabled(): Boolean = TextToSpeech.voiceReplyEnabled
 
-    /** 后端凭据是否已备齐（魔方要 API Key，豆包要 Cookie）。 */
-    fun ready(): Boolean =
-        if (TextToSpeech.backend == TextToSpeech.BACKEND_DOUBAO) TextToSpeech.doubaoCookie.isNotBlank()
-        else TextToSpeech.apiKey.isNotBlank()
+    /** 当前后端的凭据是否已备齐（魔方/Breeze 要 API Key + 音色，豆包要 Cookie）。 */
+    fun ready(): Boolean = when (TextToSpeech.backend) {
+        TextToSpeech.BACKEND_DOUBAO -> TextToSpeech.doubaoCookie.isNotBlank()
+        TextToSpeech.BACKEND_BREEZE -> TextToSpeech.breezeKey.isNotBlank() &&
+            (TextToSpeech.customVoiceId.isNotBlank() || TextToSpeech.breezeVoice.isNotBlank())
+        else -> TextToSpeech.apiKey.isNotBlank()
+    }
 
     /**
      * 异步合成并发送；回调在主线程。
@@ -33,7 +36,6 @@ object VoiceReply {
             main.post { onResult(false) }
             return
         }
-        val custom = TextToSpeech.customVoiceId.trim()
         val callback: (String?, String) -> Unit = { path, error ->
             if (path.isNullOrBlank()) {
                 WeLogger.w(TAG, "tts failed: $error")
@@ -49,16 +51,7 @@ object VoiceReply {
                 }
             }
         }
-        if (TextToSpeech.backend == TextToSpeech.BACKEND_DOUBAO) {
-            val speaker = custom.ifBlank { TextToSpeech.doubaoSpeaker }
-            TextToSpeech.generateVoiceDoubao(content, speaker, TextToSpeech.doubaoCookie, callback)
-        } else {
-            val voiceId = custom.ifBlank { TextToSpeech.selectedVoice }
-            val emotion = TextToSpeech.EMOTIONS
-                .firstOrNull { it.first == TextToSpeech.selectedEmotion }
-                ?.second
-                ?: TextToSpeech.EMOTIONS.first().second
-            TextToSpeech.generateVoice(content, voiceId, emotion, TextToSpeech.apiKey, callback)
-        }
+        // 后端、音色、语气都由 TextToSpeech 统一决定，这里不再自己判后端
+        TextToSpeech.synthesizeByBackend(content, callback)
     }
 }
