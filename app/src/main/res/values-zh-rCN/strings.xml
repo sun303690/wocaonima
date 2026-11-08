@@ -4432,6 +4432,8 @@
     <string name="glg_newbie_desc">新人进群后 X 分钟内发任何消息即移出</string>
     <string name="glg_newbie_minutes">冷静期（分钟）</string>
     <string name="mood_feature_name">情绪分析</string>
+    <string name="feature_auto_reply_entry_name">自动帮我回</string>
+    <string name="feature_auto_reply_entry_description">只为你开启的聊天生成回复建议，不依赖情绪分析</string>
     <string name="mood_feature_description">在文字气泡下方显示情绪、潜台词和沟通建议</string>
     <string name="conversation_grouping_floating_recommend_confirm">切换到浮动岛</string>
     <string name="conversation_grouping_floating_recommend_message">已开启对话列表的美化布局，推荐将对话分组的标签样式切换为浮动岛，与列表更协调。是否切换？</string>

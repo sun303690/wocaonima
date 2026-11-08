@@ -27,9 +27,7 @@ object ChatMoodHostUi : WeChatInputBarMenuApi.IActionItemsProvider {
             id = "mood_analysis_toggle",
             icon = MaterialSymbols.Outlined.Auto_awesome,
             label = "情绪分析",
-            // 只开「自动帮我回」而没有开 Jev 情绪分析时，这个会话开关同样要能用，
-            // 否则没法按聊天控制回复建议卡
-            isSupported = { _, _ -> MoodAnalyzer.enabled || ReplyAuto.enabled },
+            isSupported = { _, _ -> MoodAnalyzer.enabled },
             onClick = { context, _ -> toggleForCurrentChat(context) },
             onLongClick = { context, _ -> openSettings(context) },
         ),
@@ -50,7 +48,9 @@ object ChatMoodHostUi : WeChatInputBarMenuApi.IActionItemsProvider {
         if (checked) {
             MessageSniffer.refresh()
         } else {
-            BubbleDecorator.clearAll()
+            // 只清这个聊天的卡；若「自动帮我回」还开着，refresh 会按只显示回复建议重建
+            BubbleDecorator.clearByTalker(talker)
+            MessageSniffer.refresh()
         }
     }
 
@@ -65,7 +65,7 @@ object ChatMoodHostUi : WeChatInputBarMenuApi.IActionItemsProvider {
         if (ConversationSwitches.isEnabled(talker) != enabled) {
             dev.sun.wechat.utils.android.showToast(
                 context,
-                if (!enabled) "已为本会话开启情绪分析/自动帮我回" else "已为本会话关闭情绪分析/自动帮我回",
+                if (!enabled) "已开启本会话情绪分析" else "已关闭本会话情绪分析",
             )
         }
     }

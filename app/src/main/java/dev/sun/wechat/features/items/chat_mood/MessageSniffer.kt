@@ -57,10 +57,12 @@ object MessageSniffer {
                 while (deque.size > 24) deque.removeFirst()
                 // 情绪分析只分析/装饰对方的消息；自己发的消息仅进上下文，不出卡、不分析
                 if (message.isSend != 0) return
-                // 会话级开关同时管「情绪分析」和「自动帮我回」：没为本会话打开的聊天，
-                // 不挂卡也不请求模型，避免「分析都关了，每个聊天页还在自动出回复」
-                val chatAnalysisEnabled = ConversationSwitches.isEnabled(talker)
-                if (!chatAnalysisEnabled) return
+                // 两个开关各管各的，且都要求对应的全局功能开着：
+                // 分析 = 情绪分析功能开 + 本会话分析开关开；帮回 = 帮回全局开关开 + 本会话回复开关开。
+                // 都不满足的聊天不挂卡、不请求模型
+                val chatAnalysisEnabled = MoodAnalyzer.enabled && ConversationSwitches.isEnabled(talker)
+                val chatReplyEnabled = ReplyAuto.enabled && ConversationSwitches.isReplyEnabled(talker)
+                if (!chatAnalysisEnabled && !chatReplyEnabled) return
                 val context = deque.dropLast(1).takeLast(MessagePolicy.MAX_CONTEXT_MESSAGES)
                     .map { ContextMessage(it.first, it.second) }
                 val input = AnalysisInput(
@@ -96,7 +98,8 @@ object MessageSniffer {
     fun refresh() {
         val talker = WeCurrentConversationApi.value
         if (talker.isBlank()) return
-        if (!ConversationSwitches.isEnabled(talker)) return
+        val chatAnalysisEnabled = MoodAnalyzer.enabled && ConversationSwitches.isEnabled(talker)
+        if (!chatAnalysisEnabled && !(ReplyAuto.enabled && ConversationSwitches.isReplyEnabled(talker))) return
         val deque = recentByTalker[talker] ?: ArrayDeque()
         val context = deque.dropLast(1).takeLast(MessagePolicy.MAX_CONTEXT_MESSAGES)
             .map { ContextMessage(it.first, it.second) }
@@ -124,7 +127,7 @@ object MessageSniffer {
             // 同样延迟到下一帧，且只补最近若干条可见消息，避免一次性全量挂卡卡顿
             view.post {
                 if (view.isAttachedToWindow) {
-                    BubbleDecorator.show(view, input, analysisEnabled = true)
+                    BubbleDecorator.show(view, input, analysisEnabled = chatAnalysisEnabled)
                 }
             }
             if (isPlainText) {
@@ -218,11 +221,13 @@ object MessageSniffer {
 
     private fun submitAndRequest(input: AnalysisInput, isPlainText: Boolean) {
         try {
-            // 情绪分析只对文字有意义；语音/表情只出回复建议卡（MoodAnalyzer 内部自判全局开关）
-            if (isPlainText) {
+            // 两个开关分开判断：分析开关只放行情绪分析，回复开关只放行自动帮我回
+            if (isPlainText && ConversationSwitches.isEnabled(input.talker)) {
                 MoodAnalyzer.submit(input) { true }
             }
-            ReplyAuto.request(input.talker, input.key)
+            if (ConversationSwitches.isReplyEnabled(input.talker)) {
+                ReplyAuto.request(input.talker, input.key)
+            }
         } catch (t: Throwable) {
             WeLogger.e(TAG, "submitAndRequest failed", t)
         }

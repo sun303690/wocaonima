@@ -4410,6 +4410,8 @@
     <string name="glg_newbie_desc">新人進群後 X 分鐘內發任何訊息即移出</string>
     <string name="glg_newbie_minutes">冷靜期（分鐘）</string>
     <string name="mood_feature_name">情緒分析</string>
+    <string name="feature_auto_reply_entry_name">自動幫我回</string>
+    <string name="feature_auto_reply_entry_description">只為你開啟的聊天產生回覆建議，不依賴情緒分析</string>
     <string name="mood_feature_description">在文字氣泡下方顯示情緒、潛台詞和溝通建議</string>
     <string name="conversation_grouping_floating_recommend_confirm">切換到浮動島</string>
     <string name="conversation_grouping_floating_recommend_message">已開啟對話列表的美化佈局，推薦將對話分組的標籤樣式切換為浮動島，與列表更協調。是否切換？</string>

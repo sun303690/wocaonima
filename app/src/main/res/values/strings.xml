@@ -4405,6 +4405,8 @@
     <string name="glg_newbie_desc">Remove members who send any message within the probation window after joining</string>
     <string name="glg_newbie_minutes">Probation (minutes)</string>
     <string name="mood_feature_name">Mood Analysis</string>
+    <string name="feature_auto_reply_entry_name">Auto Reply</string>
+    <string name="feature_auto_reply_entry_description">Generate reply suggestions for chosen chats only; independent of Mood Analysis</string>
     <string name="mood_feature_description">Show emotion, subtext and suggestion under each text bubble</string>
     <string name="conversation_grouping_floating_recommend_confirm">Switch to floating island</string>
     <string name="conversation_grouping_floating_recommend_message">Conversation list beautification is now enabled. We recommend a floating island for the group tabs to match. Switch now?</string>

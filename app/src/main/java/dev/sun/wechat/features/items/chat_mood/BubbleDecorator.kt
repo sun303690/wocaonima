@@ -383,6 +383,13 @@ object BubbleDecorator {
         if (state.assignedId != null && state.anchor.id == state.assignedId) state.anchor.id = View.NO_ID
     }
     fun clearAll() { cards.keys.toList().forEach(::clear); refreshRegistered.set(false) }
+
+    /** 只清某个会话的卡片：关掉该会话的开关时用，别把其它聊天的卡片一起清掉。 */
+    fun clearByTalker(talker: String) {
+        cards.entries.toList().forEach { (row, card) ->
+            if (card.input.talker == talker) clear(row)
+        }
+    }
     fun prune() { cards.keys.filter { !it.isAttachedToWindow }.forEach(::clear) }
     private fun dp(view: View, n: Int) = (n * view.resources.displayMetrics.density).toInt()
 }
