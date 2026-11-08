@@ -137,7 +137,7 @@ object VoiceWorkshop : WeChatInputBarMenuApi.IActionItemsProvider {
         fun deliver(send: Boolean, talker: String, path: String) {
             if (send) {
                 TextToSpeech.sendVoiceTo(talker, path) { ok ->
-                    main.post {
+                    handler.post {
                         status = ""
                         toast(if (ok) "语音已发送" else "发送失败")
                     }
@@ -159,7 +159,7 @@ object VoiceWorkshop : WeChatInputBarMenuApi.IActionItemsProvider {
             val bgm = resolveBgm()
             TextToSpeech.synthesizeByBackend(body) { path, err ->
                 if (path == null) {
-                    main.post { status = ""; toast("合成失败：$err") }
+                    handler.post { status = ""; toast("合成失败：$err") }
                     return@synthesizeByBackend
                 }
                 if (bgm is BgmMixer.Bgm.None) {
@@ -169,7 +169,7 @@ object VoiceWorkshop : WeChatInputBarMenuApi.IActionItemsProvider {
                 Thread {
                     val out = File(context.cacheDir, "ws_${System.currentTimeMillis()}.wav")
                     val ok = BgmMixer.mix(context, path, bgm, gain, out.absolutePath)
-                    main.post {
+                    handler.post {
                         if (ok) deliver(send, talker, out.absolutePath)
                         else { status = ""; toast("混音失败") }
                     }
