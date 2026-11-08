@@ -9,6 +9,7 @@ import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
 import android.text.TextUtils
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
@@ -137,18 +138,12 @@ object BubbleDecorator {
         when {
             suggestion != null -> {
                 chips.addView(hint(state, "帮我回 · 点一条填入输入框"))
-                suggestion.parts.forEachIndexed { index, part -> chips.addView(chip(state, part, index + 1)) }
-                if (VoiceReply.enabled() && suggestion.parts.isNotEmpty()) {
-                    // 语音要把这一整轮建议念完：卡片上的「语音发送」过去只把第 1 条的
-                    // 前 18 个字送去合成，听起来话没说完。这里把各组建议按顺序拼起来。
-                    val parts = suggestion.parts.map { it.trim() }.filter { it.isNotEmpty() }
-                    if (parts.isNotEmpty()) {
-                        val spoken = parts.joinToString("。") { part ->
-                            part.trimEnd('。', '，', '、', '！', '？', '!', '?', '.')
-                        }
-                        val countHint = if (parts.size > 1) "（共 ${parts.size} 条）" else ""
-                        chips.addView(voiceChip(state, "🔊 语音发送$countHint：${parts.first().take(18)}", spoken))
-                    }
+                // 语音按「一条建议一条语音」发：每行右侧挂一个独立 🔊，点了只合成那一行。
+                // 过去是把这一轮所有建议拼成一段长语音，听起来像三条连读，不是想要的。
+                val voiceOn = VoiceReply.enabled()
+                suggestion.parts.forEachIndexed { index, part ->
+                    if (voiceOn && part.isNotBlank()) chips.addView(replyRow(state, part, index + 1))
+                    else chips.addView(chip(state, part, index + 1))
                 }
                 if (suggestion.reason.isNotBlank()) {
                     chips.addView(hint(state, suggestion.reason))
@@ -214,33 +209,55 @@ object BubbleDecorator {
         }
     }
 
-    /** 语音发送特殊行：accent 色文字 + 边框，不编号。[label] 是卡片上的短标签，[spoken] 才是送去合成的全文。 */
-    private fun voiceChip(state: Card, label: String, spoken: String): TextView {
+    /** 一条建议 + 右侧独立语音按钮：点建议填入输入框，点 🔊 只把这一条合成语音发出。 */
+    private fun replyRow(state: Card, text: String, index: Int): LinearLayout {
+        val row = LinearLayout(state.row.context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            val lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            lp.topMargin = dp(state.row, 4)
+            layoutParams = lp
+        }
+        val body = chip(state, text, index)
+        // 放进横向行里：吃掉剩余宽度，并去掉 chip 自带的顶部间距（间距交给外层行）
+        body.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        row.addView(body)
+        row.addView(voiceButton(state, text))
+        return row
+    }
+
+    /** 单条语音按钮：只合成这一条建议，不再把整轮拼成一条长语音。 */
+    private fun voiceButton(state: Card, spoken: String): TextView {
         val c = colors(state.row)
         return TextView(state.row.context).apply {
-            this.text = label
-            textSize = 13f
-            maxLines = 2
-            ellipsize = TextUtils.TruncateAt.END
+            text = "🔊"
+            textSize = 15f
+            gravity = Gravity.CENTER
             setTextColor(c.accent)
-            setPadding(dp(state.row, 10), dp(state.row, 7), dp(state.row, 10), dp(state.row, 7))
             background = GradientDrawable().apply {
                 cornerRadius = dp(state.row, 9).toFloat()
                 setColor(Color.TRANSPARENT)
                 setStroke(dp(state.row, 1), c.accent)
             }
-            val margin = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-            margin.topMargin = dp(state.row, 4)
-            layoutParams = margin
-            setOnClickListener {
-                if (!VoiceReply.ready()) {
-                    showToast(state.row.context, "语音未配置：请到「设置 → AI 回复配置」填写 API Key / Cookie")
-                } else {
-                    showToast(state.row.context, "正在合成语音…")
-                    VoiceReply.send(state.input.talker, spoken)
-                }
-            }
+            val lp = LinearLayout.LayoutParams(dp(state.row, 42), ViewGroup.LayoutParams.WRAP_CONTENT)
+            lp.marginStart = dp(state.row, 6)
+            layoutParams = lp
+            setPadding(0, dp(state.row, 7), 0, dp(state.row, 7))
+            contentDescription = "语音发送这一条"
+            setOnClickListener { sendVoice(state, spoken) }
         }
+    }
+
+    /** 合成并发送一条语音；未配置时给出提示。 */
+    private fun sendVoice(state: Card, spoken: String) {
+        val text = spoken.trim()
+        if (text.isBlank()) return
+        if (!VoiceReply.ready()) {
+            showToast(state.row.context, "语音未配置：请到「设置 → AI 回复配置」填写 API Key / Cookie")
+            return
+        }
+        showToast(state.row.context, "正在合成语音…")
+        VoiceReply.send(state.input.talker, text)
     }
 
     private fun fill(state: Card, text: String) {
