@@ -33,9 +33,6 @@ object AsrEngine {
     private const val TAG = "AsrEngine"
     private const val DEFAULT_MODEL = "whisper-1"
 
-    /** 设置面板里的总开关：关掉就不调接口（微信自带转写照旧可用）。 */
-    var enabled by prefOption("ai_reply_asr_enabled", true)
-
     /** 接口根地址，例如 https://api.siliconflow.cn/v1 ；也接受直接填完整的 .../audio/transcriptions。 */
     var baseUrl by prefOption("asr_base_url", "")
     var apiKey by prefOption("asr_api_key", "")
@@ -49,8 +46,9 @@ object AsrEngine {
             .build()
     }
 
-    /** 是否具备自动识别能力（开关打开且地址、Key 都填了）。 */
-    fun ready(): Boolean = enabled && baseUrl.isNotBlank() && apiKey.isNotBlank()
+    /** 是否具备自动识别能力（独立开关打开，且地址、Key 都填了）。 */
+    fun ready(): Boolean =
+        AsrFeature.isEnabled && baseUrl.isNotBlank() && apiKey.isNotBlank()
 
     /**
      * 识别一条语音消息，回调在后台线程。成功回 (文本, null)，失败回 (null, 原因)。

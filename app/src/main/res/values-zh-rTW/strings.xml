@@ -4556,4 +4556,11 @@
     <string name="beautify_global_background_glass_opacity">玻璃透明度</string>
     <string name="beautify_global_background_glass_radius">玻璃圓角</string>
     <string name="beautify_global_background_glass_margin">玻璃左右邊距</string>
+    <string name="feature_asr_name">語音辨識</string>
+    <string name="feature_asr_description">用 OpenAI 相容的辨識介面把對方語音轉成文字，讓 AI 回覆能聽懂語音訊息。</string>
+    <string name="asr_settings_hint">填 OpenAI 相容介面：{位址}/audio/transcriptions，multipart 欄位 model + file。例如 https://api.siliconflow.cn/v1</string>
+    <string name="asr_base_url">介面位址</string>
+    <string name="asr_api_key">介面 Key</string>
+    <string name="asr_model">模型（whisper-1 / FunAudioLLM/SenseVoiceSmall）</string>
+    <string name="asr_cache_hint">辨識結果按語音快取；清除應用快取即可清除。</string>
 </resources>

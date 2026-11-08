@@ -4577,4 +4577,11 @@
     <string name="beautify_global_background_glass_opacity">Glass opacity</string>
     <string name="beautify_global_background_glass_radius">Glass corner radius</string>
     <string name="beautify_global_background_glass_margin">Glass side margin</string>
+    <string name="feature_asr_name">Voice recognition</string>
+    <string name="feature_asr_description">Turn incoming voice messages into text with an OpenAI-compatible ASR API, so AI replies can understand them.</string>
+    <string name="asr_settings_hint">Any OpenAI-compatible endpoint: {baseUrl}/audio/transcriptions with multipart fields model + file. e.g. https://api.siliconflow.cn/v1</string>
+    <string name="asr_base_url">API base URL</string>
+    <string name="asr_api_key">API key</string>
+    <string name="asr_model">Model (whisper-1 / FunAudioLLM/SenseVoiceSmall)</string>
+    <string name="asr_cache_hint">Recognition results are cached per voice message; deleting the app cache clears them.</string>
 </resources>

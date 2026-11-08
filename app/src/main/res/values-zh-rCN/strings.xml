@@ -4604,4 +4604,11 @@
     <string name="beautify_global_background_glass_opacity">玻璃透明度</string>
     <string name="beautify_global_background_glass_radius">玻璃圆角</string>
     <string name="beautify_global_background_glass_margin">玻璃左右边距</string>
+    <string name="feature_asr_name">语音识别</string>
+    <string name="feature_asr_description">用 OpenAI 兼容的识别接口把对方语音转成文字，让 AI 回复能听懂语音消息。</string>
+    <string name="asr_settings_hint">填 OpenAI 兼容接口：{地址}/audio/transcriptions，multipart 字段 model + file。例如 https://api.siliconflow.cn/v1</string>
+    <string name="asr_base_url">接口地址</string>
+    <string name="asr_api_key">接口 Key</string>
+    <string name="asr_model">模型（whisper-1 / FunAudioLLM/SenseVoiceSmall）</string>
+    <string name="asr_cache_hint">识别结果按语音缓存；清空应用缓存即可清除。</string>
 </resources>

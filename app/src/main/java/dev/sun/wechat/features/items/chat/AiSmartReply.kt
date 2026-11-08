@@ -115,9 +115,6 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
     private fun ShowComposeDialogScope.SettingsDialogContent(context: android.content.Context) {
         var contextInput by remember { mutableStateOf(contextLimit.toString()) }
         var countInput by remember { mutableStateOf(replyCount.toString()) }
-        var asrUrlInput by remember { mutableStateOf(AsrEngine.baseUrl) }
-        var asrKeyInput by remember { mutableStateOf(AsrEngine.apiKey) }
-        var asrModelInput by remember { mutableStateOf(AsrEngine.model) }
         AlertDialogContent(
             title = { Text(stringResource(R.string.feature_ai_smart_reply_name)) },
             text = {
@@ -147,53 +144,6 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
                                 )
                             }
                         }
-                        // 语音识别（ASR）：OpenAI 兼容的 /audio/transcriptions，让 AI 能听懂对方语音
-                        item {
-                            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
-                                Text("语音识别接口", style = MiuixTheme.textStyles.footnote1)
-                                TextField(
-                                    value = asrUrlInput,
-                                    onValueChange = { asrUrlInput = it.trim() },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true,
-                                    label = "如 https://api.siliconflow.cn/v1",
-                                )
-                            }
-                        }
-                        item {
-                            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
-                                Text("语音识别 Key", style = MiuixTheme.textStyles.footnote1)
-                                TextField(
-                                    value = asrKeyInput,
-                                    onValueChange = { asrKeyInput = it.trim() },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true,
-                                    label = "sk-...",
-                                )
-                            }
-                        }
-                        item {
-                            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
-                                Text("语音识别模型", style = MiuixTheme.textStyles.footnote1)
-                                TextField(
-                                    value = asrModelInput,
-                                    onValueChange = { asrModelInput = it.trim() },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true,
-                                    label = "whisper-1 / FunAudioLLM/SenseVoiceSmall",
-                                )
-                            }
-                        }
-                        item {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                            ) {
-                                TextButton(onClick = {
-                                    AsrEngine.clearCache()
-                                    showToast(context, "已清空语音识别缓存")
-                                }) { Text("清空识别缓存") }
-                            }
-                        }
                     }
                 }
             },
@@ -201,9 +151,6 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
                 Button(onClick = {
                     contextLimit = contextInput.toIntOrNull()?.coerceIn(1, 50) ?: 10
                     replyCount = countInput.toIntOrNull()?.coerceIn(1, 20) ?: 20
-                    AsrEngine.baseUrl = asrUrlInput.trim()
-                    AsrEngine.apiKey = asrKeyInput.trim()
-                    AsrEngine.model = asrModelInput.trim().ifBlank { "whisper-1" }
                     onDismiss()
                 }) { Text(stringResource(R.string.dialog_confirm)) }
             },
