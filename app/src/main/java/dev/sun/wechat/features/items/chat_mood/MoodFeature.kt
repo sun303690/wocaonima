@@ -159,7 +159,7 @@ object MoodFeature : ClickableFeature() {
                             title = "对方新消息自动帮我回",
                             checked = autoReply,
                             onCheckedChange = { autoReply = it },
-                            summary = "在已开启分析的聊天里，对方发来消息后，消息下方直接给出可点击填入输入框的回复；不会自动发送",
+                            summary = "只在打开过本会话开关的聊天里生效：长按输入栏 ＋ 或发送键，点「情绪分析」开/关当前聊天。开启后对方发来消息，消息下方给出可点击填入输入框的回复；不会自动发送",
                         )
                         Button(onClick = {
                             AiSmartReply.openSmartReply(context, WeCurrentConversationApi.value)

@@ -57,9 +57,10 @@ object MessageSniffer {
                 while (deque.size > 24) deque.removeFirst()
                 // 情绪分析只分析/装饰对方的消息；自己发的消息仅进上下文，不出卡、不分析
                 if (message.isSend != 0) return
-                // 会话级开关只管「情绪分析」；自动帮我回不受它限制，否则只开自动回复的聊天不出建议卡
+                // 会话级开关同时管「情绪分析」和「自动帮我回」：没为本会话打开的聊天，
+                // 不挂卡也不请求模型，避免「分析都关了，每个聊天页还在自动出回复」
                 val chatAnalysisEnabled = ConversationSwitches.isEnabled(talker)
-                if (!chatAnalysisEnabled && !ReplyAuto.enabled) return
+                if (!chatAnalysisEnabled) return
                 val context = deque.dropLast(1).takeLast(MessagePolicy.MAX_CONTEXT_MESSAGES)
                     .map { ContextMessage(it.first, it.second) }
                 val input = AnalysisInput(
