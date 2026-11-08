@@ -45,6 +45,7 @@ import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.features.api.core.models.MessageInfo
 import dev.sun.wechat.features.api.ui.WeChatMessageContextMenuApi
 import dev.sun.wechat.features.items.chat_mood.ReplyMessageSupport
+import dev.sun.wechat.features.items.chat_mood.VoiceReply
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
@@ -279,15 +280,41 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
                                     minLines = 2,
                                     maxLines = 5,
                                 )
-                                Button(
-                                    onClick = {
-                                        val finalText = editable.trim()
-                                        if (finalText.isEmpty()) { showToast(context, context.getString(R.string.ama_tts_empty_v2)); return@Button }
-                                        val ok = WeMessageApi.sendText(talker, finalText)
-                                        showToast(context, context.getString(if (ok) R.string.ama_sent else R.string.ama_send_failed))
-                                    },
+                                // 每条候选给两个按钮：发文字 / 发语音。发送成功后自动关掉面板，
+                                // 不用再手动点「取消」。
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                                ) { Text(stringResource(R.string.ama_send)) }
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            val finalText = editable.trim()
+                                            if (finalText.isEmpty()) { showToast(context, context.getString(R.string.ama_tts_empty_v2)); return@Button }
+                                            val ok = WeMessageApi.sendText(talker, finalText)
+                                            showToast(context, context.getString(if (ok) R.string.ama_sent else R.string.ama_send_failed))
+                                            if (ok) onDismiss()
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                    ) { Text(stringResource(R.string.ama_send)) }
+                                    if (VoiceReply.enabled()) {
+                                        Button(
+                                            onClick = {
+                                                val finalText = editable.trim()
+                                                if (finalText.isEmpty()) { showToast(context, context.getString(R.string.ama_tts_empty_v2)); return@Button }
+                                                if (!VoiceReply.ready()) {
+                                                    showToast(context, "语音未配置：请到「设置 → AI 回复配置」填写 API Key / Cookie")
+                                                    return@Button
+                                                }
+                                                showToast(context, "正在合成语音…")
+                                                // 合成是异步的，回调到了再关面板
+                                                VoiceReply.send(talker, finalText) { sent ->
+                                                    if (sent) onDismiss()
+                                                }
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                        ) { Text("🔊 语音") }
+                                    }
+                                }
                             }
                         }
                     }
