@@ -72,6 +72,8 @@ import dev.sun.wechat.utils.AudioUtils
 import dev.sun.wechat.utils.BreezeCreditsClient
 import dev.sun.wechat.utils.BreezeTtsClient
 import dev.sun.wechat.utils.WeLogger
+import dev.sun.wechat.utils.reflection.ClassLoaders
+import dev.ujhhgtg.reflekt.reflekt
 import dev.sun.wechat.utils.android.showToast
 import dev.sun.wechat.utils.fs.KnownPaths
 import okhttp3.OkHttpClient
@@ -107,6 +109,9 @@ object TextToSpeech :
     override val descriptionRes = R.string.feature_text_to_speech_description
 
     private const val TAG = "TextToSpeech"
+
+    @Volatile
+    private var voiceWorkshopHooked = false
     private const val API_BASE = "https://peiyinmofang.com"
 
     const val BACKEND_MOFA = 0
@@ -205,11 +210,86 @@ object TextToSpeech :
     override fun onEnable() {
         WeChatMessageContextMenuApi.addProvider(this)
         WeChatInputBarMenuApi.addProvider(this)
+        // 语音工作台（带 BGM 的合成面板）：注册菜单入口 + 聊天页右上角按钮
+        WeChatInputBarMenuApi.addProvider(VoiceWorkshop)
+        VoiceWorkshop.setEnabled(true)
+        installVoiceWorkshopHooks()
     }
 
     override fun onDisable() {
         WeChatMessageContextMenuApi.removeProvider(this)
         WeChatInputBarMenuApi.removeProvider(this)
+        WeChatInputBarMenuApi.removeProvider(VoiceWorkshop)
+        VoiceWorkshop.setEnabled(false)
+    }
+
+    /**
+     * 聊天页右上角「🎵 语音工作台」按钮的挂载点。
+     *
+     * 微信从会话列表进聊天页走 `ChattingUIFragment`（在 LauncherUI 内部，不是独立 Activity），
+     * 通知/外部进入才用独立的 `ChattingUI`；两路都 hook，另一路兜底 `MMFragment` 里类名带 Chatting 的变体。
+     * Xposed hook 装上去摘不掉，所以只装一次，靠 VoiceWorkshop 内部的 enabled 门禁开关。
+     */
+    private fun installVoiceWorkshopHooks() {
+        if (voiceWorkshopHooked) return
+        voiceWorkshopHooked = true
+        listOf(
+            "com.tencent.mm.ui.chatting.ChattingUIFragment",
+            "com.tencent.mm.ui.chatting.BaseChattingUIFragment"
+        ).forEach { clsName ->
+            runCatching {
+                val clazz = ClassLoaders.HOST.loadClass(clsName)
+                listOf("onCreate", "onResume", "onViewCreated").forEach { methodName ->
+                    runCatching {
+                        val method = clazz.reflekt().firstMethodOrNull { name = methodName } ?: return@runCatching
+                        method.hookAfter {
+                            val view = runCatching {
+                                thisObject!!.javaClass.getMethod("getView").invoke(thisObject) as? View
+                            }.getOrNull()
+                            if (view != null) VoiceWorkshop.onChatViewShown(view)
+                        }
+                    }.onFailure { WeLogger.w(TAG, "hook $clsName.$methodName 失败", it) }
+                }
+                runCatching {
+                    val method = clazz.reflekt().firstMethodOrNull { name = "onDestroyView" } ?: return@runCatching
+                    method.hookAfter { VoiceWorkshop.onChatViewHidden() }
+                }.onFailure { WeLogger.w(TAG, "hook $clsName.onDestroyView 失败", it) }
+            }.onFailure { WeLogger.w(TAG, "加载聊天页 Fragment 失败（$clsName）：${it.message}") }
+        }
+        // 独立 ChattingUI Activity（通知栏 / 外部跳转进入）
+        runCatching {
+            val clazz = ClassLoaders.HOST.loadClass("com.tencent.mm.ui.chatting.ChattingUI")
+            listOf("onCreate", "onResume").forEach { methodName ->
+                runCatching {
+                    val method = clazz.reflekt().firstMethodOrNull { name = methodName } ?: return@runCatching
+                    method.hookAfter {
+                        val view = runCatching {
+                            thisObject!!.javaClass.getMethod("getWindow").invoke(thisObject)
+                                .let { w -> w.javaClass.getMethod("getDecorView").invoke(w) as? View }
+                        }.getOrNull()
+                        if (view != null) VoiceWorkshop.onChatViewShown(view)
+                    }
+                }.onFailure { WeLogger.w(TAG, "hook ChattingUI.$methodName 失败", it) }
+            }
+        }.onFailure { WeLogger.w(TAG, "加载 ChattingUI 失败：${it.message}") }
+        // 泛化兜底：类名带 Chatting 的 MMFragment 变体（半屏聊天等）
+        runCatching {
+            val mmFragment = ClassLoaders.HOST.loadClass("com.tencent.mm.ui.MMFragment")
+            listOf("onResume", "onCreate").forEach { methodName ->
+                runCatching {
+                    val method = mmFragment.reflekt().firstMethodOrNull { name = methodName } ?: return@runCatching
+                    method.hookAfter {
+                        val cn = thisObject!!.javaClass.name.orEmpty()
+                        if (cn.contains("Chatting", ignoreCase = true)) {
+                            val view = runCatching {
+                                thisObject!!.javaClass.getMethod("getView").invoke(thisObject) as? View
+                            }.getOrNull()
+                            if (view != null) VoiceWorkshop.onChatViewShown(view)
+                        }
+                    }
+                }.onFailure { WeLogger.w(TAG, "hook MMFragment.$methodName 失败", it) }
+            }
+        }.onFailure { WeLogger.w(TAG, "加载 MMFragment 失败：${it.message}") }
     }
 
     @Suppress("DEPRECATION")
