@@ -118,6 +118,10 @@ object BubbleDecorator {
             if (state.body.text.toString() != text) state.body.text = text
         }
         renderReplies(state)
+        // 分析区和回复建议都没内容时把整张卡藏起来：撞限流冷却、请求被跳过这类情况下，
+        // 消息下方不该留一张空白卡片。等结果回来由 refreshAll 重新 render 就会显示。
+        val hasReplies = state.chips.visibility == View.VISIBLE
+        state.container.visibility = if (hasAnalysis || hasReplies) View.VISIBLE else View.GONE
     }
 
     /** 卡片下半部分：帮我回的建议。没有状态时整块隐藏，不占位。 */
