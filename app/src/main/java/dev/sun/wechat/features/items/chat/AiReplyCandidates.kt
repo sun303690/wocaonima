@@ -93,6 +93,7 @@ import dev.sun.wechat.ui.utils.ShowComposeDialogScope
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToast
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -366,6 +367,10 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                         draft = ""
                     },
                     onFailure = { failure ->
+                        // 弹窗被关掉时 rememberCoroutineScope 随组合销毁，请求被取消，
+                        // 这是正常收场而不是失败，别弹红字吓人（日志里那条
+                        // "candidate generation failed: rememberCoroutineScope left the composition"）。
+                        if (failure is CancellationException) return@fold
                         WeLogger.w(TAG, "candidate generation failed: ${failure.message}")
                         error = failure.message
                     },

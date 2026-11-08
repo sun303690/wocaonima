@@ -42,9 +42,12 @@ import dev.sun.wechat.agent.model.ModelProviderManager
 import dev.sun.wechat.features.api.core.WeDatabaseApi
 import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
 import dev.sun.wechat.features.api.core.WeMessageApi
+import dev.sun.wechat.features.api.core.models.MessageInfo
 import dev.sun.wechat.features.api.core.models.MessageType
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
+import dev.sun.wechat.features.items.multimodal.MultimodalEngine
+import dev.sun.wechat.features.items.multimodal.MultimodalFeature
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.data.WeKitDatabase
 import dev.sun.wechat.ui.content.AlertDialogContent
@@ -233,7 +236,17 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         val messageType = MessageType.fromCode(type)
         // 语音也放行：对方语音经微信转写后（VoiceTranscriptStore）同样能自动回复
         val isVoice = messageType == MessageType.VOICE
-        if (messageType?.isText != true && !isVoice) return
+        // 多模态也放行：图片/表情/卡片/链接/文件/视频，经多模态识别转成文字后同样能自动回复
+        val isMultimodal = MultimodalFeature.isEnabled && messageType != null && (
+            messageType == MessageType.IMAGE ||
+                messageType.isSticker ||
+                messageType == MessageType.FILE ||
+                messageType.isLink ||
+                messageType == MessageType.APP ||
+                messageType == MessageType.VIDEO ||
+                messageType == MessageType.MICRO_VIDEO
+            )
+        if (messageType?.isText != true && !isVoice && !isMultimodal) return
         val isSend = values.getAsInteger("isSend") ?: return
         if (isSend != 0) return
         val talker = values.getAsString("talker").orEmpty()
@@ -277,6 +290,27 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                     return@launch
                 }
                 dispatchNewMessage(talker, transcript!!)
+            }
+            return
+        }
+
+        if (isMultimodal) {
+            // 图片/表情/卡片/链接/文件/视频：先用多模态识别把消息转成文字，
+            // 有缓存/可同步解析（卡片类）就直接分发；首次图片/表情先后台识别，
+            // 识别完成拿到文字后再补一条分发（识别失败就放弃这条）。
+            val info = runCatching { MessageInfo.fromContentValues(values) }.getOrNull()
+            if (info == null) return
+            val text = MultimodalEngine.textFor(info)
+            if (!text.isNullOrBlank()) {
+                dispatchNewMessage(talker, text)
+                return
+            }
+            MultimodalEngine.prefetch(info) { result ->
+                if (!result.isNullOrBlank()) {
+                    scope.launch { dispatchNewMessage(talker, result) }
+                } else {
+                    WeLogger.i(TAG, "AI reply skipped: multimodal without text, talker=$talker")
+                }
             }
             return
         }

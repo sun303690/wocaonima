@@ -3,6 +3,7 @@ package dev.sun.wechat.features.items.chat_mood
 import dev.sun.wechat.agent.data.WeAgentRepository
 import dev.sun.wechat.utils.WeLogger
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 /**
@@ -23,6 +24,12 @@ object ReplyHttpClient {
 
     /** 内容安全拦截的冷却：一分钟足够风头过去，久了反而耽误正事。 */
     private const val HIGH_RISK_COOLDOWN_MS = 60_000L
+
+    /** 单次生成最多调用几次模型：网络抖动（EOF/超时）重试，别的错不浪费额度。 */
+    private const val MAX_ATTEMPTS = 2
+
+    /** 重试前等一下，给网络一点自愈时间。 */
+    private const val RETRY_DELAY_MS = 400L
 
     @Volatile
     private var cooldownUntil = 0L
@@ -78,20 +85,55 @@ object ReplyHttpClient {
             else "$RATE_LIMITED_MESSAGE（还需 ${left} 秒）"
             throw IllegalStateException(reason)
         }
-        return try {
-            AgentLlm.completeWithPrompts(modelId, system, user)
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            WeLogger.e(TAG, "model call failed", e)
-            val shown = friendly(e)
-            if (shown.startsWith(RATE_LIMITED_MESSAGE)) {
-                cooldownUntil = System.currentTimeMillis() + RATE_COOLDOWN_MS
-                cooldownHighRisk = false
-                WeLogger.w(TAG, "rate limited, cool down ${RATE_COOLDOWN_MS / 1000}s")
+        var lastError: Exception? = null
+        for (attempt in 1..MAX_ATTEMPTS) {
+            try {
+                return AgentLlm.completeWithPrompts(modelId, system, user)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                lastError = e
+                val shown = friendly(e)
+                // 网络抖动（EOF / 超时 / 连接重置）重试一次通常就好；鉴权、额度、风控重试没意义
+                if (attempt < MAX_ATTEMPTS && isTransient(e) && !shown.startsWith(RATE_LIMITED_MESSAGE)) {
+                    WeLogger.w(
+                        TAG,
+                        "model call failed (${e.javaClass.simpleName}: ${e.message}), retry $attempt/${MAX_ATTEMPTS - 1}",
+                    )
+                    delay(RETRY_DELAY_MS * attempt)
+                    continue
+                }
+                WeLogger.e(TAG, "model call failed", e)
+                if (shown.startsWith(RATE_LIMITED_MESSAGE)) {
+                    cooldownUntil = System.currentTimeMillis() + RATE_COOLDOWN_MS
+                    cooldownHighRisk = false
+                    WeLogger.w(TAG, "rate limited, cool down ${RATE_COOLDOWN_MS / 1000}s")
+                }
+                throw IllegalStateException(shown, e)
             }
-            throw IllegalStateException(shown, e)
         }
+        throw IllegalStateException(friendly(lastError ?: IllegalStateException()), lastError)
+    }
+
+    /** 只有网络抖动类错误值得重试；配置错、鉴权错、风控拦截重试也没用。 */
+    private fun isTransient(error: Throwable): Boolean {
+        var cursor: Throwable? = error
+        while (cursor != null) {
+            // EOFException / SocketTimeoutException / ConnectException / UnknownHostException 都是 IOException
+            if (cursor is java.io.IOException) return true
+            val message = cursor.message.orEmpty().lowercase()
+            if (message.contains("not enough data") ||
+                message.contains("timeout") ||
+                message.contains("timed out") ||
+                message.contains("connection reset") ||
+                message.contains("unexpected end") ||
+                message.contains("stream was reset")
+            ) {
+                return true
+            }
+            cursor = cursor.cause
+        }
+        return false
     }
 
     /** 上游没按 JSON 回话时，给一句能对准病根的话，别再一律甩「格式不对」。 */

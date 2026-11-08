@@ -157,6 +157,8 @@ object AutoSpeechToText : SwitchFeature(),
         val boundTag = view.tag
         view.post {
             if (!view.isAttachedToWindow || view.tag !== boundTag) {
+                // 没真的发起转写就把标记撤掉，否则这条语音这辈子都不会再试一次
+                processedMessages.remove(id)
                 WeLogger.d(TAG, "行已回收，放弃转文字 id=$id")
                 return@post
             }

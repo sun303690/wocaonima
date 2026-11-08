@@ -33,10 +33,25 @@ object AsrEngine {
     private const val TAG = "AsrEngine"
     private const val DEFAULT_MODEL = "whisper-1"
 
+    /** 设置页「选择模型」里的候选，用户也可以自己填别的。 */
+    val MODELS = listOf(
+        "whisper-1",
+        "gpt-4o-transcribe",
+        "gpt-4o-mini-transcribe",
+        "FunAudioLLM/SenseVoiceSmall",
+        "whisper-large-v3",
+    )
+
     /** 接口根地址，例如 https://api.siliconflow.cn/v1 ；也接受直接填完整的 .../audio/transcriptions。 */
     var baseUrl by prefOption("asr_base_url", "")
     var apiKey by prefOption("asr_api_key", "")
     var model by prefOption("asr_model", DEFAULT_MODEL)
+
+    /**
+     * 语音识别总闸。开关与地址/Key 都在「多模态识别」那一页里（两件事同一个界面），
+     * 涉及联网花钱，默认关。
+     */
+    var enabled by prefOption("asr_enabled", false)
 
     private val client by lazy {
         OkHttpClient.Builder()
@@ -46,9 +61,9 @@ object AsrEngine {
             .build()
     }
 
-    /** 是否具备自动识别能力（独立开关打开，且地址、Key 都填了）。 */
+    /** 是否具备自动识别能力（开关打开，且地址、Key 都填了）。 */
     fun ready(): Boolean =
-        AsrFeature.isEnabled && baseUrl.isNotBlank() && apiKey.isNotBlank()
+        enabled && baseUrl.isNotBlank() && apiKey.isNotBlank()
 
     /**
      * 识别一条语音消息，回调在后台线程。成功回 (文本, null)，失败回 (null, 原因)。
@@ -103,10 +118,60 @@ object AsrEngine {
         return text
     }
 
+    /**
+     * 连通性自检（设置页「测试连通性」按钮）。
+     *
+     * 拿一段 0.5 秒静音 WAV 真打一次 `/audio/transcriptions`：只有 HTTP 2xx 才算通，
+     * 静音多半没有转写文本，所以「返回空文本」也判成功——这一步只验地址/Key/模型对不对。
+     */
+    fun testConnection(cb: (Boolean, String) -> Unit) {
+        if (baseUrl.isBlank()) {
+            cb(false, "还没填接口地址"); return
+        }
+        if (apiKey.isBlank()) {
+            cb(false, "还没填 Key"); return
+        }
+        thread(name = "wekit-asr-test") {
+            runCatching {
+                val dir = File(HostInfo.application.cacheDir, "asr").apply { mkdirs() }
+                val probe = File(dir, "probe.wav")
+                probe.writeBytes(silentWav(500))
+                val text = request(probe)
+                probe.delete()
+                text
+            }.onSuccess { text ->
+                cb(true, if (text.isBlank()) "连通正常（静音没有转写结果）" else "连通正常：${text.take(24)}")
+            }.onFailure { cb(false, it.message ?: "连接失败") }
+        }
+    }
+
+    /** 0.5 秒 16k / 单声道 / 16bit 静音 WAV，只用来自检，不进缓存。 */
+    private fun silentWav(millis: Int): ByteArray {
+        val sampleRate = 16000
+        val dataSize = sampleRate * millis / 1000 * 2
+        val buffer = java.nio.ByteBuffer.allocate(44 + dataSize)
+            .order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        buffer.put("RIFF".toByteArray())
+        buffer.putInt(36 + dataSize)
+        buffer.put("WAVE".toByteArray())
+        buffer.put("fmt ".toByteArray())
+        buffer.putInt(16)
+        buffer.putShort(1)              // PCM
+        buffer.putShort(1)              // 单声道
+        buffer.putInt(sampleRate)
+        buffer.putInt(sampleRate * 2)   // 字节率
+        buffer.putShort(2)              // 块对齐
+        buffer.putShort(16)             // 位深
+        buffer.put("data".toByteArray())
+        buffer.putInt(dataSize)
+        return buffer.array()
+    }
+
     private fun request(file: File): String {
+        val mime = if (file.name.endsWith(".wav", ignoreCase = true)) "audio/wav" else "audio/mpeg"
         val form = MultipartBody.Builder().setType(MultipartBody.FORM)
             .addFormDataPart("model", model.trim().ifBlank { DEFAULT_MODEL })
-            .addFormDataPart("file", file.name, file.asRequestBody("audio/mpeg".toMediaType()))
+            .addFormDataPart("file", file.name, file.asRequestBody(mime.toMediaType()))
             .build()
         val request = Request.Builder()
             .url(endpoint())

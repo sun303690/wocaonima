@@ -1,15 +1,9 @@
 package dev.sun.wechat.features.items.chat
 
 import android.app.Activity
-import android.graphics.drawable.GradientDrawable
 import android.media.MediaPlayer
 import android.os.Handler
 import android.os.Looper
-import android.view.Gravity
-import android.view.View
-import android.view.ViewGroup
-import android.widget.FrameLayout
-import android.widget.TextView
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -51,25 +45,19 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import java.io.File
-import java.util.WeakHashMap
 import kotlin.math.roundToInt
 
 /**
  * 语音工作台：输入文字 → TTS 合成 → 可选叠加背景音乐 → 试听 / 直接发到当前聊天。
  *
- * 入口两处（随「文字转语音」特性启用）：
- * - 聊天页右上角悬浮的 🎵 小按钮（hook 聊天 Fragment / 独立 ChattingUI 出现时挂上）；
- * - 输入栏 ＋/发送键长按菜单的「语音工作台」条目（兜底入口，必定可用）。
+ * 入口一处（随「文字转语音」特性启用）：
+ * - 输入栏 ＋/发送键长按菜单的「语音工作台」条目。
  *
  * 只有这里的语音带 BGM；气泡卡与帮我回面板的语音保持原样。
  */
 object VoiceWorkshop : WeChatInputBarMenuApi.IActionItemsProvider {
 
     private const val TAG = "VoiceWorkshop"
-    private const val CORNER_TAG = "wekit_voice_workshop_corner"
-
-    private val main = Handler(Looper.getMainLooper())
-    private val corners = WeakHashMap<Activity, TextView>()
 
     @Volatile
     private var enabled = false
@@ -91,6 +79,7 @@ object VoiceWorkshop : WeChatInputBarMenuApi.IActionItemsProvider {
     )
 
     fun open(activity: Activity) {
+        if (!enabled) return
         runCatching {
             showComposeDialog(activity) { WorkshopContent() }
         }.onFailure {
@@ -285,65 +274,13 @@ object VoiceWorkshop : WeChatInputBarMenuApi.IActionItemsProvider {
         )
     }
 
-    // ===== 聊天页右上角 🎵 悬浮按钮 =====
-
-    /** 聊天页出现（Fragment 或独立 Activity）时调用。 */
-    fun onChatViewShown(view: View) {
-        if (!enabled) return
-        val activity = view.context as? Activity ?: return
-        main.post { attachCorner(activity) }
-    }
-
-    /** 离开聊天页：LauncherUI 常驻，按钮必须手动藏。 */
-    fun onChatViewHidden() {
-        main.post { corners.values.forEach { it.visibility = View.GONE } }
-    }
-
-    private fun attachCorner(activity: Activity) {
-        if (!enabled) return
-        val decor = activity.window?.decorView as? ViewGroup ?: return
-        corners[activity]?.let { it.visibility = View.VISIBLE; return }
-        val d = activity.resources.displayMetrics.density
-        val size = (40 * d).toInt()
-        val sbId = activity.resources.getIdentifier("status_bar_height", "dimen", "android")
-        val statusBar = if (sbId > 0) activity.resources.getDimensionPixelSize(sbId) else 0
-        // 让开微信自己的标题栏（右上角有「…」），落在标题栏正下方仍属于界面右上角
-        val abAttr = activity.obtainStyledAttributes(intArrayOf(android.R.attr.actionBarSize))
-        val actionBar = runCatching { abAttr.getDimensionPixelSize(0, (48 * d).toInt()) }
-            .getOrDefault((48 * d).toInt()).also { abAttr.recycle() }
-        val button = TextView(activity).apply {
-            text = "🎵"
-            textSize = 17f
-            gravity = Gravity.CENTER
-            tag = CORNER_TAG
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(0x59000000)
-            }
-            setOnClickListener { open(activity) }
-        }
-        val lp = FrameLayout.LayoutParams(size, size, Gravity.TOP or Gravity.END).apply {
-            topMargin = statusBar + actionBar + (6 * d).toInt()
-            marginEnd = (10 * d).toInt()
-        }
-        runCatching { decor.addView(button, lp) }
-            .onFailure {
-                WeLogger.w(TAG, "attach corner failed: ${it.message}")
-                return
-            }
-        corners[activity] = button
-    }
+    // ===== 开关门禁 =====
 
     /**
-     * 特性启用/停用。真正的 Xposed hook 装在 [TextToSpeech]（Feature 内才有 hookAfter 成员扩展），
-     * 这里只做开关门禁：关掉后已有 hook 全部失效、按钮隐藏。
+     * 特性启用/停用。Xposed hook 装在 [TextToSpeech]，这里只做门禁：
+     * 关掉后菜单入口被摘掉、[open] 也不再打开面板。
      */
     fun setEnabled(on: Boolean) {
         enabled = on
-        if (!on) hideCorner()
-    }
-
-    fun hideCorner() {
-        corners.values.forEach { it.visibility = View.GONE }
     }
 }

@@ -1,5 +1,6 @@
 package dev.sun.wechat.features.items.chat_mood
 
+import dev.sun.wechat.utils.WeLogger
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -9,6 +10,8 @@ import org.json.JSONObject
  * 因此 OpenAI / Responses / Anthropic / Gemini 等服务商都能直接工作。
  */
 object ReplyProtocol {
+
+    private const val TAG = "ReplyProtocol"
 
     /** 一次调用的系统提示与用户输入。 */
     data class Prompts(val system: String, val user: String)
@@ -67,17 +70,95 @@ object ReplyProtocol {
         }
     }
 
+    /** 一轮最多保留几条候选：模型偶尔会把同一句循环吐上百遍，必须截断。 */
+    private const val MAX_REPLIES = 4
+
     fun parseReplyText(content: String): ReplySuggestion {
-        val result = JSONObject(cleanJson(content))
-        val replies = result.optJSONArray("replies")
-        val parts = if (replies != null && replies.length() in 1..6) {
-            (0 until replies.length()).map { replies.getString(it).trim() }
-        } else {
-            listOf(result.optString("reply", "").trim().takeIf { it.isNotEmpty() }
-                ?: throw IllegalStateException("模型未返回有效回复"))
+        val parsed = runCatching { JSONObject(cleanJson(content)) }.getOrNull()
+        if (parsed != null) {
+            val replies = parsed.optJSONArray("replies")
+            val raw = if (replies != null) {
+                (0 until replies.length()).mapNotNull { index ->
+                    runCatching { replies.getString(index) }.getOrNull()
+                }
+            } else {
+                listOf(parsed.optString("reply", ""))
+            }
+            val parts = normalizeReplies(raw)
+            if (parts.isNotEmpty()) {
+                return ReplySuggestion(parts, parsed.optString("reason", "").trim().take(2000))
+            }
         }
-        val reason = result.optString("reason", "").trim().take(2000)
-        return ReplySuggestion(parts, reason)
+        // JSON 被截断（模型把同一句循环到 max_tokens 用尽，字符串没收尾）时，
+        // 把 replies 数组里已经完整闭合的字符串捞回来，别让整轮回复白跑。
+        val salvaged = normalizeReplies(salvageReplies(content))
+        if (salvaged.isEmpty()) throw IllegalStateException("模型未返回有效回复")
+        WeLogger.w(TAG, "回复 JSON 不完整，已抢救 ${salvaged.size} 条候选")
+        return ReplySuggestion(salvaged, "")
+    }
+
+    /** 去重并按顺序保留前 [MAX_REPLIES] 条，去掉空串。 */
+    private fun normalizeReplies(raw: List<String>): List<String> {
+        val unique = LinkedHashSet<String>()
+        for (item in raw) {
+            val text = item.trim()
+            if (text.isEmpty()) continue
+            unique += text
+            if (unique.size >= MAX_REPLIES) break
+        }
+        return unique.toList()
+    }
+
+    /** 从（可能被截断的）原文里捞出 replies 数组中已闭合的字符串值。 */
+    private fun salvageReplies(raw: String): List<String> {
+        val keyAt = raw.indexOf("\"replies\"")
+        if (keyAt < 0) return emptyList()
+        val arrayAt = raw.indexOf('[', keyAt)
+        if (arrayAt < 0) return emptyList()
+        val out = ArrayList<String>()
+        var index = arrayAt + 1
+        while (index < raw.length) {
+            while (index < raw.length && (raw[index].isWhitespace() || raw[index] == ',')) index++
+            if (index >= raw.length || raw[index] == ']') break
+            if (raw[index] != '"') break
+            val builder = StringBuilder()
+            var cursor = index + 1
+            var closed = false
+            while (cursor < raw.length) {
+                when (val ch = raw[cursor]) {
+                    '\\' -> {
+                        if (cursor + 1 >= raw.length) break
+                        builder.append(
+                            when (val escaped = raw[cursor + 1]) {
+                                'n' -> '\n'
+                                't' -> '\t'
+                                'r' -> '\r'
+                                '"' -> '"'
+                                '\\' -> '\\'
+                                '/' -> '/'
+                                else -> escaped
+                            },
+                        )
+                        cursor += 2
+                        continue
+                    }
+                    '"' -> {
+                        closed = true
+                        cursor++
+                    }
+                    else -> {
+                        builder.append(ch)
+                        cursor++
+                        continue
+                    }
+                }
+                if (closed) break
+            }
+            if (!closed) break
+            out += builder.toString()
+            index = cursor
+        }
+        return out
     }
 
     // ==================== 找话题 ====================
