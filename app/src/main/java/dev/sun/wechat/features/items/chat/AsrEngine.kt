@@ -231,9 +231,9 @@ object AsrEngine {
             .asShortBuffer()
         val ratio = TARGET_SAMPLE_RATE.toDouble() / sourceRate
         val outputSamples = (sourceSamples * ratio).toInt().coerceAtLeast(1)
-        val output = java.nio.ByteBuffer.allocate(outputSamples * 2)
+        val outputBuffer = java.nio.ByteBuffer.allocate(outputSamples * 2)
             .order(java.nio.ByteOrder.LITTLE_ENDIAN)
-            .asShortBuffer()
+        val output = outputBuffer.asShortBuffer()
         for (i in 0 until outputSamples) {
             val position = i / ratio
             val index = position.toInt()
@@ -243,7 +243,7 @@ object AsrEngine {
             val sample = (current + (next - current) * fraction).toInt()
             output.put(sample.coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort())
         }
-        file.writeBytes(output.array())
+        file.writeBytes(outputBuffer.array())
         WeLogger.d(TAG, "重采样 ${sourceRate}Hz → ${TARGET_SAMPLE_RATE}Hz，${sourceSamples} → ${outputSamples} 样本")
     }
 
