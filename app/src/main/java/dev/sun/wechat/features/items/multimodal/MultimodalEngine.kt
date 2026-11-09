@@ -35,10 +35,8 @@ object MultimodalEngine {
     var stickerEnabled by prefOption("mm_sticker_enabled", true)
     var cardEnabled by prefOption("mm_card_enabled", true)
 
-    // ---- 视觉模型（OpenAI 兼容 chat/completions，支持 image_url data URI）----
-    var visionBaseUrl by prefOption("mm_vision_base_url", "")
-    var visionApiKey by prefOption("mm_vision_api_key", "")
-    var visionModel by prefOption("mm_vision_model", "gpt-4o-mini")
+    // ---- 视觉模型：直接用 WeAgent 里已配好的模型（只选一个支持看图的）----
+    var visionModelId by prefOption("mm_vision_model_id", "")
 
     private const val IMAGE_PROMPT =
         "用一句中文描述这张图片的内容。如果图里有文字，把关键文字也说出来。不超过 60 字。"
@@ -52,8 +50,7 @@ object MultimodalEngine {
     private val inFlight: MutableSet<String> = Collections.synchronizedSet(HashSet<String>())
 
     /** 视觉接口是否配好了（不代表某一类开关打开了）。 */
-    fun visionReady(): Boolean =
-        visionBaseUrl.isNotBlank() && visionApiKey.isNotBlank()
+    fun visionReady(): Boolean = visionModelId.isNotBlank()
 
     /**
      * 取一条消息的多模态文本（只读缓存，不联网）。

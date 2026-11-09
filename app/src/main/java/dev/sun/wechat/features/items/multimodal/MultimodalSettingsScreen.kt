@@ -3,10 +3,12 @@ package dev.sun.wechat.features.items.multimodal
 import android.os.Handler
 import android.os.Looper
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -17,6 +19,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.sun.wechat.R
+import dev.sun.wechat.agent.data.WeAgentRepository
 import dev.sun.wechat.features.items.chat.AsrEngine
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.miuix.MiuixAlertDialog
@@ -32,29 +35,43 @@ import top.yukonga.miuix.kmp.basic.Text
 /**
  * 多模态识别设置页（独立页面，带返回与大标题）。
  *
+ * 外壳只保留一个 [MiuixSecondaryScaffold]，页面切换只换里面内容（同 ThemeWorkshop 的
+ * PageScaffold 做法），避免每页各起一套外壳导致背景层层叠加、透出上一页内容。
+ * 壁纸层关闭：多模态设置页用纯不透明底色，保证子页不会透出主页。
+ *
  * - 主页：四个子开关 + 「语音接口」「视觉接口」两个入口 + 清缓存；
- * - 语音接口页：`/audio/transcriptions` 的地址、Key、模型（可点选）+ 连通性测试，由 [AsrEngine] 使用；
- * - 视觉接口页：`/chat/completions` 的地址、Key、模型（可点选）+ 连通性测试，由 [VisionClient] 使用。
+ * - 语音接口页：`/audio/transcriptions` 的服务商预设、地址、Key、模型（可点选）+ 连通性测试，由 [AsrEngine] 使用；
+ * - 视觉接口页：直接从 WeAgent 已配好的模型里挑一个支持看图的，不用再填地址和 Key，由 [VisionClient] 使用。
  */
 @Composable
 fun MultimodalSettingsScreen(onBack: () -> Unit) {
     var page by remember { mutableStateOf(0) }
-    when (page) {
-        1 -> ApiPage(mode = ApiMode.VOICE, onBack = { page = 0 })
-        2 -> ApiPage(mode = ApiMode.VISION, onBack = { page = 0 })
-        else -> HomePage(
-            onBack = onBack,
-            onOpenVoice = { page = 1 },
-            onOpenVision = { page = 2 },
-        )
+    val title = when (page) {
+        1 -> stringResource(R.string.mm_voice_api_page)
+        2 -> stringResource(R.string.mm_vision_api_page)
+        else -> stringResource(R.string.feature_multimodal_name)
+    }
+
+    MiuixSecondaryScaffold(
+        title = title,
+        onBack = { if (page == 0) onBack() else page = 0 },
+        showWallpaper = false,
+    ) {
+        item {
+            when (page) {
+                1 -> VoiceApiContent()
+                2 -> VisionApiContent()
+                else -> HomeContent(
+                    onOpenVoice = { page = 1 },
+                    onOpenVision = { page = 2 },
+                )
+            }
+        }
     }
 }
 
-/** 两个接口页共用同一套布局，用这个区分读写哪个引擎。 */
-enum class ApiMode { VOICE, VISION }
-
 @Composable
-private fun HomePage(onBack: () -> Unit, onOpenVoice: () -> Unit, onOpenVision: () -> Unit) {
+private fun HomeContent(onOpenVoice: () -> Unit, onOpenVision: () -> Unit) {
     val context = LocalContext.current
     var voice by remember { mutableStateOf(AsrEngine.enabled) }
     var image by remember { mutableStateOf(MultimodalEngine.imageEnabled) }
@@ -63,151 +80,151 @@ private fun HomePage(onBack: () -> Unit, onOpenVoice: () -> Unit, onOpenVision: 
     val notSet = stringResource(R.string.mm_api_not_set)
     val noModel = stringResource(R.string.mm_model_not_set)
 
-    MiuixSecondaryScaffold(title = stringResource(R.string.feature_multimodal_name), onBack = onBack) {
-        item { MiuixSettingsSectionTitle(stringResource(R.string.mm_switch_hint)) }
-        item {
-            MiuixSettingsCard {
-                MiuixSettingsToggle(
-                    title = stringResource(R.string.mm_voice_switch),
-                    summary = stringResource(R.string.mm_voice_switch_summary),
-                    checked = voice,
-                    onCheckedChange = { voice = it; AsrEngine.enabled = it },
-                )
-                MiuixSettingsToggle(
-                    title = stringResource(R.string.mm_image_switch),
-                    summary = stringResource(R.string.mm_image_switch_summary),
-                    checked = image,
-                    onCheckedChange = { image = it; MultimodalEngine.imageEnabled = it },
-                )
-                MiuixSettingsToggle(
-                    title = stringResource(R.string.mm_sticker_switch),
-                    summary = stringResource(R.string.mm_sticker_switch_summary),
-                    checked = sticker,
-                    onCheckedChange = { sticker = it; MultimodalEngine.stickerEnabled = it },
-                )
-                MiuixSettingsToggle(
-                    title = stringResource(R.string.mm_card_switch),
-                    summary = stringResource(R.string.mm_card_switch_summary),
-                    checked = card,
-                    onCheckedChange = { card = it; MultimodalEngine.cardEnabled = it },
-                )
-            }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        MiuixSettingsSectionTitle(stringResource(R.string.mm_switch_hint))
+        MiuixSettingsCard {
+            MiuixSettingsToggle(
+                title = stringResource(R.string.mm_voice_switch),
+                summary = stringResource(R.string.mm_voice_switch_summary),
+                checked = voice,
+                onCheckedChange = { voice = it; AsrEngine.enabled = it },
+            )
+            MiuixSettingsToggle(
+                title = stringResource(R.string.mm_image_switch),
+                summary = stringResource(R.string.mm_image_switch_summary),
+                checked = image,
+                onCheckedChange = { image = it; MultimodalEngine.imageEnabled = it },
+            )
+            MiuixSettingsToggle(
+                title = stringResource(R.string.mm_sticker_switch),
+                summary = stringResource(R.string.mm_sticker_switch_summary),
+                checked = sticker,
+                onCheckedChange = { sticker = it; MultimodalEngine.stickerEnabled = it },
+            )
+            MiuixSettingsToggle(
+                title = stringResource(R.string.mm_card_switch),
+                summary = stringResource(R.string.mm_card_switch_summary),
+                checked = card,
+                onCheckedChange = { card = it; MultimodalEngine.cardEnabled = it },
+            )
         }
-        item { MiuixSettingsSectionTitle(stringResource(R.string.mm_api_hint)) }
-        item {
-            MiuixSettingsCard {
-                MiuixSettingsAction(
-                    title = stringResource(R.string.mm_voice_api_page),
-                    summary = if (AsrEngine.baseUrl.isBlank()) notSet else AsrEngine.model.ifBlank { noModel },
-                    onClick = onOpenVoice,
-                )
-                MiuixSettingsAction(
-                    title = stringResource(R.string.mm_vision_api_page),
-                    summary = if (MultimodalEngine.visionBaseUrl.isBlank()) notSet else MultimodalEngine.visionModel.ifBlank { noModel },
-                    onClick = onOpenVision,
-                )
-            }
+
+        MiuixSettingsSectionTitle(stringResource(R.string.mm_api_hint))
+        MiuixSettingsCard {
+            MiuixSettingsAction(
+                title = stringResource(R.string.mm_voice_api_page),
+                summary = if (AsrEngine.baseUrl.isBlank()) notSet else AsrEngine.model.ifBlank { noModel },
+                onClick = onOpenVoice,
+            )
+            MiuixSettingsAction(
+                title = stringResource(R.string.mm_vision_api_page),
+                summary = if (MultimodalEngine.visionReady()) {
+                    stringResource(R.string.mm_weagent_selected)
+                } else {
+                    notSet
+                },
+                onClick = onOpenVision,
+            )
         }
-        item { MiuixSettingsSectionTitle(stringResource(R.string.mm_cache_hint)) }
-        item {
-            MiuixSettingsCard {
-                MiuixSettingsAction(
-                    title = stringResource(R.string.mm_clear_cache),
-                    summary = stringResource(R.string.asr_cache_hint),
-                    onClick = {
-                        MultimodalEngine.clearCache()
-                        AsrEngine.clearCache()
-                        showToast(context, "已清空多模态与语音识别缓存")
-                    },
-                )
-            }
+
+        MiuixSettingsSectionTitle(stringResource(R.string.mm_cache_hint))
+        MiuixSettingsCard {
+            MiuixSettingsAction(
+                title = stringResource(R.string.mm_clear_cache),
+                summary = stringResource(R.string.asr_cache_hint),
+                onClick = {
+                    MultimodalEngine.clearCache()
+                    AsrEngine.clearCache()
+                    showToast(context, "已清空多模态与语音识别缓存")
+                },
+            )
         }
     }
 }
 
+/** 语音接口页内容：服务商预设一键填 + 地址/Key/模型 + 连通性测试。 */
 @Composable
-private fun ApiPage(mode: ApiMode, onBack: () -> Unit) {
+private fun VoiceApiContent() {
     val context = LocalContext.current
     val main = remember { Handler(Looper.getMainLooper()) }
-    val voice = mode == ApiMode.VOICE
-
-    var url by remember { mutableStateOf(if (voice) AsrEngine.baseUrl else MultimodalEngine.visionBaseUrl) }
-    var key by remember { mutableStateOf(if (voice) AsrEngine.apiKey else MultimodalEngine.visionApiKey) }
-    var model by remember { mutableStateOf(if (voice) AsrEngine.model else MultimodalEngine.visionModel) }
+    var url by remember { mutableStateOf(AsrEngine.baseUrl) }
+    var key by remember { mutableStateOf(AsrEngine.apiKey) }
+    var model by remember { mutableStateOf(AsrEngine.model) }
     var testing by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf("") }
     var showModels by remember { mutableStateOf(false) }
     var custom by remember { mutableStateOf("") }
 
-    val presets = if (voice) AsrEngine.MODELS else VisionClient.MODELS
-    val title = stringResource(if (voice) R.string.mm_voice_api_page else R.string.mm_vision_api_page)
-
-    MiuixSecondaryScaffold(title = title, onBack = onBack) {
-        item { MiuixSettingsSectionTitle(stringResource(if (voice) R.string.asr_base_url else R.string.mm_vision_base_url)) }
-        item {
-            MiuixSettingsCard {
-                MiuixCompatTextField(
-                    value = url,
-                    onValueChange = {
-                        url = it
-                        if (voice) AsrEngine.baseUrl = it.trim() else MultimodalEngine.visionBaseUrl = it.trim()
-                    },
-                    label = stringResource(if (voice) R.string.asr_base_url else R.string.mm_vision_base_url),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-                )
-                MiuixCompatTextField(
-                    value = key,
-                    onValueChange = {
-                        key = it
-                        if (voice) AsrEngine.apiKey = it.trim() else MultimodalEngine.visionApiKey = it.trim()
-                    },
-                    label = stringResource(if (voice) R.string.asr_api_key else R.string.mm_vision_api_key),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-                )
-            }
-        }
-        item { MiuixSettingsSectionTitle(stringResource(R.string.mm_model_pick)) }
-        item {
-            MiuixSettingsCard {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        MiuixSettingsSectionTitle(stringResource(R.string.mm_preset_hint))
+        MiuixSettingsCard {
+            AsrEngine.PRESETS.forEach { preset ->
                 MiuixSettingsAction(
-                    title = stringResource(R.string.mm_model_pick),
-                    summary = model.ifBlank { stringResource(R.string.mm_model_not_set) },
-                    onClick = { showModels = true },
-                )
-            }
-        }
-        item { MiuixSettingsSectionTitle(stringResource(R.string.mm_test_connection)) }
-        item {
-            MiuixSettingsCard {
-                MiuixSettingsAction(
-                    title = stringResource(if (testing) R.string.mm_testing else R.string.mm_test_connection),
-                    summary = result,
+                    title = preset.name,
+                    summary = "${preset.baseUrl} · ${preset.model}",
                     onClick = {
-                        if (!testing) {
-                            testing = true
-                            result = ""
-                            val callback: (Boolean, String) -> Unit = { _, message ->
-                                main.post {
-                                    testing = false
-                                    result = message
-                                    showToast(context, message)
-                                }
-                            }
-                            if (voice) AsrEngine.testConnection(callback) else VisionClient.testConnection(callback)
-                        }
+                        AsrEngine.applyPreset(preset)
+                        url = preset.baseUrl
+                        model = preset.model
+                        showToast(context, "已填入 ${preset.name}")
                     },
                 )
             }
         }
-        item {
-            Text(
-                text = stringResource(if (voice) R.string.asr_settings_hint else R.string.mm_vision_hint),
-                fontSize = 12.sp,
-                modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
+
+        MiuixSettingsSectionTitle(stringResource(R.string.asr_base_url))
+        MiuixSettingsCard {
+            MiuixCompatTextField(
+                value = url,
+                onValueChange = { url = it; AsrEngine.baseUrl = it.trim() },
+                label = stringResource(R.string.asr_base_url),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+            )
+            MiuixCompatTextField(
+                value = key,
+                onValueChange = { key = it; AsrEngine.apiKey = it.trim() },
+                label = stringResource(R.string.asr_api_key),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
             )
         }
+
+        MiuixSettingsSectionTitle(stringResource(R.string.mm_model_pick))
+        MiuixSettingsCard {
+            MiuixSettingsAction(
+                title = stringResource(R.string.mm_model_pick),
+                summary = model.ifBlank { stringResource(R.string.mm_model_not_set) },
+                onClick = { showModels = true },
+            )
+        }
+
+        MiuixSettingsSectionTitle(stringResource(R.string.mm_test_connection))
+        MiuixSettingsCard {
+            MiuixSettingsAction(
+                title = stringResource(if (testing) R.string.mm_testing else R.string.mm_test_connection),
+                summary = result,
+                onClick = {
+                    if (!testing) {
+                        testing = true
+                        result = ""
+                        AsrEngine.testConnection { _, message ->
+                            main.post {
+                                testing = false
+                                result = message
+                                showToast(context, message)
+                            }
+                        }
+                    }
+                },
+            )
+        }
+
+        Text(
+            text = stringResource(R.string.asr_settings_hint),
+            fontSize = 12.sp,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
+        )
     }
 
     if (showModels) {
@@ -216,7 +233,7 @@ private fun ApiPage(mode: ApiMode, onBack: () -> Unit) {
             title = { Text(stringResource(R.string.mm_model_pick), fontSize = 17.sp) },
             text = {
                 Column {
-                    presets.forEach { preset ->
+                    AsrEngine.MODELS.forEach { preset ->
                         Text(
                             text = if (preset == model) "✓ $preset" else preset,
                             fontSize = 15.sp,
@@ -224,7 +241,7 @@ private fun ApiPage(mode: ApiMode, onBack: () -> Unit) {
                                 .fillMaxWidth()
                                 .clickable {
                                     model = preset
-                                    if (voice) AsrEngine.model = preset else MultimodalEngine.visionModel = preset
+                                    AsrEngine.model = preset
                                     showModels = false
                                 }
                                 .padding(vertical = 7.dp),
@@ -244,7 +261,7 @@ private fun ApiPage(mode: ApiMode, onBack: () -> Unit) {
                     val picked = custom.trim()
                     if (picked.isNotEmpty()) {
                         model = picked
-                        if (voice) AsrEngine.model = picked else MultimodalEngine.visionModel = picked
+                        AsrEngine.model = picked
                     }
                     showModels = false
                 }) { Text(stringResource(R.string.mm_confirm)) }
@@ -252,6 +269,70 @@ private fun ApiPage(mode: ApiMode, onBack: () -> Unit) {
             dismissButton = {
                 Button(onClick = { showModels = false }) { Text(stringResource(R.string.mm_cancel)) }
             },
+        )
+    }
+}
+
+/** 视觉接口页内容：模型直接来自 WeAgent（只列支持看图的），不用再填地址与 Key。 */
+@Composable
+private fun VisionApiContent() {
+    val context = LocalContext.current
+    val main = remember { Handler(Looper.getMainLooper()) }
+    val all by WeAgentRepository.observeModels().collectAsState(initial = emptyList())
+    val visionModels = remember(all) { all.filter { it.supportsVision } }
+    var selected by remember { mutableStateOf(MultimodalEngine.visionModelId) }
+    var testing by remember { mutableStateOf(false) }
+    var result by remember { mutableStateOf("") }
+
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        MiuixSettingsSectionTitle(stringResource(R.string.mm_weagent_hint))
+        MiuixSettingsCard {
+            if (visionModels.isEmpty()) {
+                MiuixSettingsAction(
+                    title = stringResource(R.string.mm_vision_no_model),
+                    summary = stringResource(R.string.mm_vision_no_model_summary),
+                    onClick = {},
+                )
+            } else {
+                visionModels.forEach { model ->
+                    MiuixSettingsAction(
+                        title = (if (model.id == selected) "✓ " else "") + model.displayName,
+                        summary = model.modelIdRemote,
+                        onClick = {
+                            selected = model.id
+                            MultimodalEngine.visionModelId = model.id
+                            showToast(context, "已选用 ${model.displayName}")
+                        },
+                    )
+                }
+            }
+        }
+
+        MiuixSettingsSectionTitle(stringResource(R.string.mm_test_connection))
+        MiuixSettingsCard {
+            MiuixSettingsAction(
+                title = stringResource(if (testing) R.string.mm_testing else R.string.mm_test_connection),
+                summary = result,
+                onClick = {
+                    if (!testing) {
+                        testing = true
+                        result = ""
+                        VisionClient.testConnection { _, message ->
+                            main.post {
+                                testing = false
+                                result = message
+                                showToast(context, message)
+                            }
+                        }
+                    }
+                },
+            )
+        }
+
+        Text(
+            text = stringResource(R.string.mm_vision_hint),
+            fontSize = 12.sp,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
         )
     }
 }

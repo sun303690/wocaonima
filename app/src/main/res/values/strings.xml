@@ -4593,7 +4593,12 @@
     <string name="mm_sticker_switch_summary">Explain what a sticker means; each sticker is recognised once and cached.</string>
     <string name="mm_card_switch">Parse cards and links</string>
     <string name="mm_card_switch_summary">Extract title, description, URL, file type and size from cards, links and files. No network needed.</string>
-    <string name="mm_vision_hint">Vision API (OpenAI-compatible, image_url supported); e.g. https://api.siliconflow.cn/v1</string>
+    <string name="mm_vision_hint">Vision goes through WeAgent model routing; images are scaled to a 1024px long edge before upload.</string>
+    <string name="mm_preset_hint">Provider presets (tap to fill endpoint and model)</string>
+    <string name="mm_weagent_hint">Vision models come from WeAgent: configure a model there, then pick a vision-capable one here. No endpoint or key needed.</string>
+    <string name="mm_weagent_selected">Model selected in WeAgent</string>
+    <string name="mm_vision_no_model">No vision-capable model in WeAgent yet</string>
+    <string name="mm_vision_no_model_summary">Add a vision model (gpt-4o / Qwen-VL / GLM-4V …) in WeAgent first, then come back.</string>
     <string name="mm_vision_base_url">Vision base URL</string>
     <string name="mm_vision_api_key">Vision API key</string>
     <string name="mm_vision_model">Vision model (gpt-4o-mini / Qwen/Qwen2.5-VL-72B-Instruct)</string>

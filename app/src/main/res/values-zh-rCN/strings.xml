@@ -4620,7 +4620,12 @@
     <string name="mm_sticker_switch_summary">说明表情表达的情绪；同一个表情只识别一次，之后走缓存。</string>
     <string name="mm_card_switch">解析卡片与链接</string>
     <string name="mm_card_switch_summary">从卡片、链接、文件里抽标题、描述、网址、格式与大小，不需要联网。</string>
-    <string name="mm_vision_hint">视觉接口（OpenAI 兼容，支持 image_url）。例如 https://api.siliconflow.cn/v1</string>
+    <string name="mm_vision_hint">视觉理解走 WeAgent 的模型路由；图片会缩到最长边 1024 再发送。</string>
+    <string name="mm_preset_hint">服务商预设（点一下自动填地址和模型）</string>
+    <string name="mm_weagent_hint">视觉模型来自 WeAgent：在 WeAgent 里配好模型后，这里挑一个支持看图的即可，不用再填地址和 Key。</string>
+    <string name="mm_weagent_selected">已在 WeAgent 选择模型</string>
+    <string name="mm_vision_no_model">WeAgent 里还没有支持看图的模型</string>
+    <string name="mm_vision_no_model_summary">先到 WeAgent 添加一个视觉模型（gpt-4o / Qwen-VL / GLM-4V 等），再回来选。</string>
     <string name="mm_vision_base_url">视觉接口地址</string>
     <string name="mm_vision_api_key">视觉接口 Key</string>
     <string name="mm_vision_model">视觉模型（gpt-4o-mini / Qwen/Qwen2.5-VL-72B-Instruct）</string>
