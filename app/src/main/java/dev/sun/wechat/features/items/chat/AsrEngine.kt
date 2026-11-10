@@ -145,7 +145,30 @@ object AsrEngine {
                     AudioUtils.pcmToMp3(pcm.absolutePath, mp3.absolutePath)
                 }
 
-            null -> throw IllegalStateException("认不出这个语音的格式（$info）")
+            // 认不出容器时不要直接失败：微信语音绝大多数是 SILK，其次才是 AMR 等容器。
+            // 先按 SILK 试 native 解码，再退到系统 MediaCodec，都失败才报错（附头部字节便于排查）。
+            null -> {
+                val silkOk = runCatching {
+                    AudioUtils.silkToPcm(sourcePath, pcm.absolutePath)
+                }.getOrDefault(false)
+                if (silkOk) {
+                    AudioUtils.pcmToMp3(pcm.absolutePath, mp3.absolutePath)
+                } else {
+                    pcm.delete()
+                    val decoded = runCatching {
+                        AndroidAudioDecoder.decodeToPcm16(sourcePath, pcm)
+                    }.getOrElse {
+                        throw IllegalStateException("认不出这个语音的格式，SILK 与系统解码器都没解出来（$info）")
+                    }
+                    if (decoded.channelCount > 1) {
+                        throw IllegalStateException(
+                            "语音是 ${decoded.channelCount} 声道，暂不支持（$info）"
+                        )
+                    }
+                    resampleTo24k(pcm, decoded.sampleRate)
+                    AudioUtils.pcmToMp3(pcm.absolutePath, mp3.absolutePath)
+                }
+            }
 
             // 微信部分版本把语音存成 AMR/其他容器，native 的 SILK 解码器认不了，
             // 交给系统 MediaCodec 解码，再重采样到 24 kHz（native 的 pcmToMp3 按 24 kHz 写死）。
@@ -206,7 +229,7 @@ object AsrEngine {
     }
 
     /** 文件头 8 字节的十六进制，出错时带上，方便一眼看出到底是 SILK、AMR 还是别的东西。 */
-    private fun headHex(file: File, count: Int = 8): String = runCatching {
+    private fun headHex(file: File, count: Int = 16): String = runCatching {
         file.inputStream().use { input ->
             val buffer = ByteArray(count)
             val read = input.read(buffer)
