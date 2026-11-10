@@ -1,12 +1,14 @@
 package dev.sun.wechat.features.items.contacts.hidecontacts
 
 import dev.sun.wechat.R
+import dev.sun.wechat.constants.PackageNames
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.dexMethod
 import dev.sun.wechat.features.core.ApiFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
 
 import dev.sun.wechat.features.items.contacts.HideContacts
+import dev.sun.wechat.features.items.contacts.localizedContactsString
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.utils.TargetProcess
 import dev.sun.wechat.utils.WeLogger
@@ -56,12 +58,25 @@ object HideContactsNotifications : ApiFeature(), IResolveDex {
     override val technicalId = "隐藏联系人通知抑制"
     override val nameRes = R.string.feature_hide_contacts_notifications_name
     override val categoryIds = listOf(FeatureCategoryIds.API)
+    override val descriptionRes = R.string.feature_hide_contacts_notifications_description
 
     private const val TAG = "HideContactsNotifications"
 
-    private const val CHANNEL_ID_TEAM = "wcx_team_summary"
-    private const val NOTIFY_ID_TEAM = 20251024
-    private const val KEY_TEAM_PENDING = "wcx_team_pending"
+    /**
+     * 「消息通知隐藏」这一面没开时，本类只负责震动（见 [vibrateIfRequested]），通知原样放行。
+     *
+     * 以前这里是「只要总开关开、对方在名单里就吞通知」，于是想收通知就必须把整个隐藏联系人
+     * 关掉——和「密友」的用法冲突。现在与 WCS 的实现对齐：吞通知必须由这一面显式开启
+     * （默认关，与 [HideContacts.SURFACE_NOTIFICATIONS] 的默认值一致）。
+     */
+    private const val CHANNEL_ALERT = "wekit_hidden_alert"
+    private const val ALERT_NOTIFICATION_ID = 0x5AC6
+    private const val CHATTING_UI = "${PackageNames.WECHAT}.ui.chatting.ChattingUI"
+    private const val WEIXIN_TALKER = "weixin"
+
+    /** 震动节流：同一时间窗内连续来消息只震一次，避免长语音被拆成多条时连震。 */
+    private const val KEY_LAST_VIBRATE = "hidden_last_vibrate_at"
+    private const val VIBRATE_MIN_INTERVAL_MS = 3000L
 
     /**
      * `com.tencent.mm.booter.notification.x.d(x self, String talker, String content, int msgType,
@@ -139,13 +154,19 @@ object HideContactsNotifications : ApiFeature(), IResolveDex {
      * `HideContacts.temporarilyShown` is intentionally *not* consulted — see the class KDoc.
      */
     /**
-     * 「密友消息震动」：通知被吞掉时补一次短震动，让用户知道名单内有人发消息。
+     * 「密友消息震动」：名单里有人发消息时补一次短震动。
      *
+     * 与「消息通知隐藏」解耦——震动只看 [HideContacts.SURFACE_VIBRATE]，不看通知那面，
+     * 这样「通知照常弹、另外再震一下」也能用；是否该震由调用方先用 [isHiddenForAlerts] 判定。
      * 震动是选配（默认关），失败一律静默——通知抑制本身不能被它影响。
      * 用 application context 取 Vibrator，只调一次 createOneShot，不持有引用。
      */
     private fun vibrateIfRequested() {
-        if (!KvStore.getBoolOrDef(HideContacts.SURFACE_VIBRATE, false)) return
+        if (!HideContacts.surfaceOn(HideContacts.SURFACE_VIBRATE)) return
+        val now = System.currentTimeMillis()
+        val last = KvStore.getLongOrDef(KEY_LAST_VIBRATE, 0L)
+        if (now - last < VIBRATE_MIN_INTERVAL_MS) return
+        KvStore.putLong(KEY_LAST_VIBRATE, now)
         runCatching {
             val ctx = dev.sun.wechat.utils.HostInfo.application
             val vibrator = ctx.getSystemService(android.content.Context.VIBRATOR_SERVICE) as? android.os.Vibrator
@@ -166,50 +187,76 @@ object HideContactsNotifications : ApiFeature(), IResolveDex {
 
 
     /**
-     * 「微信团队汇总提醒」：通知被吞掉后，改发一条聚合提醒。
+     * 「微信团队提醒」：通知被吞掉后改发一条本模块的通知，点它会进「微信团队」会话。
      *
-     * 为什么不用改原通知的标题：`:push` 进程拿不到 sender，而 mix 通知的构造点在混淆类里。
-     * 这里直接自己发一条 —— 固定通知 id，未读数累加在上面的 prefs 里，用户清掉通知后
-     * 下次进来继续累加（不追求精确等于微信未读，只作为「有人找过你」的提示）。
+     * 与 WCS 的实现对齐：
+     * - 固定通知 id，后来的消息只刷新这一条，不按条数堆叠，也不再维护自增计数（旧实现会
+     *   一直累加 `wcx_team_pending`，清掉通知后计数还在，正文永远显示一个越来越大的数）；
+     * - 带 PendingIntent——旧实现漏了，通知点了没任何反应；
+     * - 渠道 IMPORTANCE_DEFAULT，文案走模块自己的多语言资源。
+     *
+     * 不往「微信团队」会话里写消息：本地插入的消息不会触发微信自己的通知，`:push` 进程也没有
+     * 消息存储 API，纯通知不需要这些。
      */
-    private fun postTeamSummary() {
-        if (!KvStore.getBoolOrDef(HideContacts.SURFACE_TEAM_SUMMARY, false)) return
+    private fun postTeamAlert() {
+        if (!HideContacts.surfaceOn(HideContacts.SURFACE_TEAM_SUMMARY)) return
         runCatching {
             val ctx = dev.sun.wechat.utils.HostInfo.application
-            val nm = ctx.getSystemService(android.content.Context.NOTIFICATION_SERVICE)
+            val manager = ctx.getSystemService(android.content.Context.NOTIFICATION_SERVICE)
                 as? android.app.NotificationManager ?: return
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O
-                && nm.getNotificationChannel(CHANNEL_ID_TEAM) == null
-            ) {
-                nm.createNotificationChannel(
-                    android.app.NotificationChannel(
-                        CHANNEL_ID_TEAM,
-                        "密友消息汇总",
-                        android.app.NotificationManager.IMPORTANCE_LOW,
-                    )
-                )
+            ensureAlertChannel(manager)
+
+            val openTeamChat = android.content.Intent().apply {
+                setClassName(ctx.packageName, CHATTING_UI)
+                putExtra("Chat_User", WEIXIN_TALKER)
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
-            val pending = KvStore.getIntOrDef(KEY_TEAM_PENDING, 0) + 1
-            KvStore.putInt(KEY_TEAM_PENDING, pending)
 
             val builder = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                android.app.Notification.Builder(ctx, CHANNEL_ID_TEAM)
+                android.app.Notification.Builder(ctx, CHANNEL_ALERT)
             } else {
                 @Suppress("DEPRECATION")
                 android.app.Notification.Builder(ctx)
             }
+
             val notification = builder
-                .setContentTitle("微信团队")
-                .setContentText("你有 $pending 条未读消息")
-                .setSmallIcon(android.R.drawable.sym_action_chat)
+                .setContentTitle(localizedContactsString(R.string.contacts_hide_alert_title))
+                .setContentText(localizedContactsString(R.string.contacts_hide_alert_body))
+                .setSmallIcon(android.R.drawable.stat_notify_chat)
+                .setWhen(System.currentTimeMillis())
+                .setShowWhen(true)
                 .setAutoCancel(true)
+                .setContentIntent(
+                    android.app.PendingIntent.getActivity(
+                        ctx,
+                        ALERT_NOTIFICATION_ID,
+                        openTeamChat,
+                        android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE,
+                    )
+                )
                 .build()
-            nm.notify(NOTIFY_ID_TEAM, notification)
+            manager.notify(ALERT_NOTIFICATION_ID, notification)
         }.onFailure { WeLogger.w(TAG, "汇总提醒发送失败", it) }
     }
 
-    private fun isSuppressed(wxId: String): Boolean =
+    private fun ensureAlertChannel(manager: android.app.NotificationManager) {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) return
+        if (manager.getNotificationChannel(CHANNEL_ALERT) != null) return
+        manager.createNotificationChannel(
+            android.app.NotificationChannel(
+                CHANNEL_ALERT,
+                localizedContactsString(R.string.contacts_hide_alert_channel),
+                android.app.NotificationManager.IMPORTANCE_DEFAULT,
+            )
+        )
+    }
+
+    /** 名单内的会话吗——震动与「吞通知」共用这一个判断。 */
+    private fun isHiddenForAlerts(wxId: String): Boolean =
         KvStore.getBoolOrDef(HideContacts.technicalId, false) && wxId in HideContacts.hiddenContacts
+
+    private fun isSuppressed(wxId: String): Boolean =
+        HideContacts.surfaceOn(HideContacts.SURFACE_NOTIFICATIONS) && isHiddenForAlerts(wxId)
 
     override fun onEnable() {
         // Both bodies only cancel the call; they mutate no WeChat state and so cannot re-trigger the
@@ -226,11 +273,13 @@ object HideContactsNotifications : ApiFeature(), IResolveDex {
 
         methodDealNotify.hookBefore(100) {
             val talker = args[1] as? String ?: return@hookBefore
+            if (!isHiddenForAlerts(talker)) return@hookBefore
+            // 震动与「吞通知」解耦：只开震动、没开消息通知隐藏时，通知照常弹，这里额外震一下。
+            vibrateIfRequested()
             if (!isSuppressed(talker)) return@hookBefore
             WeLogger.i(TAG, "suppressing message notification from $talker")
-            vibrateIfRequested()
-            postTeamSummary()
             result = null
+            postTeamAlert()
         }
 
         if (methodNotifyForLightPush.isPlaceholder) {
@@ -240,11 +289,12 @@ object HideContactsNotifications : ApiFeature(), IResolveDex {
 
         methodNotifyForLightPush.hookBefore(100) {
             val userName = args[1] as? String ?: return@hookBefore
+            if (!isHiddenForAlerts(userName)) return@hookBefore
+            vibrateIfRequested()
             if (!isSuppressed(userName)) return@hookBefore
             WeLogger.i(TAG, "suppressing LightPush notification from $userName")
-            vibrateIfRequested()
-            postTeamSummary()
             result = null
+            postTeamAlert()
         }
     }
 }

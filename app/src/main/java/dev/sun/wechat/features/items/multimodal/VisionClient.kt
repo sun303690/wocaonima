@@ -31,20 +31,24 @@ object VisionClient {
 
     /** 同步调用视觉模型，返回模型给的一句话描述；失败抛异常（调用方一般在后台线程）。 */
     fun describe(file: File, prompt: String): String {
-        if (!MultimodalEngine.visionReady()) throw IllegalStateException("还没在 WeAgent 里选视觉模型")
         if (!file.isFile || file.length() == 0L) throw IllegalStateException("图片文件不存在")
         val image = encode(file) ?: throw IllegalStateException("不支持的图片格式")
-        return runBlocking { ask(MultimodalEngine.visionModelId, prompt, image) }
+        return runBlocking { ask(resolveModelId(MultimodalEngine.visionModelId), prompt, image) }
     }
+
+    /**
+     * 没单独指定视觉模型时回落到 WeAgent 的默认模型——候选回复、情绪分析、多模态共用同一份配置。
+     */
+    private suspend fun resolveModelId(preferred: String): String =
+        preferred.ifBlank { WeAgentRepository.resolvedDefaultModelId().orEmpty() }
+            .takeIf { it.isNotBlank() }
+            ?: throw IllegalStateException("还没在 WeAgent 里选视觉模型")
 
     /** 连通性测试：只发一条纯文本 ping，不花图片 token。 */
     fun testConnection(cb: (Boolean, String) -> Unit) {
-        val modelId = MultimodalEngine.visionModelId
-        if (modelId.isBlank()) {
-            cb(false, "还没在 WeAgent 里选视觉模型"); return
-        }
+        val preferred = MultimodalEngine.visionModelId
         thread(name = "wekit-vision-test") {
-            runCatching { runBlocking { ask(modelId, "ping", null) } }
+            runCatching { runBlocking { ask(resolveModelId(preferred), "ping", null) } }
                 .onSuccess { text -> cb(true, if (text.isBlank()) "连通正常" else "连通正常：${text.take(24)}") }
                 .onFailure { error ->
                     WeLogger.w(TAG, "视觉连通性测试失败：${error.message}")

@@ -207,6 +207,25 @@ object AutoRejectVoipSurface : SwitchFeature() {
 }
 
 
+// ── 消息通知隐藏 ────────────────────────────────────────────────────────────
+
+/**
+ * 名单内的人发消息时，吞掉系统通知（铃声、震动、横幅一起消失）。
+ *
+ * 默认关。关着的时候通知照常弹，[VibrateHiddenSurface] 仍可单独震一下——这两面互不依赖。
+ * 实现见 [HideContactsNotifications]（同包）的两个 hook。
+ */
+object HideNotificationsSurface : SwitchFeature() {
+
+    override val technicalId = "消息通知隐藏"
+    override val nameRes = R.string.feature_hide_contacts_notify_name
+    override val categoryIds = listOf(FeatureCategoryIds.SECRET_FRIEND)
+
+    override val defaultEnabled: Boolean = false
+    override fun onEnable() = HideContacts.onSurfaceChanged()
+    override fun onDisable() = HideContacts.onSurfaceChanged()
+}
+
 // ── 密友消息震动 ────────────────────────────────────────────────────────────
 
 object VibrateHiddenSurface : SwitchFeature() {
@@ -241,4 +260,31 @@ object TeamSummarySurface : SwitchFeature() {
  */
 internal fun HideContacts.onSurfaceChanged() {
     runCatching { WeConversationApi.reloadConversations() }
+}
+
+// ── 标题栏红点 ──────────────────────────────────────────────────────────────
+
+/**
+ * 收到隐藏联系人的消息时，在主页标题栏搜索图标左边亮一个小红点。
+ *
+ * 待看名单存在 KvStore `hidden_home_dot_pending` 里，逐个点开那些聊天之后才灭。
+ * 实现见 [HideContactsHomeDot]（同包）。
+ */
+object HomeDotSurface : SwitchFeature() {
+
+    override val technicalId = "标题栏红点"
+    override val nameRes = R.string.feature_hide_contacts_home_dot_name
+    override val categoryIds = listOf(FeatureCategoryIds.SECRET_FRIEND)
+
+    override val defaultEnabled: Boolean = false
+
+    override fun onEnable() {
+        HideContacts.onSurfaceChanged()
+        HideContacts.refreshHomeDot()
+    }
+
+    override fun onDisable() {
+        HideContacts.onSurfaceChanged()
+        HideContacts.hideHomeDot()
+    }
 }

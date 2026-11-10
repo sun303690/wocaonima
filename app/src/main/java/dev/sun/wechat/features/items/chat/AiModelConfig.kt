@@ -54,26 +54,3 @@ internal object AiModelConfig : AiApiConfig {
      */
     var extractLimit by prefOption("ai_reply_extract_limit", 0)
 }
-
-/**
- * AI 回复候选的配置。两套上游回复功能合并前，回复与群聊分析共用 `ai_reply_*`，
- * 现在各自独立，只在首次使用时把群聊那份继承一次。
- */
-object AiReplyApiConfig : AiApiConfig {
-    override var baseUrl by prefOption("ai_reply_cand_base_url", "")
-    override var apiPath by prefOption("ai_reply_cand_api_path", "")
-    override var apiKey by prefOption("ai_reply_cand_api_key", "")
-    override var modelId by prefOption("ai_reply_cand_model_id", "")
-
-    private var inherited by prefOption("ai_reply_cand_inherited", false)
-
-    fun inheritSharedConfigOnce() {
-        if (inherited) return
-        inherited = true
-        if (baseUrl.isNotBlank() || apiKey.isNotBlank() || modelId.isNotBlank()) return
-        baseUrl = AiModelConfig.baseUrl
-        apiPath = AiModelConfig.apiPath
-        apiKey = AiModelConfig.apiKey
-        modelId = AiModelConfig.modelId
-    }
-}

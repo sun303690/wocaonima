@@ -88,7 +88,7 @@ import kotlin.time.Instant
 import java.lang.reflect.Modifier as JavaModifier
 
 object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputBarListener,
-    WeDatabaseListenerApi.IQueryListener {
+    WeDatabaseListenerApi.IQueryListener, WeDatabaseListenerApi.IInsertListener {
 
     override val technicalId = "隐藏联系人"
     override val nameRes: Int = R.string.feature_hide_contacts_name
@@ -121,6 +121,8 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
     const val SURFACE_AUTO_REJECT_VOIP = "自动拒绝音视频通话"
     const val SURFACE_VIBRATE = "密友消息震动"
     const val SURFACE_TEAM_SUMMARY = "微信团队汇总提醒"
+    const val SURFACE_NOTIFICATIONS = "消息通知隐藏"
+    const val SURFACE_HOME_DOT = "标题栏红点"
 
     /**
      * 某个隐藏面是否开启。
@@ -141,6 +143,8 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
             SURFACE_AUTO_REJECT_VOIP,
             SURFACE_VIBRATE,
             SURFACE_TEAM_SUMMARY,
+            SURFACE_NOTIFICATIONS,
+            SURFACE_HOME_DOT,
             -> false
             else -> true
         }
@@ -226,7 +230,10 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
         }
 
         override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
-        override fun onActivityResumed(activity: Activity) {}
+        override fun onActivityResumed(activity: Activity) {
+            // 整个微信重新可见（切回来、解锁）时补画一次红点。
+            if (activity is LauncherUI) refreshHomeDot()
+        }
         override fun onActivityPaused(activity: Activity) {}
         override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
         override fun onActivityDestroyed(activity: Activity) {}
@@ -343,6 +350,9 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
             registerScreenOffReceiver()
             registerBackgroundCallbacks()
 
+            // 主页重建时按待看名单补画红点（标题栏是宿主自己的视图树，重建一次就没了）。
+            refreshHomeDot()
+
             // Triple-click on the main-screen title to temporarily reveal hidden contacts.
             val titleView = context.window?.decorView
                 ?.findViewById<TextView>(android.R.id.text1) ?: return@hookAfter
@@ -432,6 +442,13 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
 
         WeDatabaseListenerApi.addListener(this)
 
+        // --- 标题栏红点 ---
+        //
+        // 收到隐藏联系人的消息时，在主页标题栏搜索图标左边亮一个小红点；待看名单（KvStore
+        // `hidden_home_dot_pending`）里的人都点开之后才灭。见 hidecontacts/HideContactsHomeDot.kt。
+
+        installHomeDot()
+
         // --- notification ---
         //
         // Deliberately NOT installed here. WeChat raises new-message notifications from
@@ -453,6 +470,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
 
     override fun onDisable() {
         uninstallSchedules()
+        hideHomeDot()
         unregisterScreenOffReceiver()
         unregisterBackgroundCallbacks()
         ShakeDetector.stop()
@@ -568,6 +586,17 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
     override fun onQuery(sql: String): String? {
         if (isTemporarilyShown) return null
         return rewriteMomentsFeedSql(sql, hiddenContacts)
+    }
+
+    /**
+     * 消息入库侧的唯一入口：隐藏联系人来了新消息时，按「标题栏红点」那一面记一条待看。
+     *
+     * 只处理 `message` 表；其余表（rcontact、朋友圈等）与提醒无关。
+     */
+    override fun onInsert(table: String, values: android.content.ContentValues) {
+        if (table != "message") return
+        if (!surfaceOn(SURFACE_HOME_DOT)) return
+        onHiddenMessageArrived(values)
     }
 
     // The parentRef marker older versions wrote via WeConversationApi.setConversationsVisibility to
@@ -741,6 +770,13 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
             val eventType = args[0] as? Int ?: return@hookBefore
             if (eventType != 3) return@hookBefore
             if (temporarilyShown) return@hookBefore
+            // 两处处置分属两个面（与 WCS 的实现对齐）：
+            // - 摘掉事件跟着「主页会话隐藏」，不摘的话适配器在任何 SQL 查询之前就看见这一行；
+            // - 写库清未读跟着「未读角标隐藏」——markAsRead 会真的把消息标成已读且不可逆，
+            //   所以不能因为「对方在名单里」就无条件清，否则用户没开这一面也会丢未读。
+            val rowsHidden = surfaceOn(SURFACE_CONVERSATIONS)
+            val unreadSuppressed = surfaceOn(SURFACE_UNREAD)
+            if (!rowsHidden && !unreadSuppressed) return@hookBefore
             val talker = args[2] as? String ?: return@hookBefore
             if (talker.isEmpty()) return@hookBefore
             if (talker !in hiddenContacts) return@hookBefore
@@ -748,17 +784,19 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
             // Already inside our own markAsRead: this is the storage echoing our write back at us.
             // Still cancel the event so the row never reaches an adapter, but do not write again.
             if (markingAsRead.get() == true) {
-                result = null
+                if (rowsHidden) result = null
                 return@hookBefore
             }
 
-            markingAsRead.set(true)
-            try {
-                WeConversationApi.markAsRead(talker)
-            } finally {
-                markingAsRead.set(false)
+            if (unreadSuppressed) {
+                markingAsRead.set(true)
+                try {
+                    WeConversationApi.markAsRead(talker)
+                } finally {
+                    markingAsRead.set(false)
+                }
             }
-            result = null
+            if (rowsHidden) result = null
         }
     }
 

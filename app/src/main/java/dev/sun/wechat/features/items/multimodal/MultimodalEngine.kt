@@ -83,14 +83,15 @@ object MultimodalEngine {
                 runOnce(key, { AsrEngine.transcribeEncPath(encPath) }, onDone)
             }
             type.code == MessageType.IMAGE.code -> {
-                if (!imageEnabled || !visionReady()) return
+                // 不单独指定视觉模型时由 VisionClient 回落到 WeAgent 默认模型
+                if (!imageEnabled) return
                 if (message.serverId <= 0L) return
                 val key = imageKey(message)
                 if (readCache(key) != null) return
                 runOnce(key, { describeImage(message) }, onDone)
             }
             type.isSticker -> {
-                if (!stickerEnabled || !visionReady()) return
+                if (!stickerEnabled) return
                 val key = stickerKey(message)
                 if (readCache(key) != null) return
                 runOnce(key, { describeSticker(message) }, onDone)

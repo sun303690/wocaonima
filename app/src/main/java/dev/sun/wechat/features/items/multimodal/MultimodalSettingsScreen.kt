@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,6 +31,8 @@ import dev.sun.wechat.ui.content.miuix.MiuixSettingsCard
 import dev.sun.wechat.ui.content.miuix.MiuixSettingsSectionTitle
 import dev.sun.wechat.ui.content.miuix.MiuixSettingsToggle
 import dev.sun.wechat.utils.android.showToast
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.Text
 
 /**
@@ -118,10 +121,10 @@ private fun HomeContent(onOpenVoice: () -> Unit, onOpenVision: () -> Unit) {
             )
             MiuixSettingsAction(
                 title = stringResource(R.string.mm_vision_api_page),
-                summary = if (MultimodalEngine.visionReady()) {
+                summary = if (MultimodalEngine.visionModelId.isNotBlank()) {
                     stringResource(R.string.mm_weagent_selected)
                 } else {
-                    notSet
+                    stringResource(R.string.mm_weagent_default_value)
                 },
                 onClick = onOpenVision,
             )
@@ -281,8 +284,16 @@ private fun VisionApiContent() {
     val all by WeAgentRepository.observeModels().collectAsState(initial = emptyList())
     val visionModels = remember(all) { all.filter { it.supportsVision } }
     var selected by remember { mutableStateOf(MultimodalEngine.visionModelId) }
+    // 没单独选模型时实际用的是 WeAgent 默认模型，列表里把它标成「默认」
+    var defaultId by remember { mutableStateOf("") }
     var testing by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        defaultId = withContext(Dispatchers.IO) {
+            runCatching { WeAgentRepository.resolvedDefaultModelId() }.getOrNull().orEmpty()
+        }
+    }
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         MiuixSettingsSectionTitle(stringResource(R.string.mm_weagent_hint))
@@ -294,10 +305,16 @@ private fun VisionApiContent() {
                     onClick = {},
                 )
             } else {
+                val effective = selected.ifBlank { defaultId }
+                val defaultTag = stringResource(R.string.mm_model_default_tag)
                 visionModels.forEach { model ->
                     MiuixSettingsAction(
-                        title = (if (model.id == selected) "✓ " else "") + model.displayName,
-                        summary = model.modelIdRemote,
+                        title = (if (model.id == effective) "✓ " else "") + model.displayName,
+                        summary = if (model.id == defaultId) {
+                            model.modelIdRemote + " · " + defaultTag
+                        } else {
+                            model.modelIdRemote
+                        },
                         onClick = {
                             selected = model.id
                             MultimodalEngine.visionModelId = model.id

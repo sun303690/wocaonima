@@ -1,5 +1,7 @@
 package dev.sun.wechat.features.items.chat
 
+import android.content.Intent
+
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,7 +16,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -62,8 +63,8 @@ import com.composables.icons.materialsymbols.outlined.Keyboard_arrow_down
 import com.composables.icons.materialsymbols.outlined.Settings
 import com.composables.icons.materialsymbols.outlined.Tune
 import dev.sun.wechat.R
-import dev.sun.wechat.agent.data.entity.ModelEntity
-import dev.sun.wechat.agent.data.entity.ModelProviderEntity
+import dev.sun.wechat.activity.agent.WeAgentSettingsActivity
+import dev.sun.wechat.agent.data.WeAgentRepository
 import dev.sun.wechat.agent.model.LlmMessage
 import dev.sun.wechat.agent.model.LlmRole
 import dev.sun.wechat.agent.model.LlmStreamEvent
@@ -73,6 +74,7 @@ import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.features.api.ui.WeChatMessageContextMenuApi
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
+import dev.sun.wechat.features.items.chat_mood.AgentLlm
 import dev.sun.wechat.features.items.chat_mood.ReplyMessageSupport
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.data.KvStore.prefOption
@@ -84,7 +86,6 @@ import dev.sun.wechat.ui.content.m3.DropDownMenuWidget
 import dev.sun.wechat.ui.content.m3.DropdownOption
 import dev.sun.wechat.ui.content.m3.ExpressiveOptionDropdown
 import dev.sun.wechat.ui.content.m3.IntNumberPickerWidget
-import dev.sun.wechat.ui.content.m3.RadioButtonWidget
 import dev.sun.wechat.ui.content.m3.SegmentedColumn
 import dev.sun.wechat.ui.content.m3.SwitchWidget
 import dev.sun.wechat.ui.content.m3.TextFieldDialogWidget
@@ -123,10 +124,6 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
     private const val MAX_CONTEXT_LINE_CHARS = 300
     private const val SOURCE_MAX_LINES = 4
     private const val MAX_SOURCE_CHARS = 300
-
-    /** 模型列表一屏露出的行数，与 M3 单行 ListItem 的默认最小高度一起决定弹窗限高。 */
-    private const val MODEL_ROWS_VISIBLE = 8
-    private const val LIST_ITEM_MIN_HEIGHT_DP = 56
 
     private val STYLES = listOf(
         "智能全能" to "分析当前对话氛围，给出最得体、自然的回复。",
@@ -326,7 +323,6 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
     }
 
     private fun showCandidateDialog(context: android.content.Context, talker: String, source: String) {
-        AiReplyApiConfig.inheritSharedConfigOnce()
         showComposeDialog(context, directlyDismissable = false) {
             CandidateContent(talker, source)
         }
@@ -954,130 +950,20 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
         }
     }
 
-    private fun showModelPickerDialog(
-        context: android.content.Context,
-        current: String,
-        onPicked: (String) -> Unit,
-    ) {
-        showComposeDialog(context) { ModelPickerContent(current, onPicked) }
-    }
-
-    /**
-     * 模型选择弹窗：右下角先只有「获取模型」，取回列表并点选一条后原位变成「确定」。
-     * 列表最多露出 [MODEL_ROWS_VISIBLE] 行，其余上下滑动。
-     */
-    @Composable
-    private fun ShowComposeDialogScope.ModelPickerContent(current: String, onPicked: (String) -> Unit) {
-        val scope = rememberCoroutineScope()
-        var models by remember { mutableStateOf<List<String>>(emptyList()) }
-        var fetching by remember { mutableStateOf(false) }
-        var fetchError by remember { mutableStateOf<String?>(null) }
-        var picked by remember { mutableStateOf("") }
-
-        AlertDialogContent(
-            title = {
-                Text(
-                    text = stringResource(R.string.ui_group_ai_model_picker_title),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            },
-            text = {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    if (models.isEmpty()) {
-                        if (fetching) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            ) {
-                                CircularProgressIndicator(modifier = Modifier.padding(4.dp), strokeWidth = 3.dp)
-                                Text(
-                                    text = stringResource(R.string.ui_group_ai_settings_fetching),
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                            }
-                        } else {
-                            val error = fetchError
-                            Text(
-                                text = if (error == null) {
-                                    stringResource(R.string.ai_reply_model_fetch_hint)
-                                } else {
-                                    stringResource(R.string.ui_group_ai_settings_fetch_failed_toast, error)
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (error == null) {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                } else {
-                                    MaterialTheme.colorScheme.error
-                                },
-                            )
-                        }
-                    } else {
-                        Text(
-                            text = stringResource(R.string.ui_group_ai_model_picker_summary, models.size),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Column(
-                            modifier = Modifier
-                                .heightIn(max = (LIST_ITEM_MIN_HEIGHT_DP * MODEL_ROWS_VISIBLE).dp)
-                                .verticalScroll(rememberScrollState()),
-                        ) {
-                            models.forEach { name ->
-                                BaseWidget(
-                                    iconPlaceholder = false,
-                                    title = name,
-                                    selected = name == picked || (picked.isEmpty() && name == current),
-                                    onClick = { picked = name },
-                                )
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                if (picked.isEmpty()) {
-                    Button(
-                        onClick = {
-                            fetching = true
-                            fetchError = null
-                            scope.launch {
-                                val result = AiModelConnection.fetchModels(AiReplyApiConfig)
-                                fetching = false
-                                result.fold(
-                                    onSuccess = { models = it },
-                                    onFailure = { failure -> fetchError = failure.message },
-                                )
-                            }
-                        },
-                        enabled = !fetching,
-                    ) {
-                        Text(
-                            stringResource(
-                                if (fetching) R.string.ui_group_ai_settings_fetching
-                                else R.string.ui_group_ai_settings_fetch_models,
-                            ),
-                        )
-                    }
-                } else {
-                    Button(
-                        onClick = {
-                            onPicked(picked)
-                            onDismiss()
-                        },
-                    ) { Text(stringResource(R.string.dialog_confirm)) }
-                }
-            },
-        )
-    }
-
     @Composable
     private fun ShowComposeDialogScope.ApiSettingsContent(onTtsChanged: (Boolean) -> Unit) {
         val scope = rememberCoroutineScope()
-        var baseUrl by remember { mutableStateOf(AiReplyApiConfig.baseUrl) }
-        var apiPath by remember { mutableStateOf(AiReplyApiConfig.apiPath) }
-        var apiKey by remember { mutableStateOf(AiReplyApiConfig.apiKey) }
-        var modelId by remember { mutableStateOf(AiReplyApiConfig.modelId) }
+        // 模型改由 WeAgent 统一管理，这里只展示当前默认模型
+        var weagentModelLabel by remember { mutableStateOf("") }
+        LaunchedEffect(Unit) {
+            weagentModelLabel = withContext(Dispatchers.IO) {
+                runCatching {
+                    val id = WeAgentRepository.resolvedDefaultModelId()
+                    val model = id?.let { WeAgentRepository.getModel(it) }
+                    model?.displayName?.takeIf { it.isNotBlank() } ?: model?.modelIdRemote.orEmpty()
+                }.getOrDefault("")
+            }
+        }
         var testing by remember { mutableStateOf(false) }
         var testOutcome by remember { mutableStateOf<Boolean?>(null) }
         var testError by remember { mutableStateOf<String?>(null) }
@@ -1145,60 +1031,23 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                 ) {
                     SegmentedColumn(title = stringResource(R.string.ui_group_ai_settings_title)) {
                         item {
-                            TextFieldDialogWidget(
-                                title = stringResource(R.string.ui_group_ai_settings_base_url),
-                                value = baseUrl,
-                                onValueChange = {
-                                    baseUrl = it.trim()
-                                    AiReplyApiConfig.baseUrl = baseUrl
+                            BaseWidget(
+                                iconPlaceholder = false,
+                                title = stringResource(R.string.ai_reply_model_row_title),
+                                description = weagentModelLabel.ifBlank {
+                                    stringResource(R.string.ai_reply_model_weagent_none)
                                 },
-                                dialogTitle = stringResource(R.string.ui_group_ai_settings_base_url),
-                                confirmLabel = stringResource(R.string.dialog_confirm),
-                                dismissLabel = stringResource(R.string.dialog_cancel),
-                                valueHint = stringResource(R.string.ui_group_ai_settings_base_url_hint),
-                            )
-                        }
-                        item {
-                            TextFieldDialogWidget(
-                                title = stringResource(R.string.ui_group_ai_settings_path),
-                                value = apiPath,
-                                onValueChange = {
-                                    apiPath = it.trim()
-                                    AiReplyApiConfig.apiPath = apiPath
-                                },
-                                dialogTitle = stringResource(R.string.ui_group_ai_settings_path),
-                                confirmLabel = stringResource(R.string.dialog_confirm),
-                                dismissLabel = stringResource(R.string.dialog_cancel),
-                                valueHint = stringResource(R.string.ui_group_ai_settings_path_hint),
-                            )
-                        }
-                        item {
-                            TextFieldDialogWidget(
-                                title = stringResource(R.string.ui_group_ai_settings_api_key),
-                                value = apiKey,
-                                onValueChange = {
-                                    apiKey = it.trim()
-                                    AiReplyApiConfig.apiKey = apiKey
-                                },
-                                dialogTitle = stringResource(R.string.ui_group_ai_settings_api_key),
-                                confirmLabel = stringResource(R.string.dialog_confirm),
-                                dismissLabel = stringResource(R.string.dialog_cancel),
-                                valueHint = stringResource(R.string.ui_group_ai_settings_api_key_hint),
-                                password = true,
                             )
                         }
                         item {
                             BaseWidget(
                                 iconPlaceholder = false,
-                                title = stringResource(R.string.ui_group_ai_settings_model_id),
-                                description = modelId.ifBlank {
-                                    stringResource(R.string.ai_reply_model_row_hint)
-                                },
+                                title = stringResource(R.string.ai_reply_model_weagent_open),
+                                description = stringResource(R.string.ai_reply_model_weagent_hint),
                                 onClick = {
-                                    showModelPickerDialog(context, modelId) { picked ->
-                                        modelId = picked
-                                        AiReplyApiConfig.modelId = picked
-                                    }
+                                    context.startActivity(
+                                        Intent(context, WeAgentSettingsActivity::class.java),
+                                    )
                                 },
                             )
                         }
@@ -1413,7 +1262,16 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                         testOutcome = null
                         testError = null
                         scope.launch {
-                            val result = AiModelConnection.testConnection(AiReplyApiConfig)
+                            val result = runCatching {
+                                val modelId = WeAgentRepository.resolvedDefaultModelId()
+                                    ?: error(localizedChatString(R.string.ai_reply_err_model_unset))
+                                val reply = AgentLlm.completeWithPrompts(
+                                    modelId = modelId,
+                                    system = "你是连通性测试助手，只回一句很短的话。",
+                                    user = "ping",
+                                )
+                                check(reply.isNotBlank()) { "模型没有返回内容" }
+                            }
                             testing = false
                             result.fold(
                                 onSuccess = { testOutcome = true },
@@ -1446,9 +1304,13 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
         style: String,
         stylePrompt: String,
     ): List<String> = withContext(Dispatchers.IO) {
-        check(AiReplyApiConfig.baseUrl.isNotBlank()) { localizedChatString(R.string.ai_reply_err_base_url) }
-        check(AiReplyApiConfig.apiKey.isNotBlank()) { localizedChatString(R.string.ai_reply_err_api_key) }
-        check(AiReplyApiConfig.modelId.isNotBlank()) { localizedChatString(R.string.ai_reply_err_model_id) }
+        // 回复候选统一走 WeAgent 模型库：默认模型在「WeAgent 模型设置」里配一次，所有 AI 功能共用
+        val modelId = WeAgentRepository.resolvedDefaultModelId()
+            ?: error(localizedChatString(R.string.ai_reply_err_model_unset))
+        val model = WeAgentRepository.getModel(modelId)
+            ?: error(localizedChatString(R.string.ai_reply_err_model_unset))
+        val provider = WeAgentRepository.getModelProvider(model.providerId)
+            ?: error(localizedChatString(R.string.ai_reply_err_model_unset))
 
         val count = candidateCount.coerceIn(1, MAX_CANDIDATES)
         // 界面可以展开看全文，送进模型的只取前 MAX_SOURCE_CHARS 字，并在提示词里说明
@@ -1457,22 +1319,6 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
         } else {
             source
         }
-        val provider = ModelProviderEntity(
-            id = "ai_reply_candidates",
-            type = AiReplyApiConfig.providerType(),
-            name = technicalId,
-            baseUrl = AiReplyApiConfig.resolvedBaseUrl(),
-            apiKey = AiReplyApiConfig.apiKey.trim(),
-        )
-        val model = ModelEntity(
-            id = "ai_reply_candidates_model",
-            providerId = provider.id,
-            modelIdRemote = AiReplyApiConfig.modelId.trim(),
-            reasoningEffort = null,
-            customJsonOverride = null,
-            displayName = AiReplyApiConfig.modelId.trim(),
-        )
-
         val systemPrompt = buildString {
             append("你是微信聊天助手。语气要求：")
             append(stylePrompt.ifBlank { defaultPromptFor(style) })
