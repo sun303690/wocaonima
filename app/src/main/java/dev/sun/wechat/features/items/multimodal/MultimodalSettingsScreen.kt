@@ -152,6 +152,8 @@ private fun VoiceApiContent() {
     val main = remember { Handler(Looper.getMainLooper()) }
     var url by remember { mutableStateOf(AsrEngine.baseUrl) }
     var key by remember { mutableStateOf(AsrEngine.apiKey) }
+    var aes by remember { mutableStateOf(AsrEngine.aesKey) }
+    var auth by remember { mutableStateOf(AsrEngine.authKey) }
     var model by remember { mutableStateOf(AsrEngine.model) }
     var testing by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf("") }
@@ -188,6 +190,20 @@ private fun VoiceApiContent() {
                 value = key,
                 onValueChange = { key = it; AsrEngine.apiKey = it.trim() },
                 label = stringResource(R.string.asr_api_key),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+            )
+            MiuixCompatTextField(
+                value = aes,
+                onValueChange = { aes = it; AsrEngine.aesKey = it.trim() },
+                label = stringResource(R.string.asr_aes_key),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+            )
+            MiuixCompatTextField(
+                value = auth,
+                onValueChange = { auth = it; AsrEngine.authKey = it.trim() },
+                label = stringResource(R.string.asr_auth_key),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
             )

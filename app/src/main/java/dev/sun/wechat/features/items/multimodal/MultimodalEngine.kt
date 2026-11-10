@@ -76,8 +76,7 @@ object MultimodalEngine {
         when {
             type.code == MessageType.VOICE.code -> {
                 if (!AsrEngine.ready()) return
-                val encPath = message.imagePath
-                if (encPath.isNullOrBlank()) return
+                val encPath = AsrEngine.voiceFileKey(message) ?: return
                 val key = voiceKey(message)
                 if (readCache(key) != null) return
                 runOnce(key, { AsrEngine.transcribeEncPath(encPath) }, onDone)

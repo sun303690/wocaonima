@@ -112,10 +112,13 @@ object TextToSpeech :
     const val BACKEND_MOFA = 0
     const val BACKEND_DOUBAO = 1
     const val BACKEND_BREEZE = 2
+    /** 硅基流动 TTS（OpenAI 兼容 /audio/speech，CosyVoice2）。 */
+    const val BACKEND_SILICON = 3
 
     /** 底部「切换后端」菜单的顺序与文案 */
     private val BACKEND_LABELS = listOf(
         BACKEND_BREEZE to "Breeze",
+        BACKEND_SILICON to "硅基流动",
         BACKEND_DOUBAO to "豆包",
         BACKEND_MOFA to "魔方",
     )
@@ -152,6 +155,12 @@ object TextToSpeech :
     var breezeModel by prefOption("tts_breeze_model_id", BreezeTtsClient.DEFAULT_MODEL)
     var breezeVoice by prefOption("tts_breeze_voice", "")
     var breezeVoiceName by prefOption("tts_breeze_voice_name", "")
+
+    /** 硅基流动 TTS：地址、Key、模型、音色（voice 形如 模型名:音色名）。 */
+    var siliconBaseUrl by prefOption("tts_silicon_base_url", "https://api.siliconflow.cn/v1")
+    var siliconApiKey by prefOption("tts_silicon_api_key", "")
+    var siliconModel by prefOption("tts_silicon_model", "FunAudioLLM/CosyVoice2-0.5B")
+    var siliconVoice by prefOption("tts_silicon_voice", "FunAudioLLM/CosyVoice2-0.5B:alex")
 
     /** 入口一: 长按聊天消息气泡的菜单 */
     private var entryBubble by prefOption("tts_entry_bubble", false)
@@ -309,11 +318,13 @@ object TextToSpeech :
             var backendMode by remember { mutableIntStateOf(backend) }
             val isDoubao = backendMode == BACKEND_DOUBAO
             val isBreeze = backendMode == BACKEND_BREEZE
+            val isSilicon = backendMode == BACKEND_SILICON
             var voiceId by remember {
                 mutableStateOf(
                     when (backendMode) {
                         BACKEND_DOUBAO -> doubaoSpeaker
                         BACKEND_BREEZE -> breezeVoice
+                        BACKEND_SILICON -> siliconVoice
                         else -> selectedVoice
                     }
                 )
@@ -398,6 +409,11 @@ object TextToSpeech :
                                         contentDescription = null,
                                     )
                                 },
+                            )
+                        } else if (isSilicon) {
+                            BaseWidget(
+                                title = "硅基流动音色",
+                                description = siliconVoice.ifBlank { "未设置" },
                             )
                         } else if (isDoubao) {
                             // 豆包音色单列占满：自定义音色、语气是魔方/Breeze 的概念，豆包模式整行不出现
@@ -659,6 +675,10 @@ object TextToSpeech :
         showComposeDialog(context) {
             var apiKeyState by remember { mutableStateOf(apiKey) }
             var cookieState by remember { mutableStateOf(doubaoCookie) }
+            var siliconBaseState by remember { mutableStateOf(siliconBaseUrl) }
+            var siliconKeyState by remember { mutableStateOf(siliconApiKey) }
+            var siliconModelState by remember { mutableStateOf(siliconModel) }
+            var siliconVoiceState by remember { mutableStateOf(siliconVoice) }
             var breezeKeyState by remember { mutableStateOf(breezeKey) }
             var breezeModelState by remember { mutableStateOf(breezeModel) }
             // DropDownMenuWidget 内部是 options.first { it.value == value }，当前值必须在选项里
@@ -760,6 +780,65 @@ object TextToSpeech :
                             .heightIn(max = 420.dp)
                             .verticalScroll(rememberScrollState()),
                     ) {
+                        SegmentedColumn(title = "硅基流动") {
+                            item {
+                                TextFieldDialogWidget(
+                                    title = "接口地址",
+                                    value = siliconBaseState,
+                                    onValueChange = {
+                                        siliconBaseState = it
+                                        siliconBaseUrl = it.trim()
+                                    },
+                                    dialogTitle = "设置硅基流动接口地址",
+                                    confirmLabel = "确认",
+                                    dismissLabel = "取消",
+                                    valueHint = "默认 https://api.siliconflow.cn/v1",
+                                )
+                            }
+                            item {
+                                TextFieldDialogWidget(
+                                    title = "API Key",
+                                    value = siliconKeyState,
+                                    onValueChange = {
+                                        siliconKeyState = it
+                                        siliconApiKey = it.trim()
+                                    },
+                                    dialogTitle = "设置硅基流动 API Key",
+                                    confirmLabel = "确认",
+                                    dismissLabel = "取消",
+                                    valueHint = "未设置，在 siliconflow.cn 控制台创建",
+                                    password = true,
+                                )
+                            }
+                            item {
+                                TextFieldDialogWidget(
+                                    title = "模型",
+                                    value = siliconModelState,
+                                    onValueChange = {
+                                        siliconModelState = it
+                                        siliconModel = it.trim()
+                                    },
+                                    dialogTitle = "设置硅基流动 TTS 模型",
+                                    confirmLabel = "确认",
+                                    dismissLabel = "取消",
+                                    valueHint = "默认 FunAudioLLM/CosyVoice2-0.5B",
+                                )
+                            }
+                            item {
+                                TextFieldDialogWidget(
+                                    title = "音色",
+                                    value = siliconVoiceState,
+                                    onValueChange = {
+                                        siliconVoiceState = it
+                                        siliconVoice = it.trim()
+                                    },
+                                    dialogTitle = "设置硅基流动音色",
+                                    confirmLabel = "确认",
+                                    dismissLabel = "取消",
+                                    valueHint = "形如 FunAudioLLM/CosyVoice2-0.5B:alex",
+                                )
+                            }
+                        }
                         SegmentedColumn(title = "Breeze Blue") {
                             item {
                                 TextFieldDialogWidget(
@@ -1024,6 +1103,68 @@ object TextToSpeech :
         }.start()
     }
 
+    /**
+     * 硅基流动 TTS：`POST {base}/audio/speech`，body 里给 model / input / voice，
+     * 响应体直接就是音频字节（mp3）。失败时把 HTTP 状态与响应片段带回去。
+     */
+    fun generateVoiceSilicon(
+        text: String,
+        voice: String = siliconVoice,
+        key: String = siliconApiKey,
+        baseUrl: String = siliconBaseUrl,
+        model: String = siliconModel,
+        cb: (String?, String) -> Unit,
+    ) {
+        Thread {
+            var outPath: String? = null
+            var error = ""
+            try {
+                val payload = JSONObject().apply {
+                    put("model", model)
+                    put("input", text)
+                    put("voice", voice)
+                    put("response_format", "mp3")
+                }.toString()
+                val endpoint = baseUrl.trim().trimEnd('/').let {
+                    if (it.endsWith("/audio/speech")) it else "$it/audio/speech"
+                }
+                val conn = URL(endpoint).openConnection() as HttpURLConnection
+                conn.requestMethod = "POST"
+                conn.connectTimeout = 15000
+                conn.readTimeout = 120000
+                conn.doOutput = true
+                conn.setRequestProperty("Content-Type", "application/json")
+                conn.setRequestProperty("Authorization", "Bearer ${key.trim()}")
+                conn.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
+                val code = conn.responseCode
+                if (code != 200) {
+                    val msg = runCatching {
+                        conn.errorStream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+                    }.getOrDefault("")
+                    error = "接口返回 $code：${msg.take(160)}"
+                } else {
+                    val bytes = conn.inputStream.use { it.readBytes() }
+                    if (bytes.size < 512) {
+                        error = "接口没有返回音频（${bytes.size} 字节）"
+                    } else {
+                        val dir = File(KnownPaths.moduleCache.toFile(), "wcs_tts").apply { mkdirs() }
+                        val dest = File(dir, "silicon_${System.currentTimeMillis()}.mp3")
+                        dest.writeBytes(bytes)
+                        outPath = dest.absolutePath
+                        lastWavPath = outPath
+                    }
+                }
+                runCatching { conn.disconnect() }
+            } catch (e: Exception) {
+                error = e.message ?: "exception"
+                WeLogger.w(TAG, "silicon tts failed: $error")
+            }
+            val result = outPath
+            val reason = error
+            mh.post { cb(result, reason) }
+        }.start()
+    }
+
     private fun doubaoWsUrl(speaker: String): String {
         // 伪装成一次全新的网页会话: 三个身份字段每次随机
         val dev = (7_400_000_000_000_000_000L + Random.nextLong(999_999_999_999_999_999L)).toString()
@@ -1189,6 +1330,14 @@ object TextToSpeech :
                     doubaoSpeaker.ifBlank { DOUBAO_VOICES.first().id }
                 }
                 generateVoiceDoubao(text, speaker, doubaoCookie, cb)
+            }
+
+            BACKEND_SILICON -> {
+                if (siliconApiKey.isBlank()) {
+                    cb(null, "未填写硅基流动 API Key")
+                    return
+                }
+                generateVoiceSilicon(text = text, cb = cb)
             }
 
             BACKEND_BREEZE -> {

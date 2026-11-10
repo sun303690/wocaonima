@@ -18,11 +18,12 @@ object VoiceReply {
 
     fun enabled(): Boolean = TextToSpeech.voiceReplyEnabled
 
-    /** 当前后端的凭据是否已备齐（魔方/Breeze 要 API Key + 音色，豆包要 Cookie）。 */
+    /** 当前后端的凭据是否已备齐（魔方/Breeze 要 API Key + 音色，豆包要 Cookie，硅基流动要 API Key）。 */
     fun ready(): Boolean = when (TextToSpeech.backend) {
         TextToSpeech.BACKEND_DOUBAO -> TextToSpeech.doubaoCookie.isNotBlank()
         TextToSpeech.BACKEND_BREEZE -> TextToSpeech.breezeKey.isNotBlank() &&
             (TextToSpeech.customVoiceId.isNotBlank() || TextToSpeech.breezeVoice.isNotBlank())
+        TextToSpeech.BACKEND_SILICON -> TextToSpeech.siliconApiKey.isNotBlank()
         else -> TextToSpeech.apiKey.isNotBlank()
     }
 

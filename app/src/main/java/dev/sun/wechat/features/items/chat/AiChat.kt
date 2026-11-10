@@ -273,7 +273,9 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                 }
                 // 微信没给转写文本时，用模块自己接的 ASR 识别一遍（失败就放弃这条语音）
                 if (transcript.isNullOrBlank()) {
-                    val encPath = values.getAsString("imgPath")
+                    // imgPath 偶发为空，退到 content（有的版本语音名只在 content 里）。
+                    val encPath = values.getAsString("imgPath")?.takeIf { it.isNotBlank() }
+                        ?: values.getAsString("content")?.takeIf { it.startsWith("msg_") }
                     if (AsrEngine.ready() && !encPath.isNullOrBlank()) {
                         WeLogger.i(TAG, "语音无微信转写，改用 ASR：talker=$talker, localId=$localId")
                         transcript = runCatching {

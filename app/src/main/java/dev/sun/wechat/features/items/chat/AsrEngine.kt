@@ -73,6 +73,18 @@ object AsrEngine {
     var model by prefOption("asr_model", DEFAULT_MODEL)
 
     /**
+     * 语音解密用的 AES Key（16 字节起，key 与 IV 同值）。
+     *
+     * 微信 CDN 语音是 AES-128-CBC，部分机型/版本在 `voice2/` 落盘的是加密体而不是明文 SILK，
+     * 这时 [MediaFileTypeDetector] 认不出容器，就用这两个串去解（与 Hchat 的 asr.aesKey / asr.authKey 同名同义）。
+     * 都留空时跳过解密分支（明文 SILK/AMR 不需要）。
+     */
+    var aesKey by prefOption("asr_aes_key", "")
+
+    /** 备用解密串（Hchat 里叫 asr.authKey），与 [aesKey] 一起当候选。 */
+    var authKey by prefOption("asr_auth_key", "")
+
+    /**
      * 语音识别总闸。开关与地址/Key 都在「多模态识别」那一页里（两件事同一个界面），
      * 涉及联网花钱，默认关。
      */
@@ -100,7 +112,7 @@ object AsrEngine {
         if (!ready()) {
             cb(null, "未配置语音识别接口"); return
         }
-        val encPath = message.imagePath
+        val encPath = voiceFileKey(message)
         if (encPath.isNullOrBlank()) {
             cb(null, "拿不到语音文件路径"); return
         }
@@ -123,50 +135,73 @@ object AsrEngine {
             ?.takeIf { it.isNotEmpty() }
             ?.let { return it }
 
-        val sourcePath = WeMessageApi.getVoiceFullPath(encPath)
-        if (sourcePath.isBlank()) throw IllegalStateException("语音文件还没下载")
+        // 微信 API 给的路径优先；它空着/文件不存在时，退到按 voice2 目录规则直查。
+        val fromApi = runCatching { WeMessageApi.getVoiceFullPath(encPath) }.getOrDefault("")
+        val sourcePath = fromApi.takeIf { it.isNotBlank() && File(it).let { f -> f.isFile && f.length() > 0 } }
+            ?: locateVoiceFile(encPath)?.also {
+                WeLogger.d(TAG, "微信 API 没给出可用路径，voice2 直查命中：$it")
+            }
+            ?: throw IllegalStateException(
+                "语音文件还没下载（${encPath.ifBlank { "空路径" }}）；先在微信里播放一次这条语音"
+            )
         val source = File(sourcePath)
         if (!source.isFile || source.length() == 0L) {
             throw IllegalStateException(
                 "语音文件不存在或为空（${source.name}，${source.length()} 字节）"
             )
         }
-        val format = MediaFileTypeDetector.detectAudio(source.toPath())
-        val info = "文件=${source.name} 大小=${source.length()} 格式=${format?.name ?: "未识别"} 头=${headHex(source)}"
+        // 先按容器判格式；认不出就先怀疑是加密体（微信 CDN 语音 AES-128-CBC，key=IV）。
+        var workFile = source
+        var format = MediaFileTypeDetector.detectAudio(source.toPath())
+        var decrypted = false
+        if (format == null) {
+            tryDecryptSilk(source, dir, key)?.let {
+                workFile = it
+                format = MediaFileTypeDetector.AudioFormat.SILK
+                decrypted = true
+            }
+        }
+        val info = buildString {
+            append("文件=${source.name} 大小=${source.length()} 字节")
+            append(" 格式=${format?.name ?: "未识别"}")
+            if (decrypted) append("（已解密）")
+            append(" 头=${headHex(source)}")
+        }
         WeLogger.d(TAG, "语音源 $info")
 
+        val workPath = workFile.absolutePath
         val pcm = File(dir, "$key.pcm")
         val mp3 = File(dir, "$key.mp3")
-        val ok = when (format) {
-            MediaFileTypeDetector.AudioFormat.SILK ->
-                if (!AudioUtils.silkToPcm(sourcePath, pcm.absolutePath)) {
-                    throw IllegalStateException("SILK 转 PCM 失败（$info）")
-                } else {
-                    AudioUtils.pcmToMp3(pcm.absolutePath, mp3.absolutePath)
-                }
+        val wav = File(dir, "$key.wav")
 
-            // 认不出容器时不要直接失败：微信语音绝大多数是 SILK，其次才是 AMR 等容器。
-            // 先按 SILK 试 native 解码，再退到系统 MediaCodec，都失败才报错（附头部字节便于排查）。
+        val upload: File? = when (format) {
+            MediaFileTypeDetector.AudioFormat.SILK -> {
+                if (!runCatching { AudioUtils.silkToPcm(workPath, pcm.absolutePath) }.getOrDefault(false)) {
+                    throw IllegalStateException("SILK 转 PCM 失败（$info）")
+                }
+                toUploadable(pcm, mp3, wav)
+            }
+
+            // 认不出容器：先按 SILK 试 native 解码，再退系统 MediaCodec，
+            // 都失败才按「加密体 / 未知容器」分层报错（附头部字节便于排查）。
             null -> {
                 val silkOk = runCatching {
-                    AudioUtils.silkToPcm(sourcePath, pcm.absolutePath)
+                    AudioUtils.silkToPcm(workPath, pcm.absolutePath)
                 }.getOrDefault(false)
                 if (silkOk) {
-                    AudioUtils.pcmToMp3(pcm.absolutePath, mp3.absolutePath)
+                    toUploadable(pcm, mp3, wav)
                 } else {
                     pcm.delete()
                     val decoded = runCatching {
-                        AndroidAudioDecoder.decodeToPcm16(sourcePath, pcm)
-                    }.getOrElse {
-                        throw IllegalStateException("认不出这个语音的格式，SILK 与系统解码器都没解出来（$info）")
-                    }
+                        AndroidAudioDecoder.decodeToPcm16(workPath, pcm)
+                    }.getOrNull() ?: throw IllegalStateException(unknownFormatMessage(info))
                     if (decoded.channelCount > 1) {
                         throw IllegalStateException(
                             "语音是 ${decoded.channelCount} 声道，暂不支持（$info）"
                         )
                     }
                     resampleTo24k(pcm, decoded.sampleRate)
-                    AudioUtils.pcmToMp3(pcm.absolutePath, mp3.absolutePath)
+                    toUploadable(pcm, mp3, wav)
                 }
             }
 
@@ -174,7 +209,7 @@ object AsrEngine {
             // 交给系统 MediaCodec 解码，再重采样到 24 kHz（native 的 pcmToMp3 按 24 kHz 写死）。
             else -> {
                 val decoded = runCatching {
-                    AndroidAudioDecoder.decodeToPcm16(sourcePath, pcm)
+                    AndroidAudioDecoder.decodeToPcm16(workPath, pcm)
                 }.getOrElse {
                     throw IllegalStateException(
                         "解码 ${format?.name ?: "未知"} 失败：${it.message}（$info）"
@@ -186,15 +221,19 @@ object AsrEngine {
                     )
                 }
                 resampleTo24k(pcm, decoded.sampleRate)
-                AudioUtils.pcmToMp3(pcm.absolutePath, mp3.absolutePath)
+                toUploadable(pcm, mp3, wav)
             }
         }
-        pcm.delete()
-        val ready = ok && mp3.isFile && mp3.length() > 0
-        if (!ready) throw IllegalStateException("PCM 转 MP3 失败（$info）")
 
-        val text = request(mp3)
-        mp3.delete()
+        pcm.delete()
+        if (decrypted) workFile.delete()
+        if (upload == null) throw IllegalStateException("PCM 转 MP3/WAV 都失败（$info）")
+
+        val text = try {
+            request(upload)
+        } finally {
+            upload.delete()
+        }
         if (text.isEmpty()) throw IllegalStateException("接口没返回文字")
         runCatching { textCache.writeText(text) }
         WeLogger.i(TAG, "识别成功 key=$key len=${text.length}")
@@ -229,6 +268,204 @@ object AsrEngine {
     }
 
     /** 文件头 8 字节的十六进制，出错时带上，方便一眼看出到底是 SILK、AMR 还是别的东西。 */
+    /** 微信 shared_prefs 目录（auth_key 在里面，自动解密用）。 */
+    private val PREFS_DIRS = arrayOf(
+        "/data/data/com.tencent.mm/shared_prefs",
+        "/data/user/0/com.tencent.mm/shared_prefs",
+    )
+
+    /** 匹配 `<string name="_auth_key">值</string>` 之类的键值。 */
+    private val AUTH_KEY_PATTERN = Regex("""name="([^"]*auth[_-]?key[^"]*)">([^<]+)<""")
+
+    /** 微信语音文件所在的三个候选根目录（模块跑在微信进程内，读权限同微信）。 */
+    private val VOICE_ROOTS = arrayOf(
+        "/storage/emulated/0/Android/data/com.tencent.mm/MicroMsg",
+        "/data/data/com.tencent.mm/MicroMsg",
+        "/data/user/0/com.tencent.mm/MicroMsg",
+    )
+
+    /**
+     * 取这条语音的「文件名/路径」：`imagePath` 优先，空了退 `content`（有的版本只在 content 里），
+     * 再退消息对象上的 `getNativeUrl()`。任一命中即可，后面 [transcribeEncPath] 自己会找文件。
+     */
+    fun voiceFileKey(message: MessageInfo): String? {
+        message.imagePath?.trim()?.takeIf { it.isNotEmpty() }?.let { return it }
+        message.content?.trim()?.takeIf { it.startsWith("msg_") }?.let { return it }
+        nativeUrlOf(message)?.takeIf { it.startsWith("msg_") || it.contains("/voice2/") }?.let { return it }
+        return null
+    }
+
+    /** 反射拿 `getNativeUrl()`（不同微信版本字段名不一致时的最后兜底）。 */
+    private fun nativeUrlOf(message: MessageInfo): String? = runCatching {
+        message.instance.javaClass.methods
+            .firstOrNull { it.name == "getNativeUrl" && it.parameterCount == 0 }
+            ?.invoke(message.instance) as? String
+    }.getOrNull()?.takeIf { it.isNotBlank() }
+
+    /**
+     * 按微信的落盘规则直查语音文件：
+     * `MicroMsg/<32 位 hash>/voice2/<文件名前 2 位>/<第 3–4 位>/<文件名>.amr|.silk`。
+     *
+     * 只在 `getVoiceFullPath` 拿不到可用文件时使用——它绕开微信 API，坏处是慢（要遍历 hash 目录），
+     * 好处是 API 换实现/返回空串时仍能自愈。
+     */
+    fun locateVoiceFile(fileName: String): String? {
+        var name = fileName.trim().substringAfterLast('/')
+        if (name.endsWith(".amr", true) || name.endsWith(".silk", true)) {
+            name = name.substringBeforeLast('.')
+        }
+        if (name.length < 4) return null
+        val sub1 = name.substring(0, 2)
+        val sub2 = name.substring(2, 4)
+        for (root in VOICE_ROOTS) {
+            val rootDir = File(root)
+            val hashes = runCatching { rootDir.list() }.getOrNull() ?: continue
+            for (hash in hashes) {
+                if (hash.length != 32) continue
+                for (ext in arrayOf(".amr", ".silk")) {
+                    val candidate = File(rootDir, "$hash/voice2/$sub1/$sub2/$name$ext")
+                    if (candidate.isFile && candidate.length() > 0) return candidate.absolutePath
+                }
+            }
+        }
+        return null
+    }
+
+    /**
+     * 把 24 kHz/单声道 PCM 变成能上传的文件：优先 MP3，失败退 WAV。
+     *
+     * 个别机型的 native `pcmToMp3` 会返回空/极小的输出，而 WAV 只是加 44 字节头，
+     * 各家 ASR 都收（SiliconFlow、OpenAI、Groq 都支持 wav），所以留一条退路。
+     */
+    private fun toUploadable(pcm: File, mp3: File, wav: File): File? {
+        val mp3Ok = runCatching {
+            AudioUtils.pcmToMp3(pcm.absolutePath, mp3.absolutePath)
+        }.getOrDefault(false)
+        if (mp3Ok && mp3.isFile && mp3.length() > 512) return mp3
+        if (pcmToWav(pcm, wav)) {
+            WeLogger.d(TAG, "MP3 转码不可用，改用 WAV 上传")
+            return wav
+        }
+        return null
+    }
+
+    /** 手写 44 字节 WAV 头（PCM 16bit / 单声道 / [TARGET_SAMPLE_RATE]）。 */
+    private fun pcmToWav(pcm: File, wav: File): Boolean = runCatching {
+        val data = pcm.readBytes()
+        if (data.size < 100) return@runCatching false
+        val out = java.io.ByteArrayOutputStream(data.size + 44)
+        fun le32(v: Int) = byteArrayOf(
+            v.toByte(), (v shr 8).toByte(), (v shr 16).toByte(), (v shr 24).toByte()
+        )
+        fun le16(v: Int) = byteArrayOf(v.toByte(), (v shr 8).toByte())
+        val blockAlign = 2 // 单声道 × 16bit
+        out.write("RIFF".toByteArray(Charsets.US_ASCII))
+        out.write(le32(36 + data.size))
+        out.write("WAVEfmt ".toByteArray(Charsets.US_ASCII))
+        out.write(le32(16))
+        out.write(le16(1))                       // PCM
+        out.write(le16(1))                       // 单声道
+        out.write(le32(TARGET_SAMPLE_RATE))
+        out.write(le32(TARGET_SAMPLE_RATE * blockAlign))
+        out.write(le16(blockAlign))
+        out.write(le16(16))
+        out.write("data".toByteArray(Charsets.US_ASCII))
+        out.write(le32(data.size))
+        out.write(data)
+        wav.writeBytes(out.toByteArray())
+        wav.isFile && wav.length() > 44
+    }.getOrDefault(false)
+
+    /**
+     * 加密体尝试解密：AES-128-CBC，key 与 IV 都用同一串 16 字节，允许 0 或 6 字节头。
+     * 只有解出来带 SILK 魔数才算成功（避免把随机数据当音频送去识别）。
+     * @return 解密后的临时 SILK 文件；未配置 Key 或没解开返回 null。
+     */
+    /**
+     * 加密体自动解密：候选 Key 逐个试——ASR 里填的 aesKey / authKey 优先，其次微信自己的登录 auth_key
+     * （模块跑在微信进程内，与微信同 uid，可直接读它的 shared_prefs）。
+     *
+     * 算法固定为 AES-128-CBC、key 与 IV 同值、允许 0 或 6 字节头；
+     * 只有解出来带 SILK 魔数才采信，避免把随机数据当音频送去识别。
+     *
+     * @return 解密后的临时 SILK 文件；没解出来返回 null。
+     */
+    private fun tryDecryptSilk(source: File, dir: File, key: String): File? {
+        val raw = runCatching { source.readBytes() }.getOrNull() ?: return null
+        if (isSilk(raw)) return null
+        val secrets = candidateSecrets()
+        if (secrets.isEmpty()) {
+            WeLogger.d(TAG, "语音像加密体，但没拿到可用的解密 Key")
+            return null
+        }
+        for ((secret, origin) in secrets) {
+            val keyBytes = secret.take(16).toByteArray(Charsets.UTF_8)
+            for (skip in intArrayOf(0, 6)) {
+                val len = raw.size - skip
+                if (len < 16 || len % 16 != 0) continue
+                val plain = runCatching {
+                    val cipher = javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding")
+                    cipher.init(
+                        javax.crypto.Cipher.DECRYPT_MODE,
+                        javax.crypto.spec.SecretKeySpec(keyBytes, "AES"),
+                        javax.crypto.spec.IvParameterSpec(keyBytes)
+                    )
+                    cipher.doFinal(raw, skip, len)
+                }.getOrNull() ?: continue
+                if (isSilk(plain)) {
+                    val out = File(dir, "$key.dec.silk")
+                    out.writeBytes(plain)
+                    WeLogger.d(TAG, "语音解密成功 source=$origin skip=$skip len=${plain.size}")
+                    return out
+                }
+            }
+        }
+        WeLogger.d(TAG, "语音解密失败：试过 ${secrets.size} 个 Key 都没解出 SILK")
+        return null
+    }
+
+    /** 候选解密 Key（去重，标注来源）：ASR 的 aesKey → authKey → 微信 auth_key。 */
+    private fun candidateSecrets(): List<Pair<String, String>> {
+        val out = LinkedHashMap<String, String>()
+        aesKey.trim().takeIf { it.length >= 16 }?.let { out[it] = "aesKey" }
+        authKey.trim().takeIf { it.length >= 16 }?.let { out.putIfAbsent(it, "authKey") }
+        for ((value, origin) in readAuthKeys()) {
+            if (value.length >= 16) out.putIfAbsent(value, origin)
+        }
+        return out.map { it.key to it.value }
+    }
+
+    /** 读微信 shared_prefs 里的 auth_key，作为自动解密候选；读不到返回空表。 */
+    private fun readAuthKeys(): List<Pair<String, String>> {
+        val result = ArrayList<Pair<String, String>>()
+        for (dir in PREFS_DIRS) {
+            val file = File(dir, "auth_info_key_prefs.xml")
+            if (!file.isFile) continue
+            val text = runCatching { file.readText() }.getOrNull() ?: continue
+            for (m in AUTH_KEY_PATTERN.findAll(text)) {
+                val value = m.groupValues[2].trim()
+                if (value.length >= 16) result.add(value to "auth_key")
+            }
+        }
+        return result
+    }
+
+    /** 明文 SILK 判定：允许微信常见的 0x02 前缀。 */
+    private fun isSilk(bytes: ByteArray): Boolean {
+        val magic = "#!SILK_V3".toByteArray(Charsets.US_ASCII)
+        if (bytes.size < 10) return false
+        val offset = if (bytes[0] == 0x02.toByte()) 1 else 0
+        if (bytes.size < offset + magic.size) return false
+        for (i in magic.indices) {
+            if (bytes[offset + i] != magic[i]) return false
+        }
+        return true
+    }
+
+    /** 认不出格式时的提示（解密已自动尝试过）。 */
+    private fun unknownFormatMessage(info: String): String =
+        "认不出这个语音的格式，自动解密也没成功（$info）；先在微信里播放一次这条语音再试"
+
     private fun headHex(file: File, count: Int = 16): String = runCatching {
         file.inputStream().use { input ->
             val buffer = ByteArray(count)

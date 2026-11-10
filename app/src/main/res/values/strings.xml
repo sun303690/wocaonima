@@ -4307,9 +4307,9 @@
     <string name="smart_reply_tap_generate">Choose a tone and tap Generate</string>
     <string name="feature_ai_reply_config_name">AI Reply Settings</string>
     <string name="feature_ai_reply_config_description">Model and voice configuration for AI replies</string>
-    <string name="feature_ai_chat_name">AI Chat</string>
+    <string name="feature_ai_chat_name">AI Group Chat</string>
     <string name="feature_ai_chat_description">Let AI continuously reply to every text message received from conversations in the list</string>
-    <string name="ai_chat_config_title">AI Chat Settings</string>
+    <string name="ai_chat_config_title">AI Group Chat Settings</string>
     <string name="ai_chat_system_prompt">System Prompt</string>
     <string name="ai_chat_system_prompt_description">Optional. Changing the provider, model, prompt or context rounds clears existing conversation context.</string>
     <string name="ai_chat_temperature">Temperature</string>
@@ -4328,8 +4328,8 @@
     <string name="ai_chat_configure_whitelist">Configure whitelist</string>
     <string name="ai_chat_configure_blacklist">Configure blacklist</string>
     <string name="ai_chat_selected_count">%1$d selected</string>
-    <string name="ai_chat_select_whitelist_title">Select AI Chat Whitelist</string>
-    <string name="ai_chat_select_blacklist_title">Select AI Chat Blacklist</string>
+    <string name="ai_chat_select_whitelist_title">Select AI Group Chat Whitelist</string>
+    <string name="ai_chat_select_blacklist_title">Select AI Group Chat Blacklist</string>
     <string name="feature_glg_description">Whitelisted-group moderation: kick members who post links or mini programs, plus a silent-hours window</string>
     <string name="feature_glg_name">Group Management</string>
     <string name="glg_action">Action</string>
@@ -4580,6 +4580,8 @@
     <string name="mm_voice_switch_summary">Recognize voice messages with your own ASR endpoint, so AI replies can actually read them.</string>
     <string name="asr_settings_hint">Any OpenAI-compatible endpoint: {baseUrl}/audio/transcriptions with multipart fields model + file. e.g. https://api.siliconflow.cn/v1</string>
     <string name="asr_base_url">API base URL</string>
+    <string name="asr_aes_key">Voice AES key (16 bytes, for encrypted voice files)</string>
+    <string name="asr_auth_key">Voice auth key (fallback)</string>
     <string name="asr_api_key">API key</string>
     <string name="asr_model">Model (whisper-1 / FunAudioLLM/SenseVoiceSmall)</string>
     <string name="asr_cache_hint">Recognition results are cached per voice message; deleting the app cache clears them.</string>

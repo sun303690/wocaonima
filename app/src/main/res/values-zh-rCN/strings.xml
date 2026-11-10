@@ -4334,9 +4334,9 @@
     <string name="smart_reply_tap_generate">选择语气预设，点击生成回复</string>
     <string name="feature_ai_reply_config_name">AI 回复配置</string>
     <string name="feature_ai_reply_config_description">AI 回复的模型与语音配置</string>
-    <string name="feature_ai_chat_name">AI 聊天</string>
+    <string name="feature_ai_chat_name">AI 群聊设置</string>
     <string name="feature_ai_chat_description">让 AI 对名单内收到的每条文字消息进行连续对话回复</string>
-    <string name="ai_chat_config_title">AI 聊天设置</string>
+    <string name="ai_chat_config_title">AI 群聊设置</string>
     <string name="ai_chat_system_prompt">系统提示词</string>
     <string name="ai_chat_system_prompt_description">可选。修改接口、模型、提示词或上下文轮数后会清空已有对话上下文。</string>
     <string name="ai_chat_temperature">Temperature</string>
@@ -4355,8 +4355,8 @@
     <string name="ai_chat_configure_whitelist">配置白名单</string>
     <string name="ai_chat_configure_blacklist">配置黑名单</string>
     <string name="ai_chat_selected_count">已选 %1$d 个</string>
-    <string name="ai_chat_select_whitelist_title">选择 AI 聊天白名单</string>
-    <string name="ai_chat_select_blacklist_title">选择 AI 聊天黑名单</string>
+    <string name="ai_chat_select_whitelist_title">选择 AI 群聊白名单</string>
+    <string name="ai_chat_select_blacklist_title">选择 AI 群聊黑名单</string>
     <string name="feature_glg_description">白名单群管理：发送链接/小程序的成员自动移出，另可设禁言时段（时段内发言即移出）</string>
     <string name="feature_glg_name">群管理</string>
     <string name="glg_action">处理动作</string>
@@ -4607,6 +4607,8 @@
     <string name="mm_voice_switch_summary">用你自己的识别接口把对方语音转成文字，AI 才能读懂语音消息。</string>
     <string name="asr_settings_hint">填 OpenAI 兼容接口：{地址}/audio/transcriptions，multipart 字段 model + file。例如 https://api.siliconflow.cn/v1</string>
     <string name="asr_base_url">接口地址</string>
+    <string name="asr_aes_key">语音 AES Key（16 字节，解密语音用）</string>
+    <string name="asr_auth_key">语音 Auth Key（备用）</string>
     <string name="asr_api_key">接口 Key</string>
     <string name="asr_model">模型（whisper-1 / FunAudioLLM/SenseVoiceSmall）</string>
     <string name="asr_cache_hint">识别结果按语音缓存；清空应用缓存即可清除。</string>

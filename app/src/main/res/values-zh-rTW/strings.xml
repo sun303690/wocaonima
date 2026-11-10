@@ -4316,9 +4316,9 @@
     <string name="smart_reply_tap_generate">選擇語氣預設，點擊生成回覆</string>
     <string name="feature_ai_reply_config_name">AI 回覆設定</string>
     <string name="feature_ai_reply_config_description">AI 回覆的模型與語音設定</string>
-    <string name="feature_ai_chat_name">AI 聊天</string>
+    <string name="feature_ai_chat_name">AI 群聊設定</string>
     <string name="feature_ai_chat_description">讓 AI 對名單內收到的每則文字訊息進行連續對話回覆</string>
-    <string name="ai_chat_config_title">AI 聊天設定</string>
+    <string name="ai_chat_config_title">AI 群聊設定</string>
     <string name="ai_chat_system_prompt">系統提示詞</string>
     <string name="ai_chat_system_prompt_description">選填。修改介面、模型、提示詞或上下文輪數後會清除既有對話上下文。</string>
     <string name="ai_chat_temperature">Temperature</string>
@@ -4337,8 +4337,8 @@
     <string name="ai_chat_configure_whitelist">設定白名單</string>
     <string name="ai_chat_configure_blacklist">設定黑名單</string>
     <string name="ai_chat_selected_count">已選 %1$d 個</string>
-    <string name="ai_chat_select_whitelist_title">選擇 AI 聊天白名單</string>
-    <string name="ai_chat_select_blacklist_title">選擇 AI 聊天黑名單</string>
+    <string name="ai_chat_select_whitelist_title">選擇 AI 群聊白名單</string>
+    <string name="ai_chat_select_blacklist_title">選擇 AI 群聊黑名單</string>
     <string name="feature_glg_description">白名單群管理：傳送連結/小程式的成員自動移出，另可設禁言時段（時段內發言即移出）</string>
     <string name="feature_glg_name">群管理</string>
     <string name="glg_action">處理動作</string>
@@ -4558,6 +4558,8 @@
     <string name="mm_voice_switch_summary">用你自己的辨識介面把對方語音轉成文字，AI 才能讀懂語音訊息。</string>
     <string name="asr_settings_hint">填 OpenAI 相容介面：{位址}/audio/transcriptions，multipart 欄位 model + file。例如 https://api.siliconflow.cn/v1</string>
     <string name="asr_base_url">介面位址</string>
+    <string name="asr_aes_key">語音 AES Key（16 位元組，解密語音用）</string>
+    <string name="asr_auth_key">語音 Auth Key（備用）</string>
     <string name="asr_api_key">介面 Key</string>
     <string name="asr_model">模型（whisper-1 / FunAudioLLM/SenseVoiceSmall）</string>
     <string name="asr_cache_hint">辨識結果按語音快取；清除應用快取即可清除。</string>
