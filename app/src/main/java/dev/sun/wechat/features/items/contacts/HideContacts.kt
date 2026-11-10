@@ -50,7 +50,11 @@ import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.items.contacts.SplitGroupCall
 
+import dev.sun.wechat.features.items.contacts.hidecontacts.hideHomeDot
 import dev.sun.wechat.features.items.contacts.hidecontacts.installBlockHooks
+import dev.sun.wechat.features.items.contacts.hidecontacts.installHomeDot
+import dev.sun.wechat.features.items.contacts.hidecontacts.onHiddenMessageArrived
+import dev.sun.wechat.features.items.contacts.hidecontacts.refreshHomeDot
 import dev.sun.wechat.features.items.contacts.hidecontacts.installSearchCommandHook
 import dev.sun.wechat.features.items.contacts.hidecontacts.installListHooks
 import dev.sun.wechat.features.items.contacts.hidecontacts.installMomentsHooks
