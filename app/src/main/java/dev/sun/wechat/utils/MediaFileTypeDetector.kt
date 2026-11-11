@@ -12,6 +12,9 @@ import java.nio.file.Path
  * filename after importing a file whose extension is missing or incorrect.
  */
 object MediaFileTypeDetector {
+    /** 微信给 SILK 加的 1 字节版本前缀，0x02 与 0x03 都出现过。 */
+    private val SILK_PREFIXES = setOf(0x02.toByte(), 0x03.toByte(), 0x04.toByte(), 0x05.toByte())
+
     enum class ImageFormat(val extension: String) {
         GIF("gif"),
         PNG("png"),
@@ -71,8 +74,10 @@ object MediaFileTypeDetector {
     }
 
     private fun detectAudioHeader(bytes: ByteArray): AudioFormat? = when {
+        // 微信语音的 SILK 有两种头：纯 `#!SILK_V3`，以及 1 字节版本前缀（0x02/0x03/0x04/0x05）+ `#!SILK_V3`。
+        // 8.0.7x 的较长语音用 0x03 前缀，只认 0x02 会把它们误判成「未识别」并白跑一轮解密。
         bytes.startsWithAscii("#!SILK_V3") ||
-                bytes.size >= 10 && bytes[0] == 0x02.toByte() && bytes.copyOfRange(1, 10)
+                bytes.size >= 10 && bytes[0] in SILK_PREFIXES && bytes.copyOfRange(1, 10)
             .contentEquals("#!SILK_V3".toByteArray()) -> AudioFormat.SILK
         bytes.startsWithAscii("#!AMR-WB") || bytes.startsWithAscii("#!AMR\n") -> AudioFormat.AMR
         bytes.startsWithAscii("RIFF") && bytes.ascii(8, 12) == "WAVE" -> AudioFormat.WAV

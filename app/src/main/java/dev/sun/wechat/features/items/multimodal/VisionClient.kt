@@ -101,7 +101,13 @@ object VisionClient {
             WeLogger.d(TAG, "未知图片格式，尝试解码 file=${file.name}")
         }
         val bitmap = runCatching { BitmapFactory.decodeFile(file.absolutePath) }.getOrNull()
-            ?: return mime?.let { LlmImage(base64(raw), it) }
+            ?: run {
+                WeLogger.d(
+                    TAG,
+                    "图片解码失败（可能是原图还没下载完）file=${file.name} 大小=${raw.size} 字节"
+                )
+                return mime?.let { LlmImage(base64(raw), it) }
+            }
         val scaled = scaleDown(bitmap)
         val out = ByteArrayOutputStream()
         val ok = runCatching { scaled.compress(Bitmap.CompressFormat.JPEG, 82, out) }.getOrDefault(false)

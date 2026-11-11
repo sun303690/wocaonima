@@ -102,6 +102,10 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
 
     private const val MAX_CONTEXT_ROUNDS = 20
     private const val MAX_OUTPUT_TOKENS = 32768
+    /** 一次历史上下文里最多现场补几条语音转写（每条都要调一次语音识别接口，慢且花钱）。 */
+    private const val MAX_LIVE_VOICE_TRANSCRIPTS = 1
+    /** 现场补语音转写时的最长等待，超时先用「[语音]」占位，识别结果仍会进缓存。 */
+    private const val VOICE_WAIT_MS = 8_000L
     private const val MAX_REPLY_DELAY_MS = 60_000L
 
     private const val LIST_WHITELIST = 0
@@ -195,19 +199,6 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     @Volatile private var lastSendAt = 0L
     @Volatile private var lastFailure: String? = null
 
-    data class DiagnosticSnapshot(
-        val receiveHookAvailable: Boolean,
-        val lastReceiveAt: Long,
-        val lastSendAt: Long,
-        val inFlightCount: Int,
-        val lastFailure: String?,
-    )
-
-    fun diagnosticSnapshot() = DiagnosticSnapshot(
-        WeMessageApi.methodMsgInfoStorageInsertMessage.isAvailable,
-        lastReceiveAt, lastSendAt, inFlight.size, lastFailure,
-    )
-
     private val scope = CoroutineScope(SupervisorJob() + Executors.newSingleThreadExecutor().asCoroutineDispatcher())
 
     override fun onEnable() {
@@ -276,7 +267,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                     // imgPath 偶发为空，退到 content（有的版本语音名只在 content 里）。
                     val encPath = values.getAsString("imgPath")?.takeIf { it.isNotBlank() }
                         ?: values.getAsString("content")?.takeIf { it.startsWith("msg_") }
-                    if (AsrEngine.ready() && !encPath.isNullOrBlank()) {
+                    if (MultimodalFeature.isEnabled && AsrEngine.ready() && !encPath.isNullOrBlank()) {
                         WeLogger.i(TAG, "语音无微信转写，改用 ASR：talker=$talker, localId=$localId")
                         transcript = runCatching {
                             withContext(Dispatchers.IO) { AsrEngine.transcribeEncPath(encPath) }
@@ -508,11 +499,42 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         val rows = runCatching { WeDatabaseApi.getMessages(talker, 1, 10) }
             .getOrElse { WeLogger.w(TAG, "failed to refresh recent group context for $talker", it); emptyList() }
             .asReversed()
-            .filter { MessageType.fromCode(it.typeCode)?.isText == true && it.content.isNotBlank() }
+            .filter { row ->
+                val type = MessageType.fromCode(row.typeCode)
+                (type?.isText == true && row.content.isNotBlank()) || type?.code == MessageType.VOICE.code
+            }
             .takeLast(10)
+        // 语音进上下文要花钱：缓存没命中时只现场识别 1 条（限时 8 秒），其余先放占位符，下一轮命中缓存再补全。
+        var liveBudget = MAX_LIVE_VOICE_TRANSCRIPTS
+        var transcribed = 0
         synchronized(history) {
             history.clear()
             rows.forEach { message ->
+                val type = MessageType.fromCode(message.typeCode)
+                if (type?.code == MessageType.VOICE.code) {
+                    val encPath = message.imgPath
+                    val transcript = when {
+                        // 多模态识别总开关管全部：关掉时语音一律不识别，只留占位符
+                        !MultimodalFeature.isEnabled -> null
+                        encPath == null -> null
+                        else -> {
+                            val cached = runCatching { AsrEngine.cachedTranscript(encPath) }.getOrNull()
+                            if (cached != null) {
+                                cached
+                            } else if (liveBudget > 0) {
+                                liveBudget--
+                                runCatching { AsrEngine.transcriptForContext(encPath, VOICE_WAIT_MS) }
+                                    .onFailure { WeLogger.w(TAG, "voice transcript for context failed: ${it.message}") }
+                                    .getOrNull()
+                            } else null
+                        }
+                    }
+                    if (!transcript.isNullOrBlank()) transcribed++
+                    val body = if (transcript.isNullOrBlank()) "[语音]" else "[语音] $transcript"
+                    val text = if (message.isSend != 0) "[WeChat sender: self]\n$body" else body
+                    history += LlmMessage(if (message.isSend != 0) LlmRole.ASSISTANT else LlmRole.USER, text)
+                    return@forEach
+                }
                 val (sender, body) = splitGroupSender(talker, message.content)
                 val text = when {
                     message.isSend != 0 -> "[WeChat sender: self]\n$body"
@@ -522,11 +544,9 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                 history += LlmMessage(if (message.isSend != 0) LlmRole.ASSISTANT else LlmRole.USER, text)
             }
         }
+        if (transcribed > 0) WeLogger.i(TAG, "voice messages transcribed for context: talker=$talker, count=$transcribed")
         return rows.size
     }
-
-    internal fun contextPreview(talker: String): List<LlmMessage> =
-        memories[talker]?.let { synchronized(it) { it.toList() } }.orEmpty()
 
     private fun applyGroupTrigger(talker: String, content: String, config: Config): String? {
         if (!talker.endsWith("@chatroom") && !talker.endsWith("@im.chatroom")) return content

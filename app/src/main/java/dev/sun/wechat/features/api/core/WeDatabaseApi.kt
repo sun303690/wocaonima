@@ -262,7 +262,7 @@ object WeDatabaseApi : ApiFeature(), IResolveDex {
 
         /** 分页获取消息 */
         fun messages(wxid: String, limit: Int, offset: Int) = """
-            SELECT msgId, msgSvrId, talker, content, type, createTime, isSend
+            SELECT msgId, msgSvrId, talker, content, type, createTime, isSend, imgPath
             FROM message
             WHERE talker='$wxid'
             ORDER BY createTime DESC
@@ -686,7 +686,8 @@ object WeDatabaseApi : ApiFeature(), IResolveDex {
                 content = row.str("content"),
                 typeCode = row.int("type"),
                 createTime = row.long("createTime"),
-                isSend = row.int("isSend")
+                isSend = row.int("isSend"),
+                imgPath = row.str("imgPath").takeIf { it.isNotBlank() },
             )
         }
     }

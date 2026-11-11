@@ -49,9 +49,6 @@ object MultimodalEngine {
     /** 正在识别的 key，防止同一条消息重复花钱。 */
     private val inFlight: MutableSet<String> = Collections.synchronizedSet(HashSet<String>())
 
-    /** 视觉接口是否配好了（不代表某一类开关打开了）。 */
-    fun visionReady(): Boolean = visionModelId.isNotBlank()
-
     /**
      * 取一条消息的多模态文本（只读缓存，不联网）。
      * 卡片/链接/文件这类纯解析的会在这里直接算出来。
@@ -104,10 +101,19 @@ object MultimodalEngine {
         if (!inFlight.add(key)) return
         thread(name = "wekit-mm") {
             try {
-                val text = runCatching(block).getOrNull()?.trim()
+                val outcome = runCatching(block)
+                val text = outcome.getOrNull()?.trim()
                 if (!text.isNullOrEmpty()) {
                     writeCache(key, text)
                     WeLogger.d(TAG, "识别完成 key=$key len=${text.length}")
+                } else {
+                    // 空结果以前是静默的，日志里只剩「AI reply skipped: multimodal without text」，
+                    // 分不清是拿不到图片、模型回了空，还是调用抛错，这里补一条可诊断的日志。
+                    val reason = outcome.exceptionOrNull()?.message
+                    WeLogger.d(
+                        TAG,
+                        "识别为空 key=$key${if (reason.isNullOrBlank()) "" else " 原因=$reason"}"
+                    )
                 }
                 onDone?.invoke(text)
             } catch (e: Exception) {
@@ -120,9 +126,16 @@ object MultimodalEngine {
     }
 
     private fun describeImage(message: MessageInfo): String? {
-        val path = WeMessageApi.cacheImage(message.serverId) ?: return null
+        val path = WeMessageApi.cacheImage(message.serverId)
+        if (path.isNullOrBlank()) {
+            WeLogger.d(TAG, "图片还没缓存好 serverId=${message.serverId}")
+            return null
+        }
         val file = File(path)
-        if (!file.isFile || file.length() == 0L) return null
+        if (!file.isFile || file.length() == 0L) {
+            WeLogger.d(TAG, "图片文件为空 ${file.name}")
+            return null
+        }
         return VisionClient.describe(file, IMAGE_PROMPT)
     }
 
@@ -131,7 +144,11 @@ object MultimodalEngine {
             ?: message.imagePath?.takeIf { it.length >= 32 }
             ?: return null
         val destination = File(cacheDir(), "stk_$md5.img").toPath()
-        val decoded = WeMessageApi.decodeStickerToFile(md5, destination) ?: return null
+        val decoded = WeMessageApi.decodeStickerToFile(md5, destination)
+        if (decoded == null) {
+            WeLogger.d(TAG, "表情解密失败 md5=$md5（这类表情 WeKit 解不出来，跳过）")
+            return null
+        }
         val file = decoded.toFile()
         if (!file.isFile || file.length() == 0L) return null
         return VisionClient.describe(file, STICKER_PROMPT)

@@ -53,7 +53,9 @@ data class WeMessage(
     val content: String,
     val typeCode: Int,
     val createTime: Long,
-    val isSend: Int
+    val isSend: Int,
+    /** 图片/语音消息的本地文件名（语音形如 msg_xxx.amr），识别语音时当 encPath 用。 */
+    val imgPath: String? = null,
 ) {
     val type = MessageType.fromCode(typeCode)
 }

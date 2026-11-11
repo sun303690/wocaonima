@@ -16,6 +16,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
 import org.json.JSONObject
 import java.io.File
+import java.util.concurrent.FutureTask
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
@@ -34,6 +35,12 @@ object AsrEngine {
 
     private const val TAG = "AsrEngine"
     private const val DEFAULT_MODEL = "whisper-1"
+
+    /** SILK 明文魔数；native 解码器认它。 */
+    private val SILK_MAGIC = "#!SILK_V3".toByteArray(Charsets.US_ASCII)
+
+    /** 微信在魔数前插的 1 字节版本前缀（0x02 旧语音、0x03 长语音都见过）。 */
+    private val SILK_PREFIXES = setOf(0x02.toByte(), 0x03.toByte(), 0x04.toByte(), 0x05.toByte())
 
     /** native 的 pcmToMp3 按 24 kHz 写死，解码出来的 PCM 必须先重采样到这里。 */
     private const val TARGET_SAMPLE_RATE = 24000
@@ -123,6 +130,32 @@ object AsrEngine {
         }
     }
 
+    /** 只读本地识别缓存：同一条语音之前识别过就直接给，不联网、不阻塞。 */
+    fun cachedTranscript(encPath: String): String? = runCatching {
+        File(HostInfo.application.cacheDir, "asr")
+            .resolve("${cacheKey(encPath)}.txt")
+            .takeIf { it.isFile }
+            ?.readText()
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+    }.getOrNull()
+
+    /**
+     * 给「历史上下文」用：有缓存立刻返回；没有就现识别，最多等 [timeoutMs]，超时返回 null。
+     *
+     * 超时不算白跑——识别仍在后台线程继续，成功后照样写进缓存，下一次构造上下文直接命中。
+     */
+    fun transcriptForContext(encPath: String, timeoutMs: Long = 15_000L): String? {
+        cachedTranscript(encPath)?.let { return it }
+        if (!ready()) return null
+        val task = FutureTask { runCatching { transcribeEncPath(encPath) }.getOrNull() }
+        Thread(task, "wekit-asr-ctx").apply { isDaemon = true }.start()
+        return runCatching { task.get(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS) }
+            .getOrNull()
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+    }
+
     /**
      * 同步识别一个微信语音 encPath（阻塞，调用方自己放 IO 线程）。
      * @return 识别文本；失败抛异常。
@@ -176,7 +209,10 @@ object AsrEngine {
 
         val upload: File? = when (format) {
             MediaFileTypeDetector.AudioFormat.SILK -> {
-                if (!runCatching { AudioUtils.silkToPcm(workPath, pcm.absolutePath) }.getOrDefault(false)) {
+                val playable = normalizeSilk(workFile, dir, key)
+                if (!runCatching {
+                        AudioUtils.silkToPcm(playable.absolutePath, pcm.absolutePath)
+                    }.getOrDefault(false)) {
                     throw IllegalStateException("SILK 转 PCM 失败（$info）")
                 }
                 toUploadable(pcm, mp3, wav)
@@ -185,8 +221,9 @@ object AsrEngine {
             // 认不出容器：先按 SILK 试 native 解码，再退系统 MediaCodec，
             // 都失败才按「加密体 / 未知容器」分层报错（附头部字节便于排查）。
             null -> {
+                val playable = normalizeSilk(workFile, dir, key)
                 val silkOk = runCatching {
-                    AudioUtils.silkToPcm(workPath, pcm.absolutePath)
+                    AudioUtils.silkToPcm(playable.absolutePath, pcm.absolutePath)
                 }.getOrDefault(false)
                 if (silkOk) {
                     toUploadable(pcm, mp3, wav)
@@ -450,16 +487,37 @@ object AsrEngine {
         return result
     }
 
-    /** 明文 SILK 判定：允许微信常见的 0x02 前缀。 */
+    /** 明文 SILK 判定：允许微信常见的 0x02 / 0x03 版本前缀。 */
     private fun isSilk(bytes: ByteArray): Boolean {
-        val magic = "#!SILK_V3".toByteArray(Charsets.US_ASCII)
+        val magic = SILK_MAGIC
         if (bytes.size < 10) return false
-        val offset = if (bytes[0] == 0x02.toByte()) 1 else 0
+        val offset = if (bytes[0] in SILK_PREFIXES) 1 else 0
         if (bytes.size < offset + magic.size) return false
         for (i in magic.indices) {
             if (bytes[offset + i] != magic[i]) return false
         }
         return true
+    }
+
+    /**
+     * native 的 `silk_to_pcm` 只对 0x02 前缀做 seek(10)，0x03 等其它前缀会被判成非法头。
+     * 这里把「1 字节前缀 + `#!SILK_V3`」重写成纯魔数头的文件，交给 native 直接解。
+     */
+    private fun normalizeSilk(source: File, dir: File, cacheKey: String): File {
+        val plain = File(dir, "$cacheKey.plain.silk")
+        if (plain.isFile && plain.length() > 0) return plain
+        return runCatching {
+            val bytes = source.readBytes()
+            if (bytes.size <= SILK_MAGIC.size) return source
+            val prefixed = bytes[0] in SILK_PREFIXES &&
+                    bytes.copyOfRange(1, SILK_MAGIC.size + 1).contentEquals(SILK_MAGIC)
+            if (!prefixed) return source
+            plain.outputStream().use { output ->
+                output.write(SILK_MAGIC)
+                output.write(bytes, SILK_MAGIC.size + 1, bytes.size - SILK_MAGIC.size - 1)
+            }
+            plain
+        }.getOrDefault(source)
     }
 
     /** 认不出格式时的提示（解密已自动尝试过）。 */
