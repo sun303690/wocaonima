@@ -30,7 +30,7 @@ class MultimodalSettingsActivity : ComponentActivity() {
         setContent {
             CompositionLocalProvider(LocalComponentActivity provides this) {
                 WeKitLocaleProvider(mode = LocaleResourceMode.InjectedHost) {
-                    MiuixModuleTheme {
+                    MiuixModuleTheme(opaqueBackground = true) {
                         MultimodalSettingsScreen(onBack = ::finish)
                     }
                 }

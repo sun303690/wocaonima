@@ -35,19 +35,54 @@ object MultimodalEngine {
     var stickerEnabled by prefOption("mm_sticker_enabled", true)
     var cardEnabled by prefOption("mm_card_enabled", true)
 
-    // ---- 视觉模型：直接用 WeAgent 里已配好的模型（只选一个支持看图的）----
-    var visionModelId by prefOption("mm_vision_model_id", "")
+    // ---- 视觉接口：独立配置，OpenAI 兼容的 chat/completions（支持 image_url data URI）----
+    // 不复用 WeAgent 的模型路由：视觉要多花钱，用户希望地址/Key/模型自己能单独指定，
+    // 换服务商时不必回头改 WeAgent 的全局配置。
+    var visionBaseUrl by prefOption("mm_vision_base_url", "")
+    var visionApiKey by prefOption("mm_vision_api_key", "")
+    var visionModel by prefOption("mm_vision_model", "gpt-4o-mini")
 
     private const val IMAGE_PROMPT =
         "用一句中文描述这张图片的内容。如果图里有文字，把关键文字也说出来。不超过 60 字。"
     private const val STICKER_PROMPT =
         "这是一个微信表情包。用不超过 20 字说明它表达的情绪或含义。"
 
+    /**
+     * 识别失败后的冷却时长（语音 / 图片共用）。
+     *
+     * 语音和图片的失败原因多半是暂时的：语音文件还没下载、原图还没下载完（「不支持的图片格式」
+     * 「图片文件为空」）、模型限流（HTTP 429）。过一会儿重试是有意义的，所以不写永久标记，
+     * 只冷却这么久，到点自动放行。表情解密失败是确定性的，另走 [failedStickers] 永久跳过。
+     */
+    private const val RETRY_COOLDOWN_MS = 10 * 60 * 1000L
+
     /** 内存层缓存，避免每次都读盘。 */
     private val memory = LruCache<String, String>(maxLimit = 256)
 
     /** 正在识别的 key，防止同一条消息重复花钱。 */
     private val inFlight: MutableSet<String> = Collections.synchronizedSet(HashSet<String>())
+
+    /**
+     * 解不出来的表情 md5。
+     *
+     * 表情解密是确定性的：同一个 md5 这次解不出来，下次重试也还是解不出来（实测同一条一天被
+     * 绑定上百次，每次都白跑一遍解密 + 打一条带堆栈的 E 级日志）。所以失败一次就记下来，
+     * 内存 + 一个空标记文件，重启后也不再重试。
+     */
+    private val failedStickers: MutableSet<String> = Collections.synchronizedSet(HashSet<String>())
+
+    /**
+     * 语音/图片的失败冷却表（key → 失败时刻）。
+     *
+     * 同一条消息的 View 在一次会话里会被反复绑定，失败一次就会紧接着再试好几次。这里在
+     * [RETRY_COOLDOWN_MS] 内直接跳过，到点自动放行——不落盘，重启后允许立刻重试一次，
+     * 因为重启往往意味着微信这边已经把图片/语音下载完了。上限 512 条，够覆盖一次会话。
+     */
+    private val failedAt = LruCache<String, Long>(maxLimit = 512)
+
+    /** 视觉接口是否配好了（不代表图片/表情开关打开了）。 */
+    fun visionReady(): Boolean =
+        visionBaseUrl.isNotBlank() && visionApiKey.isNotBlank()
 
     /**
      * 取一条消息的多模态文本（只读缓存，不联网）。
@@ -76,20 +111,25 @@ object MultimodalEngine {
                 val encPath = AsrEngine.voiceFileKey(message) ?: return
                 val key = voiceKey(message)
                 if (readCache(key) != null) return
+                if (retryCoolingDown(key)) return
                 runOnce(key, { AsrEngine.transcribeEncPath(encPath) }, onDone)
             }
             type.code == MessageType.IMAGE.code -> {
-                // 不单独指定视觉模型时由 VisionClient 回落到 WeAgent 默认模型
                 if (!imageEnabled) return
+                // 视觉接口没配好就不要空转：没有地址和 Key，后台线程只会白跑一次再抛异常
+                if (!visionReady()) return
                 if (message.serverId <= 0L) return
                 val key = imageKey(message)
                 if (readCache(key) != null) return
+                if (retryCoolingDown(key)) return
                 runOnce(key, { describeImage(message) }, onDone)
             }
             type.isSticker -> {
                 if (!stickerEnabled) return
+                if (!visionReady()) return
                 val key = stickerKey(message)
                 if (readCache(key) != null) return
+                if (stickerDecodeKnownFailed(key)) return
                 runOnce(key, { describeSticker(message) }, onDone)
             }
         }
@@ -105,6 +145,7 @@ object MultimodalEngine {
                 val text = outcome.getOrNull()?.trim()
                 if (!text.isNullOrEmpty()) {
                     writeCache(key, text)
+                    clearRetryCooldown(key)
                     WeLogger.d(TAG, "识别完成 key=$key len=${text.length}")
                 } else {
                     // 空结果以前是静默的，日志里只剩「AI reply skipped: multimodal without text」，
@@ -114,10 +155,12 @@ object MultimodalEngine {
                         TAG,
                         "识别为空 key=$key${if (reason.isNullOrBlank()) "" else " 原因=$reason"}"
                     )
+                    markRetryCooldown(key)
                 }
                 onDone?.invoke(text)
             } catch (e: Exception) {
                 WeLogger.w(TAG, "识别失败 key=$key：${e.message}")
+                markRetryCooldown(key)
                 onDone?.invoke(null)
             } finally {
                 inFlight.remove(key)
@@ -146,7 +189,10 @@ object MultimodalEngine {
         val destination = File(cacheDir(), "stk_$md5.img").toPath()
         val decoded = WeMessageApi.decodeStickerToFile(md5, destination)
         if (decoded == null) {
-            WeLogger.d(TAG, "表情解密失败 md5=$md5（这类表情 WeKit 解不出来，跳过）")
+            // 解密结果是确定的：同一个 md5 这次解不出来，重试也不会成功。
+            // 记下失败标记，之后同一条表情直接跳过，不再重复解密、不再刷 E 级堆栈。
+            markStickerDecodeFailed(stickerKey(message))
+            WeLogger.d(TAG, "表情解密失败 md5=$md5（这类表情 WeKit 解不出来，不再重试）")
             return null
         }
         val file = decoded.toFile()
@@ -259,9 +305,43 @@ object MultimodalEngine {
         runCatching { File(cacheDir(), "$key.txt").writeText(value) }
     }
 
+    /** 这条表情之前是否已经确认解不出来（内存标记 + 落盘标记文件，重启后仍生效）。 */
+    private fun stickerDecodeKnownFailed(key: String): Boolean {
+        if (failedStickers.contains(key)) return true
+        if (!File(cacheDir(), "$key.failed").isFile) return false
+        failedStickers.add(key)
+        return true
+    }
+
+    /** 记下「这条表情解不出来」，之后不再重试。 */
+    private fun markStickerDecodeFailed(key: String) {
+        failedStickers.add(key)
+        runCatching { File(cacheDir(), "$key.failed").writeText("") }
+    }
+
+    /** 这条语音/图片是否还在失败冷却期内。 */
+    private fun retryCoolingDown(key: String): Boolean {
+        val at = synchronized(failedAt) { failedAt[key] } ?: return false
+        if (System.currentTimeMillis() - at < RETRY_COOLDOWN_MS) return true
+        synchronized(failedAt) { failedAt.remove(key) }
+        return false
+    }
+
+    /** 记一次失败，冷却期内不再重试（到点自动放行）。 */
+    private fun markRetryCooldown(key: String) {
+        synchronized(failedAt) { failedAt[key] = System.currentTimeMillis() }
+    }
+
+    /** 识别成功后清掉冷却标记，避免残留条目挤掉别的 key。 */
+    private fun clearRetryCooldown(key: String) {
+        synchronized(failedAt) { failedAt.remove(key) }
+    }
+
     /** 清掉所有多模态识别缓存（设置页用）。 */
     fun clearCache() {
         memory.clear()
+        failedStickers.clear()
+        synchronized(failedAt) { failedAt.clear() }
         runCatching { cacheDir().deleteRecursively() }
     }
 }

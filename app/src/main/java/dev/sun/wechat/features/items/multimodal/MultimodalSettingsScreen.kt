@@ -2,14 +2,13 @@ package dev.sun.wechat.features.items.multimodal
 
 import android.os.Handler
 import android.os.Looper
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -20,7 +19,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.sun.wechat.R
-import dev.sun.wechat.agent.data.WeAgentRepository
 import dev.sun.wechat.features.items.chat.AsrEngine
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.miuix.MiuixAlertDialog
@@ -31,8 +29,6 @@ import dev.sun.wechat.ui.content.miuix.MiuixSettingsCard
 import dev.sun.wechat.ui.content.miuix.MiuixSettingsSectionTitle
 import dev.sun.wechat.ui.content.miuix.MiuixSettingsToggle
 import dev.sun.wechat.utils.android.showToast
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.Text
 
 /**
@@ -44,7 +40,7 @@ import top.yukonga.miuix.kmp.basic.Text
  *
  * - 主页：四个子开关 + 「语音接口」「视觉接口」两个入口 + 清缓存；
  * - 语音接口页：`/audio/transcriptions` 的服务商预设、地址、Key、模型（可点选）+ 连通性测试，由 [AsrEngine] 使用；
- * - 视觉接口页：直接从 WeAgent 已配好的模型里挑一个支持看图的，不用再填地址和 Key，由 [VisionClient] 使用。
+ * - 视觉接口页：自填 OpenAI 兼容地址 + Key + 模型（预设点选或手填），由 [VisionClient] 使用。
  */
 @Composable
 fun MultimodalSettingsScreen(onBack: () -> Unit) {
@@ -54,6 +50,9 @@ fun MultimodalSettingsScreen(onBack: () -> Unit) {
         2 -> stringResource(R.string.mm_vision_api_page)
         else -> stringResource(R.string.feature_multimodal_name)
     }
+
+    // 系统返回键/手势：子页先回主页，主页才退出；否则在接口页一按返回就直接关掉整个设置页
+    BackHandler(enabled = page != 0) { page = 0 }
 
     MiuixSecondaryScaffold(
         title = title,
@@ -121,10 +120,10 @@ private fun HomeContent(onOpenVoice: () -> Unit, onOpenVision: () -> Unit) {
             )
             MiuixSettingsAction(
                 title = stringResource(R.string.mm_vision_api_page),
-                summary = if (MultimodalEngine.visionModelId.isNotBlank()) {
-                    stringResource(R.string.mm_weagent_selected)
+                summary = if (MultimodalEngine.visionBaseUrl.isBlank()) {
+                    notSet
                 } else {
-                    stringResource(R.string.mm_weagent_default_value)
+                    MultimodalEngine.visionModel.ifBlank { noModel }
                 },
                 onClick = onOpenVision,
             )
@@ -292,53 +291,45 @@ private fun VoiceApiContent() {
     }
 }
 
-/** 视觉接口页内容：模型直接来自 WeAgent（只列支持看图的），不用再填地址与 Key。 */
+/** 视觉接口页内容：自填 OpenAI 兼容地址 + Key + 模型（可点选预设，也可手填）。 */
 @Composable
 private fun VisionApiContent() {
     val context = LocalContext.current
     val main = remember { Handler(Looper.getMainLooper()) }
-    val all by WeAgentRepository.observeModels().collectAsState(initial = emptyList())
-    val visionModels = remember(all) { all.filter { it.supportsVision } }
-    var selected by remember { mutableStateOf(MultimodalEngine.visionModelId) }
-    // 没单独选模型时实际用的是 WeAgent 默认模型，列表里把它标成「默认」
-    var defaultId by remember { mutableStateOf("") }
+    var url by remember { mutableStateOf(MultimodalEngine.visionBaseUrl) }
+    var key by remember { mutableStateOf(MultimodalEngine.visionApiKey) }
+    var model by remember { mutableStateOf(MultimodalEngine.visionModel) }
     var testing by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf("") }
-
-    LaunchedEffect(Unit) {
-        defaultId = withContext(Dispatchers.IO) {
-            runCatching { WeAgentRepository.resolvedDefaultModelId() }.getOrNull().orEmpty()
-        }
-    }
+    var showModels by remember { mutableStateOf(false) }
+    var custom by remember { mutableStateOf("") }
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        MiuixSettingsSectionTitle(stringResource(R.string.mm_weagent_hint))
+        MiuixSettingsSectionTitle(stringResource(R.string.mm_vision_api_page))
         MiuixSettingsCard {
-            if (visionModels.isEmpty()) {
-                MiuixSettingsAction(
-                    title = stringResource(R.string.mm_vision_no_model),
-                    summary = stringResource(R.string.mm_vision_no_model_summary),
-                    onClick = {},
-                )
-            } else {
-                val effective = selected.ifBlank { defaultId }
-                val defaultTag = stringResource(R.string.mm_model_default_tag)
-                visionModels.forEach { model ->
-                    MiuixSettingsAction(
-                        title = (if (model.id == effective) "✓ " else "") + model.displayName,
-                        summary = if (model.id == defaultId) {
-                            model.modelIdRemote + " · " + defaultTag
-                        } else {
-                            model.modelIdRemote
-                        },
-                        onClick = {
-                            selected = model.id
-                            MultimodalEngine.visionModelId = model.id
-                            showToast(context, "已选用 ${model.displayName}")
-                        },
-                    )
-                }
-            }
+            MiuixCompatTextField(
+                value = url,
+                onValueChange = { url = it; MultimodalEngine.visionBaseUrl = it.trim() },
+                label = stringResource(R.string.mm_vision_base_url),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+            )
+            MiuixCompatTextField(
+                value = key,
+                onValueChange = { key = it; MultimodalEngine.visionApiKey = it.trim() },
+                label = stringResource(R.string.mm_vision_api_key),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+            )
+        }
+
+        MiuixSettingsSectionTitle(stringResource(R.string.mm_model_pick))
+        MiuixSettingsCard {
+            MiuixSettingsAction(
+                title = stringResource(R.string.mm_model_pick),
+                summary = model.ifBlank { stringResource(R.string.mm_model_not_set) },
+                onClick = { showModels = true },
+            )
         }
 
         MiuixSettingsSectionTitle(stringResource(R.string.mm_test_connection))
@@ -366,6 +357,51 @@ private fun VisionApiContent() {
             text = stringResource(R.string.mm_vision_hint),
             fontSize = 12.sp,
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
+        )
+    }
+
+    if (showModels) {
+        MiuixAlertDialog(
+            onDismissRequest = { showModels = false },
+            title = { Text(stringResource(R.string.mm_model_pick), fontSize = 17.sp) },
+            text = {
+                Column {
+                    VisionClient.MODELS.forEach { preset ->
+                        Text(
+                            text = if (preset == model) "✓ $preset" else preset,
+                            fontSize = 15.sp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    model = preset
+                                    MultimodalEngine.visionModel = preset
+                                    showModels = false
+                                }
+                                .padding(vertical = 7.dp),
+                        )
+                    }
+                    MiuixCompatTextField(
+                        value = custom,
+                        onValueChange = { custom = it },
+                        label = stringResource(R.string.mm_model_custom),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    val picked = custom.trim()
+                    if (picked.isNotEmpty()) {
+                        model = picked
+                        MultimodalEngine.visionModel = picked
+                    }
+                    showModels = false
+                }) { Text(stringResource(R.string.mm_confirm)) }
+            },
+            dismissButton = {
+                Button(onClick = { showModels = false }) { Text(stringResource(R.string.mm_cancel)) }
+            },
         )
     }
 }

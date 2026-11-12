@@ -12,6 +12,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 @Composable
 fun MiuixModuleTheme(
     darkTheme: Boolean? = null,
+    opaqueBackground: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     // Miuix follows the host configuration automatically. Keep darkTheme as a
@@ -21,6 +22,8 @@ fun MiuixModuleTheme(
     // 统一「半透明底」：所有模块页面（设置、二级页、主题工坊…）都透出下层画面，
     // 与主题设置页的观感保持一致。颜色来自宿主 MiuixTheme，只把 background 的 alpha 降下来。
     // 宿主窗口透明，页面半透明底才透得出下层画面（只在模块自己的 Activity 里改，不动微信）。
+    // 表单类页面（填地址/Key 的多模态接口页）用 opaqueBackground = true 关掉半透明，
+    // 避免下层微信界面透出来干扰输入。
     val hostContext = LocalContext.current
     DisposableEffect(hostContext) {
         val activity = hostContext.findActivity()
@@ -29,7 +32,9 @@ fun MiuixModuleTheme(
     }
     val base = MiuixTheme.colorScheme
     MiuixTheme(
-        colors = base.copy(background = base.background.copy(alpha = GLASS_ALPHA)),
+        colors = base.copy(
+            background = base.background.copy(alpha = if (opaqueBackground) 1f else GLASS_ALPHA),
+        ),
         content = content,
     )
 }

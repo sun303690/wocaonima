@@ -214,16 +214,11 @@ object TextToSpeech :
     override fun onEnable() {
         WeChatMessageContextMenuApi.addProvider(this)
         WeChatInputBarMenuApi.addProvider(this)
-        // 语音工作台（带 BGM 的合成面板）：只注册长按菜单入口，不再往聊天页贴悬浮按钮
-        WeChatInputBarMenuApi.addProvider(VoiceWorkshop)
-        VoiceWorkshop.setEnabled(true)
     }
 
     override fun onDisable() {
         WeChatMessageContextMenuApi.removeProvider(this)
         WeChatInputBarMenuApi.removeProvider(this)
-        WeChatInputBarMenuApi.removeProvider(VoiceWorkshop)
-        VoiceWorkshop.setEnabled(false)
     }
 
     @Suppress("DEPRECATION")
