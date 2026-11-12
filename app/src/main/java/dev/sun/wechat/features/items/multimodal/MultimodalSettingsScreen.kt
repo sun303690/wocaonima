@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -291,6 +292,20 @@ private fun VoiceApiContent() {
     }
 }
 
+/**
+ * 模型列表拉到之后：当前模型不在列表里（没填 / 换过服务商）就自动挑一个视觉模型并落盘。
+ *
+ * 只在明确不匹配时才覆盖，用户手动填的合法模型不会被冲掉。
+ */
+private fun applyPickedModel(candidates: List<String>, apply: (String) -> Unit) {
+    if (candidates.isEmpty()) return
+    val current = MultimodalEngine.visionModel
+    if (current.isNotBlank() && candidates.any { it.equals(current, ignoreCase = true) }) return
+    val picked = VisionClient.pickVisionModel(candidates) ?: return
+    MultimodalEngine.visionModel = picked
+    apply(picked)
+}
+
 /** 视觉接口页内容：自填 OpenAI 兼容地址 + Key + 模型（可点选预设，也可手填）。 */
 @Composable
 private fun VisionApiContent() {
@@ -303,6 +318,28 @@ private fun VisionApiContent() {
     var result by remember { mutableStateOf("") }
     var showModels by remember { mutableStateOf(false) }
     var custom by remember { mutableStateOf("") }
+    var models by remember { mutableStateOf<List<String>>(emptyList()) }
+    var loading by remember { mutableStateOf(false) }
+    var modelError by remember { mutableStateOf("") }
+
+    fun refreshModels() {
+        if (loading) return
+        loading = true
+        modelError = ""
+        VisionClient.fetchModels { list, error ->
+            main.post {
+                loading = false
+                modelError = error.orEmpty()
+                models = list.orEmpty()
+                list?.let { candidates -> applyPickedModel(candidates) { picked -> model = picked } }
+            }
+        }
+    }
+
+    // 进页面就按已填的地址/Key 拉一次模型列表；改完地址/Key 点「获取模型列表」刷新
+    LaunchedEffect(Unit) {
+        if (MultimodalEngine.visionReady()) refreshModels()
+    }
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         MiuixSettingsSectionTitle(stringResource(R.string.mm_vision_api_page))
@@ -327,8 +364,22 @@ private fun VisionApiContent() {
         MiuixSettingsCard {
             MiuixSettingsAction(
                 title = stringResource(R.string.mm_model_pick),
-                summary = model.ifBlank { stringResource(R.string.mm_model_not_set) },
+                summary = if (loading) {
+                    stringResource(R.string.mm_model_fetching)
+                } else {
+                    model.ifBlank { stringResource(R.string.mm_model_not_set) }
+                },
                 onClick = { showModels = true },
+            )
+            MiuixSettingsAction(
+                title = stringResource(R.string.mm_model_fetch),
+                summary = when {
+                    loading -> stringResource(R.string.mm_model_fetching)
+                    modelError.isNotEmpty() -> modelError
+                    models.isEmpty() -> stringResource(R.string.mm_model_empty)
+                    else -> "${models.size} 个可用"
+                },
+                onClick = { refreshModels() },
             )
         }
 
@@ -366,7 +417,9 @@ private fun VisionApiContent() {
             title = { Text(stringResource(R.string.mm_model_pick), fontSize = 17.sp) },
             text = {
                 Column {
-                    VisionClient.MODELS.forEach { preset ->
+                    // 拉到了就用接口给的列表；没拉到（没网/没填 Key）回落内置预设
+                    val candidates = models.ifEmpty { VisionClient.MODELS }
+                    candidates.forEach { preset ->
                         Text(
                             text = if (preset == model) "✓ $preset" else preset,
                             fontSize = 15.sp,

@@ -4594,7 +4594,7 @@
     <string name="mm_sticker_switch_summary">Explain what a sticker means; each sticker is recognised once and cached.</string>
     <string name="mm_card_switch">Parse cards and links</string>
     <string name="mm_card_switch_summary">Extract title, description, URL, file type and size from cards, links and files. No network needed.</string>
-    <string name="mm_vision_hint">Vision endpoint (OpenAI-compatible, supports image_url). e.g. https://api.siliconflow.cn/v1</string>
+    <string name="mm_vision_hint">Vision endpoint (OpenAI-compatible, supports image_url). With a URL and key set, the model list is fetched from /models automatically — pick one that can see images. e.g. https://api.siliconflow.cn/v1</string>
     <string name="mm_preset_hint">Provider presets (tap to fill endpoint and model)</string>
     <string name="mm_vision_base_url">Vision base URL</string>
     <string name="mm_vision_api_key">Vision API key</string>
@@ -4607,6 +4607,9 @@
     <string name="mm_api_not_set">Not configured</string>
     <string name="mm_model_not_set">No model selected</string>
     <string name="mm_model_pick">Choose model</string>
+    <string name="mm_model_fetch">Fetch model list from endpoint</string>
+    <string name="mm_model_fetching">Fetching model list…</string>
+    <string name="mm_model_empty">No models returned yet — tap to fetch</string>
     <string name="mm_model_custom">Custom model name</string>
     <string name="mm_confirm">OK</string>
     <string name="mm_cancel">Cancel</string>

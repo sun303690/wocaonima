@@ -4621,7 +4621,7 @@
     <string name="mm_sticker_switch_summary">说明表情表达的情绪；同一个表情只识别一次，之后走缓存。</string>
     <string name="mm_card_switch">解析卡片与链接</string>
     <string name="mm_card_switch_summary">从卡片、链接、文件里抽标题、描述、网址、格式与大小，不需要联网。</string>
-    <string name="mm_vision_hint">视觉接口（OpenAI 兼容，支持 image_url）。例如 https://api.siliconflow.cn/v1</string>
+    <string name="mm_vision_hint">视觉接口（OpenAI 兼容，支持 image_url）。填好地址和 Key 后会自动从 /models 拉取模型列表，挑一个能看图的即可。例如 https://api.siliconflow.cn/v1</string>
     <string name="mm_preset_hint">服务商预设（点一下自动填地址和模型）</string>
     <string name="mm_vision_base_url">视觉接口地址</string>
     <string name="mm_vision_api_key">视觉接口 Key</string>
@@ -4634,6 +4634,9 @@
     <string name="mm_api_not_set">还没配置</string>
     <string name="mm_model_not_set">还没选模型</string>
     <string name="mm_model_pick">选择模型</string>
+    <string name="mm_model_fetch">从接口获取模型列表</string>
+    <string name="mm_model_fetching">正在获取模型列表…</string>
+    <string name="mm_model_empty">还没拉到模型，点这里获取</string>
     <string name="mm_model_custom">自定义模型名</string>
     <string name="mm_confirm">确定</string>
     <string name="mm_cancel">取消</string>

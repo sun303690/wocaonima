@@ -92,6 +92,87 @@ object VisionClient {
         }
     }
 
+    /**
+     * 从 `GET {base}/models` 拉模型列表（OpenAI 兼容接口的标准端点）。
+     *
+     * 先用 [cachedModels] 兜底秒开，网络失败时回落到它；两者都空才报错。
+     * 回调在后台线程，调用方自己 post 回主线程。
+     */
+    fun fetchModels(cb: (List<String>?, String?) -> Unit) {
+        if (MultimodalEngine.visionBaseUrl.isBlank()) {
+            cb(cachedModels.ifEmpty { null }, "还没填接口地址"); return
+        }
+        if (MultimodalEngine.visionApiKey.isBlank()) {
+            cb(cachedModels.ifEmpty { null }, "还没填 Key"); return
+        }
+        thread(name = "wekit-vision-models") {
+            runCatching {
+                val request = Request.Builder()
+                    .url(modelsEndpoint())
+                    .addHeader("Authorization", "Bearer ${MultimodalEngine.visionApiKey.trim()}")
+                    .get()
+                    .build()
+                client.newCall(request).execute().use { response ->
+                    val body = response.body?.string().orEmpty()
+                    if (!response.isSuccessful) {
+                        throw IllegalStateException("接口返回 ${response.code}：${body.take(160)}")
+                    }
+                    val json = runCatching { JSONObject(body) }.getOrNull()
+                        ?: throw IllegalStateException("返回不是 JSON：${body.take(120)}")
+                    parseModels(json)
+                }
+            }.onSuccess { list ->
+                if (list.isNotEmpty()) cachedModels = list
+                WeLogger.d(TAG, "取到 ${list.size} 个模型")
+                cb(list.ifEmpty { cachedModels.ifEmpty { null } }, null)
+            }.onFailure { error ->
+                WeLogger.w(TAG, "拉模型列表失败：${error.message}")
+                cb(cachedModels.ifEmpty { null }, error.message ?: "拉取失败")
+            }
+        }
+    }
+
+    /** 最近一次成功拉到的模型列表（进程内缓存，设置页重进不再等网络）。 */
+    @Volatile
+    private var cachedModels: List<String> = emptyList()
+
+    /**
+     * 从候选里挑一个最像视觉模型的当默认值：优先名字带 vl / vision / 4o / 4v 的，
+     * 其次 gemini / claude / llama-vision，最后回落到第一个。挑不出来返回 null。
+     */
+    fun pickVisionModel(candidates: List<String>): String? {
+        if (candidates.isEmpty()) return null
+        val strong = listOf("vl", "vision", "-4o", "4o-", "glm-4v", "glm-4.5v", "llava", "pixtral", "internvl")
+        candidates.firstOrNull { id ->
+            val lower = id.lowercase()
+            strong.any { lower.contains(it) }
+        }?.let { return it }
+        val weak = listOf("gemini", "claude", "gpt-4", "qwen", "doubao", "step-1v", "moonshot")
+        candidates.firstOrNull { id ->
+            val lower = id.lowercase()
+            weak.any { lower.contains(it) }
+        }?.let { return it }
+        return candidates.first()
+    }
+
+    private fun parseModels(json: JSONObject): List<String> {
+        val array = json.optJSONArray("data") ?: json.optJSONArray("models") ?: return emptyList()
+        val ids = ArrayList<String>(array.length())
+        for (index in 0 until array.length()) {
+            val item = array.optJSONObject(index) ?: continue
+            val id = item.optString("id").ifEmpty { item.optString("name") }
+            if (id.isNotBlank()) ids.add(id)
+        }
+        return ids.distinct().sorted()
+    }
+
+    /** `/chat/completions` 与 `/models` 同级；用户填完整端点或只填 base 都兼容。 */
+    private fun modelsEndpoint(): String {
+        val base = MultimodalEngine.visionBaseUrl.trim().trimEnd('/')
+            .removeSuffix("/chat/completions")
+        return if (base.endsWith("/models")) base else "$base/models"
+    }
+
     /** 连通性测试：只发一条纯文本 ping，验证地址/Key/模型是否可用，不花图片 token。 */
     fun testConnection(cb: (Boolean, String) -> Unit) {
         if (MultimodalEngine.visionBaseUrl.isBlank()) {
