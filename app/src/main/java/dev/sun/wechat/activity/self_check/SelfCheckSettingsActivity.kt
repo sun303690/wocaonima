@@ -61,9 +61,13 @@ import dev.sun.wechat.i18n.WeKitLocaleProvider
 import dev.sun.wechat.ui.content.miuix.MiuixSettingsPage
 import dev.sun.wechat.ui.agent.settings.AgentConfirmDialog
 import dev.sun.wechat.ui.agent.settings.AgentListActionButton
+import dev.sun.wechat.ui.content.miuix.IosDivider
+import dev.sun.wechat.ui.content.miuix.IosSectionHeader
 import dev.sun.wechat.ui.content.miuix.MiuixBaseItemContainer
 import dev.sun.wechat.ui.content.miuix.MiuixBaseWidget
 import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.utils.theme.IosGrouped
+import dev.sun.wechat.ui.utils.theme.LocalIosGroupedPalette
 import dev.sun.wechat.ui.utils.theme.MiuixModuleTheme
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToast
@@ -195,7 +199,7 @@ private fun SelfCheckRoot(onFinish: () -> Unit) {
             Text(
                 text = "最后检测：$lastScan　·　点击任意一项可看详情，可修复的项会带动作按钮",
                 fontSize = 12.sp,
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                color = LocalIosGroupedPalette.current.labelTertiary,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             )
         }
@@ -249,13 +253,7 @@ private fun SelfCheckRoot(onFinish: () -> Unit) {
         }
 
         item(key = "actions_title") {
-            Text(
-                text = "一键自检与修复",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MiuixTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp),
-            )
+            IosSectionHeader("一键自检与修复")
         }
         item(key = "actions") {
             MiuixSegmentedColumn {
@@ -505,15 +503,9 @@ private fun OverviewHealthCard(
                 fontSize = 13.sp,
                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             )
-            Spacer(Modifier.height(16.dp))
-            // 蓝色分隔线
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(2.dp)
-                    .background(MiuixTheme.colorScheme.primary),
-            )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(14.dp))
+            IosDivider(startInset = 0.dp)
+            Spacer(Modifier.height(14.dp))
             // 4 格统计
             Row(modifier = Modifier.fillMaxWidth()) {
                 StatCell(formatDuration(scanDurationMs), "耗时", Modifier.weight(1f).padding(end = 6.dp))
@@ -533,8 +525,8 @@ private fun OverviewHealthCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(MiuixTheme.colorScheme.primary)
+                    .clip(RoundedCornerShape(IosGrouped.controlRadius))
+                    .background(LocalIosGroupedPalette.current.accent)
                     .clickable { onRescan() },
                 contentAlignment = Alignment.Center,
             ) {
@@ -547,14 +539,19 @@ private fun OverviewHealthCard(
             }
             Spacer(Modifier.height(8.dp))
             // 次按钮：一键修复（描边式）
-            Button(
-                onClick = onRepair,
-                modifier = Modifier.fillMaxWidth().height(40.dp),
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(42.dp)
+                    .clip(RoundedCornerShape(IosGrouped.controlRadius))
+                    .background(LocalIosGroupedPalette.current.controlFill)
+                    .clickable { onRepair() },
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "一键修复（重建引导链路）",
-                    fontSize = 13.sp,
-                    color = MiuixTheme.colorScheme.primary,
+                    fontSize = 14.sp,
+                    color = LocalIosGroupedPalette.current.accent,
                 )
             }
         }
@@ -576,7 +573,8 @@ private fun StatCell(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
 ) {
-    val bg = MiuixTheme.colorScheme.surfaceContainer
+    val palette = LocalIosGroupedPalette.current
+    val bg = palette.controlFill
     Box(
         modifier = modifier
             .height(64.dp)
@@ -586,9 +584,9 @@ private fun StatCell(
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = value, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MiuixTheme.colorScheme.onSurface)
+            Text(text = value, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = palette.labelPrimary)
             Spacer(Modifier.height(2.dp))
-            Text(text = label, fontSize = 13.sp, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+            Text(text = label, fontSize = 13.sp, color = palette.labelSecondary)
         }
     }
 }
@@ -666,10 +664,11 @@ private fun ProgressOverlay(
 @Composable
 private fun HealthRow(h: ModuleSelfCheck.HealthItem, onShowDetail: () -> Unit) {
     val icon = if (h.ok) MaterialSymbols.Outlined.Check_circle else MaterialSymbols.Outlined.Error
+    val palette = LocalIosGroupedPalette.current
     val iconColor = when {
-        h.ok -> MiuixTheme.colorScheme.primary
-        h.inactive -> Color(0xFFB26A00)
-        else -> MiuixTheme.colorScheme.error
+        h.ok -> palette.accent
+        h.inactive -> palette.labelTertiary
+        else -> palette.danger
     }
     MiuixBaseWidget(
         title = h.label,

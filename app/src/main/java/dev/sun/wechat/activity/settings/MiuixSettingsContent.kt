@@ -23,6 +23,13 @@ import dev.sun.wechat.R
 import dev.sun.wechat.activity.self_check.SelfCheckSettingsActivity
 import dev.sun.wechat.ui.utils.theme.AppThemeMode
 import dev.sun.wechat.ui.utils.theme.SettingsUiEngine
+import dev.sun.wechat.ui.content.miuix.IosCard
+import dev.sun.wechat.ui.content.miuix.IosChevron
+import dev.sun.wechat.ui.content.miuix.IosDivider
+import dev.sun.wechat.ui.content.miuix.IosRow
+import dev.sun.wechat.ui.content.miuix.IosSwitchRow
+import dev.sun.wechat.ui.utils.theme.IosGrouped
+import dev.sun.wechat.ui.utils.theme.LocalIosGroupedPalette
 import dev.sun.wechat.ui.content.miuix.MiuixBaseItemContainer
 import dev.sun.wechat.ui.content.miuix.MiuixSettingsPage
 import dev.sun.wechat.ui.utils.theme.PageTransitionAnimation
@@ -43,8 +50,6 @@ import com.composables.icons.materialsymbols.outlined.Info
 import com.composables.icons.materialsymbols.outlined.Star
 import com.composables.icons.materialsymbols.outlined.Upload
 import com.composables.icons.materialsymbols.outlined.Wallpaper
-import top.yukonga.miuix.kmp.preference.ArrowPreference
-import top.yukonga.miuix.kmp.preference.SwitchPreference
 
 private enum class MiuixPage { HOME, FEATURES, CATEGORY, APPEARANCE, BACKUP, LOGS, ABOUT, LICENSE }
 
@@ -106,19 +111,19 @@ private fun MiuixHome(
             Spacer(Modifier.height(12.dp))
             MiuixSectionTitle("快捷入口")
             MiuixCard {
-                ArrowPreference(
+                IosRow(
                     title = "全部功能",
                     summary = "浏览分类、搜索与配置所有功能",
-                    startAction = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Extension, Color(0xFF4C8DFF)) },
                     onClick = openFeatures,
-                )
-                HorizontalDivider()
-                ArrowPreference(
+                    leading = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Extension, Color(0xFF4C8DFF)) }
+                ) { IosChevron() }
+                IosDivider()
+                IosRow(
                     title = "外观设置",
                     summary = "主题模式、强调色、圆角与动效",
-                    startAction = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Wallpaper, Color(0xFF9B6BFF)) },
                     onClick = openAppearance,
-                )
+                    leading = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Wallpaper, Color(0xFF9B6BFF)) }
+                ) { IosChevron() }
             }
             Spacer(Modifier.height(4.dp))
             MiuixSectionTitle("功能分类")
@@ -127,54 +132,49 @@ private fun MiuixHome(
                     val enabledCount = FeaturesProvider.ALL_FEATURES.count {
                         category.id in it.categoryIds && (it as? SwitchFeature)?.isEnabled == true
                     }
-                    ArrowPreference(
+                    IosRow(
                         title = stringResource(category.titleRes),
                         summary = "${enabledCount} 项已启用",
-                        startAction = { MiuixPreferenceIcon(category.icon, categoryTint(index)) },
                         onClick = { openCategory(category.id) },
-                    )
-                    if (index != FEATURE_CATEGORIES.lastIndex) HorizontalDivider()
+                        leading = { MiuixPreferenceIcon(category.icon, categoryTint(index)) }
+                    ) { IosChevron() }
+                    if (index != FEATURE_CATEGORIES.lastIndex) IosDivider()
                 }
             }
             Spacer(Modifier.height(4.dp))
             MiuixSectionTitle("工具")
             MiuixCard {
-                ArrowPreference(
-                    title = "主题工坊",
-                    summary = "完整主题、壁纸、气泡与诊断",
-                    startAction = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Star, Color(0xFFFF9F0A)) },
-                    onClick = {
+                IosRow(title = "主题工坊", summary = "完整主题、壁纸、气泡与诊断", onClick = {
                         (context as? ComponentActivity)?.let(dev.sun.wechat.features.items.beautify.ThemeStore::onClick)
-                    },
-                )
-                HorizontalDivider()
-                ArrowPreference(
+                    }, leading = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Star, Color(0xFFFF9F0A)) }) { IosChevron() }
+                IosDivider()
+                IosRow(
                     title = "备份与还原",
                     summary = "导出、导入或清空模块配置",
-                    startAction = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Upload, Color(0xFF34C759)) },
                     onClick = openBackup,
-                )
-                HorizontalDivider()
-                ArrowPreference(
+                    leading = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Upload, Color(0xFF34C759)) }
+                ) { IosChevron() }
+                IosDivider()
+                IosRow(
                     title = "日志中心",
                     summary = "模块日志、崩溃日志与主题诊断",
-                    startAction = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Article, Color(0xFF8E8E93)) },
                     onClick = openLogs,
-                )
-                HorizontalDivider()
-                ArrowPreference(
+                    leading = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Article, Color(0xFF8E8E93)) }
+                ) { IosChevron() }
+                IosDivider()
+                IosRow(
                     title = "自检与诊断",
                     summary = "检查 Hook、权限与运行环境",
-                    startAction = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Bug_report, Color(0xFFFF453A)) },
                     onClick = { context.startActivity(Intent(context, SelfCheckSettingsActivity::class.java)) },
-                )
-                HorizontalDivider()
-                ArrowPreference(
+                    leading = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Bug_report, Color(0xFFFF453A)) }
+                ) { IosChevron() }
+                IosDivider()
+                IosRow(
                     title = "关于与许可",
                     summary = "版本、开源协议与项目链接",
-                    startAction = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Info, Color(0xFF30B0C7)) },
                     onClick = openAbout,
-                )
+                    leading = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Info, Color(0xFF30B0C7)) }
+                ) { IosChevron() }
             }
         }
     }
@@ -191,11 +191,12 @@ private fun categoryTint(index: Int): Color = when (index % 6) {
 
 @Composable
 private fun MiuixSectionTitle(text: String) {
+    // iOS 分组标题：卡外灰色小字，左缩进与卡内文字对齐。
     Text(
         text,
         fontSize = 13.sp,
-        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-        modifier = Modifier.padding(start = 6.dp, top = 6.dp, bottom = 6.dp),
+        color = LocalIosGroupedPalette.current.labelSecondary,
+        modifier = Modifier.padding(start = IosGrouped.separatorInset, top = IosGrouped.sectionSpacing, bottom = IosGrouped.headerSpacing),
     )
 }
 
@@ -237,74 +238,64 @@ private fun MiuixAppearancePage(back: () -> Unit) {
         item {
             MiuixSectionTitle("引擎")
             MiuixCard {
-                ArrowPreference(
-                    title = "主题模式",
-                    summary = ThemeSettings.themeMode.displayName,
-                    startAction = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Wallpaper, Color(0xFF9B6BFF)) },
-                    onClick = {
+                IosRow(title = "主题模式", summary = ThemeSettings.themeMode.displayName, onClick = {
                         val entries = AppThemeMode.entries
                         ThemeSettings.updateThemeMode(entries[(entries.indexOf(ThemeSettings.themeMode) + 1) % entries.size]); tick++
-                    },
-                )
-                HorizontalDivider()
-                ArrowPreference(
-                    title = "页面切换动效",
-                    summary = ThemeSettings.pageTransitionAnimation.name,
-                    startAction = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Star, Color(0xFFFF9F0A)) },
-                    onClick = {
+                    }, leading = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Wallpaper, Color(0xFF9B6BFF)) }) { IosChevron() }
+                IosDivider()
+                IosRow(title = "页面切换动效", summary = ThemeSettings.pageTransitionAnimation.name, onClick = {
                         val entries = PageTransitionAnimation.entries
                         ThemeSettings.updatePageTransitionAnimation(entries[(entries.indexOf(ThemeSettings.pageTransitionAnimation) + 1) % entries.size]); tick++
-                    },
-                )
-                HorizontalDivider()
-                ArrowPreference(
+                    }, leading = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Star, Color(0xFFFF9F0A)) }) { IosChevron() }
+                IosDivider()
+                IosRow(
                     title = "UI 组件引擎",
                     summary = ThemeSettings.uiEngine.displayName,
-                    startAction = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Extension, Color(0xFF4C8DFF)) },
                     onClick = { showEnginePicker = true },
-                )
+                    leading = { MiuixPreferenceIcon(MaterialSymbols.Outlined.Extension, Color(0xFF4C8DFF)) }
+                ) { IosChevron() }
             }
             Spacer(Modifier.height(4.dp))
             MiuixSectionTitle("背景")
             MiuixCard {
-                SwitchPreference(
-                    checked = ThemeSettings.settingsWallpaper,
-                    onCheckedChange = { ThemeSettings.updateSettingsWallpaper(it); tick++ },
+                IosSwitchRow(
                     title = "设置页背景图",
                     summary = "在设置页显示背景图片",
+                    checked = ThemeSettings.settingsWallpaper,
+                    onCheckedChange = { ThemeSettings.updateSettingsWallpaper(it); tick++ }
                 )
                 if (ThemeSettings.settingsWallpaper) {
-                    HorizontalDivider()
-                    ArrowPreference(
+                    IosDivider()
+                    IosRow(
                         title = "选择背景图片",
                         summary = ThemeSettings.settingsWallpaperPath?.let { java.io.File(it).name } ?: "跟随主题壁纸",
-                        onClick = { picker.launch("image/*") },
-                    )
+                        onClick = { picker.launch("image/*") }
+                    ) { IosChevron() }
                     if (ThemeSettings.settingsWallpaperPath != null) {
-                        HorizontalDivider()
-                        ArrowPreference(
+                        IosDivider()
+                        IosRow(
                             title = "清除自定义图片",
                             summary = "恢复使用主题壁纸",
-                            onClick = { ThemeSettings.updateSettingsWallpaperPath(null); tick++ },
-                        )
+                            onClick = { ThemeSettings.updateSettingsWallpaperPath(null); tick++ }
+                        ) { IosChevron() }
                     }
                 }
             }
             Spacer(Modifier.height(4.dp))
             MiuixSectionTitle("取色")
             MiuixCard {
-                SwitchPreference(
-                    checked = ThemeSettings.dynamicWallpaper,
-                    onCheckedChange = { ThemeSettings.updateDynamicWallpaper(it); tick++ },
+                IosSwitchRow(
                     title = "使用动态壁纸颜色",
                     summary = "从系统壁纸提取强调色",
+                    checked = ThemeSettings.dynamicWallpaper,
+                    onCheckedChange = { ThemeSettings.updateDynamicWallpaper(it); tick++ }
                 )
-                HorizontalDivider()
-                SwitchPreference(
-                    checked = ThemeSettings.applyToWechat,
-                    onCheckedChange = { ThemeSettings.updateApplyToWechat(it); tick++ },
+                IosDivider()
+                IosSwitchRow(
                     title = "同时应用到微信",
                     summary = "重启微信后生效",
+                    checked = ThemeSettings.applyToWechat,
+                    onCheckedChange = { ThemeSettings.updateApplyToWechat(it); tick++ }
                 )
             }
         }
@@ -329,7 +320,7 @@ private fun MiuixLogsPage(back: () -> Unit) {
                     context.getSystemService(android.content.ClipboardManager::class.java)
                         .setPrimaryClip(android.content.ClipData.newPlainText("WeKit Theme Diagnostics", text))
                 }
-                HorizontalDivider()
+                IosDivider()
                 MiuixAction("刷新日志", "当前共 ${logFiles.size} 个日志文件") { refresh++ }
             }
         }
@@ -352,9 +343,9 @@ private fun MiuixAboutPage(back: () -> Unit, openLicense: () -> Unit) {
         item {
             MiuixCard {
                 MiuixAction("WeKit", "版本 ${dev.sun.wechat.BuildConfig.VERSION_NAME}") { }
-                HorizontalDivider()
+                IosDivider()
                 MiuixAction("开源许可", "查看第三方组件与许可证", openLicense)
-                HorizontalDivider()
+                IosDivider()
                 MiuixAction("项目主页", "GitHub · sun303690/wocaonima") {
                     context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/sun303690/wocaonima")))
                 }
@@ -373,7 +364,7 @@ private fun MiuixLicensePage(back: () -> Unit) {
         "MMKV · Tencent key-value storage",
     )
     MiuixSettingsPage("开源许可", back) {
-        item { MiuixCard { licenses.forEachIndexed { i, text -> if (i > 0) HorizontalDivider(); MiuixAction(text, "详见项目内许可证与上游仓库") { } } } }
+        item { MiuixCard { licenses.forEachIndexed { i, text -> if (i > 0) IosDivider(); MiuixAction(text, "详见项目内许可证与上游仓库") { } } } }
     }
 }
 
@@ -386,11 +377,11 @@ private fun MiuixBackupPage(back: () -> Unit) {
                 MiuixAction("导出配置", "保存完整 WeKit 配置备份") {
                     SettingsConfigActions.export(context) { context }
                 }
-                HorizontalDivider()
+                IosDivider()
                 MiuixAction("导入配置", "从备份文件恢复并重启微信") {
                     SettingsConfigActions.importFromDocument(context) { context }
                 }
-                HorizontalDivider()
+                IosDivider()
                 MiuixAction("清空配置", "删除所有模块设置并重启微信") {
                     SettingsConfigActions.clearAndRestart()
                 }
@@ -447,7 +438,7 @@ private fun MiuixFeatures(
                         MiuixAction(stringResource(category.titleRes), "${enabledCount} 项已启用") {
                             openCategory(category.id)
                         }
-                        if (index != FEATURE_CATEGORIES.lastIndex) HorizontalDivider()
+                        if (index != FEATURE_CATEGORIES.lastIndex) IosDivider()
                     }
                 }
             }
@@ -496,7 +487,8 @@ private fun MiuixFeatureRow(feature: BaseFeature, changed: () -> Unit) {
             (feature as? SwitchFeature)?.defaultEnabled == true,
         )
     }
-    Column(Modifier.padding(horizontal = 16.dp)) {
+    // 页面外壳已给 16dp 左右边距，这里不再叠加，避免卡片越缩越窄。
+    Column(Modifier.fillMaxWidth()) {
         MiuixBaseItemContainer {
             FeatureRow(item = feature, checked = checked, onCheckedChange = { changed() })
             feature.Ui()
@@ -515,37 +507,40 @@ private fun MiuixChoiceDialog(
     // Miuix 的 OverlayDialog 只有在 Miuix Scaffold 提供的 popup host 里才会真正渲染，
     // 设置页是普通 LazyColumn，没有任何 host，弹窗会静默不显示。这里改用平台 Dialog。
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        val palette = LocalIosGroupedPalette.current
         Column(
             Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(MiuixTheme.colorScheme.surface)
-                .padding(vertical = 10.dp),
+                .clip(RoundedCornerShape(IosGrouped.cardRadius))
+                .background(palette.card)
+                .padding(vertical = 6.dp),
         ) {
             Text(
                 title,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
                 fontSize = 17.sp,
                 fontWeight = FontWeight.Bold,
-                color = MiuixTheme.colorScheme.onSurface,
+                color = palette.labelPrimary,
             )
+            IosDivider(startInset = 20.dp)
             val current = ThemeSettings.uiEngine.displayName
             options.forEach { (label, action) ->
                 Row(
                     Modifier
                         .fillMaxWidth()
                         .clickable { action(); onDismiss() }
-                        .padding(horizontal = 20.dp, vertical = 15.dp),
+                        .defaultMinSize(minHeight = IosGrouped.rowMinHeight)
+                        .padding(horizontal = 20.dp, vertical = 13.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         label,
                         modifier = Modifier.weight(1f),
                         fontSize = 16.sp,
-                        color = if (label == current) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurface,
+                        color = if (label == current) palette.accent else palette.labelPrimary,
                     )
                     if (label == current) {
-                        Text("✓", fontSize = 16.sp, color = MiuixTheme.colorScheme.primary)
+                        Text("✓", fontSize = 16.sp, color = palette.accent)
                     }
                 }
             }
@@ -560,26 +555,16 @@ private fun MiuixSearch(value: String, changed: (String) -> Unit, search: () -> 
 
 @Composable
 private fun MiuixCard(content: @Composable ColumnScope.() -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)),
-        shape = RoundedCornerShape(18.dp),
-        color = MiuixTheme.colorScheme.surfaceContainer,
-    ) { Column(content = content) }
+    // iOS inset grouped 卡片：12dp 圆角、无阴影，行分隔线由内容自己画。
+    IosCard { content() }
 }
 
 @Composable
 private fun MiuixToggle(title: String, checked: Boolean, change: (Boolean) -> Unit) {
-    BasicComponent(
-        title = title,
-        endActions = { Switch(checked = checked, onCheckedChange = change) },
-        onClick = { change(!checked) },
-    )
+    IosSwitchRow(title = title, checked = checked, onCheckedChange = change)
 }
 
 @Composable
 private fun MiuixAction(title: String, summary: String, click: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clickable(onClick = click).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) { Text(title, fontSize = 17.sp, color = MiuixTheme.colorScheme.onSurface); Text(summary, fontSize = 13.sp, color = MiuixTheme.colorScheme.onSurfaceVariantSummary) }
-        Text("›", fontSize = 25.sp, color = MiuixTheme.colorScheme.primary)
-    }
+    IosRow(title = title, summary = summary, onClick = click) { IosChevron() }
 }

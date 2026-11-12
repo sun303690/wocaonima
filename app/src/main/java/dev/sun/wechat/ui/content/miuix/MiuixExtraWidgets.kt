@@ -17,14 +17,23 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
+/**
+ * 通用容器：iOS 分组卡片（12dp 圆角、卡片底色）。
+ *
+ * 已经在分组卡片里（如塞在 [MiuixSegmentedColumn] 的某个 item 中）时只做普通分栏，
+ * 不再套第二层圆角。
+ */
 @Composable
 fun MiuixBaseItemContainer(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    Card(modifier.fillMaxWidth()) { Column { content() } }
+    if (LocalInIosCard.current) {
+        Column(modifier.fillMaxWidth()) { content() }
+    } else {
+        IosCard(modifier) { content() }
+    }
 }
 
 @Composable

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -13,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import dev.sun.wechat.ui.utils.theme.IosGrouped
 import top.yukonga.miuix.kmp.basic.RadioButton
 import top.yukonga.miuix.kmp.basic.Slider
 import top.yukonga.miuix.kmp.basic.Text
@@ -21,8 +23,22 @@ data class DropdownOption<T>(val value: T, val label: String)
 
 @Composable
 fun MiuixBaseSupportingWidget(title: String, modifier: Modifier = Modifier, description: String? = null, iconPlaceholder: Boolean = false, onClick: (() -> Unit)? = null, enabled: Boolean = true, supportingContent: @Composable () -> Unit) {
-    MiuixBaseWidget(title = title, summary = description, modifier = modifier, iconPlaceholder = iconPlaceholder, onClick = onClick, enabled = enabled)
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) { supportingContent() }
+    val body: @Composable () -> Unit = {
+        MiuixBaseWidget(title = title, summary = description, modifier = modifier, iconPlaceholder = iconPlaceholder, onClick = onClick, enabled = enabled)
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(start = IosGrouped.separatorInset, end = IosGrouped.separatorInset, bottom = 12.dp)
+        ) { supportingContent() }
+    }
+    // 单独使用时把标题行和控件包进同一张 iOS 分组卡片，避免控件「掉」到卡片外面。
+    if (LocalInIosCard.current) {
+        body()
+    } else {
+        IosCard {
+            CompositionLocalProvider(LocalInIosCard provides true) { body() }
+        }
+    }
 }
 
 @Composable

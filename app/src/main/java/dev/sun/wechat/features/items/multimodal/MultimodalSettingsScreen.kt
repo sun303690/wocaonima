@@ -91,18 +91,21 @@ private fun HomeContent(onOpenVoice: () -> Unit, onOpenVision: () -> Unit) {
                 summary = stringResource(R.string.mm_voice_switch_summary),
                 checked = voice,
                 onCheckedChange = { voice = it; AsrEngine.enabled = it },
+                divider = true,
             )
             MiuixSettingsToggle(
                 title = stringResource(R.string.mm_image_switch),
                 summary = stringResource(R.string.mm_image_switch_summary),
                 checked = image,
                 onCheckedChange = { image = it; MultimodalEngine.imageEnabled = it },
+                divider = true,
             )
             MiuixSettingsToggle(
                 title = stringResource(R.string.mm_sticker_switch),
                 summary = stringResource(R.string.mm_sticker_switch_summary),
                 checked = sticker,
                 onCheckedChange = { sticker = it; MultimodalEngine.stickerEnabled = it },
+                divider = true,
             )
             MiuixSettingsToggle(
                 title = stringResource(R.string.mm_card_switch),
@@ -118,6 +121,7 @@ private fun HomeContent(onOpenVoice: () -> Unit, onOpenVision: () -> Unit) {
                 title = stringResource(R.string.mm_voice_api_page),
                 summary = if (AsrEngine.baseUrl.isBlank()) notSet else AsrEngine.model.ifBlank { noModel },
                 onClick = onOpenVoice,
+                divider = true,
             )
             MiuixSettingsAction(
                 title = stringResource(R.string.mm_vision_api_page),
@@ -173,6 +177,7 @@ private fun VoiceApiContent() {
                         model = preset.model
                         showToast(context, "已填入 ${preset.name}")
                     },
+                    divider = preset != AsrEngine.PRESETS.last(),
                 )
             }
         }
@@ -374,6 +379,7 @@ private fun VisionApiContent() {
                     showModels = true
                     refreshModels()
                 },
+                divider = true,
             )
             MiuixSettingsAction(
                 title = stringResource(R.string.mm_model_fetch),

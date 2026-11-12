@@ -3,15 +3,17 @@ package dev.sun.wechat.ui.content.miuix
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import dev.sun.wechat.ui.utils.theme.IosGrouped
+import dev.sun.wechat.ui.utils.theme.LocalIosGroupedPalette
 import top.yukonga.miuix.kmp.basic.RadioButton
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /** Small Miuix-native replacements for Material chips and list rows. */
 @Composable
@@ -23,8 +25,12 @@ fun MiuixFilterChip(
     leadingIcon: (@Composable () -> Unit)? = null,
     label: @Composable () -> Unit,
 ) {
+    val palette = LocalIosGroupedPalette.current
     Box(
-        modifier.background(if (selected) MiuixTheme.colorScheme.primaryContainer else MiuixTheme.colorScheme.surfaceContainer, RoundedCornerShape(18.dp))
+        modifier.background(
+            if (selected) palette.accent.copy(alpha = if (palette.isDark) 0.24f else 0.12f) else palette.controlFill,
+            RoundedCornerShape(IosGrouped.controlRadius),
+        )
             .clickable(enabled = enabled, onClick = onClick).padding(horizontal = 14.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -52,7 +58,13 @@ fun MiuixListItem(
     Row(
         modifier.fillMaxWidth().background(containerColor)
             .then(if (onClick != null) Modifier.clickable(enabled = enabled, onClick = onClick) else Modifier)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .defaultMinSize(minHeight = IosGrouped.rowMinHeight)
+            .padding(
+                start = IosGrouped.separatorInset,
+                end = IosGrouped.separatorInset,
+                top = IosGrouped.rowVerticalPadding,
+                bottom = IosGrouped.rowVerticalPadding,
+            ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (leadingContent != null) { leadingContent(); Spacer(Modifier.width(12.dp)) }
