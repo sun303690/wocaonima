@@ -369,7 +369,11 @@ private fun VisionApiContent() {
                 } else {
                     model.ifBlank { stringResource(R.string.mm_model_not_set) }
                 },
-                onClick = { showModels = true },
+                // 点开就拉：不靠用户再点一次「获取模型列表」
+                onClick = {
+                    showModels = true
+                    refreshModels()
+                },
             )
             MiuixSettingsAction(
                 title = stringResource(R.string.mm_model_fetch),
@@ -417,9 +421,22 @@ private fun VisionApiContent() {
             title = { Text(stringResource(R.string.mm_model_pick), fontSize = 17.sp) },
             text = {
                 Column {
-                    // 拉到了就用接口给的列表；没拉到（没网/没填 Key）回落内置预设
-                    val candidates = models.ifEmpty { VisionClient.MODELS }
-                    candidates.forEach { preset ->
+                    // 只列接口给的模型；内置预设已去掉，没拉到就提示去拉或手填
+                    if (loading) {
+                        Text(
+                            text = stringResource(R.string.mm_model_fetching),
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(bottom = 6.dp),
+                        )
+                    }
+                    if (models.isEmpty() && !loading) {
+                        Text(
+                            text = stringResource(R.string.mm_model_empty),
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(bottom = 6.dp),
+                        )
+                    }
+                    models.forEach { preset ->
                         Text(
                             text = if (preset == model) "✓ $preset" else preset,
                             fontSize = 15.sp,

@@ -29,17 +29,6 @@ object VisionClient {
     private const val MAX_RAW_BYTES = 1_400_000
     private const val MAX_EDGE = 1024
     private const val MAX_TOKENS = 200
-    private const val DEFAULT_MODEL = "gpt-4o-mini"
-
-    /** 设置页「选择模型」里的候选，用户也可以自己填别的。 */
-    val MODELS = listOf(
-        "gpt-4o-mini",
-        "gpt-4o",
-        "Qwen/Qwen2.5-VL-72B-Instruct",
-        "Pro/Qwen/Qwen2.5-VL-7B-Instruct",
-        "glm-4.5v",
-        "doubao-1.5-vision-pro-32k",
-    )
 
     private val client by lazy {
         OkHttpClient.Builder()
@@ -210,7 +199,8 @@ object VisionClient {
         }
     }
 
-    private fun modelName(): String = MultimodalEngine.visionModel.trim().ifBlank { DEFAULT_MODEL }
+    private fun modelName(): String =
+        MultimodalEngine.visionModel.trim().ifBlank { throw IllegalStateException("还没选视觉模型") }
 
     private fun request(payload: JSONObject): Request = Request.Builder()
         .url(endpoint())

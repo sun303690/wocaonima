@@ -40,7 +40,7 @@ object MultimodalEngine {
     // 换服务商时不必回头改 WeAgent 的全局配置。
     var visionBaseUrl by prefOption("mm_vision_base_url", "")
     var visionApiKey by prefOption("mm_vision_api_key", "")
-    var visionModel by prefOption("mm_vision_model", "gpt-4o-mini")
+    var visionModel by prefOption("mm_vision_model", "")
 
     private const val IMAGE_PROMPT =
         "用一句中文描述这张图片的内容。如果图里有文字，把关键文字也说出来。不超过 60 字。"
@@ -84,6 +84,9 @@ object MultimodalEngine {
     fun visionReady(): Boolean =
         visionBaseUrl.isNotBlank() && visionApiKey.isNotBlank()
 
+    /** 地址、Key、模型都齐了才算能真正发请求；缺一个后台线程就别起。 */
+    fun visionUsable(): Boolean = visionReady() && visionModel.isNotBlank()
+
     /**
      * 取一条消息的多模态文本（只读缓存，不联网）。
      * 卡片/链接/文件这类纯解析的会在这里直接算出来。
@@ -117,7 +120,7 @@ object MultimodalEngine {
             type.code == MessageType.IMAGE.code -> {
                 if (!imageEnabled) return
                 // 视觉接口没配好就不要空转：没有地址和 Key，后台线程只会白跑一次再抛异常
-                if (!visionReady()) return
+                if (!visionUsable()) return
                 if (message.serverId <= 0L) return
                 val key = imageKey(message)
                 if (readCache(key) != null) return
@@ -126,7 +129,7 @@ object MultimodalEngine {
             }
             type.isSticker -> {
                 if (!stickerEnabled) return
-                if (!visionReady()) return
+                if (!visionUsable()) return
                 val key = stickerKey(message)
                 if (readCache(key) != null) return
                 if (stickerDecodeKnownFailed(key)) return
