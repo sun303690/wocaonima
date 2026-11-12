@@ -1,8 +1,23 @@
 package dev.sun.wechat.features.items.self_check
 
 import android.content.Context
+import android.os.Build
 import dev.sun.wechat.BuildConfig
 import dev.sun.wechat.constants.Preferences
+import dev.sun.wechat.constants.WeChatVersions
+import dev.sun.wechat.features.items.chat.AsrEngine
+import dev.sun.wechat.features.items.chat.TextToSpeech
+import dev.sun.wechat.features.items.multimodal.MultimodalEngine
+import dev.sun.wechat.features.items.multimodal.MultimodalFeature
+import dev.sun.wechat.loader.startup.StartupInfo
+import dev.sun.wechat.utils.TargetProcesses
+import dev.sun.wechat.utils.WeLogger
+import dev.sun.wechat.utils.fs.KnownPaths
+import java.io.File
+import java.lang.reflect.Modifier
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import dev.sun.wechat.features.api.core.WeConversationApi
 import dev.sun.wechat.features.core.FeaturesProvider
 import dev.sun.wechat.features.core.SwitchFeature
@@ -58,6 +73,9 @@ object ModuleSelfCheck {
     class HealthStep(val title: String, val run: () -> List<HealthItem>)
 
     const val SECTION_OVERVIEW = "功能清单与分类启用概况"
+    const val SECTION_ENV = "运行环境与注入链路"
+    const val SECTION_HOOK = "Hook 安装明细"
+    const val SECTION_SERVICE = "外部服务与配置"
     const val SECTION_SCRIPT = "脚本运行时"
     const val SECTION_ANCHOR = "关键类锚点"
     const val SECTION_SECRET = "密友功能"
@@ -77,8 +95,11 @@ object ModuleSelfCheck {
     /** 自检步骤（全量）。 */
     fun healthSteps(context: Context): List<HealthStep> = listOf(
         HealthStep(SECTION_OVERVIEW) { featureOverview() },
+        HealthStep(SECTION_ENV) { environmentSection(context) },
+        HealthStep(SECTION_HOOK) { hookInstallSection(context) },
         HealthStep(SECTION_ANCHOR) { anchors() },
         HealthStep(SECTION_SECRET) { secretFriendSection() },
+        HealthStep(SECTION_SERVICE) { serviceSection() },
         HealthStep(SECTION_RUNTIME) { runtimeStatus(context) },
     )
 
@@ -125,6 +146,377 @@ object ModuleSelfCheck {
                 out += HealthItem("分类·$category", SECTION_OVERVIEW, "${list.size} 个，已启用 $on", true, detail)
             }
         return out
+    }
+
+    // ------------------------------------------------------------------
+    //  运行环境与注入链路
+    // ------------------------------------------------------------------
+
+    /**
+     * 注入链路本身是否正常：加载器、Hook 桥、进程、宿主/模块版本、设备、可写目录。
+     *
+     * 这一组回答的是「模块到底有没有被装进微信进程」——功能大面积失效时先看这里：
+     * 加载器为空 = 没注入；Hook 桥为空 = 注入方式不支持 Hook；进程不对 = 当前功能本来就不该生效。
+     */
+    private fun environmentSection(context: Context): List<HealthItem> {
+        val section = SECTION_ENV
+        val out = mutableListOf<HealthItem>()
+
+        val loader = runCatching { StartupInfo.loaderService }.getOrNull()
+        out += if (loader != null) {
+            HealthItem(
+                label = "注入加载器",
+                section = section,
+                value = "${loader.loaderName} ${loader.loaderVersionName}(${loader.loaderVersionCode})",
+                ok = true,
+                detail = "模块由 ${loader.loaderName} 注入，入口 ${loader.entryPointName}。\n" +
+                    "加载器负责把模块 DEX 与资源塞进微信进程。加载器版本过低或与框架不匹配时，" +
+                    "钩子会静默装不上，模块内部看不出原因——这一项有值说明注入链路本身是通的。",
+            )
+        } else {
+            HealthItem(
+                label = "注入加载器",
+                section = section,
+                value = "未初始化",
+                ok = false,
+                detail = "StartupInfo 还没有被填充：模块没有注入到当前进程，或当前页面不在被注入的微信进程里。\n" +
+                    "这种情况下所有 Hook 都不会生效。请检查框架里模块是否勾选、作用域是否包含微信、改完是否重启过微信。",
+            )
+        }
+
+        val bridge = runCatching { StartupInfo.hookBridge }.getOrNull()
+        out += HealthItem(
+            label = "Hook 桥",
+            section = section,
+            value = bridge?.javaClass?.simpleName ?: "未知",
+            ok = bridge != null,
+            detail = if (bridge != null) {
+                "当前 Hook 桥：${bridge.javaClass.name}\n" +
+                    "Hook 桥是模块调用框架 API 的唯一出口；它为 null 时功能开关能打开但不会真正生效。"
+            } else {
+                "StartupInfo.hookBridge 为 null：当前注入方式没有提供 Hook 能力（例如只做资源注入的加载器）。\n" +
+                    "换用支持 Hook 的加载器（LSPosed / libxposed）后重启微信。"
+            },
+        )
+
+        val process = runCatching { "${TargetProcesses.currentType.name}（${TargetProcesses.currentName}）" }
+            .getOrDefault("未知")
+        out += HealthItem(
+            label = "当前进程",
+            section = section,
+            value = process,
+            ok = true,
+            detail = "模块按进程分别加载：主进程（MAIN）才是完整功能；PUSH / TOOLS / SANDBOX 等进程只装该进程需要的功能。\n" +
+                "若某些功能在设置里开着却「未安装 Hook」，先确认它是否是给别的进程用的。",
+        )
+
+        val hostName = knownHostVersionName(HostInfo.versionCode)
+        out += HealthItem(
+            label = "微信版本",
+            section = section,
+            value = "${HostInfo.versionName}(${HostInfo.versionCode})" + (hostName?.let { " · $it" } ?: ""),
+            ok = true,
+            detail = "宿主包名：${HostInfo.packageName}\n" +
+                "渠道：${if (HostInfo.isHostGooglePlay) "Google Play" else "国内版"}\n" +
+                "模块按锚点适配而非硬编码版本号：同一个版本号下国内版/Play 版的 DEX 布局可能不同，" +
+                "所以「关键类锚点」全部命中才代表这个宿主真的适配好了。",
+        )
+
+        out += HealthItem(
+            label = "模块版本",
+            section = section,
+            value = moduleVersionDisplay(),
+            ok = true,
+            detail = "包名：${BuildConfig.APPLICATION_ID}\n如果是覆盖安装升级，旧进程里的模块版本可能还是旧的——升级后必须重启微信。",
+        )
+
+        out += HealthItem(
+            label = "设备与系统",
+            section = section,
+            value = deviceLine(),
+            ok = true,
+            detail = "部分功能依赖系统能力：Android 11 以下没有进程退出原因记录；" +
+                "Android 13+ 需要通知权限；分屏/小窗会影响界面类 Hook 的锚点命中。",
+        )
+
+        val modulePath = runCatching { StartupInfo.modulePath }.getOrNull()
+        val moduleFile = modulePath?.let { runCatching { File(it) }.getOrNull() }
+        out += HealthItem(
+            label = "模块安装包",
+            section = section,
+            value = when {
+                modulePath == null -> "未初始化"
+                moduleFile?.exists() == true -> "可读 · ${moduleFile.length() / 1024}KB"
+                else -> "路径存在性未知"
+            },
+            ok = modulePath != null && moduleFile?.exists() != false,
+            detail = "路径：${modulePath ?: "（空）"}\n模块包被卸载/移动后，资源与扩展包会读不到，界面可能显示空白或回落成默认样式。",
+        )
+
+        val writable = runCatching {
+            val probe = File(context.filesDir, ".selfcheck_probe")
+            probe.writeText("ok")
+            val text = probe.readText()
+            probe.delete()
+            text == "ok"
+        }.getOrDefault(false)
+        out += HealthItem(
+            label = "私有目录可写",
+            section = section,
+            value = if (writable) "正常" else "不可写",
+            ok = writable,
+            detail = "用来存配置、识别缓存、Dex 适配缓存。\n目录：${context.filesDir.absolutePath}\n" +
+                "不可写时表现为：开关打开后重启就丢、识别结果每次重算、Dex 缓存无法落盘（每次启动都重新解析）。",
+        )
+
+        val downloadDir = runCatching { KnownPaths.downloads.toFile() }.getOrNull()
+        out += HealthItem(
+            label = "导出目录",
+            section = section,
+            value = if (downloadDir?.exists() == true) "可用" else "不可用",
+            ok = downloadDir?.exists() == true,
+            inactive = downloadDir?.exists() != true,
+            detail = "诊断报告、语音/图片导出都写在这里：\n${downloadDir?.absolutePath ?: "（无法创建，通常是没给存储权限）"}",
+        )
+        return out
+    }
+
+    // ------------------------------------------------------------------
+    //  Hook 安装明细
+    // ------------------------------------------------------------------
+
+    /**
+     * 逐项对比「开关已打开」与「Hook 真的装上了」。
+     *
+     * 这是比分类启用概况更细的一层：开关只是用户的意愿，[BaseFeature.isActive] 才是运行事实。
+     * 差异项按当前进程过滤——只在别的进程生效的功能不算失败，避免误报。
+     */
+    private fun hookInstallSection(context: Context): List<HealthItem> {
+        val section = SECTION_HOOK
+        val out = mutableListOf<HealthItem>()
+        val all = runCatching { FeaturesProvider.ALL_FEATURES }.getOrDefault(emptyList())
+        val switches = all.filterIsInstance<SwitchFeature>()
+        val enabled = switches.filter { it.isEnabled }
+        val active = enabled.filter { it.isActive }
+        val currentType = runCatching { TargetProcesses.currentType }.getOrNull()
+        val broken = enabled.filter {
+            !it.isActive && (currentType == null || it.targetProcesses.contains(currentType))
+        }
+        val otherProcess = enabled.count {
+            !it.isActive && currentType != null && !it.targetProcesses.contains(currentType)
+        }
+
+        out += HealthItem(
+            label = "功能注册总数",
+            section = section,
+            value = "${all.size} 个",
+            ok = true,
+            detail = "其中可开关的功能 ${switches.size} 个；当前已启用 ${enabled.size} 个。",
+        )
+        out += HealthItem(
+            label = "已启用且已装 Hook",
+            section = section,
+            value = "${active.size}/${enabled.size}",
+            ok = true,
+            detail = "开关打开且 Hook 实际安装成功的功能数。\n" +
+                "Hook 安装发生在功能启用瞬间（或启动时统一恢复），装不上会被回滚，开关回到关闭状态——" +
+                "所以这里长期偏低通常意味着有一个功能每次开启都失败。",
+        )
+        out += HealthItem(
+            label = "启用但 Hook 未安装",
+            section = section,
+            value = if (broken.isEmpty()) "无" else "${broken.size} 个",
+            ok = broken.isEmpty(),
+            inactive = broken.isEmpty(),
+            detail = if (broken.isEmpty()) {
+                "当前进程里，所有已启用的功能都装上了 Hook。"
+            } else {
+                "这些功能开关是开的，但 Hook 没装上（已按当前进程过滤，只在别的进程生效的不计入）：\n" +
+                    "· " + broken.take(20).joinToString("\n· ") { nameWithId(context, it) } +
+                    (if (broken.size > 20) "\n…共 ${broken.size} 个" else "") +
+                    "\n\n常见原因：锚点在当前微信版本漂移（先看「关键类锚点」并试「重置 Dex 缓存」）、" +
+                    "功能依赖的界面还没出现过（延迟挂载类功能会在进入对应页面后自动补装）。"
+            },
+        )
+        if (otherProcess > 0) {
+            out += HealthItem(
+                label = "仅在其他进程生效",
+                section = section,
+                value = "$otherProcess 个",
+                ok = true,
+                detail = "这些功能已启用，但它们的目标进程不是当前进程（当前 ${currentType?.name ?: "未知"}），" +
+                    "所以这里看不到 Hook。属于正常现象，不需要处理。",
+            )
+        }
+
+        val digest = runCatching { WeLogger.digest(80) }.getOrNull()
+        val failures = digest?.problems
+            ?.filter { it.header.contains("failed to enable feature") }
+            .orEmpty()
+        out += HealthItem(
+            label = "Hook 安装失败日志",
+            section = section,
+            value = if (failures.isEmpty()) "无" else "${failures.size} 条",
+            ok = failures.isEmpty(),
+            inactive = failures.isEmpty(),
+            detail = if (failures.isEmpty()) {
+                "最近的运行日志里没有「failed to enable feature」。"
+            } else {
+                "运行日志里最近 ${failures.size} 条 Hook 安装失败（新→旧）：\n" +
+                    failures.take(8).joinToString("\n\n") {
+                        it.header + "\n" + it.detail.take(4).joinToString("\n")
+                    }
+            },
+        )
+        return out
+    }
+
+    // ------------------------------------------------------------------
+    //  外部服务与配置
+    // ------------------------------------------------------------------
+
+    /**
+     * 需要自己填地址/Key 的能力：视觉、语音识别、语音合成。
+     *
+     * 这里只做「配置齐不齐」的静态判断，不发网络请求——自检跑在 IO 线程且要快，
+     * 联网探测放到各设置页的「测试连通性」里做。
+     */
+    private fun serviceSection(): List<HealthItem> {
+        val section = SECTION_SERVICE
+        val out = mutableListOf<HealthItem>()
+
+        val mmOn = runCatching { MultimodalFeature.isEnabled }.getOrDefault(false)
+        out += HealthItem(
+            label = "多模态识别总开关",
+            section = section,
+            value = if (mmOn) "开启" else "关闭",
+            ok = mmOn,
+            inactive = !mmOn,
+            detail = "总开关关闭时，图片/表情/语音识别全部不工作（也不产生任何请求）。\n在「多模态识别」设置页顶部打开。",
+        )
+
+        val visionReady = runCatching { MultimodalEngine.visionReady() }.getOrDefault(false)
+        val visionUsable = runCatching { MultimodalEngine.visionUsable() }.getOrDefault(false)
+        out += HealthItem(
+            label = "视觉接口",
+            section = section,
+            value = when {
+                visionUsable -> "已配置 · ${MultimodalEngine.visionModel}"
+                visionReady -> "缺模型"
+                else -> "未配置"
+            },
+            ok = visionUsable || !visionReady,
+            inactive = !visionReady,
+            detail = buildString {
+                appendLine("地址：${MultimodalEngine.visionBaseUrl.ifBlank { "未填" }}")
+                appendLine("Key：${maskSecret(MultimodalEngine.visionApiKey)}")
+                appendLine("模型：${MultimodalEngine.visionModel.ifBlank { "未选" }}")
+                append("OpenAI 兼容接口，路径要能拼出 /chat/completions，模型列表来自 /models。")
+                if (visionReady && !visionUsable) append("\n地址和 Key 有了但模型是空的：后台识别会被直接跳过，图片/表情都不会有描述。")
+            },
+        )
+
+        out += HealthItem(
+            label = "图片 / 表情识别",
+            section = section,
+            value = "图片${onOff(MultimodalEngine.imageEnabled)} · 表情${onOff(MultimodalEngine.stickerEnabled)}",
+            ok = true,
+            detail = "两个子开关独立于总开关；关掉后对应消息不再调用视觉接口（省流量、省钱）。\n" +
+                "表情解不出来只解一次：失败过的表情会落盘标记，之后不再重试；语音/图片是 10 分钟冷却。\n" +
+                "想立刻重试全部失败项，用「刷新检测结果」下方设置页里的「清空识别缓存」。",
+        )
+
+        val asrOn = runCatching { AsrEngine.enabled }.getOrDefault(false)
+        val asrReady = runCatching {
+            AsrEngine.baseUrl.isNotBlank() && AsrEngine.apiKey.isNotBlank()
+        }.getOrDefault(false)
+        out += HealthItem(
+            label = "语音识别（ASR）",
+            section = section,
+            value = when {
+                !asrOn -> "关闭"
+                asrReady -> AsrEngine.model.ifBlank { "whisper-1" }
+                else -> "缺地址或 Key"
+            },
+            ok = !asrOn || asrReady,
+            inactive = !asrOn,
+            detail = buildString {
+                appendLine("地址：${AsrEngine.baseUrl.ifBlank { "未填" }}")
+                appendLine("Key：${maskSecret(AsrEngine.apiKey)}")
+                appendLine("模型：${AsrEngine.model.ifBlank { "whisper-1" }}")
+                appendLine("SILK 解密 Key 1：${maskSecret(AsrEngine.aesKey)}")
+                append("SILK 解密 Key 2：${maskSecret(AsrEngine.authKey)}")
+                if (AsrEngine.aesKey.isBlank() && AsrEngine.authKey.isBlank()) {
+                    append("\n两个解密 Key 都空着：会回落到微信自身的 auth_key。若对方语音消息转不出文字，先确认这里。")
+                }
+            },
+        )
+
+        val backend = runCatching { TextToSpeech.backend }.getOrDefault(TextToSpeech.BACKEND_BREEZE)
+        val backendLabel = when (backend) {
+            TextToSpeech.BACKEND_BREEZE -> "Breeze"
+            TextToSpeech.BACKEND_SILICON -> "硅基流动"
+            TextToSpeech.BACKEND_DOUBAO -> "豆包"
+            TextToSpeech.BACKEND_MOFA -> "魔方"
+            else -> "未知($backend)"
+        }
+        val ttsReady = runCatching {
+            when (backend) {
+                TextToSpeech.BACKEND_SILICON -> TextToSpeech.siliconApiKey.isNotBlank()
+                TextToSpeech.BACKEND_DOUBAO -> TextToSpeech.doubaoCookie.isNotBlank()
+                TextToSpeech.BACKEND_BREEZE -> TextToSpeech.breezeKey.isNotBlank()
+                TextToSpeech.BACKEND_MOFA -> TextToSpeech.apiKey.isNotBlank()
+                else -> true
+            }
+        }.getOrDefault(true)
+        out += HealthItem(
+            label = "语音合成（TTS）",
+            section = section,
+            value = "$backendLabel · " + if (ttsReady) "已配置" else "缺凭据",
+            ok = ttsReady,
+            detail = "语音回复、文字转语音都用这个后端。\n" +
+                "Breeze 有内置默认 Key，通常不用填；硅基流动需要自己的 API Key；" +
+                "豆包需要网页版 Cookie（过期后合成会失败，重新粘贴即可）。\n" +
+                "当前后端：$backendLabel。",
+        )
+        return out
+    }
+
+    private fun onOff(value: Boolean): String = if (value) "开" else "关"
+
+    private fun nameWithId(context: Context, feature: Any): String {
+        val f = feature as? dev.sun.wechat.features.core.BaseFeature ?: return feature.toString()
+        val name = runCatching { f.localizedName(context) }.getOrDefault(f.technicalId)
+        return "$name（${f.technicalId}）"
+    }
+
+    /** 把已知引擎版本号翻译成人读的版本名；未知版本返回 null。 */
+    private fun knownHostVersionName(code: Long): String? = runCatching {
+        WeChatVersions::class.java.declaredFields.firstNotNullOfOrNull { field ->
+            if (field.type != Int::class.javaPrimitiveType || !Modifier.isStatic(field.modifiers)) {
+                null
+            } else {
+                field.isAccessible = true
+                if (field.getInt(null).toLong() == code) field.name else null
+            }
+        }
+    }.getOrNull()
+        ?.removePrefix("MM_")
+        ?.replace("_PLAY", " Play")
+        ?.replace('_', '.')
+
+    private fun deviceLine(): String = buildString {
+        append(Build.MANUFACTURER).append(' ').append(Build.MODEL)
+        append(" · Android ").append(Build.VERSION.RELEASE)
+        append(" (API ").append(Build.VERSION.SDK_INT).append(')')
+        append(" · ").append(Build.SUPPORTED_ABIS.firstOrNull() ?: "?")
+    }
+
+    /** Key / Cookie 一律脱敏后再进报告。 */
+    private fun maskSecret(value: String): String = when {
+        value.isBlank() -> "未填"
+        value.length <= 8 -> "****"
+        else -> value.take(4) + "****" + value.takeLast(4)
     }
 
     // ------------------------------------------------------------------
@@ -290,12 +682,50 @@ object ModuleSelfCheck {
         }
 
     /** 收集一份完整文本（用于复制反馈）。 */
-    fun buildReportText(context: Context): String =
+    fun buildReportText(context: Context): String = buildString {
+        appendLine("【WeKit 模块自检报告】")
+        appendLine("时间：" + SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date()))
+        appendLine("模块：" + moduleVersionDisplay())
+        appendLine("微信：" + wechatVersionDisplay() + " · " + (knownHostVersionName(HostInfo.versionCode) ?: "未收录"))
+        appendLine("进程：" + runCatching { TargetProcesses.currentType.name }.getOrDefault("未知"))
+        appendLine("设备：" + deviceLine())
+        appendLine()
+        var lastSection: String? = null
         healthSteps(context).flatMap { step ->
             runCatching { step.run() }.getOrElse { e ->
                 listOf(HealthItem(step.title, step.title, "异常", false, "执行「${step.title}」时抛出异常：\n$e"))
             }
-        }.joinToString("\n") { it.label + "：" + it.value }
+        }.forEach { item ->
+            if (item.section != lastSection) {
+                appendLine("── " + item.section + " ──")
+                lastSection = item.section
+            }
+            val mark = when {
+                item.ok -> "✅"
+                item.inactive -> "○"
+                else -> "❌"
+            }
+            appendLine("$mark " + item.label + "：" + item.value)
+        }
+    }
+
+    /**
+     * 把完整报告写到 `Download/WeKit/selfcheck-<时间>.txt` 并返回绝对路径。
+     *
+     * 与「复制检测结果」的区别：不截断、带环境头，适合直接发给开发者。
+     * 失败时抛异常，由调用方提示（通常是没给存储权限）。
+     */
+    fun exportReportFile(context: Context): String {
+        val text = buildReportText(context)
+        val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
+        val dir = KnownPaths.downloads.toFile()
+        if (!dir.exists() && !dir.mkdirs()) {
+            throw IllegalStateException("无法创建导出目录：" + dir.absolutePath)
+        }
+        val file = File(dir, "selfcheck-$stamp.txt")
+        file.writeText(text, Charsets.UTF_8)
+        return file.absolutePath
+    }
 
     /** 概览卡片用的微信版本展示串。 */
     fun wechatVersionDisplay(): String =

@@ -262,7 +262,7 @@ private fun SelfCheckRoot(onFinish: () -> Unit) {
                 item(key = "scan") {
                     MiuixBaseWidget(
                         title = "一键自检",
-                        description = "逐项扫描全部公共依赖（微信 API / 脚本 / Hook 任务 / 锚点 / 密友 / 运行状态），带进度条，跑完弹报告",
+                        description = "逐项扫描注入链路、Hook 安装、锚点、密友、外部服务与运行状态，带进度条，跑完弹报告",
                         onClick = {
                             launchRun(
                                 "一键自检",
@@ -331,6 +331,29 @@ private fun SelfCheckRoot(onFinish: () -> Unit) {
                         },
                     )
                 }
+                item(key = "export") {
+                    MiuixBaseWidget(
+                        title = "导出诊断报告",
+                        description = "写到 Download/WeKit/，含环境头、逐项状态与异常，不截断；适合直接发给开发者",
+                        onClick = {
+                            scope.launch {
+                                val result = withContext(Dispatchers.IO) {
+                                    runCatching { ModuleSelfCheck.exportReportFile(context) }
+                                }
+                                result.fold(
+                                    onSuccess = { path ->
+                                        val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                                        cm?.setPrimaryClip(ClipData.newPlainText("WeKit 诊断报告路径", path))
+                                        showToast(context, "已导出：$path")
+                                    },
+                                    onFailure = { e ->
+                                        showToast(context, "导出失败：${e.message ?: e.javaClass.simpleName}")
+                                    },
+                                )
+                            }
+                        },
+                    )
+                }
             }
         }
 
@@ -338,7 +361,7 @@ private fun SelfCheckRoot(onFinish: () -> Unit) {
 
         item(key = "footer_hint") {
             Text(
-                text = "说明：本页是「全量自检」——覆盖微信公共 API、脚本运行时、Hook 安装任务、关键类锚点、密友状态、运行状态与各分类启用情况。" +
+                text = "说明：本页是「全量自检」——覆盖注入链路与运行环境、Hook 安装明细、微信公共 API 锚点、密友状态、外部服务配置、运行状态与各分类启用情况。" +
                     "标红或标 ❌ 的项通常就是对应功能失效的原因；点开可看含义、恢复建议与可直接执行的动作。",
                 fontSize = 12.sp,
                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
