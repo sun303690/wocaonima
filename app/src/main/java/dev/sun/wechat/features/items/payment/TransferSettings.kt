@@ -712,6 +712,7 @@ object TransferSettings {
                 }
                 item(key = "auto_reply_text", animatedVisibility = rules.autoReply.enabled) {
                     val replyTitle = stringResource(R.string.automation_reply_content)
+                    val replyHint = stringResource(R.string.payment_reply_multiline_hint)
                     val amountPlaceholder = stringResource(R.string.payment_transfer_amount_placeholder)
                     PaymentValueRow(
                         title = replyTitle,
@@ -723,7 +724,7 @@ object TransferSettings {
                                 PaymentTextEditMode(
                                     title = replyTitle,
                                     initial = rules.autoReply.text,
-                                    supportingText = stringResource(R.string.payment_reply_multiline_hint),
+                                    supportingText = replyHint,
                                     onCommit = {
                                         onChange(RuleKey.AUTO_REPLY, rules.copy(autoReply = rules.autoReply.copy(text = it)))
                                     },
