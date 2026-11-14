@@ -723,7 +723,7 @@ object TransferSettings {
                                 PaymentTextEditMode(
                                     title = replyTitle,
                                     initial = rules.autoReply.text,
-                                    supportingText = amountPlaceholder,
+                                    supportingText = stringResource(R.string.payment_reply_multiline_hint),
                                     onCommit = {
                                         onChange(RuleKey.AUTO_REPLY, rules.copy(autoReply = rules.autoReply.copy(text = it)))
                                     },

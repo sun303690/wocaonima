@@ -22,6 +22,7 @@ import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.TextButton
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
+import dev.sun.wechat.utils.MultiLineReply
 import dev.sun.wechat.utils.android.runOnUiThread
 import dev.sun.wechat.utils.android.showToast
 import java.math.BigDecimal
@@ -125,10 +126,11 @@ object AutoAcceptTransfers : ClickableFeature(), WeDatabaseListenerApi.IInsertLi
                 WeLogger.i(TAG, "called WePaymentApi.confirmTransfer")
 
                 if (rules.autoReply.enabled) {
-                    WeMessageApi.sendText(
-                        msgInfo.talker,
-                        rules.autoReply.text.replace($$"$amount", transferMsg.feedesc)
-                    )
+                    val reply = MultiLineReply.pick(rules.autoReply.text)
+                        .replace($$"$amount", transferMsg.feedesc)
+                    if (reply.isNotBlank()) {
+                        WeMessageApi.sendText(msgInfo.talker, reply)
+                    }
                 }
 
                 if (!rules.notification.enabled) return@thread

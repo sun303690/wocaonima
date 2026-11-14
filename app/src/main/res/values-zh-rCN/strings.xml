@@ -3747,6 +3747,7 @@
     <string name="payment_red_packet_notification_enabled">显示抢到的金额与来源</string>
     <string name="payment_red_packet_auto_reply">抢到后自动回复</string>
     <string name="payment_red_packet_amount_placeholder">使用 $amount 表示抢到的金额</string>
+    <string name="payment_reply_multiline_hint">一行一条，随机发送；留空则不回复</string>
     <string name="payment_transfer_global_summary">配置默认接收条件与接收后的操作</string>
     <string name="payment_transfer_default_accept">默认接收转账</string>
     <string name="payment_transfer_default_all">默认接收所有联系人的转账, 分联系人设置可单独关闭</string>
@@ -4646,4 +4647,16 @@
     <string name="loader_libxposed_api_name">libxposed API %1$d</string>
     <string name="home_side_panel_lunar_separator">，</string>
     <string name="agent_panel_environment">环境</string>
+    <string name="feature_display_message_time_v2_name">显示消息时间v2</string>
+    <string name="feature_display_message_time_v2_description">在消息气泡右下角显示发送时间，可自定义格式、字号和炫彩颜色</string>
+    <string name="msg_time_v2_format_label">时间格式和文字/emoji，如 HH:mm:ss、HH:mm 已读、😊 HH:mm</string>
+    <string name="msg_time_v2_size_label">字号（sp）</string>
+    <string name="msg_time_v2_size_range">字号需要在 6～24 之间</string>
+    <string name="msg_time_v2_rainbow_label">炫彩颜色</string>
+    <string name="msg_time_v2_rainbow_summary">时间文字使用彩色渐变</string>
+    <string name="msg_time_v2_color_start">渐变起始色</string>
+    <string name="msg_time_v2_color_end">渐变结束色</string>
+    <string name="msg_time_v2_invalid_pattern">格式无效，请检查时间格式字符</string>
+    <string name="pay_reply_red_packet_label">领取后回复（一行一条，随机发送）</string>
+    <string name="pay_reply_transfer_label">收款后回复内容（一行一条，随机发送）</string>
 </resources>

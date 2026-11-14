@@ -34,6 +34,7 @@ import dev.sun.wechat.ui.content.TextButton
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.getTopMostActivity
+import dev.sun.wechat.utils.MultiLineReply
 import dev.sun.wechat.utils.android.showToast
 import dev.sun.wechat.utils.strings.isGroupChatWxId
 import org.json.JSONObject
@@ -397,7 +398,7 @@ object AutoOpenRedPackets : ClickableFeature(), WeDatabaseListenerApi.IInsertLis
             )
         }
 
-        val reply = info.autoReply
+        val reply = MultiLineReply.pick(info.autoReply)
         if (reply.isNotBlank()) {
             WeMessageApi.sendText(info.talker, reply.replace($$"$amount", "¥$displayAmount"))
         }

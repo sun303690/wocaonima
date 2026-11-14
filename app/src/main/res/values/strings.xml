@@ -3707,6 +3707,7 @@
     <string name="payment_red_packet_notification_enabled">Show the claimed amount and source</string>
     <string name="payment_red_packet_auto_reply">Reply automatically after claiming</string>
     <string name="payment_red_packet_amount_placeholder">Use $amount for the claimed amount</string>
+    <string name="payment_reply_multiline_hint">One reply per line; a random line is sent. Leave empty to send nothing.</string>
 
     <string name="payment_transfer_global_summary">Configure the default acceptance conditions and post-acceptance actions</string>
     <string name="payment_transfer_default_accept">Accept transfers by default</string>
@@ -4616,4 +4617,16 @@
     <string name="mm_test_connection">Test connection</string>
     <string name="mm_testing">Testing…</string>
     <string name="mm_back">‹ Back</string>
+    <string name="feature_display_message_time_v2_name">Show message time v2</string>
+    <string name="feature_display_message_time_v2_description">Show the send time at the bubble\'s bottom-right corner, with a custom pattern, text size and rainbow colors</string>
+    <string name="msg_time_v2_format_label">Pattern and text/emoji, e.g. HH:mm:ss, HH:mm Read, 😊 HH:mm</string>
+    <string name="msg_time_v2_size_label">Text size (sp)</string>
+    <string name="msg_time_v2_size_range">Text size must be between 6 and 24</string>
+    <string name="msg_time_v2_rainbow_label">Rainbow colors</string>
+    <string name="msg_time_v2_rainbow_summary">Use a moving color gradient for the time text</string>
+    <string name="msg_time_v2_color_start">Gradient start color</string>
+    <string name="msg_time_v2_color_end">Gradient end color</string>
+    <string name="msg_time_v2_invalid_pattern">Invalid pattern, please check the time format characters</string>
+    <string name="pay_reply_red_packet_label">Reply after claiming (one per line, random)</string>
+    <string name="pay_reply_transfer_label">Reply after accepting (one per line, random)</string>
 </resources>

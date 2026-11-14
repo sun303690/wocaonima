@@ -3732,6 +3732,7 @@
     <string name="payment_red_packet_notification_enabled">顯示搶到的金額與來源</string>
     <string name="payment_red_packet_auto_reply">搶到後自動回覆</string>
     <string name="payment_red_packet_amount_placeholder">使用 $amount 表示搶到的金額</string>
+    <string name="payment_reply_multiline_hint">一行一條，隨機發送；留空則不回覆</string>
     <string name="payment_transfer_global_summary">配置默認接收條件與接收後的操作</string>
     <string name="payment_transfer_default_accept">默認接收轉賬</string>
     <string name="payment_transfer_default_all">默認接收所有聯繫人的轉賬, 分聯繫人設置可單獨關閉</string>
@@ -4629,4 +4630,16 @@
     <string name="ai_reply_tts_breeze_instructions">指令</string>
     <string name="ai_reply_tts_breeze_instructions_hint">用自然語言描述這段文字該怎麼讀</string>
     <string name="ai_reply_tts_preview">試聽</string>
+    <string name="feature_display_message_time_v2_name">顯示訊息時間v2</string>
+    <string name="feature_display_message_time_v2_description">在訊息氣泡右下角顯示傳送時間，可自訂格式、字級和炫彩顏色</string>
+    <string name="msg_time_v2_format_label">時間格式和文字/emoji，如 HH:mm:ss、HH:mm 已讀、😊 HH:mm</string>
+    <string name="msg_time_v2_size_label">字級（sp）</string>
+    <string name="msg_time_v2_size_range">字級需要在 6～24 之間</string>
+    <string name="msg_time_v2_rainbow_label">炫彩顏色</string>
+    <string name="msg_time_v2_rainbow_summary">時間文字使用彩色漸層</string>
+    <string name="msg_time_v2_color_start">漸層起始色</string>
+    <string name="msg_time_v2_color_end">漸層結束色</string>
+    <string name="msg_time_v2_invalid_pattern">格式無效，請檢查時間格式字元</string>
+    <string name="pay_reply_red_packet_label">領取後回覆（一行一條，隨機發送）</string>
+    <string name="pay_reply_transfer_label">收款後回覆內容（一行一條，隨機發送）</string>
 </resources>
