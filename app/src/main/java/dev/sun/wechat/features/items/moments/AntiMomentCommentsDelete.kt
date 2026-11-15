@@ -2,9 +2,9 @@ package dev.sun.wechat.features.items.moments
 
 import android.content.ContentValues
 import android.database.Cursor
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.Modifiers
-import dev.ujhhgtg.reflekt.utils.isBuiltin
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.Modifiers
+import dev.sun.wechat.reflekt.utils.isBuiltin
 import dev.sun.wechat.R
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.dexMethod

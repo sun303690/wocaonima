@@ -4,7 +4,7 @@ import android.os.Handler
 import android.os.Looper
 import androidx.core.os.postDelayed
 import com.tencent.kinda.framework.module.impl.WXPCommReqResp
-import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.reflekt.reflekt
 import dev.sun.wechat.R
 import dev.sun.wechat.constants.Preferences
 import dev.sun.wechat.dexkit.abc.IResolveDex

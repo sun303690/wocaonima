@@ -17,7 +17,7 @@ import dev.sun.wechat.utils.reflection.ClassLoaders
 import dev.sun.wechat.utils.HookParam
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.fs.createDirsSafe
-import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.reflekt.reflekt
 import java.io.File
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.div

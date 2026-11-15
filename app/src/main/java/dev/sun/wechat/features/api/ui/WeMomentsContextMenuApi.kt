@@ -4,8 +4,8 @@ import android.app.Activity
 import android.content.Context
 import android.graphics.drawable.Drawable
 import android.view.ContextMenu
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.Modifiers
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.Modifiers
 import dev.sun.wechat.R
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.DexMethodDelegate

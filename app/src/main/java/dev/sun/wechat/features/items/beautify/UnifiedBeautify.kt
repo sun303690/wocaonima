@@ -50,10 +50,10 @@ import androidx.core.view.postDelayed
 import coil3.load
 import coil3.request.CachePolicy
 import coil3.request.crossfade
-import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.reflekt.reflekt
 import dev.sun.wechat.R
 import dev.sun.wechat.i18n.LocalWeKitLocalizedContext
-import dev.ujhhgtg.reflekt.utils.Modifiers
+import dev.sun.wechat.reflekt.utils.Modifiers
 import dev.sun.wechat.activity.TransparentActivity
 import dev.sun.wechat.constants.PackageNames
 import dev.sun.wechat.dexkit.abc.IResolveDex
@@ -90,7 +90,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
-import dev.ujhhgtg.reflekt.reflected.ReflectedField
+import dev.sun.wechat.reflekt.reflected.ReflectedField
 import dev.sun.wechat.features.api.core.WeConversationApi
 import dev.sun.wechat.ui.content.miuix.MiuixDropDownMenuWidget
 import dev.sun.wechat.ui.content.miuix.DropdownOption

@@ -3,7 +3,7 @@ package dev.sun.wechat.loader.startup
 import android.annotation.SuppressLint
 import android.app.Application
 import android.os.Build
-import dev.ujhhgtg.reflekt.utils.ReflectionClassLoader
+import dev.sun.wechat.reflekt.utils.ReflectionClassLoader
 import dev.sun.wechat.R
 import dev.sun.wechat.loader.abc.IHookBridge
 import dev.sun.wechat.loader.abc.ILoaderService

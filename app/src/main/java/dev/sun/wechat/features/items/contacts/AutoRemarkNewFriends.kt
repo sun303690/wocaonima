@@ -14,8 +14,8 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.res.stringResource
 import dev.sun.wechat.R
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.toClass
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.toClass
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.data.KvStore

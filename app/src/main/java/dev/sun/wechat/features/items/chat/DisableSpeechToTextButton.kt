@@ -1,7 +1,7 @@
 package dev.sun.wechat.features.items.chat
 
 import com.tencent.mm.pluginsdk.ui.chat.ChatFooter
-import dev.ujhhgtg.reflekt.utils.fastJavaMethod
+import dev.sun.wechat.reflekt.utils.fastJavaMethod
 import dev.sun.wechat.R
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature

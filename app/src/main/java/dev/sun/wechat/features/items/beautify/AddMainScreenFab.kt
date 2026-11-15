@@ -91,8 +91,8 @@ import com.composables.icons.materialsymbols.outlinedfilled.Update
 import com.composables.icons.materialsymbols.outlinedfilled.Wallet
 import com.tencent.mm.ui.LauncherUI
 import com.tencent.mm.ui.conversation.BaseConversationUI
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.fastJavaMethod
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.fastJavaMethod
 import dev.sun.wechat.R
 import dev.sun.wechat.activity.settings.SettingsActivity
 import dev.sun.wechat.features.api.core.WeConversationApi

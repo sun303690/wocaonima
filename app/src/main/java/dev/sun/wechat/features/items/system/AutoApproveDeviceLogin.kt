@@ -14,7 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.tencent.mm.plugin.webwx.ui.ExtDeviceWXLoginUI
-import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.reflekt.reflekt
 import dev.sun.wechat.R
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds

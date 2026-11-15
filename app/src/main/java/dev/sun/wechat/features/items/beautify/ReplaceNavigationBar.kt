@@ -93,9 +93,9 @@ import com.composables.icons.materialsymbols.outlinedfilled.Explore
 import com.composables.icons.materialsymbols.outlinedfilled.Home
 import com.composables.icons.materialsymbols.outlinedfilled.Person
 import com.tencent.mm.ui.mogic.WxViewPager
-import dev.ujhhgtg.reflekt.firstMethod
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.toClass
+import dev.sun.wechat.reflekt.firstMethod
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.toClass
 import dev.sun.wechat.R
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.dexMethod

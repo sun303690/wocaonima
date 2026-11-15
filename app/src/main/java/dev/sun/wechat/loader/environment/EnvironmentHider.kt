@@ -9,9 +9,9 @@ import android.content.pm.ResolveInfo
 import android.content.pm.VersionedPackage
 import android.os.Debug
 import android.provider.Settings
-import dev.ujhhgtg.reflekt.reflected.BaseReflectedMethod
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.toClassOrNull
+import dev.sun.wechat.reflekt.reflected.BaseReflectedMethod
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.toClassOrNull
 import dev.sun.wechat.constants.PackageNames
 import dev.sun.wechat.loader.abc.IHookBridge
 import dev.sun.wechat.loader.entry.zygisk.ArtHookBridge

@@ -3,8 +3,8 @@ package dev.sun.wechat.features.items.contacts.hidecontacts
 import android.app.Activity
 import dev.sun.wechat.features.items.contacts.HideContacts
 import dev.sun.wechat.utils.WeLogger
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.toClass
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.toClass
 
 private const val TAG = "HideContactsSearchCmd"
 

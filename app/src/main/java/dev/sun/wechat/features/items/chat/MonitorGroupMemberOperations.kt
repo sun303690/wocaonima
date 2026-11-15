@@ -3,8 +3,8 @@ package dev.sun.wechat.features.items.chat
 import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.view.View
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.Modifiers
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.Modifiers
 import dev.sun.wechat.R
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.dexMethod

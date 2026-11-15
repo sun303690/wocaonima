@@ -24,7 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
-import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.reflekt.reflekt
 import dev.sun.wechat.R
 import dev.sun.wechat.constants.PackageNames
 import dev.sun.wechat.dexkit.abc.IResolveDex

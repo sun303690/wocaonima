@@ -3,7 +3,7 @@ package dev.sun.wechat.features.items.payment
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.reflekt.reflekt
 import dev.sun.wechat.R
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.dexClass

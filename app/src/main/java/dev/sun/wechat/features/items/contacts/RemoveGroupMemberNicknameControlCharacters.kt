@@ -3,7 +3,7 @@ package dev.sun.wechat.features.items.contacts
 import android.text.SpannableStringBuilder
 import android.view.View
 import android.widget.TextView
-import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.reflekt.reflekt
 import dev.sun.wechat.R
 import dev.sun.wechat.features.api.ui.WeChatMessageViewApi
 import dev.sun.wechat.features.core.FeatureCategoryIds

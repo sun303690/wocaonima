@@ -2,8 +2,8 @@ package dev.sun.wechat.features.items.contacts.hidecontacts
 
 import com.tencent.mm.plugin.sns.ui.SnsCommentFooter
 import com.tencent.mm.protocal.protobuf.SnsObject
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.makeAccessible
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.makeAccessible
 import dev.sun.wechat.features.items.contacts.HideContacts
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.reflection.BString

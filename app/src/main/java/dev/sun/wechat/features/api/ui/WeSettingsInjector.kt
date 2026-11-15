@@ -16,9 +16,9 @@ import com.tencent.mm.plugin.setting.ui.setting_new.settings.SettingGroupPersona
 import com.tencent.mm.pluginsdk.ui.chat.ChatFooter
 import com.tencent.mm.ui.LauncherUI
 import com.tencent.mm.ui.base.preference.IconPreference
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.isBuiltin
-import dev.ujhhgtg.reflekt.utils.toClassOrNull
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.isBuiltin
+import dev.sun.wechat.reflekt.utils.toClassOrNull
 import dev.sun.wechat.BuildConfig
 import dev.sun.wechat.R
 import dev.sun.wechat.activity.self_check.SelfCheckSettingsActivity

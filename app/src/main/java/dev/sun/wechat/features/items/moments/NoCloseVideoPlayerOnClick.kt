@@ -3,10 +3,10 @@ package dev.sun.wechat.features.items.moments
 import android.app.Activity
 import android.view.MotionEvent
 import android.widget.FrameLayout
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.isBuiltin
-import dev.ujhhgtg.reflekt.utils.isSubclassOf
-import dev.ujhhgtg.reflekt.utils.makeAccessible
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.isBuiltin
+import dev.sun.wechat.reflekt.utils.isSubclassOf
+import dev.sun.wechat.reflekt.utils.makeAccessible
 import dev.sun.wechat.R
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.dexMethod

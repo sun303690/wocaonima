@@ -5,7 +5,7 @@ package dev.sun.wechat.loader.entry.zygisk
 import android.annotation.SuppressLint
 import android.content.pm.ApplicationInfo
 import androidx.annotation.Keep
-import dev.ujhhgtg.reflekt.utils.makeAccessible
+import dev.sun.wechat.reflekt.utils.makeAccessible
 import dev.sun.wechat.BuildConfig
 import dev.sun.wechat.constants.PackageNames
 import dev.sun.wechat.loader.abc.IHookBridge

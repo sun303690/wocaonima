@@ -3,7 +3,7 @@ package dev.sun.wechat.agent.jvm
 import android.os.Handler
 import android.os.Looper
 import androidx.annotation.Keep
-import dev.ujhhgtg.reflekt.utils.toClass
+import dev.sun.wechat.reflekt.utils.toClass
 import dev.sun.wechat.utils.reflection.ClassLoaders
 import dev.sun.wechat.utils.reflection.bool
 import dev.sun.wechat.utils.reflection.byte

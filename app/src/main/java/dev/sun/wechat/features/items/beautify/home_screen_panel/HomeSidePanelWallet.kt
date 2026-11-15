@@ -1,6 +1,6 @@
 package dev.sun.wechat.features.items.beautify.home_screen_panel
 
-import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.reflekt.reflekt
 import dev.sun.wechat.features.api.core.WeServiceApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

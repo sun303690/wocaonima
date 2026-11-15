@@ -1,7 +1,7 @@
 package dev.sun.wechat.features.items.chat
 
 import android.app.Activity
-import dev.ujhhgtg.reflekt.utils.toClass
+import dev.sun.wechat.reflekt.utils.toClass
 import dev.sun.wechat.R
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature

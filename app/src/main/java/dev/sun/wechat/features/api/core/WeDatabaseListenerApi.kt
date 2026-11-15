@@ -3,8 +3,8 @@ package dev.sun.wechat.features.api.core
 import android.annotation.SuppressLint
 import android.content.ContentValues
 import com.tencent.wcdb.database.SQLiteDatabase
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.toClassOrNull
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.toClassOrNull
 import dev.sun.wechat.R
 import dev.sun.wechat.constants.Preferences
 import dev.sun.wechat.constants.WeChatVersions

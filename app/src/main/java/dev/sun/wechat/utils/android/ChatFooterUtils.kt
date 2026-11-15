@@ -3,8 +3,8 @@ package dev.sun.wechat.utils.android
 import android.content.Context
 import android.util.AttributeSet
 import com.tencent.mm.pluginsdk.ui.chat.ChatFooter
-import dev.ujhhgtg.reflekt.reflected.ReflectedConstructor
-import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.reflekt.reflected.ReflectedConstructor
+import dev.sun.wechat.reflekt.reflekt
 import dev.sun.wechat.utils.reflection.int
 import kotlin.reflect.KClass
 

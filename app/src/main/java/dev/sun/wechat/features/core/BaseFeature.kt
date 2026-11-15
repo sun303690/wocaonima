@@ -5,9 +5,9 @@ package dev.sun.wechat.features.core
 import android.content.Context
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
-import dev.ujhhgtg.reflekt.reflected.BaseReflectedMethod
-import dev.ujhhgtg.reflekt.reflected.ReflectedConstructor
-import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.reflekt.reflected.BaseReflectedMethod
+import dev.sun.wechat.reflekt.reflected.ReflectedConstructor
+import dev.sun.wechat.reflekt.reflekt
 import dev.sun.wechat.dexkit.dsl.BaseDexDelegate
 import dev.sun.wechat.dexkit.dsl.DexConstructorDelegate
 import dev.sun.wechat.dexkit.dsl.DexMethodDelegate

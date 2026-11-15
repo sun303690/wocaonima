@@ -11,7 +11,7 @@ import androidx.activity.ComponentActivity
 import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
-import dev.ujhhgtg.reflekt.utils.createInstance
+import dev.sun.wechat.reflekt.utils.createInstance
 import dev.sun.wechat.R
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.data

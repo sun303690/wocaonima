@@ -2,7 +2,7 @@ package dev.sun.wechat.features.items.chat
 
 import android.app.Activity
 import android.widget.CheckBox
-import dev.ujhhgtg.reflekt.utils.toClass
+import dev.sun.wechat.reflekt.utils.toClass
 import dev.sun.wechat.R
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.dexField

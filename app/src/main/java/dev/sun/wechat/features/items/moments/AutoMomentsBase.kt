@@ -7,8 +7,8 @@ import android.view.ViewGroup
 import com.tencent.mm.plugin.sns.ui.SnsUserUI
 import com.tencent.mm.plugin.sns.ui.improve.ImproveSnsTimelineUI
 import com.tencent.mm.view.recyclerview.WxRecyclerView
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.isSubclassOf
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.isSubclassOf
 import dev.sun.wechat.features.api.ui.WeMomentsApi
 import dev.sun.wechat.features.api.core.WeApi
 import dev.sun.wechat.data.KvStore

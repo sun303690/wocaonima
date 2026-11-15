@@ -1,7 +1,7 @@
 package dev.sun.wechat.utils.reflection
 
 import android.content.Context
-import dev.ujhhgtg.reflekt.utils.ReflectionClassLoader
+import dev.sun.wechat.reflekt.utils.ReflectionClassLoader
 import dev.sun.wechat.loader.utils.HybridClassLoader
 
 object ClassLoaders {

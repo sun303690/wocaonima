@@ -2,8 +2,8 @@
 
 package dev.sun.wechat.dexkit.dsl
 
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.toClassOrNull
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.toClassOrNull
 import dev.sun.wechat.dexkit.DexMethodDescriptor
 import dev.sun.wechat.dexkit.resolution.DexResolutionContext
 import dev.sun.wechat.dexkit.resolution.DexResolutionDiagnostic

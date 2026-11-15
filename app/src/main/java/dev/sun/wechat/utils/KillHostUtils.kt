@@ -1,7 +1,7 @@
 package dev.sun.wechat.utils
 
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.toClass
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.toClass
 import dev.sun.wechat.R
 import dev.sun.wechat.i18n.LocaleResourceMode
 import dev.sun.wechat.i18n.LocalizedContextFactory

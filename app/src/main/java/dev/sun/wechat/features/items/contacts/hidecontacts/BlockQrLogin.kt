@@ -9,7 +9,7 @@ import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToast
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
-import dev.ujhhgtg.reflekt.utils.toClass
+import dev.sun.wechat.reflekt.utils.toClass
 
 /**
  * 拦截扫码登录。

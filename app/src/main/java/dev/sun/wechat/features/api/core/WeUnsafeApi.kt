@@ -1,7 +1,7 @@
 package dev.sun.wechat.features.api.core
 
 import android.annotation.SuppressLint
-import dev.ujhhgtg.reflekt.utils.makeAccessible
+import dev.sun.wechat.reflekt.utils.makeAccessible
 import dev.sun.wechat.R
 import dev.sun.wechat.features.core.ApiFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds

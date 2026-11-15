@@ -1,9 +1,9 @@
 package dev.sun.wechat.features.items.system.servers
 
 import android.util.Base64
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.Modifiers
-import dev.ujhhgtg.reflekt.utils.toClass
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.Modifiers
+import dev.sun.wechat.reflekt.utils.toClass
 import dev.sun.wechat.features.api.core.WeApi
 import dev.sun.wechat.features.api.core.WeAuthApi
 import dev.sun.wechat.features.api.core.WeContactApi

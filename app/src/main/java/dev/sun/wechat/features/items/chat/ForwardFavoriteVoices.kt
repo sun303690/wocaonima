@@ -6,9 +6,9 @@ import android.content.DialogInterface
 import android.view.View
 import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.ui.res.stringResource
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.Modifiers
-import dev.ujhhgtg.reflekt.utils.toClass
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.Modifiers
+import dev.sun.wechat.reflekt.utils.toClass
 import dev.sun.wechat.R
 import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.features.api.net.models.protobuf.FavInfoProto

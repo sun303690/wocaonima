@@ -2,7 +2,7 @@ package dev.sun.wechat.features.items.miniapps
 
 import android.webkit.ValueCallback
 import android.webkit.WebView
-import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.reflekt.reflekt
 import dev.sun.wechat.R
 import dev.sun.wechat.features.api.ui.WeWebViewApi
 import dev.sun.wechat.features.core.FeatureCategoryIds

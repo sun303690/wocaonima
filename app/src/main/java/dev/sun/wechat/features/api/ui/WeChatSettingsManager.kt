@@ -4,9 +4,9 @@ import android.app.Activity
 import android.content.Context
 import androidx.annotation.Keep
 import com.android.dx.stock.ProxyBuilder
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.createInstance
-import dev.ujhhgtg.reflekt.utils.toClass
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.createInstance
+import dev.sun.wechat.reflekt.utils.toClass
 import dev.sun.wechat.loader.utils.ParcelableFixer
 import dev.sun.wechat.utils.HookHandle
 import dev.sun.wechat.utils.hookAfterDirectly

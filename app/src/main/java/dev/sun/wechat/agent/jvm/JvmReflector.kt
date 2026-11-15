@@ -2,7 +2,7 @@
 
 package dev.sun.wechat.agent.jvm
 
-import dev.ujhhgtg.reflekt.utils.makeAccessible
+import dev.sun.wechat.reflekt.utils.makeAccessible
 import java.lang.reflect.Constructor
 import java.lang.reflect.Field
 import java.lang.reflect.Method

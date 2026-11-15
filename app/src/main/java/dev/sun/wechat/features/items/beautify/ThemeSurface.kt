@@ -11,7 +11,7 @@ import android.graphics.Color as AndroidColor
 import dev.sun.wechat.features.api.ui.WeMainActivityBeautifyApi
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.utils.WeLogger
-import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.reflekt.reflekt
 import java.lang.ref.WeakReference
 import kotlin.io.path.absolutePathString
 import java.util.concurrent.ConcurrentHashMap

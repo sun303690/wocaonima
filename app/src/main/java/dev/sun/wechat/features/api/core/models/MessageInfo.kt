@@ -3,7 +3,7 @@
 package dev.sun.wechat.features.api.core.models
 
 import android.content.ContentValues
-import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.reflekt.reflekt
 import dev.sun.wechat.features.api.core.WeApi
 import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.utils.serialization.NativeXmlParser

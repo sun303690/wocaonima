@@ -3,7 +3,7 @@ package dev.sun.wechat.features.api.ui
 import android.text.Editable
 import android.text.TextWatcher
 import com.tencent.mm.pluginsdk.ui.chat.ChatFooter
-import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.reflekt.reflekt
 import dev.sun.wechat.R
 import dev.sun.wechat.features.api.ui.WeChatInputBarApi.addListener
 import dev.sun.wechat.features.core.ApiFeature

@@ -3,7 +3,7 @@
 package dev.sun.wechat.utils.unsafe
 
 import android.annotation.SuppressLint
-import dev.ujhhgtg.reflekt.utils.makeAccessible
+import dev.sun.wechat.reflekt.utils.makeAccessible
 import sun.misc.Unsafe
 
 val TheUnsafe by lazy {

@@ -3,8 +3,8 @@ package dev.sun.wechat.features.items.contacts.hidecontacts
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Adapter
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.makeAccessible
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.makeAccessible
 import dev.sun.wechat.constants.PackageNames
 import dev.sun.wechat.dexkit.dsl.DexClassDelegate
 import dev.sun.wechat.dexkit.dsl.DexMethodDelegate

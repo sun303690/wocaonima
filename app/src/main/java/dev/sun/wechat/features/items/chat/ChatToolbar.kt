@@ -77,8 +77,8 @@ import com.composables.icons.materialsymbols.outlined.Voice_chat
 import com.composables.icons.materialsymbols.outlined.Volume_up
 import com.tencent.mm.pluginsdk.ui.chat.AppPanel
 import com.tencent.mm.pluginsdk.ui.chat.ChatFooter
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.createInstance
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.createInstance
 import dev.sun.wechat.R
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.dexMethod

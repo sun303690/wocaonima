@@ -1,7 +1,7 @@
 package dev.sun.wechat.dexkit
 
-import dev.ujhhgtg.reflekt.utils.isPrivate
-import dev.ujhhgtg.reflekt.utils.isStatic
+import dev.sun.wechat.reflekt.utils.isPrivate
+import dev.sun.wechat.reflekt.utils.isStatic
 import java.lang.reflect.Constructor
 import java.lang.reflect.Method
 

@@ -22,7 +22,7 @@ import android.os.PersistableBundle
 import android.os.TestLooperManager
 import android.view.KeyEvent
 import android.view.MotionEvent
-import dev.ujhhgtg.reflekt.utils.makeAccessible
+import dev.sun.wechat.reflekt.utils.makeAccessible
 import dev.sun.wechat.constants.PackageNames
 import dev.sun.wechat.utils.HostInfo
 import dev.sun.wechat.utils.WeLogger

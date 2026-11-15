@@ -16,7 +16,7 @@ import android.widget.TextView
 import com.tencent.mm.pluginsdk.ui.chat.ChatFooter
 import com.tencent.mm.ui.LauncherUI
 
-import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.reflekt.reflekt
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.features.items.contacts.HideContacts
 import dev.sun.wechat.ui.utils.findViewsWhich

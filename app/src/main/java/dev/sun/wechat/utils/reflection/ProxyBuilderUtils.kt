@@ -1,7 +1,7 @@
 package dev.sun.wechat.utils.reflection
 
 import com.android.dx.stock.ProxyBuilder
-import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.reflekt.reflekt
 import dev.sun.wechat.utils.fs.KnownPaths
 import dev.sun.wechat.utils.fs.createDirsSafe
 import dev.sun.wechat.utils.hookAfterDirectly

@@ -13,8 +13,8 @@ import androidx.activity.ComponentActivity
 import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.ui.res.stringResource
 import androidx.core.view.children
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.toClass
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.toClass
 import dev.sun.wechat.R
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.dexMethod

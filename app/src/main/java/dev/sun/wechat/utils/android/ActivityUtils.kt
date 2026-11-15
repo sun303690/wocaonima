@@ -7,7 +7,7 @@ import android.app.Activity
 import android.app.ActivityThread
 import android.os.IBinder
 import android.util.ArrayMap
-import dev.ujhhgtg.reflekt.utils.makeAccessible
+import dev.sun.wechat.reflekt.utils.makeAccessible
 import dev.sun.wechat.utils.WeLogger
 
 private val mActivitiesField = ActivityThread::class.java.getDeclaredField("mActivities").makeAccessible()

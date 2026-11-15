@@ -2,7 +2,7 @@ package dev.sun.wechat.features.items.chat
 
 import android.util.SparseBooleanArray
 import android.view.View
-import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.reflekt.reflekt
 import dev.sun.wechat.R
 import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.features.api.core.models.MessageInfo

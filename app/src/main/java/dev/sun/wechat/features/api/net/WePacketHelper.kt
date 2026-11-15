@@ -4,9 +4,9 @@ import android.annotation.SuppressLint
 import android.os.Handler
 import android.os.Looper
 import com.tencent.mm.network.v0
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.createInstance
-import dev.ujhhgtg.reflekt.utils.isSubclassOf
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.createInstance
+import dev.sun.wechat.reflekt.utils.isSubclassOf
 import dev.sun.wechat.R
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.data

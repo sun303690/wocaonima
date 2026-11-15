@@ -3,8 +3,8 @@ package dev.sun.wechat.loader.entry.common
 import android.app.Application
 import android.content.Context
 import dalvik.system.InMemoryDexClassLoader
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.toClass
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.toClass
 import dev.sun.wechat.loader.abc.IHookBridge
 import dev.sun.wechat.loader.abc.ILoaderService
 import dev.sun.wechat.loader.environment.EnvironmentHider

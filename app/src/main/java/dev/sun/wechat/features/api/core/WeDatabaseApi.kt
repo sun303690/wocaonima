@@ -5,7 +5,7 @@ import android.database.Cursor
 import com.tencent.wcdb.DatabaseErrorHandler
 import com.tencent.wcdb.database.SQLiteCipherSpec
 import com.tencent.wcdb.database.SQLiteDatabase
-import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.reflekt.reflekt
 import dev.sun.wechat.R
 import dev.sun.wechat.constants.Preferences
 import dev.sun.wechat.dexkit.abc.IResolveDex

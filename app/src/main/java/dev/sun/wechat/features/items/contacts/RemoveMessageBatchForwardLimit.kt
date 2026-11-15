@@ -1,7 +1,7 @@
 package dev.sun.wechat.features.items.contacts
 
 import android.app.Activity
-import dev.ujhhgtg.reflekt.utils.toClassOrNull
+import dev.sun.wechat.reflekt.utils.toClassOrNull
 import dev.sun.wechat.R
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature

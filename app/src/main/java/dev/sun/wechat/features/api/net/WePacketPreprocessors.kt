@@ -1,6 +1,6 @@
 package dev.sun.wechat.features.api.net
 
-import dev.ujhhgtg.reflekt.utils.createInstance
+import dev.sun.wechat.reflekt.utils.createInstance
 import dev.sun.wechat.features.api.core.WeApi
 import dev.sun.wechat.features.api.net.MsgIdPreviewer.generateClientMsgId
 import dev.sun.wechat.features.api.net.MsgIdPreviewer.previewNextId

@@ -2,7 +2,7 @@ package dev.sun.wechat.loader.utils
 
 import android.content.Intent
 import android.os.Bundle
-import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.reflekt.reflekt
 import dev.sun.wechat.utils.HookCallback
 import dev.sun.wechat.utils.HookParam
 import dev.sun.wechat.utils.WeLogger

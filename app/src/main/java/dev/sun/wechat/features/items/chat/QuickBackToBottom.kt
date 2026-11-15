@@ -14,7 +14,7 @@ import com.tencent.mm.pluginsdk.ui.chat.ChattingScrollLayout
 import com.tencent.mm.pluginsdk.ui.tools.ChattingRecyclerView
 import com.tencent.mm.ui.chatting.view.MMChattingListView
 import com.tencent.mm.ui.widget.imageview.WeImageView
-import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.reflekt.reflekt
 import dev.sun.wechat.R
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.dexMethod

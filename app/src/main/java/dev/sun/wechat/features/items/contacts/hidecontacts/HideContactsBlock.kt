@@ -6,7 +6,7 @@ import com.tencent.mm.ui.chatting.ChattingUI
 import dev.sun.wechat.features.api.ui.WeStartActivityApi
 import dev.sun.wechat.features.items.contacts.HideContacts
 import dev.sun.wechat.utils.WeLogger
-import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.reflekt.reflekt
 
 private const val TAG = "HideContactsBlock"
 

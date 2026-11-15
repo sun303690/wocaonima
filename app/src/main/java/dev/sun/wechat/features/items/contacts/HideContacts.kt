@@ -35,8 +35,8 @@ import com.composables.icons.materialsymbols.outlined.Chevron_right
 import com.tencent.mm.pluginsdk.ui.chat.ChatFooter
 import com.tencent.mm.ui.LauncherUI
 import com.tencent.mm.ui.chatting.ChattingUI
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.isSubclassOf
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.isSubclassOf
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.data
 import dev.sun.wechat.dexkit.dsl.dexClass

@@ -3,8 +3,8 @@ package dev.sun.wechat.features.items.profile
 import android.view.View
 import android.widget.TextView
 import com.tencent.mm.plugin.setting.ui.setting.EditSignatureUI
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.toClass
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.toClass
 import dev.sun.wechat.R
 import dev.sun.wechat.constants.PackageNames
 import dev.sun.wechat.dexkit.abc.IResolveDex

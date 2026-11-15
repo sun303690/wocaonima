@@ -35,8 +35,8 @@ import com.tencent.mm.pluginsdk.ui.chat.ChatFooter
 import com.tencent.mm.pluginsdk.ui.chat.ChatFooterBottom
 import com.tencent.mm.pluginsdk.ui.chat.ChattingScrollLayout
 import com.tencent.mm.pluginsdk.ui.chat.ChattingUILayout
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.fastJavaMethod
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.fastJavaMethod
 import dev.sun.wechat.R
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.dexMethod

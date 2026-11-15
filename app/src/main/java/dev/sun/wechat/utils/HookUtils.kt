@@ -1,7 +1,7 @@
 package dev.sun.wechat.utils
 
-import dev.ujhhgtg.reflekt.reflected.BaseReflectedMethod
-import dev.ujhhgtg.reflekt.reflected.ReflectedConstructor
+import dev.sun.wechat.reflekt.reflected.BaseReflectedMethod
+import dev.sun.wechat.reflekt.reflected.ReflectedConstructor
 import dev.sun.wechat.loader.abc.IHookBridge
 import dev.sun.wechat.loader.startup.StartupInfo
 import java.lang.reflect.Executable

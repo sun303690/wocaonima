@@ -2,7 +2,7 @@ package dev.sun.wechat.features.items.system
 
 import android.view.WindowManager
 import com.android.internal.policy.PhoneWindow
-import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.reflekt.reflekt
 import dev.sun.wechat.R
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature

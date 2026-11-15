@@ -1,7 +1,7 @@
 package dev.sun.wechat.features.items.contacts.hidecontacts
 
 import com.tencent.wcdb.database.SQLiteDatabase
-import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.reflekt.reflekt
 import dev.sun.wechat.features.items.contacts.HideContacts
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.reflection.BString

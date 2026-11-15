@@ -1,6 +1,6 @@
 package dev.sun.wechat.features.items.chat
 
-import dev.ujhhgtg.reflekt.utils.makeAccessible
+import dev.sun.wechat.reflekt.utils.makeAccessible
 import dev.sun.wechat.R
 import dev.sun.wechat.constants.PackageNames
 import dev.sun.wechat.dexkit.abc.IResolveDex

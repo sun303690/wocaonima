@@ -3,7 +3,7 @@ package dev.sun.wechat.features.items.contacts
 import android.view.MenuItem
 import androidx.activity.ComponentActivity
 import dev.sun.wechat.R
-import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.reflekt.reflekt
 import dev.sun.wechat.dexkit.abc.IResolveDex
 import dev.sun.wechat.dexkit.dsl.dexMethod
 import dev.sun.wechat.features.api.net.models.protobuf.NearbyFriendProto

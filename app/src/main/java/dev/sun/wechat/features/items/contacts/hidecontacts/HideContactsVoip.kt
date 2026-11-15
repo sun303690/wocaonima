@@ -3,7 +3,7 @@ package dev.sun.wechat.features.items.contacts.hidecontacts
 import android.app.Service
 import android.content.Intent
 import com.tencent.mm.plugin.voip.widget.VoipForegroundService
-import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.reflekt.reflekt
 import dev.sun.wechat.features.items.contacts.HideContacts
 import dev.sun.wechat.utils.HookParam
 import dev.sun.wechat.utils.RuntimeConfig

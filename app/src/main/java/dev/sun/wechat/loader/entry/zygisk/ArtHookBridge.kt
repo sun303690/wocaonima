@@ -9,7 +9,7 @@ import com.android.dx.FieldId
 import com.android.dx.MethodId
 import com.android.dx.TypeId
 import dalvik.system.DexFile
-import dev.ujhhgtg.reflekt.utils.isStatic
+import dev.sun.wechat.reflekt.utils.isStatic
 import dev.sun.wechat.R
 import dev.sun.wechat.constants.PackageNames
 import dev.sun.wechat.i18n.HostLocalizedStrings

@@ -9,7 +9,7 @@ import android.view.View
 import android.widget.TextView
 import androidx.core.graphics.toColorInt
 import androidx.core.view.isGone
-import dev.ujhhgtg.reflekt.reflekt
+import dev.sun.wechat.reflekt.reflekt
 import dev.sun.wechat.R
 import dev.sun.wechat.features.api.ui.WeChatMessageViewApi
 import dev.sun.wechat.features.core.ApiFeature

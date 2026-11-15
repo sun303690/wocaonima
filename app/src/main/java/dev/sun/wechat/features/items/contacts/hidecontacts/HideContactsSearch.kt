@@ -1,7 +1,7 @@
 package dev.sun.wechat.features.items.contacts.hidecontacts
 
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.makeAccessible
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.makeAccessible
 import dev.sun.wechat.features.items.contacts.HideContacts
 import dev.sun.wechat.utils.WeLogger
 import java.lang.reflect.Field

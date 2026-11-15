@@ -11,10 +11,10 @@ import bsh.BshMethod
 import bsh.Interpreter
 import bsh.NameSpace
 import dalvik.system.InMemoryDexClassLoader
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.Modifiers
-import dev.ujhhgtg.reflekt.utils.createInstance
-import dev.ujhhgtg.reflekt.utils.toClass
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.Modifiers
+import dev.sun.wechat.reflekt.utils.createInstance
+import dev.sun.wechat.reflekt.utils.toClass
 import dev.sun.wechat.BuildConfig
 import dev.sun.wechat.R
 import dev.sun.wechat.features.api.core.WeApi

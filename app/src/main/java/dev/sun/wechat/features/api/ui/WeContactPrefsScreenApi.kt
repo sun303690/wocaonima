@@ -7,10 +7,10 @@ import com.tencent.mm.chatroom.ui.ChatroomInfoUI
 import com.tencent.mm.plugin.profile.ui.ContactInfoUI
 import com.tencent.mm.ui.base.preference.MMPreference
 import com.tencent.mm.ui.base.preference.Preference
-import dev.ujhhgtg.reflekt.reflekt
-import dev.ujhhgtg.reflekt.utils.Modifiers
-import dev.ujhhgtg.reflekt.utils.isSubclassOf
-import dev.ujhhgtg.reflekt.utils.makeAccessible
+import dev.sun.wechat.reflekt.reflekt
+import dev.sun.wechat.reflekt.utils.Modifiers
+import dev.sun.wechat.reflekt.utils.isSubclassOf
+import dev.sun.wechat.reflekt.utils.makeAccessible
 import dev.sun.wechat.R
 import dev.sun.wechat.features.core.ApiFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds

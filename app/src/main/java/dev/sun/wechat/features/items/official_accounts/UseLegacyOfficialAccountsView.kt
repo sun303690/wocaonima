@@ -5,7 +5,7 @@ import android.content.Context
 import android.content.Intent
 import top.yukonga.miuix.kmp.basic.Text
 import androidx.compose.ui.res.stringResource
-import dev.ujhhgtg.reflekt.utils.toClassOrNull
+import dev.sun.wechat.reflekt.utils.toClassOrNull
 import dev.sun.wechat.R
 import dev.sun.wechat.constants.PackageNames
 import dev.sun.wechat.features.api.ui.WeStartActivityApi
