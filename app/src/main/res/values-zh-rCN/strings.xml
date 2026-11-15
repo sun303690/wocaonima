@@ -739,6 +739,7 @@
     <string name="rainbow_gradient">炫彩颜色</string>
     <string name="rainbow_gradient_summary">文字使用流动的彩色渐变，覆盖原纯色</string>
     <string name="rainbow_color_start">渐变起始色</string>
+    <string name="rainbow_color_mid">渐变中间色</string>
     <string name="rainbow_color_end">渐变结束色</string>
     <string name="avatar_time_invalid_number">请输入有效的字体大小</string>
     <string name="feature_modify_text_message_display_name">修改文本消息显示</string>

@@ -76,6 +76,7 @@ object DisplayMessageTimeByAvatar : ClickableFeature(),
     /** 炫彩渐变：开启后时间文字使用流动的彩色渐变，覆盖纯色 [textColor]。 */
     private var rainbow by prefOption("avatar_time_rainbow", false)
     private var rainbowStart by prefOption("avatar_time_rainbow_start", RainbowText.DEFAULT_START)
+    private var rainbowMid by prefOption("avatar_time_rainbow_mid", RainbowText.DEFAULT_MID)
     private var rainbowEnd by prefOption("avatar_time_rainbow_end", RainbowText.DEFAULT_END)
 
     private const val MASK_LAYOUT_CLASS = "com.tencent.mm.ui.base.MaskLayout"
@@ -128,6 +129,7 @@ object DisplayMessageTimeByAvatar : ClickableFeature(),
                 RainbowText.attach(
                     timeText,
                     RainbowText.parseColor(rainbowStart),
+                    RainbowText.parseColor(rainbowMid, RainbowText.DEFAULT_MID),
                     RainbowText.parseColor(rainbowEnd, RainbowText.DEFAULT_END),
                 )
             } else {
@@ -211,6 +213,7 @@ object DisplayMessageTimeByAvatar : ClickableFeature(),
             var textColorInput by remember { mutableStateOf(textColor) }
             var rainbowInput by remember { mutableStateOf(rainbow) }
             var rainbowStartInput by remember { mutableStateOf(rainbowStart) }
+            var rainbowMidInput by remember { mutableStateOf(rainbowMid) }
             var rainbowEndInput by remember { mutableStateOf(rainbowEnd) }
 
             AlertDialogContent(
@@ -263,6 +266,13 @@ object DisplayMessageTimeByAvatar : ClickableFeature(),
                             }
                             item(animatedVisibility = rainbowInput) {
                                 MiuixColorPickerWidget(
+                                    title = stringResource(R.string.rainbow_color_mid),
+                                    value = rainbowMidInput,
+                                    onValueChange = { rainbowMidInput = it },
+                                )
+                            }
+                            item(animatedVisibility = rainbowInput) {
+                                MiuixColorPickerWidget(
                                     title = stringResource(R.string.rainbow_color_end),
                                     value = rainbowEndInput,
                                     onValueChange = { rainbowEndInput = it },
@@ -283,6 +293,7 @@ object DisplayMessageTimeByAvatar : ClickableFeature(),
                         textColor = textColorInput
                         rainbow = rainbowInput
                         rainbowStart = rainbowStartInput
+                        rainbowMid = rainbowMidInput
                         rainbowEnd = rainbowEndInput
                         onDismiss()
                     }) { Text(stringResource(R.string.dialog_confirm)) }

@@ -17,6 +17,9 @@ import kotlin.math.roundToInt
 /**
  * 炫彩文字（彩色渐变横向流动）。
  *
+ * 配色三档：起始色 → 中间色 → 结束色。中间色给 null 时退化成两色往返
+ * （起始 → 结束 → 起始），给了中间色则是起 → 中 → 止 → 中 → 起。
+ *
  * 两套接入方式，按宿主控件的绘制方式选用：
  *
  * - [attach] / [detach]：把渐变着色器直接挂到 [TextView.paint] 上，适合文字全部是纯文本、
@@ -31,6 +34,9 @@ object RainbowText {
 
     /** 默认渐变起始色（与微信红包红接近）。 */
     const val DEFAULT_START = "#FFFF3B30"
+
+    /** 默认渐变中间色（系统绿）。 */
+    const val DEFAULT_MID = "#FF34C759"
 
     /** 默认渐变结束色（系统蓝）。 */
     const val DEFAULT_END = "#FF0A84FF"
@@ -49,8 +55,7 @@ object RainbowText {
         private set
 
     private class Slot(
-        var startColor: Int,
-        var endColor: Int,
+        var colors: IntArray,
         val matrix: Matrix,
     ) {
         var width: Float = -1f
@@ -68,13 +73,28 @@ object RainbowText {
         runCatching { value.toColorInt() }
             .getOrElse { runCatching { fallback.toColorInt() }.getOrDefault(DEFAULT_START.toColorInt()) }
 
+    /** 三档配色 → 首尾闭合的色标数组。中间色为空时退化成两色往返。 */
+    private fun stopsOf(startColor: Int, midColor: Int?, endColor: Int): IntArray =
+        if (midColor == null || midColor == startColor || midColor == endColor) {
+            intArrayOf(startColor, endColor, startColor)
+        } else {
+            intArrayOf(startColor, midColor, endColor, midColor, startColor)
+        }
+
+    private fun positionsOf(colors: IntArray): FloatArray =
+        if (colors.size == 5) {
+            floatArrayOf(0f, 0.25f, 0.5f, 0.75f, 1f)
+        } else {
+            floatArrayOf(0f, 0.5f, 1f)
+        }
+
     /** 给整个 [textView] 的文字套上流动渐变。重复调用只会更新配色。 */
-    fun attach(textView: TextView, startColor: Int, endColor: Int) {
-        val slot = paintSlots[textView] ?: Slot(startColor, endColor, Matrix()).also {
+    fun attach(textView: TextView, startColor: Int, midColor: Int?, endColor: Int) {
+        val colors = stopsOf(startColor, midColor, endColor)
+        val slot = paintSlots[textView] ?: Slot(colors, Matrix()).also {
             paintSlots[textView] = it
         }
-        slot.startColor = startColor
-        slot.endColor = endColor
+        slot.colors = colors
         slot.width = -1f
         ensureTicker()
         applySlot(textView, slot)
@@ -101,20 +121,22 @@ object RainbowText {
     /**
      * 构造一个宽度为 [width] 的重复渐变着色器，并按当前相位横向平移。
      *
-     * 三色 `[start, end, start]` + [Shader.TileMode.REPEAT] 让平铺接缝处颜色一致，
+     * 色标数组首尾同色 + [Shader.TileMode.REPEAT] 让平铺接缝处颜色一致，
      * 相位平移一个周期后画面完全重合，所以循环无跳变。
      */
     fun shaderFor(
         width: Float,
         startColor: Int,
+        midColor: Int?,
         endColor: Int,
         matrix: Matrix = Matrix(),
     ): LinearGradient {
         val w = if (width > 1f) width else 1f
+        val colors = stopsOf(startColor, midColor, endColor)
         val shader = LinearGradient(
             0f, 0f, w, 0f,
-            intArrayOf(startColor, endColor, startColor),
-            floatArrayOf(0f, 0.5f, 1f),
+            colors,
+            positionsOf(colors),
             Shader.TileMode.REPEAT,
         )
         matrix.setTranslate(phase * w, 0f)
@@ -129,8 +151,8 @@ object RainbowText {
         if (slot.shader == null || slot.width != width) {
             slot.shader = LinearGradient(
                 0f, 0f, width, 0f,
-                intArrayOf(slot.startColor, slot.endColor, slot.startColor),
-                floatArrayOf(0f, 0.5f, 1f),
+                slot.colors,
+                positionsOf(slot.colors),
                 Shader.TileMode.REPEAT,
             )
             slot.width = width
@@ -176,17 +198,33 @@ object RainbowText {
 /**
  * 给 [android.text.Spannable] 的一段文字上流动渐变色的 [ReplacementSpan]。
  *
+ * [midColor] 为空时是两色往返，非空时是起 → 中 → 止 → 中 → 起。
  * 只接管绘制，不改字号与行高（[getSize] 里把字体度量原样拷给 [Paint.FontMetricsInt]）。
  * 宿主 View 需要先 [RainbowText.watch]，否则相位推进时不会重绘。
  */
 class RainbowTextSpan(
     private val startColor: Int,
+    private val midColor: Int?,
     private val endColor: Int,
 ) : ReplacementSpan() {
 
     private val matrix = Matrix()
     private var shader: LinearGradient? = null
     private var shaderWidth = -1f
+
+    private val colors: IntArray =
+        if (midColor == null || midColor == startColor || midColor == endColor) {
+            intArrayOf(startColor, endColor, startColor)
+        } else {
+            intArrayOf(startColor, midColor, endColor, midColor, startColor)
+        }
+
+    private val positions: FloatArray =
+        if (colors.size == 5) {
+            floatArrayOf(0f, 0.25f, 0.5f, 0.75f, 1f)
+        } else {
+            floatArrayOf(0f, 0.5f, 1f)
+        }
 
     override fun getSize(
         paint: Paint,
@@ -216,8 +254,8 @@ class RainbowTextSpan(
         if (cached == null || shaderWidth != width) {
             shader = LinearGradient(
                 0f, 0f, width, 0f,
-                intArrayOf(startColor, endColor, startColor),
-                floatArrayOf(0f, 0.5f, 1f),
+                colors,
+                positions,
                 Shader.TileMode.REPEAT,
             ).also { shaderWidth = width }
         }

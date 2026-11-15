@@ -104,6 +104,7 @@ object DisplayGroupMemberRoles : ClickableFeature(), IResolveDex,
     /** 炫彩渐变：开启后身份徽章文字使用流动彩色渐变（覆盖徽章前景色）。 */
     private var rainbow by KvStore.prefOption("group_role_rainbow", false)
     private var rainbowStart by KvStore.prefOption("group_role_rainbow_start", RainbowText.DEFAULT_START)
+    private var rainbowMid by KvStore.prefOption("group_role_rainbow_mid", RainbowText.DEFAULT_MID)
     private var rainbowEnd by KvStore.prefOption("group_role_rainbow_end", RainbowText.DEFAULT_END)
 
     private fun parseColor(value: String, fallback: String): Int =
@@ -132,6 +133,7 @@ object DisplayGroupMemberRoles : ClickableFeature(), IResolveDex,
             var selectedRole by remember { mutableIntStateOf(0) }
             var rainbowOn by remember { mutableStateOf(rainbow) }
             var rainbowFrom by remember { mutableStateOf(rainbowStart) }
+            var rainbowMidInput by remember { mutableStateOf(rainbowMid) }
             var rainbowTo by remember { mutableStateOf(rainbowEnd) }
 
             val roleLabels = listOf(ownerDefault, adminDefault, memberDefault)
@@ -274,6 +276,13 @@ object DisplayGroupMemberRoles : ClickableFeature(), IResolveDex,
                             }
                             item(animatedVisibility = rainbowOn) {
                                 MiuixColorPickerWidget(
+                                    title = stringResource(R.string.rainbow_color_mid),
+                                    value = rainbowMidInput,
+                                    onValueChange = { rainbowMidInput = it },
+                                )
+                            }
+                            item(animatedVisibility = rainbowOn) {
+                                MiuixColorPickerWidget(
                                     title = stringResource(R.string.rainbow_color_end),
                                     value = rainbowTo,
                                     onValueChange = { rainbowTo = it },
@@ -296,6 +305,7 @@ object DisplayGroupMemberRoles : ClickableFeature(), IResolveDex,
                         showMember = showMem
                         rainbow = rainbowOn
                         rainbowStart = rainbowFrom
+                        rainbowMid = rainbowMidInput
                         rainbowEnd = rainbowTo
                         ownerText = ot.takeUnless { it == ownerDefault }.orEmpty()
                         adminText = at.takeUnless { it == adminDefault }.orEmpty()
@@ -384,6 +394,7 @@ object DisplayGroupMemberRoles : ClickableFeature(), IResolveDex,
                 textColor = fgColor,
                 cornerRadius = 16f,
                 padding = 10f,
+                rainbowMid = if (rainbowOn) RainbowText.parseColor(rainbowMid, RainbowText.DEFAULT_MID) else null,
                 rainbowStart = if (rainbowOn) {
                     RainbowText.parseColor(rainbowStart, RainbowText.DEFAULT_START)
                 } else {
@@ -424,6 +435,7 @@ private class RoundedBackgroundSpan(
     private val cornerRadius: Float = 12f,
     private val padding: Float = 16f,
     private val rainbowStart: Int? = null,
+    private val rainbowMid: Int? = null,
     private val rainbowEnd: Int? = null,
 ) : ReplacementSpan() {
 
@@ -459,7 +471,7 @@ private class RoundedBackgroundSpan(
         val gradientEnd = rainbowEnd
         if (gradientStart != null && gradientEnd != null) {
             // 炫彩渐变：着色器只作用于徽章文字，画完立刻还原，避免污染其它 span
-            paint.shader = RainbowText.shaderFor(width, gradientStart, gradientEnd)
+            paint.shader = RainbowText.shaderFor(width, gradientStart, rainbowMid, gradientEnd)
             canvas.drawText(text, start, end, x + padding, y.toFloat(), paint)
             paint.shader = null
         } else {

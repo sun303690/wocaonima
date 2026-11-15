@@ -776,6 +776,7 @@
     <string name="rainbow_gradient">Rainbow gradient</string>
     <string name="rainbow_gradient_summary">Use a flowing color gradient instead of a solid color</string>
     <string name="rainbow_color_start">Gradient start color</string>
+    <string name="rainbow_color_mid">Gradient middle color</string>
     <string name="rainbow_color_end">Gradient end color</string>
     <string name="avatar_time_invalid_number">Enter a valid font size</string>
     <string name="feature_modify_text_message_display_name">Modify text message display</string>

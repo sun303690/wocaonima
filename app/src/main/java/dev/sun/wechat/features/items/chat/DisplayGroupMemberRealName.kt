@@ -182,6 +182,10 @@ object DisplayGroupMemberRealName : ApiFeature(), WeChatMessageViewApi.ICreateVi
                         RainbowText.DEFAULT_START
                     ),
                     RainbowText.parseColor(
+                        lastCharFeature.annotationRainbowMid,
+                        RainbowText.DEFAULT_MID
+                    ),
+                    RainbowText.parseColor(
                         lastCharFeature.annotationRainbowEnd,
                         RainbowText.DEFAULT_END
                     ),

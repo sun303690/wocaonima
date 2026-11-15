@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -23,6 +24,7 @@ import dev.sun.wechat.ui.content.formatArgbHex
 import top.yukonga.miuix.kmp.basic.ColorPicker
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.basic.TextField
 
 /**
  * 颜色选择行：卡片上只显示色块，点开后在弹窗里用调色板调整。
@@ -60,12 +62,29 @@ fun MiuixColorPickerWidget(
             onDismissRequest = { showPicker = false },
             title = { Text(title) },
             text = {
+                var hexInput by remember(value) { mutableStateOf(value) }
                 Column(Modifier.padding(top = 4.dp)) {
-                    Text(value)
                     ColorPicker(
                         color = parsed,
-                        onColorChanged = { onValueChange(formatArgbHex(it.toArgb())) },
+                        onColorChanged = {
+                            val hex = formatArgbHex(it.toArgb())
+                            hexInput = hex
+                            onValueChange(hex)
+                        },
                         showPreview = false,
+                    )
+                    // 直接填色值：支持 #RRGGBB / #AARRGGBB，6 位时自动补不透明
+                    TextField(
+                        value = hexInput,
+                        onValueChange = { input ->
+                            hexInput = input
+                            normalizeArgbHex(input)?.let(onValueChange)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        label = "#AARRGGBB",
+                        singleLine = true,
                     )
                 }
             },
@@ -74,4 +93,12 @@ fun MiuixColorPickerWidget(
             },
         )
     }
+}
+
+/** 把用户输入规整成 `#AARRGGBB`；不合法返回 null。 */
+private fun normalizeArgbHex(raw: String): String? {
+    val body = raw.trim().removePrefix("#").uppercase()
+    if (body.length != 6 && body.length != 8) return null
+    if (!body.all { it in "0123456789ABCDEF" }) return null
+    return if (body.length == 6) "#FF$body" else "#$body"
 }

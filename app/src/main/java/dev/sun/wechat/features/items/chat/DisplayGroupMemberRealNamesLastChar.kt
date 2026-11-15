@@ -74,6 +74,7 @@ object DisplayGroupMemberRealNamesLastChar : ClickableFeature(), IContactInfoPro
      */
     var annotationRainbow by KvStore.prefOption("real_name_last_char_rainbow", false)
     var annotationRainbowStart by KvStore.prefOption("real_name_last_char_rainbow_start", RainbowText.DEFAULT_START)
+    var annotationRainbowMid by KvStore.prefOption("real_name_last_char_rainbow_mid", RainbowText.DEFAULT_MID)
     var annotationRainbowEnd by KvStore.prefOption("real_name_last_char_rainbow_end", RainbowText.DEFAULT_END)
 
     override fun onClick(context: ComponentActivity) {
@@ -81,6 +82,7 @@ object DisplayGroupMemberRealNamesLastChar : ClickableFeature(), IContactInfoPro
             var fg by remember { mutableStateOf(annotationFg) }
             var rainbowOn by remember { mutableStateOf(annotationRainbow) }
             var rainbowFrom by remember { mutableStateOf(annotationRainbowStart) }
+            var rainbowMid by remember { mutableStateOf(annotationRainbowMid) }
             var rainbowTo by remember { mutableStateOf(annotationRainbowEnd) }
 
             AlertDialogContent(
@@ -108,6 +110,13 @@ object DisplayGroupMemberRealNamesLastChar : ClickableFeature(), IContactInfoPro
                                     title = stringResource(R.string.rainbow_color_start),
                                     value = rainbowFrom,
                                     onValueChange = { rainbowFrom = it },
+                                )
+                            }
+                            item(animatedVisibility = rainbowOn) {
+                                MiuixColorPickerWidget(
+                                    title = stringResource(R.string.rainbow_color_mid),
+                                    value = rainbowMid,
+                                    onValueChange = { rainbowMid = it },
                                 )
                             }
                             item(animatedVisibility = rainbowOn) {
