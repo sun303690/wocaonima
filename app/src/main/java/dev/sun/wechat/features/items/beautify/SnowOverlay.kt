@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //
-// 微信页面下雪 —— 按 Wren 模块 SnowView 的原实现重写（纯 Canvas 绘制）。
+// 微信页面下雪 —— 参照 WeKit SnowView 的实现（纯 Canvas 绘制）。
 // 不注册 RenderEffect、不做背景模糊；挂载方式参考「应用全局背景」的
 // ActivityLifecycleCallbacks，模块自己的页面一律跳过。
 package dev.sun.wechat.features.items.beautify

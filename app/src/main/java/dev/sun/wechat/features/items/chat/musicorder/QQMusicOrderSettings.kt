@@ -5,7 +5,7 @@ import dev.sun.wechat.data.KvStore.prefOption
 import org.json.JSONArray
 
 /**
- * QQ点歌完整设置（对照 Hchat musicorder 配置，全部保留）。
+ * QQ点歌完整设置（对照 WeKit musicorder 配置，全部保留）。
  */
 object QQMusicOrderSettings {
 

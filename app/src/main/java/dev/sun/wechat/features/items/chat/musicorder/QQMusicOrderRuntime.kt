@@ -17,7 +17,7 @@ import java.net.URL
 import java.util.concurrent.Executors
 
 /**
- * QQ点歌完整功能（对照 Hchat musicorder 模块移植，功能不缩水）。
+ * QQ点歌完整功能（对照 WeKit musicorder 模块，功能不缩水）。
  *
  * 能力：
  * - 音乐卡片 + 歌曲语音 双发送

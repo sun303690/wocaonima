@@ -56,7 +56,7 @@ private const val TAG_AVATAR_TIME_WRAPPER = "wekit_avatar_time_wrapper"
 private const val TAG_AVATAR_TIME_TEXT = "wekit_avatar_time_text"
 
 /**
- * 头像下显示时间（FkWeChat 方案）：在每条消息的头像正下方显示发送时间 HH:mm。
+ * 头像下显示时间（WeKit 方案）：在每条消息的头像正下方显示发送时间 HH:mm。
  *
  * 实现：把微信头像从父容器移到新建的垂直 LinearLayout(wrapper) 中，再把 wrapper 放回头像
  * 原位置，最后在 wrapper 里头像下方加入一个 TextView。用 tag 缓存避免重复创建。

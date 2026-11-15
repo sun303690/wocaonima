@@ -83,12 +83,12 @@ object AsrEngine {
      * 语音解密用的 AES Key（16 字节起，key 与 IV 同值）。
      *
      * 微信 CDN 语音是 AES-128-CBC，部分机型/版本在 `voice2/` 落盘的是加密体而不是明文 SILK，
-     * 这时 [MediaFileTypeDetector] 认不出容器，就用这两个串去解（与 Hchat 的 asr.aesKey / asr.authKey 同名同义）。
+     * 这时 [MediaFileTypeDetector] 认不出容器，就用这两个串去解（与 WeKit 的 asr.aesKey / asr.authKey 同名同义）。
      * 都留空时跳过解密分支（明文 SILK/AMR 不需要）。
      */
     var aesKey by prefOption("asr_aes_key", "")
 
-    /** 备用解密串（Hchat 里叫 asr.authKey），与 [aesKey] 一起当候选。 */
+    /** 备用解密串（WeKit 里叫 asr.authKey），与 [aesKey] 一起当候选。 */
     var authKey by prefOption("asr_auth_key", "")
 
     /**

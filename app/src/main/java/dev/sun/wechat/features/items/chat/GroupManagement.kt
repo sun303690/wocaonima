@@ -431,7 +431,7 @@ object GroupManagement : ClickableFeature(), WeDatabaseListenerApi.IInsertListen
     }
 
     /**
-     * 成员列表 diff 监控（Hchat 同款）：读 chatroom.memberlist 与快照对比，
+     * 成员列表 diff 监控（WeKit 同款）：读 chatroom.memberlist 与快照对比，
      * 不依赖系统消息格式；首次检查只建快照不发事件；DB 读空跳过防误判全员退群。
      * 系统消息路径触发时会同步快照，两条路径不会重复发。
      */

@@ -88,7 +88,7 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
     var replyCount by prefOption("ai_reply_count", 20)
     private var lastSelectedStyle by prefOption("ai_reply_last_selected_style", "智能全能")
 
-    /** 语气预设 name -> prompt（与 FkWeChat 一致，含关系预设） */
+    /** 语气预设 name -> prompt（与 WeKit 一致，含关系预设） */
     val STYLES = listOf(
         "智能全能" to "分析当前对话氛围，给出最得体、自然的回复。",
         "高情商" to "说话非常有艺术，能够化解尴尬，照顾对方感受，充满智慧。",

@@ -268,48 +268,126 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
 
     private object ShakeDetector : SensorEventListener {
 
-        private var sensorManager: SensorManager? = null
-        private var lastShakeTime: Long = 0
-        private const val SHAKE_THRESHOLD = 4.5f // higher = harder shake required
+        /** 一次摇晃判定所需的抖动次数与统计窗口。 */
+        private const val MIN_SHAKE_COUNT = 3
+        private const val COUNT_WINDOW_MS = 500L
 
-        fun start(context: Context) {
+        /** 两次触发之间的最小间隔，避免连续动作。 */
+        private const val DEBOUNCE_MS = 2000L
+
+        /** 低通滤波系数：越小基线越稳，只保留高频抖动。 */
+        private const val FILTER_ALPHA = 0.2f
+
+        /** 灵敏度 0 / 100 对应的位移阈值（m/s²）；灵敏度越高阈值越低。 */
+        private const val THRESHOLD_AT_ZERO = 22.0f
+        private const val THRESHOLD_AT_HUNDRED = 7.0f
+
+        /** 抖动时间戳环形缓冲的槽数。 */
+        private const val RING_SIZE = 16
+
+        private var sensorManager: SensorManager? = null
+        private var onShake: (() -> Unit)? = null
+
+        private val ring = LongArray(RING_SIZE)
+        private var ringHead = 0
+        private var ringSize = 0
+
+        private var gravityX = 0f
+        private var gravityY = 0f
+        private var gravityZ = 0f
+        private var gravityReady = false
+        private var lastTriggerTime = 0L
+
+        /**
+         * [action] 是本次注册的摇动动作，每次 [start] 覆盖：同一个检测器被两个入口复用
+         * ——会话页摇一摇退回主页、主页摇一摇临时显示隐藏联系人。哪个页面在前台就由哪个
+         * 页面的 `onResume` 重新注册成自己的动作，因此不存在两套传感器。
+         */
+        fun start(context: Context, action: () -> Unit) {
             WeLogger.d(TAG, "starting shake detector")
+
+            onShake = action
 
             if (sensorManager != null) return
 
-            sensorManager = context.getSystemService<SensorManager>()
-            val accelerometer = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+            val manager = context.getSystemService<SensorManager>()
+            sensorManager = manager
+            val accelerometer = manager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) ?: return
 
-            sensorManager?.registerListener(
-                this,
-                accelerometer,
-                SensorManager.SENSOR_DELAY_UI
-            )
+            manager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_GAME)
         }
 
         fun stop() {
             WeLogger.d(TAG, "stopping shake detector")
 
+            onShake = null
             sensorManager?.unregisterListener(this)
             sensorManager = null
+            resetState()
+        }
+
+        private fun resetState() {
+            ringHead = 0
+            ringSize = 0
+            gravityReady = false
+        }
+
+        /** 灵敏度 0–100 线性映射到 22–7 m/s² 的位移阈值。 */
+        private fun threshold(): Float {
+            val sensitivity = HideContacts.shakeSensitivity.coerceIn(0, 100)
+            return THRESHOLD_AT_ZERO - (sensitivity / 100f) * (THRESHOLD_AT_ZERO - THRESHOLD_AT_HUNDRED)
         }
 
         override fun onSensorChanged(event: SensorEvent?) {
             if (event?.sensor?.type != Sensor.TYPE_ACCELEROMETER) return
 
-            val x = event.values[0]
-            val y = event.values[1]
-            val z = event.values[2]
+            val action = onShake ?: return
+            val values = event.values
+            val x = values[0]
+            val y = values[1]
+            val z = values[2]
 
-            val gForce = sqrt((x * x + y * y + z * z).toDouble()).toFloat() / SensorManager.GRAVITY_EARTH
-
-            if (gForce > SHAKE_THRESHOLD) {
-                val now = System.currentTimeMillis()
-                if (lastShakeTime + 1000 > now) return // 1-second debounce
-                lastShakeTime = now
-
-                exitToMainActivity()
+            // 第一次采样只用来建立重力基线，否则初始位移会把静止状态判成摇晃。
+            if (!gravityReady) {
+                gravityX = x
+                gravityY = y
+                gravityZ = z
+                gravityReady = true
+                return
             }
+
+            // 低通滤波得到重力分量，原始值减它即抖动分量。
+            val nextX = x * FILTER_ALPHA + gravityX * (1f - FILTER_ALPHA)
+            val nextY = y * FILTER_ALPHA + gravityY * (1f - FILTER_ALPHA)
+            val nextZ = z * FILTER_ALPHA + gravityZ * (1f - FILTER_ALPHA)
+            gravityX = nextX
+            gravityY = nextY
+            gravityZ = nextZ
+
+            val dx = x - nextX
+            val dy = y - nextY
+            val dz = z - nextZ
+            if (sqrt((dx * dx + dy * dy + dz * dz).toDouble()) <= threshold()) return
+
+            // 单次抖动不算摇晃：统计窗口内累计到 [MIN_SHAKE_COUNT] 次才触发。
+            val now = System.currentTimeMillis()
+            ring[ringHead] = now
+            ringHead = (ringHead + 1) % RING_SIZE
+            if (ringSize < RING_SIZE) ringSize++
+
+            var hits = 0
+            for (i in 0 until ringSize) {
+                val age = now - ring[(ringHead - 1 - i + RING_SIZE) % RING_SIZE]
+                if (age < 0 || age > COUNT_WINDOW_MS) break
+                hits++
+            }
+            if (hits < MIN_SHAKE_COUNT) return
+
+            if (now - lastTriggerTime < DEBOUNCE_MS) return
+            lastTriggerTime = now
+            resetState()
+
+            action()
         }
 
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
@@ -385,12 +463,28 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
                 val wxId = activity.intent.getStringExtra("Chat_User")
                 if (temporarilyShown || wxId !in hiddenContacts) return@hookAfter
 
-                ShakeDetector.start(activity)
+                ShakeDetector.start(activity) { exitToMainActivity() }
             }
 
             firstMethod { name = "onPause" }.hookAfter {
                 chattingUi?.clear()
                 chattingUi = null
+                ShakeDetector.stop()
+            }
+        }
+
+        // --- shake to reveal (main screen) ---
+        //
+        // 与上面「摇一摇退回主页」共用同一个 [ShakeDetector]：同一时刻只有一个页面在前台，
+        // 各自的 onResume 把自己的动作装进去、onPause 卸载，因此不会同时响应两个手势。
+        LauncherUI::class.reflekt().apply {
+            firstMethod { name = "onResume" }.hookAfter {
+                val activity = thisObject as LauncherUI
+                if (!shakeToReveal) return@hookAfter
+                ShakeDetector.start(activity) { revealTemporarily(activity) }
+            }
+
+            firstMethod { name = "onPause" }.hookAfter {
                 ShakeDetector.stop()
             }
         }
@@ -728,6 +822,12 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
 
     internal var tripleClickTitle by prefOption("hide_triple_click_title", false)
 
+    /** 主页摇一摇临时显示隐藏联系人；微信切后台后同三击/指令一样自动恢复隐藏。 */
+    internal var shakeToReveal by prefOption("hide_shake_to_reveal", false)
+
+    /** 摇一摇灵敏度 0–100：越大越容易触发（默认 50，对应约 14.5 m/s² 的位移阈值）。 */
+    internal var shakeSensitivity by prefOption("hide_shake_sensitivity", 50)
+
     /** 主页搜索框临时显示指令（默认 #wm#，可自定义）。 */
     internal var searchCommandText by prefOption("hide_search_command", "#wm#")
 
@@ -852,6 +952,7 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
                 title = { Text("隐藏联系人") },
                 text = {
                     var tripleClickTitleInput by remember { mutableStateOf(tripleClickTitle) }
+                    var shakeToRevealInput by remember { mutableStateOf(shakeToReveal) }
 
                     // 普通可滚动 Column，而不是 LazyColumn/SegmentedColumn：AlertDialog 的文本区
                     // 高度不受约束，LazyColumn 在这种容器里测量会溢出，表现为条目互相压字、
@@ -915,6 +1016,28 @@ object HideContacts : ClickableFeature(), IResolveDex, WeChatInputBarApi.IInputB
                                 tripleClickTitleInput = it
                                 tripleClickTitle = it
                             },
+                        )
+                        SwitchWidget(
+                            iconPlaceholder = false,
+                            title = "摇一摇临时显示",
+                            description = "在主页摇一摇手机临时显示隐藏联系人；微信切后台后自动恢复隐藏",
+                            checked = shakeToRevealInput,
+                            onCheckedChange = {
+                                shakeToRevealInput = it
+                                shakeToReveal = it
+                            },
+                        )
+                        TextFieldDialogWidget(
+                            title = "摇一摇灵敏度(0-100)",
+                            value = shakeSensitivity.toString(),
+                            onValueChange = { raw ->
+                                raw.filter { it.isDigit() }.take(3).toIntOrNull()?.let {
+                                    shakeSensitivity = it.coerceIn(0, 100)
+                                }
+                            },
+                            dialogTitle = "数值越大越容易触发（0–100，默认 50）",
+                            confirmLabel = "确定",
+                            dismissLabel = "取消",
                         )
                         TextFieldDialogWidget(
                             title = "搜索框临时显示指令",
