@@ -773,6 +773,10 @@
     <string name="avatar_time_format">Time format</string>
     <string name="avatar_time_font_size">Font size</string>
     <string name="avatar_time_color">Font color</string>
+    <string name="rainbow_gradient">Rainbow gradient</string>
+    <string name="rainbow_gradient_summary">Use a flowing color gradient instead of a solid color</string>
+    <string name="rainbow_color_start">Gradient start color</string>
+    <string name="rainbow_color_end">Gradient end color</string>
     <string name="avatar_time_invalid_number">Enter a valid font size</string>
     <string name="feature_modify_text_message_display_name">Modify text message display</string>
     <string name="feature_modify_text_message_display_description">Add menu items to the message long press menu to modify the local message display content</string>
@@ -4617,16 +4621,6 @@
     <string name="mm_test_connection">Test connection</string>
     <string name="mm_testing">Testing…</string>
     <string name="mm_back">‹ Back</string>
-    <string name="feature_display_message_time_v2_name">Show message time v2</string>
-    <string name="feature_display_message_time_v2_description">Show the send time at the bubble\'s bottom-right corner, with a custom pattern, text size and rainbow colors</string>
-    <string name="msg_time_v2_format_label">Pattern and text/emoji, e.g. HH:mm:ss, HH:mm Read, 😊 HH:mm</string>
-    <string name="msg_time_v2_size_label">Text size (sp)</string>
-    <string name="msg_time_v2_size_range">Text size must be between 6 and 24</string>
-    <string name="msg_time_v2_rainbow_label">Rainbow colors</string>
-    <string name="msg_time_v2_rainbow_summary">Use a moving color gradient for the time text</string>
-    <string name="msg_time_v2_color_start">Gradient start color</string>
-    <string name="msg_time_v2_color_end">Gradient end color</string>
-    <string name="msg_time_v2_invalid_pattern">Invalid pattern, please check the time format characters</string>
     <string name="pay_reply_red_packet_label">Reply after claiming (one per line, random)</string>
     <string name="pay_reply_transfer_label">Reply after accepting (one per line, random)</string>
 </resources>

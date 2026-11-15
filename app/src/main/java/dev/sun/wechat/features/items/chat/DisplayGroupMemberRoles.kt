@@ -48,6 +48,7 @@ import dev.sun.wechat.ui.content.miuix.MiuixBaseSupportingWidget
 import dev.sun.wechat.ui.content.miuix.MiuixColorPickerWidget
 import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
 import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
+import dev.sun.wechat.ui.utils.RainbowText
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.HookParam
 import dev.sun.wechat.utils.collections.LruCache
@@ -100,6 +101,11 @@ object DisplayGroupMemberRoles : ClickableFeature(), IResolveDex,
     private var showAdmin by KvStore.prefOption("group_role_show_admin", true)
     private var showMember by KvStore.prefOption("group_role_show_member", true)
 
+    /** 炫彩渐变：开启后身份徽章文字使用流动彩色渐变（覆盖徽章前景色）。 */
+    private var rainbow by KvStore.prefOption("group_role_rainbow", false)
+    private var rainbowStart by KvStore.prefOption("group_role_rainbow_start", RainbowText.DEFAULT_START)
+    private var rainbowEnd by KvStore.prefOption("group_role_rainbow_end", RainbowText.DEFAULT_END)
+
     private fun parseColor(value: String, fallback: String): Int =
         runCatching { value.toColorInt() }.getOrElse { fallback.toColorInt() }
 
@@ -124,6 +130,9 @@ object DisplayGroupMemberRoles : ClickableFeature(), IResolveDex,
             var showAdm by remember { mutableStateOf(showAdmin) }
             var showMem by remember { mutableStateOf(showMember) }
             var selectedRole by remember { mutableIntStateOf(0) }
+            var rainbowOn by remember { mutableStateOf(rainbow) }
+            var rainbowFrom by remember { mutableStateOf(rainbowStart) }
+            var rainbowTo by remember { mutableStateOf(rainbowEnd) }
 
             val roleLabels = listOf(ownerDefault, adminDefault, memberDefault)
             val selectedShow = when (selectedRole) {
@@ -246,6 +255,31 @@ object DisplayGroupMemberRoles : ClickableFeature(), IResolveDex,
                                 }
                             }
                         }
+
+                        MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                            item {
+                                MiuixSwitchWidget(
+                                    title = stringResource(R.string.rainbow_gradient),
+                                    summary = stringResource(R.string.rainbow_gradient_summary),
+                                    checked = rainbowOn,
+                                    onCheckedChange = { rainbowOn = it },
+                                )
+                            }
+                            item(animatedVisibility = rainbowOn) {
+                                MiuixColorPickerWidget(
+                                    title = stringResource(R.string.rainbow_color_start),
+                                    value = rainbowFrom,
+                                    onValueChange = { rainbowFrom = it },
+                                )
+                            }
+                            item(animatedVisibility = rainbowOn) {
+                                MiuixColorPickerWidget(
+                                    title = stringResource(R.string.rainbow_color_end),
+                                    value = rainbowTo,
+                                    onValueChange = { rainbowTo = it },
+                                )
+                            }
+                        }
                     }
                 },
                 dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.dialog_cancel)) } },
@@ -260,6 +294,9 @@ object DisplayGroupMemberRoles : ClickableFeature(), IResolveDex,
                         showOwner = showOwn
                         showAdmin = showAdm
                         showMember = showMem
+                        rainbow = rainbowOn
+                        rainbowStart = rainbowFrom
+                        rainbowEnd = rainbowTo
                         ownerText = ot.takeUnless { it == ownerDefault }.orEmpty()
                         adminText = at.takeUnless { it == adminDefault }.orEmpty()
                         memberText = mt.takeUnless { it == memberDefault }.orEmpty()
@@ -340,17 +377,29 @@ object DisplayGroupMemberRoles : ClickableFeature(), IResolveDex,
             else -> unreachable()
         }
 
+        val rainbowOn = rainbow
         sb.setSpan(
             RoundedBackgroundSpan(
                 backgroundColor = bgColor,
                 textColor = fgColor,
                 cornerRadius = 16f,
-                padding = 10f
+                padding = 10f,
+                rainbowStart = if (rainbowOn) {
+                    RainbowText.parseColor(rainbowStart, RainbowText.DEFAULT_START)
+                } else {
+                    null
+                },
+                rainbowEnd = if (rainbowOn) {
+                    RainbowText.parseColor(rainbowEnd, RainbowText.DEFAULT_END)
+                } else {
+                    null
+                },
             ),
             0,
             roleText.length,
             Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
         )
+        if (rainbowOn) RainbowText.watch(textView)
 
         textView.text = sb
     }
@@ -373,7 +422,9 @@ private class RoundedBackgroundSpan(
     private val backgroundColor: Int,
     private val textColor: Int,
     private val cornerRadius: Float = 12f,
-    private val padding: Float = 16f
+    private val padding: Float = 16f,
+    private val rainbowStart: Int? = null,
+    private val rainbowEnd: Int? = null,
 ) : ReplacementSpan() {
 
     override fun getSize(
@@ -404,7 +455,16 @@ private class RoundedBackgroundSpan(
         paint.color = backgroundColor
         canvas.drawRoundRect(rect, cornerRadius, cornerRadius, paint)
 
-        paint.color = textColor
-        canvas.drawText(text, start, end, x + padding, y.toFloat(), paint)
+        val gradientStart = rainbowStart
+        val gradientEnd = rainbowEnd
+        if (gradientStart != null && gradientEnd != null) {
+            // 炫彩渐变：着色器只作用于徽章文字，画完立刻还原，避免污染其它 span
+            paint.shader = RainbowText.shaderFor(width, gradientStart, gradientEnd)
+            canvas.drawText(text, start, end, x + padding, y.toFloat(), paint)
+            paint.shader = null
+        } else {
+            paint.color = textColor
+            canvas.drawText(text, start, end, x + padding, y.toFloat(), paint)
+        }
     }
 }

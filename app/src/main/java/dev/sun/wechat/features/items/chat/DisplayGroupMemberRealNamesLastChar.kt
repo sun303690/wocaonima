@@ -4,6 +4,8 @@ import android.app.Activity
 import android.os.Handler
 import android.os.Looper
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import top.yukonga.miuix.kmp.basic.Text
@@ -13,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import dev.sun.wechat.R
 import dev.sun.wechat.data.WeKitDatabase
 import dev.sun.wechat.data.entity.ContactRealNamePartEntity
@@ -29,9 +32,11 @@ import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
-import dev.sun.wechat.ui.content.DefaultColumn
 import dev.sun.wechat.ui.content.TextButton
-import dev.sun.wechat.ui.content.WeColorField
+import dev.sun.wechat.ui.content.miuix.MiuixColorPickerWidget
+import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
+import dev.sun.wechat.ui.utils.RainbowText
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.currentWxId
@@ -63,24 +68,65 @@ object DisplayGroupMemberRealNamesLastChar : ClickableFeature(), IContactInfoPro
      */
     var annotationFg by KvStore.prefOption("real_name_last_char_fg", DEFAULT_FG)
 
+    /**
+     * 炫彩渐变：开启后实名标注使用流动彩色渐变（覆盖 [annotationFg]）。
+     * 同样暴露给 [DisplayGroupMemberRealName] 读取。
+     */
+    var annotationRainbow by KvStore.prefOption("real_name_last_char_rainbow", false)
+    var annotationRainbowStart by KvStore.prefOption("real_name_last_char_rainbow_start", RainbowText.DEFAULT_START)
+    var annotationRainbowEnd by KvStore.prefOption("real_name_last_char_rainbow_end", RainbowText.DEFAULT_END)
+
     override fun onClick(context: ComponentActivity) {
         showComposeDialog(context) {
             var fg by remember { mutableStateOf(annotationFg) }
+            var rainbowOn by remember { mutableStateOf(annotationRainbow) }
+            var rainbowFrom by remember { mutableStateOf(annotationRainbowStart) }
+            var rainbowTo by remember { mutableStateOf(annotationRainbowEnd) }
 
             AlertDialogContent(
                 title = { Text(stringResource(R.string.feature_display_group_member_real_names_last_char_name)) },
                 text = {
-                    DefaultColumn(Modifier.verticalScroll(rememberScrollState())) {
-                        WeColorField(
-                            label = stringResource(R.string.chat_color_foreground),
-                            value = fg,
-                            onValueChange = { fg = it })
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        MiuixSegmentedColumn(contentPadding = PaddingValues(0.dp)) {
+                            item {
+                                MiuixColorPickerWidget(
+                                    title = stringResource(R.string.chat_color_foreground),
+                                    value = fg,
+                                    onValueChange = { fg = it },
+                                )
+                            }
+                            item {
+                                MiuixSwitchWidget(
+                                    title = stringResource(R.string.rainbow_gradient),
+                                    summary = stringResource(R.string.rainbow_gradient_summary),
+                                    checked = rainbowOn,
+                                    onCheckedChange = { rainbowOn = it },
+                                )
+                            }
+                            item(animatedVisibility = rainbowOn) {
+                                MiuixColorPickerWidget(
+                                    title = stringResource(R.string.rainbow_color_start),
+                                    value = rainbowFrom,
+                                    onValueChange = { rainbowFrom = it },
+                                )
+                            }
+                            item(animatedVisibility = rainbowOn) {
+                                MiuixColorPickerWidget(
+                                    title = stringResource(R.string.rainbow_color_end),
+                                    value = rainbowTo,
+                                    onValueChange = { rainbowTo = it },
+                                )
+                            }
+                        }
                     }
                 },
                 dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.dialog_cancel)) } },
                 confirmButton = {
                     Button(onClick = {
                         annotationFg = fg
+                        annotationRainbow = rainbowOn
+                        annotationRainbowStart = rainbowFrom
+                        annotationRainbowEnd = rainbowTo
                         onDismiss()
                     }) { Text(stringResource(R.string.dialog_confirm)) }
                 })

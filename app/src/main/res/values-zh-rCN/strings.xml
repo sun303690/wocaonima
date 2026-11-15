@@ -736,6 +736,10 @@
     <string name="avatar_time_format">时间格式</string>
     <string name="avatar_time_font_size">字体大小</string>
     <string name="avatar_time_color">字体颜色</string>
+    <string name="rainbow_gradient">炫彩颜色</string>
+    <string name="rainbow_gradient_summary">文字使用流动的彩色渐变，覆盖原纯色</string>
+    <string name="rainbow_color_start">渐变起始色</string>
+    <string name="rainbow_color_end">渐变结束色</string>
     <string name="avatar_time_invalid_number">请输入有效的字体大小</string>
     <string name="feature_modify_text_message_display_name">修改文本消息显示</string>
     <string name="feature_modify_text_message_display_description">向消息长按菜单添加菜单项, 可修改本地消息显示内容</string>
@@ -4647,16 +4651,6 @@
     <string name="loader_libxposed_api_name">libxposed API %1$d</string>
     <string name="home_side_panel_lunar_separator">，</string>
     <string name="agent_panel_environment">环境</string>
-    <string name="feature_display_message_time_v2_name">显示消息时间v2</string>
-    <string name="feature_display_message_time_v2_description">在消息气泡右下角显示发送时间，可自定义格式、字号和炫彩颜色</string>
-    <string name="msg_time_v2_format_label">时间格式和文字/emoji，如 HH:mm:ss、HH:mm 已读、😊 HH:mm</string>
-    <string name="msg_time_v2_size_label">字号（sp）</string>
-    <string name="msg_time_v2_size_range">字号需要在 6～24 之间</string>
-    <string name="msg_time_v2_rainbow_label">炫彩颜色</string>
-    <string name="msg_time_v2_rainbow_summary">时间文字使用彩色渐变</string>
-    <string name="msg_time_v2_color_start">渐变起始色</string>
-    <string name="msg_time_v2_color_end">渐变结束色</string>
-    <string name="msg_time_v2_invalid_pattern">格式无效，请检查时间格式字符</string>
     <string name="pay_reply_red_packet_label">领取后回复（一行一条，随机发送）</string>
     <string name="pay_reply_transfer_label">收款后回复内容（一行一条，随机发送）</string>
 </resources>

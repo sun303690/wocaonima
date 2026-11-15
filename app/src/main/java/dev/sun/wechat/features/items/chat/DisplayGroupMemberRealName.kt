@@ -14,6 +14,8 @@ import dev.sun.wechat.R
 import dev.sun.wechat.features.api.ui.WeChatMessageViewApi
 import dev.sun.wechat.features.core.ApiFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
+import dev.sun.wechat.ui.utils.RainbowText
+import dev.sun.wechat.ui.utils.RainbowTextSpan
 import dev.sun.wechat.utils.HookParam
 
 /**
@@ -170,11 +172,31 @@ object DisplayGroupMemberRealName : ApiFeature(), WeChatMessageViewApi.ICreateVi
         val sb = SpannableStringBuilder(existing, 0, plainLen)
         sb.append(annotation)
 
-        sb.setSpan(
-            ForegroundColorSpan(annotationColor()),
-            plainLen, sb.length,
-            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-        )
+        val lastCharFeature = DisplayGroupMemberRealNamesLastChar
+        if (lastCharFeature.isActive && lastCharFeature.annotationRainbow) {
+            // 炫彩渐变：用 ReplacementSpan 只接管标注段的绘制，宿主 View 需持续重绘
+            sb.setSpan(
+                RainbowTextSpan(
+                    RainbowText.parseColor(
+                        lastCharFeature.annotationRainbowStart,
+                        RainbowText.DEFAULT_START
+                    ),
+                    RainbowText.parseColor(
+                        lastCharFeature.annotationRainbowEnd,
+                        RainbowText.DEFAULT_END
+                    ),
+                ),
+                plainLen, sb.length,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            RainbowText.watch(textView)
+        } else {
+            sb.setSpan(
+                ForegroundColorSpan(annotationColor()),
+                plainLen, sb.length,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+        }
 
         textView.text = sb
     }

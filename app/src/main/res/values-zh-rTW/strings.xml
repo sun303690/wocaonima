@@ -734,6 +734,10 @@
     <string name="avatar_time_format">時間格式</string>
     <string name="avatar_time_font_size">字體大小</string>
     <string name="avatar_time_color">字體顏色</string>
+    <string name="rainbow_gradient">炫彩顏色</string>
+    <string name="rainbow_gradient_summary">文字使用流動的彩色漸變，覆蓋原本純色</string>
+    <string name="rainbow_color_start">漸變起始色</string>
+    <string name="rainbow_color_end">漸變結束色</string>
     <string name="avatar_time_invalid_number">請輸入有效的字體大小</string>
     <string name="feature_modify_text_message_display_name">修改文本消息顯示</string>
     <string name="feature_modify_text_message_display_description">向消息長按菜單添加菜單項, 可修改本地消息顯示內容</string>
@@ -4630,16 +4634,6 @@
     <string name="ai_reply_tts_breeze_instructions">指令</string>
     <string name="ai_reply_tts_breeze_instructions_hint">用自然語言描述這段文字該怎麼讀</string>
     <string name="ai_reply_tts_preview">試聽</string>
-    <string name="feature_display_message_time_v2_name">顯示訊息時間v2</string>
-    <string name="feature_display_message_time_v2_description">在訊息氣泡右下角顯示傳送時間，可自訂格式、字級和炫彩顏色</string>
-    <string name="msg_time_v2_format_label">時間格式和文字/emoji，如 HH:mm:ss、HH:mm 已讀、😊 HH:mm</string>
-    <string name="msg_time_v2_size_label">字級（sp）</string>
-    <string name="msg_time_v2_size_range">字級需要在 6～24 之間</string>
-    <string name="msg_time_v2_rainbow_label">炫彩顏色</string>
-    <string name="msg_time_v2_rainbow_summary">時間文字使用彩色漸層</string>
-    <string name="msg_time_v2_color_start">漸層起始色</string>
-    <string name="msg_time_v2_color_end">漸層結束色</string>
-    <string name="msg_time_v2_invalid_pattern">格式無效，請檢查時間格式字元</string>
     <string name="pay_reply_red_packet_label">領取後回覆（一行一條，隨機發送）</string>
     <string name="pay_reply_transfer_label">收款後回覆內容（一行一條，隨機發送）</string>
 </resources>

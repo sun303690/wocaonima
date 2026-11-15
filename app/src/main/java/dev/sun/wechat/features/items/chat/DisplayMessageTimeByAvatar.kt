@@ -40,6 +40,8 @@ import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.TextButton
 import dev.sun.wechat.ui.content.miuix.MiuixColorPickerWidget
 import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
+import dev.sun.wechat.ui.utils.RainbowText
 import dev.sun.wechat.ui.utils.showComposeDialog
 import dev.sun.wechat.utils.HookParam
 import dev.sun.wechat.utils.WeLogger
@@ -70,6 +72,11 @@ object DisplayMessageTimeByAvatar : ClickableFeature(),
     private var timePattern by prefOption("avatar_time_pattern", "HH:mm")
     private var textSize by prefOption("avatar_time_text_size", 6)
     private var textColor by prefOption("avatar_time_text_color", "#FF8AB22F")
+
+    /** 炫彩渐变：开启后时间文字使用流动的彩色渐变，覆盖纯色 [textColor]。 */
+    private var rainbow by prefOption("avatar_time_rainbow", false)
+    private var rainbowStart by prefOption("avatar_time_rainbow_start", RainbowText.DEFAULT_START)
+    private var rainbowEnd by prefOption("avatar_time_rainbow_end", RainbowText.DEFAULT_END)
 
     private const val MASK_LAYOUT_CLASS = "com.tencent.mm.ui.base.MaskLayout"
 
@@ -116,6 +123,16 @@ object DisplayMessageTimeByAvatar : ClickableFeature(),
             timeText.setTextColor(parsedColor)
             timeText.setTextSize(TypedValue.COMPLEX_UNIT_SP, textSize.toFloat())
             timeText.text = formatTime(msgInfo.createTime, timePattern)
+            if (rainbow) {
+                // 渐变 shader 挂在 paint 上，优先级高于 textColor
+                RainbowText.attach(
+                    timeText,
+                    RainbowText.parseColor(rainbowStart),
+                    RainbowText.parseColor(rainbowEnd, RainbowText.DEFAULT_END),
+                )
+            } else {
+                RainbowText.detach(timeText)
+            }
             timeText.visibility = View.VISIBLE
             wrapper.visibility = View.VISIBLE
         } catch (error: Exception) {
@@ -192,6 +209,9 @@ object DisplayMessageTimeByAvatar : ClickableFeature(),
             var timeFormatInput by remember { mutableStateOf(timePattern) }
             var textSizeInputRaw by remember { mutableStateOf(textSize.toString()) }
             var textColorInput by remember { mutableStateOf(textColor) }
+            var rainbowInput by remember { mutableStateOf(rainbow) }
+            var rainbowStartInput by remember { mutableStateOf(rainbowStart) }
+            var rainbowEndInput by remember { mutableStateOf(rainbowEnd) }
 
             AlertDialogContent(
                 title = { Text(stringResource(R.string.feature_display_message_time_by_avatar_name)) },
@@ -226,6 +246,28 @@ object DisplayMessageTimeByAvatar : ClickableFeature(),
                                     onValueChange = { textColorInput = it },
                                 )
                             }
+                            item {
+                                MiuixSwitchWidget(
+                                    title = stringResource(R.string.rainbow_gradient),
+                                    summary = stringResource(R.string.rainbow_gradient_summary),
+                                    checked = rainbowInput,
+                                    onCheckedChange = { rainbowInput = it },
+                                )
+                            }
+                            item(animatedVisibility = rainbowInput) {
+                                MiuixColorPickerWidget(
+                                    title = stringResource(R.string.rainbow_color_start),
+                                    value = rainbowStartInput,
+                                    onValueChange = { rainbowStartInput = it },
+                                )
+                            }
+                            item(animatedVisibility = rainbowInput) {
+                                MiuixColorPickerWidget(
+                                    title = stringResource(R.string.rainbow_color_end),
+                                    value = rainbowEndInput,
+                                    onValueChange = { rainbowEndInput = it },
+                                )
+                            }
                         }
                     }
                 },
@@ -239,6 +281,9 @@ object DisplayMessageTimeByAvatar : ClickableFeature(),
                         timePattern = timeFormatInput.ifBlank { "HH:mm" }
                         textSize = textSizeInput
                         textColor = textColorInput
+                        rainbow = rainbowInput
+                        rainbowStart = rainbowStartInput
+                        rainbowEnd = rainbowEndInput
                         onDismiss()
                     }) { Text(stringResource(R.string.dialog_confirm)) }
                 },
