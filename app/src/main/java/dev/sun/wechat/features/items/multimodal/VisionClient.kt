@@ -7,7 +7,9 @@ import dev.sun.wechat.utils.WeLogger
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import okio.BufferedSink
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
@@ -29,6 +31,12 @@ object VisionClient {
     private const val MAX_RAW_BYTES = 1_400_000
     private const val MAX_EDGE = 1024
     private const val MAX_TOKENS = 200
+
+    /** 视频直传上限：整段 base64 会膨胀 4/3，再大中转站多半直接断流。 */
+    private const val MAX_VIDEO_BYTES = 10L * 1024 * 1024
+
+    /** 必须是 3 的倍数，否则分块编码会在每块末尾塞填充符，拼出来的 base64 是坏的。 */
+    private const val CHUNK_SIZE = 3 * 8192
 
     private val client by lazy {
         OkHttpClient.Builder()
@@ -80,6 +88,68 @@ object VisionClient {
             return parseContent(json).ifEmpty { throw IllegalStateException("接口没返回描述") }
         }
     }
+
+    /**
+     * 同步识别视频：整段 base64 塞不进内存，所以请求体是边读边写。
+     *
+     * 形状是 OpenAI 兼容的 `video_url` 分段：`prefix + base64(流式) + suffix`，
+     * 三段拼出一个完整 JSON 请求体，长度可预算所以能带上 Content-Length。
+     */
+    fun describeVideo(file: File, prompt: String): String {
+        if (!MultimodalEngine.visionReady()) throw IllegalStateException("未配置视觉接口")
+        if (!file.isFile || file.length() == 0L) throw IllegalStateException("视频文件不存在")
+        if (file.length() > MAX_VIDEO_BYTES) {
+            throw IllegalStateException("视频 ${file.length() / 1024 / 1024}MB 超过 10MB 上限")
+        }
+        val prefix = buildString {
+            append("{\"model\":").append(JSONObject.quote(modelName()))
+            append(",\"max_tokens\":").append(MAX_TOKENS)
+            append(",\"messages\":[{\"role\":\"user\",\"content\":[")
+            append("{\"type\":\"text\",\"text\":").append(JSONObject.quote(prompt)).append("},")
+            append("{\"type\":\"video_url\",\"video_url\":{\"url\":\"data:video/mp4;base64,")
+        }
+        val suffix = "\"}}]}]}"
+        val prefixBytes = prefix.toByteArray(Charsets.UTF_8)
+        val suffixBytes = suffix.toByteArray(Charsets.UTF_8)
+        val body = object : RequestBody() {
+            override fun contentType() = "application/json".toMediaType()
+
+            override fun contentLength(): Long =
+                prefixBytes.size.toLong() + base64Length(file.length()) + suffixBytes.size
+
+            override fun writeTo(sink: BufferedSink) {
+                sink.write(prefixBytes)
+                val buffer = ByteArray(CHUNK_SIZE)
+                file.inputStream().use { input ->
+                    while (true) {
+                        val read = input.read(buffer)
+                        if (read <= 0) break
+                        sink.writeUtf8(Base64.encodeToString(buffer, 0, read, Base64.NO_WRAP))
+                    }
+                }
+                sink.write(suffixBytes)
+                sink.flush()
+            }
+        }
+        val request = Request.Builder()
+            .url(endpoint())
+            .addHeader("Authorization", "Bearer ${MultimodalEngine.visionApiKey.trim()}")
+            .post(body)
+            .build()
+        val response = runCatching { client.newCall(request).execute() }.getOrElse {
+            WeLogger.w(TAG, "视频视觉请求失败：${it.message}")
+            throw IllegalStateException("网络失败：${it.message}")
+        }
+        response.use {
+            val text = it.body?.string().orEmpty()
+            if (!it.isSuccessful) throw IllegalStateException("接口返回 ${it.code}：${text.take(160)}")
+            val json = runCatching { JSONObject(text) }.getOrNull()
+                ?: throw IllegalStateException("返回不是 JSON：${text.take(120)}")
+            return parseContent(json).ifEmpty { throw IllegalStateException("接口没返回描述") }
+        }
+    }
+
+    private fun base64Length(size: Long): Long = ((size + 2) / 3) * 4
 
     /**
      * 从 `GET {base}/models` 拉模型列表（OpenAI 兼容接口的标准端点）。

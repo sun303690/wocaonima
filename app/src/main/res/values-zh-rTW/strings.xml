@@ -4317,6 +4317,8 @@
 
     <string name="smart_reply_context_limit">參考上下文條數（訊息）</string>
     <string name="smart_reply_count">生成備選數（條）</string>
+    <string name="smart_reply_media_context">辨識圖片和影片</string>
+    <string name="smart_reply_media_context_summary">生成回覆時，把最近訊息裡的圖片、貼圖、影片也讀成文字，一併交給模型參考。</string>
 
     <string name="smart_reply_style">語氣預設</string>
     <string name="smart_reply_tap_generate">選擇語氣預設，點擊生成回覆</string>

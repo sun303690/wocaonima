@@ -47,20 +47,25 @@ import dev.sun.wechat.features.api.core.models.MessageType
 import dev.sun.wechat.features.api.ui.WeChatMessageContextMenuApi
 import dev.sun.wechat.features.items.chat_mood.ReplyMessageSupport
 import dev.sun.wechat.features.items.chat_mood.VoiceReply
+import dev.sun.wechat.features.items.multimodal.MediaVision
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
 import dev.sun.wechat.ui.content.Button
 import dev.sun.wechat.ui.content.TextButton
 import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
+import dev.sun.wechat.ui.content.miuix.MiuixSwitchWidget
 import dev.sun.wechat.ui.utils.VectorPathDrawable
 import dev.sun.wechat.ui.utils.ShowComposeDialogScope
 import dev.sun.wechat.ui.utils.showComposeDialog
+import dev.sun.wechat.utils.HostInfo
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * 帮我回（原「智能回复」，并入情绪分析）：
@@ -76,6 +81,14 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
 
     private const val MENU_ID = 777042
 
+    private const val IMAGE_PROMPT = "请用中文一句话概括这张图片的内容，只输出概括结果。"
+    private const val STICKER_PROMPT = "请用中文一句话说明这个表情包想表达的情绪或意思，只输出结果。"
+    private const val ANIMATION_PROMPT = "这是一段动图的四连拍拼图，请用中文一句话概括这段动画在做什么，只输出结果。"
+    private const val VIDEO_PROMPT = "请用中文一句话概括这个视频的主要内容，只输出概括结果。"
+
+    /** 同一条消息的媒体识别结果在整个进程里只算一次（key = serverId-typeCode）。 */
+    private val mediaCache = ConcurrentHashMap<String, String>()
+
     private fun stylePromptKey(name: String) = "asr_style_prompt_$name"
 
     /** 风格提示词: 优先用户改过的, 否则内置默认 */
@@ -85,6 +98,9 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
             STYLES.firstOrNull { it.first == name }?.second ?: "",
         )
     var contextLimit by prefOption("ai_reply_context_limit", 10)
+
+    /** 生成回复时是否把历史窗口里的图片 / 表情 / 视频也读成文字，喂给模型当上下文。 */
+    var mediaContext by prefOption("ai_reply_media_context", false)
     var replyCount by prefOption("ai_reply_count", 20)
     private var lastSelectedStyle by prefOption("ai_reply_last_selected_style", "智能全能")
 
@@ -115,6 +131,7 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
     private fun ShowComposeDialogScope.SettingsDialogContent(context: android.content.Context) {
         var contextInput by remember { mutableStateOf(contextLimit.toString()) }
         var countInput by remember { mutableStateOf(replyCount.toString()) }
+        var mediaContextInput by remember { mutableStateOf(mediaContext) }
         AlertDialogContent(
             title = { Text(stringResource(R.string.feature_ai_smart_reply_name)) },
             text = {
@@ -144,6 +161,14 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
                                 )
                             }
                         }
+                        item {
+                            MiuixSwitchWidget(
+                                title = stringResource(R.string.smart_reply_media_context),
+                                checked = mediaContextInput,
+                                onCheckedChange = { mediaContextInput = it },
+                                summary = stringResource(R.string.smart_reply_media_context_summary),
+                            )
+                        }
                     }
                 }
             },
@@ -151,6 +176,7 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
                 Button(onClick = {
                     contextLimit = contextInput.toIntOrNull()?.coerceIn(1, 50) ?: 10
                     replyCount = countInput.toIntOrNull()?.coerceIn(1, 20) ?: 20
+                    mediaContext = mediaContextInput
                     onDismiss()
                 }) { Text(stringResource(R.string.dialog_confirm)) }
             },
@@ -362,16 +388,39 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
         // 文字用原文；语音用微信转写文本（没有则 [语音]）；表情用 [表情]
         ReplyMessageSupport.replyText(msg) ?: ""
 
-    private fun loadRecentContext(talker: String, limit: Int): String {
+    private suspend fun loadRecentContext(talker: String, limit: Int): String {
         if (talker.isEmpty()) return ""
         return try {
             val now = System.currentTimeMillis()
-            WeDatabaseApi.getMessagesInRange(talker, now - 7L * 86400000L, now)
-                .filter { it.content.isNotBlank() }
+            val rows = WeDatabaseApi.getMessagesInRange(talker, now - 7L * 86400000L, now)
+                .filter { it.content.isNotBlank() || MediaVision.isVisual(it.type) }
                 .takeLast(limit)
-                .joinToString("\n") { msg ->
-                    (if (msg.isSend != 0) "我：" else "对方：") + msg.content
+            val withMedia = mediaContext && MediaVision.available()
+            val cacheDir = File(HostInfo.application.cacheDir, "media-vision")
+            withContext(Dispatchers.IO) {
+                rows.joinToString("\n") { msg ->
+                    val head = if (msg.isSend != 0) "我：" else "对方："
+                    if (!withMedia || !MediaVision.isVisual(msg.type)) {
+                        head + msg.content
+                    } else {
+                        val label = msg.type?.displayName.orEmpty()
+                        val key = "${msg.msgSvrId}-${msg.typeCode}"
+                        var text = mediaCache[key]
+                        if (text == null) {
+                            text = MediaVision.describe(
+                                msg = msg,
+                                cacheDir = cacheDir,
+                                imagePrompt = IMAGE_PROMPT,
+                                stickerPrompt = STICKER_PROMPT,
+                                animationPrompt = ANIMATION_PROMPT,
+                                videoPrompt = VIDEO_PROMPT,
+                            ).orEmpty()
+                            mediaCache[key] = text
+                        }
+                        if (text.isBlank()) "$head[$label]" else "$head[$label 分析] $text"
+                    }
                 }
+            }
         } catch (e: Exception) {
             WeLogger.e(TAG, "load context failed", e); ""
         }
