@@ -3,7 +3,7 @@ package dev.sun.wechat.features.items.multimodal
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Movie
-import dev.sun.wechat.features.api.core.MessageType
+import dev.sun.wechat.features.api.core.models.MessageType
 import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.features.api.core.WeServiceApi
 import dev.sun.wechat.features.api.core.models.MessageInfo
