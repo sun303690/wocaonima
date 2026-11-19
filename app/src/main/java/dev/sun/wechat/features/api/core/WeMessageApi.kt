@@ -2879,4 +2879,103 @@ object WeMessageApi : ApiFeature(), IResolveDex {
         if (quoteMethod.parameterCount == 1) quoteMethod.invoke(chatFooter, msgInfoInstance)
         else quoteMethod.invoke(chatFooter, msgInfoInstance, null)
     }
+    sealed interface VideoSource {
+        /** 已经是可以直接读的本地文件 */
+        class Ready(val path: Path) : VideoSource
+
+        /** 文件在，但超过调用方给的上限 */
+        object TooLarge : VideoSource
+
+        /** 磁盘上没有，VFS 里也取不到 */
+        object Missing : VideoSource
+    }
+
+    /**
+     * 把视频消息的 mp4 解析成可读文件。
+     * 微信给的镜像路径和真文件位置常常不同：先按原路径与账号目录映射路径找，
+     * 都没有再用 VFS 流式拷贝到 [destination]（拷贝过程中按 [maxBytes] 截断）。
+     */
+    fun materializeVideoSource(rawPath: String, destination: Path, maxBytes: Long): VideoSource {
+        val candidates = videoPathCandidates(rawPath)
+        for (candidate in candidates) {
+            val file = File(candidate)
+            if (!file.isFile || file.length() <= 0L) continue
+            if (file.length() > maxBytes) return VideoSource.TooLarge
+            WeLogger.i(TAG, "video source: $candidate (${file.length()} bytes)")
+            return VideoSource.Ready(file.toPath())
+        }
+        for (candidate in candidates) {
+            val result = copyVideoFromVfs(candidate, destination, maxBytes)
+            if (result != null) return result
+        }
+        return VideoSource.Missing
+    }
+
+    /** 原路径 + 映射到账号目录后的路径（去重保序） */
+    private fun videoPathCandidates(rawPath: String): List<String> {
+        val candidates = linkedSetOf(rawPath)
+        val account = runCatching { accountDirectory() }.getOrNull()
+        val marker = "/MicroMsg/"
+        val index = rawPath.indexOf(marker)
+        if (account != null && index >= 0) {
+            // …/MicroMsg/<任意hash>/video/xx/yy/<name>.mp4 → <账号目录>/video/xx/yy/<name>.mp4
+            val rest = rawPath.substring(index + marker.length)
+            val slash = rest.indexOf('/')
+            if (slash > 0 && slash < rest.lastIndex) {
+                val relative = rest.substring(slash + 1)
+                runCatching { (account / relative).toFile().absolutePath }.getOrNull()?.let { candidates += it }
+            }
+        }
+        return candidates.toList()
+    }
+
+    /** files/MicroMsg/<32 位 hash> 里最近修改的账号目录 */
+    private fun accountDirectory(): Path? =
+        (HostInfo.application.filesDir.asPath.parent / "MicroMsg").listDirectoryEntries()
+            .filter { it.isDirectory() && it.fileName.toString().length == 32 }
+            .maxByOrNull { it.getLastModifiedTime().toMillis() }
+
+    /**
+     * 用微信 VFS 读流拷到 destination。
+     * @return Ready=已落盘，TooLarge=超限，null=VFS 里没有这个文件
+     */
+    private fun copyVideoFromVfs(source: String, destination: Path, maxBytes: Long): VideoSource? {
+        val input = runCatching {
+            vfsReadMethod.invoke(null, source) as? InputStream
+        }.getOrNull() ?: return null
+        var copied = 0L
+        var tooLarge = false
+        val target = destination.toFile()
+        try {
+            target.parentFile?.mkdirs()
+            input.use { stream ->
+                target.outputStream().use { output ->
+                    val buffer = ByteArray(64 * 1024)
+                    while (true) {
+                        val read = stream.read(buffer)
+                        if (read < 0) break
+                        copied += read
+                        if (copied > maxBytes) { tooLarge = true; break }
+                        output.write(buffer, 0, read)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            WeLogger.w(TAG, "video vfs copy failed: $source", e)
+            target.delete()
+            return null
+        }
+        if (tooLarge) {
+            target.delete()
+            return VideoSource.TooLarge
+        }
+        val written = target.length()
+        if (copied <= 0L || written != copied) {
+            WeLogger.w(TAG, "video vfs copy incomplete: $source copied=$copied written=$written")
+            target.delete()
+            return null
+        }
+        return VideoSource.Ready(destination)
+    }
+
 }

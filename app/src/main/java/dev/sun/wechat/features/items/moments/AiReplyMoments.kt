@@ -24,17 +24,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.sun.wechat.R
-import dev.sun.wechat.agent.data.WeAgentRepository
-import dev.sun.wechat.agent.model.LlmMessage
-import dev.sun.wechat.agent.model.LlmRole
-import dev.sun.wechat.agent.model.LlmStreamEvent
-import dev.sun.wechat.agent.model.ModelProviderManager
 import dev.sun.wechat.features.api.core.WeApi
 import dev.sun.wechat.features.api.core.WeDatabaseApi
 import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
 import dev.sun.wechat.features.api.ui.WeMomentsApi
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
+import dev.sun.wechat.features.items.multimodal.MultimodalEngine
+import dev.sun.wechat.features.items.multimodal.VisionClient
 import dev.sun.wechat.i18n.LocalWeKitLocalizedContext
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.ui.content.AlertDialogContent
@@ -62,7 +59,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
  *  - 检测朋友圈动态(SnsInfo 表 insert/update)；处理范围：刷到时处理 / 全部已加载内容
  *  - 名单模式：全部 / 白名单(仅回复选中) / 黑名单(跳过选中)，可配置联系人名单
  *  - 回复间隔(ms)、自动刷新朋友圈(固定间隔拉取并继续回复)
- *  - 用 WeAgent 模型库生成评论(系统提示词可自定义)，截断到最大评论长度
+ *  - 用多模态配置里的文本模型生成评论(系统提示词可自定义)，截断到最大评论长度
  *  - 通过 WeMomentsApi.comment() 发送(type=2 评论)
  */
 object AiReplyMoments : ClickableFeature(),
@@ -293,31 +290,16 @@ object AiReplyMoments : ClickableFeature(),
 
     private suspend fun generateComment(content: String): String = withContext(Dispatchers.IO) {
         try {
-            val modelId = WeAgentRepository.firstModelId() ?: return@withContext ""
-            val model = WeAgentRepository.getModel(modelId) ?: return@withContext ""
-            val provider = WeAgentRepository.getModelProvider(model.providerId) ?: return@withContext ""
-            val client = ModelProviderManager.clientFor(provider)
+            if (!MultimodalEngine.textUsable()) return@withContext ""
             val sysPrompt = prompt.ifBlank { DEFAULT_PROMPT }
             val userContent = if (content.isBlank()) {
                 "用户发了一条朋友圈（无文字内容），请生成一条合适的评论。"
             } else {
                 "朋友圈内容：$content"
             }
-            val messages = listOf(
-                LlmMessage(LlmRole.SYSTEM, sysPrompt),
-                LlmMessage(LlmRole.USER, userContent),
-            )
-            val request = ModelProviderManager.buildRequest(model, messages, emptyList(), stream = true)
-            val sb = StringBuilder()
-            client.stream(request).collect { event ->
-                when (event) {
-                    is LlmStreamEvent.TextDelta -> sb.append(event.text)
-                    is LlmStreamEvent.Completed -> if (sb.isEmpty()) { event.message.content?.let { sb.append(it) } }
-                    is LlmStreamEvent.Failed -> throw event.error
-                    else -> {}
-                }
-            }
-            sb.toString().trim().take(maxCommentLength.coerceIn(1, 2000))
+            VisionClient.streamChat(system = sysPrompt, user = userContent, maxTokens = 512)
+                .trim()
+                .take(maxCommentLength.coerceIn(1, 2000))
         } catch (e: Exception) {
             WeLogger.e(TAG, "generate comment failed", e)
             ""

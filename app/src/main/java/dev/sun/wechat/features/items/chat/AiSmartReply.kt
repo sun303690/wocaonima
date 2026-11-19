@@ -35,11 +35,6 @@ import androidx.compose.ui.unit.dp
 import com.composables.icons.materialsymbols.MaterialSymbols
 import com.composables.icons.materialsymbols.outlined.Auto_awesome
 import dev.sun.wechat.R
-import dev.sun.wechat.agent.data.WeAgentRepository
-import dev.sun.wechat.agent.model.LlmMessage
-import dev.sun.wechat.agent.model.LlmRole
-import dev.sun.wechat.agent.model.LlmStreamEvent
-import dev.sun.wechat.agent.model.ModelProviderManager
 import dev.sun.wechat.features.api.core.WeDatabaseApi
 import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.features.api.core.models.MessageInfo
@@ -48,6 +43,8 @@ import dev.sun.wechat.features.api.ui.WeChatMessageContextMenuApi
 import dev.sun.wechat.features.items.chat_mood.ReplyMessageSupport
 import dev.sun.wechat.features.items.chat_mood.VoiceReply
 import dev.sun.wechat.features.items.multimodal.MediaVision
+import dev.sun.wechat.features.items.multimodal.MultimodalEngine
+import dev.sun.wechat.features.items.multimodal.VisionClient
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.ui.content.AlertDialogContent
@@ -73,7 +70,7 @@ import java.util.concurrent.ConcurrentHashMap
  *  - 语气预设：智能全能/高情商/…/委婉拒绝
  *  - 关系预设：亲人/朋友/同事/恋人/长辈/弟弟妹妹/暗恋对象/暧昧对象
  *  - 参考上下文条数（默认10，取该会话最近N条）；生成备选数（默认20）
- *  AI 调用复用 WeAgent 模型库。不再作为独立开关，由情绪分析 UI 直接打开。
+ *  AI 调用走「多模态」设置里的文本模型（未配文本模型时退回视觉模型）。
  */
 object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
 
@@ -429,14 +426,14 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
     private suspend fun generateCandidates(talker: String, content: String, styleName: String, promptOverride: String? = null): Result<List<String>> =
         withContext(Dispatchers.IO) {
             try {
-                // 直接用 WeAgent 的默认模型（未设置则回退第一个模型）
-                val modelId = WeAgentRepository.resolvedDefaultModelId()
-                    ?: return@withContext Result.failure(IllegalStateException("没有配置模型，请先在 WeAgent 模型设置里添加服务商和模型"))
-                val model = WeAgentRepository.getModel(modelId)
-                    ?: return@withContext Result.failure(IllegalStateException("模型 $modelId 不存在，请在模型设置里重新添加"))
-                val provider = WeAgentRepository.getModelProvider(model.providerId)
-                    ?: return@withContext Result.failure(IllegalStateException("模型未绑定服务商，请在模型设置里检查"))
-                val client = ModelProviderManager.clientFor(provider)
+                // 模型统一取「多模态」设置里的纯文本模型（没配就退回视觉模型）
+                if (!MultimodalEngine.textUsable()) {
+                    return@withContext Result.failure(
+                        IllegalStateException(
+                            HostInfo.application.getString(R.string.ai_reply_err_multimodal_unset),
+                        ),
+                    )
+                }
 
                 val count = replyCount.coerceIn(1, 20)
                 val stylePrompt = promptOverride?.takeIf { it.isNotBlank() }
@@ -458,20 +455,13 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
                         append("请根据下面的最近聊天记录，生成${count}条我可以直接发送的回复。")
                         if (contextText.isNotBlank()) append("\n\n最近聊天记录：\n").append(contextText)
                     }
-                val messages = listOf(
-                    LlmMessage(LlmRole.SYSTEM, systemPrompt),
-                    LlmMessage(LlmRole.USER, userContent),
+                val sb = StringBuilder(
+                    VisionClient.streamChat(
+                        system = systemPrompt,
+                        user = userContent,
+                        maxTokens = 2048,
+                    ),
                 )
-                val request = ModelProviderManager.buildRequest(model, messages, emptyList(), stream = true)
-                val sb = StringBuilder()
-                client.stream(request).collect { event ->
-                    when (event) {
-                        is LlmStreamEvent.TextDelta -> sb.append(event.text)
-                        is LlmStreamEvent.Completed -> if (sb.isEmpty()) { event.message.content?.let { sb.append(it) } }
-                        is LlmStreamEvent.Failed -> throw event.error
-                        else -> {}
-                    }
-                }
                 Result.success(
                     sb.toString().lines().map { it.trim() }.filter { it.isNotEmpty() }
                         .filter { !it.matches(Regex("^\\d+[.、．]?.*")) }

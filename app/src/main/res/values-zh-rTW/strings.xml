@@ -4517,6 +4517,7 @@
     <string name="ai_reply_model_weagent_open">WeAgent 模型設定</string>
     <string name="ai_reply_model_weagent_hint">在 WeAgent 裡設定一次預設模型，所有 AI 功能共用</string>
     <string name="ai_reply_err_model_unset">WeAgent 裡沒有設定模型，請到 WeAgent 設定裡選一個預設模型</string>
+    <string name="ai_reply_err_multimodal_unset">請先在「多模態」設定裡填好介面位址、Key 和模型</string>
     <string name="ai_reply_no_text">這條消息沒有可回覆的文字</string>
     <string name="ai_reply_pick_another">換一條</string>
     <string name="ai_reply_pick_hint">點選一條候選即可編輯並傳送</string>
@@ -4639,4 +4640,6 @@
     <string name="ai_reply_tts_preview">試聽</string>
     <string name="pay_reply_red_packet_label">領取後回覆（一行一條，隨機發送）</string>
     <string name="pay_reply_transfer_label">收款後回覆內容（一行一條，隨機發送）</string>
+    <string name="mm_text_model">純文字模型</string>
+    <string name="mm_text_model_fallback">跟隨視覺模型</string>
 </resources>

@@ -33,12 +33,8 @@ import com.composables.icons.materialsymbols.outlined.Chevron_right
 import com.composables.icons.materialsymbols.outlined.Delete
 import com.composables.icons.materialsymbols.outlined.Save
 import dev.sun.wechat.R
-import dev.sun.wechat.agent.data.WeAgentRepository
-import dev.sun.wechat.agent.data.WeAgentSettings
 import dev.sun.wechat.agent.model.LlmMessage
 import dev.sun.wechat.agent.model.LlmRole
-import dev.sun.wechat.agent.model.LlmStreamEvent
-import dev.sun.wechat.agent.model.ModelProviderManager
 import dev.sun.wechat.features.api.core.WeDatabaseApi
 import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
 import dev.sun.wechat.features.api.core.WeMessageApi
@@ -46,6 +42,8 @@ import dev.sun.wechat.features.api.core.models.MessageInfo
 import dev.sun.wechat.features.api.core.models.MessageType
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
+import dev.sun.wechat.features.items.multimodal.MultimodalEngine
+import dev.sun.wechat.features.items.multimodal.VisionClient
 import dev.sun.wechat.features.items.multimodal.MultimodalEngine
 import dev.sun.wechat.features.items.multimodal.MultimodalFeature
 import dev.sun.wechat.data.KvStore
@@ -77,8 +75,6 @@ import kotlin.coroutines.resume
 import androidx.lifecycle.lifecycleScope
 import dev.sun.wechat.ui.utils.showComposeDialog
 import kotlin.time.Duration.Companion.milliseconds
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 
 /**
  * AI 聊天（移植 Nuke 的 `ai_chat` 模块）：让 AI 对名单内收到的每条文字消息进行连续对话回复。
@@ -434,7 +430,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                 lastFailure = reply.exceptionOrNull()?.message ?: "模型请求失败"
                 WeLogger.e(
                     TAG,
-                    "AI completion failed: talker=$talker, model=${WeAgentRepository.firstModelId()}, reason=${reply.exceptionOrNull()?.message}",
+                    "AI completion failed: talker=$talker, model=${MultimodalEngine.textModel}, reason=${reply.exceptionOrNull()?.message}",
                 )
                 return
             }
@@ -614,38 +610,27 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         return content.substring(0, index) to content.substring(index + 2)
     }
 
+    /**
+     * 模型统一取「多模态」设置里的文本模型；多轮上下文压成一段带说话人前缀的文本，
+     * system 单独发，保证 OpenAI 兼容服务端都能吃。
+     */
     private suspend fun requestModel(config: Config, messages: List<LlmMessage>): Result<String> = runCatching {
-        val modelId = WeAgentSettings.defaultModelId() ?: WeAgentRepository.firstModelId()
-            ?: error("no AI model configured")
-        val model = WeAgentRepository.getModel(modelId) ?: error("model not found: $modelId")
-        val provider = WeAgentRepository.getModelProvider(model.providerId)
-            ?: error("model provider not found: ${model.providerId}")
-        val client = ModelProviderManager.clientFor(provider)
-        val base = ModelProviderManager.buildRequest(
-            model = model,
-            messages = messages,
-            tools = emptyList(),
-            stream = true,
-        )
-        // Nuke 的 Temperature / 最大输出 Tokens 是显式配置项：maxTokens 是 LlmRequest 字段，
-        // temperature 各客户端靠 LlmJson.shallowMerge(customJsonOverride) 透传，这里合并到覆盖里。
-        val override = buildJsonObject {
-            base.customJsonOverride?.forEach { (key, value) -> put(key, value) }
-            put("temperature", config.temperature)
-        }
-        val request = base.copy(maxTokens = config.maxTokens, customJsonOverride = override)
-        val builder = StringBuilder()
-        client.stream(request).collect { event ->
-            when (event) {
-                is LlmStreamEvent.TextDelta -> builder.append(event.text)
-                is LlmStreamEvent.Completed -> if (builder.isEmpty()) {
-                    event.message.content?.let { builder.append(it) }
-                }
-                is LlmStreamEvent.Failed -> throw event.error
-                else -> {}
+        if (!MultimodalEngine.textUsable()) error("no text model configured")
+        val systemText = messages.lastOrNull { it.role == LlmRole.SYSTEM }?.content
+        val dialogue = messages
+            .filter { it.role != LlmRole.SYSTEM }
+            .joinToString("\n") { message ->
+                val speaker = if (message.role == LlmRole.ASSISTANT) "我" else "对方"
+                "$speaker：${message.content}"
             }
+        withContext(Dispatchers.IO) {
+            VisionClient.streamChat(
+                system = systemText,
+                user = dialogue,
+                maxTokens = config.maxTokens,
+                temperature = config.temperature,
+            )
         }
-        builder.toString()
     }
 
     private fun pruneHandledIds() {
@@ -955,7 +940,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                                 append("消息 Hook: ")
                                 append(if (WeMessageApi.methodMsgInfoStorageInsertMessage.isAvailable) "可用" else "不可用")
                                 append(" · 模型: ")
-                                append("请在 WeAgent 模型设置中检查")
+                                append(if (MultimodalEngine.textUsable()) MultimodalEngine.textModel.ifBlank { MultimodalEngine.visionModel } else "请先在多模态设置里填地址、Key 和模型")
                                 append("\n收件: ").append(if (lastReceiveAt == 0L) "暂无" else java.util.Date(lastReceiveAt))
                                 append(" · 发送: ").append(if (lastSendAt == 0L) "暂无" else java.util.Date(lastSendAt))
                                 append("\n处理中: ").append(inFlight.size)

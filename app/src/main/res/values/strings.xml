@@ -4508,6 +4508,7 @@
     <string name="ai_reply_model_weagent_open">WeAgent model settings</string>
     <string name="ai_reply_model_weagent_hint">Set the default model once in WeAgent; all AI features share it</string>
     <string name="ai_reply_err_model_unset">No model configured in WeAgent. Open WeAgent settings and pick a default model.</string>
+    <string name="ai_reply_err_multimodal_unset">Fill in the endpoint, API key and model in Multimodal settings first.</string>
     <string name="ai_reply_no_text">This message has no text to reply to</string>
     <string name="ai_reply_pick_another">Change one</string>
     <string name="ai_reply_pick_hint">Pick a candidate to edit it and send</string>
@@ -4626,4 +4627,6 @@
     <string name="mm_back">‹ Back</string>
     <string name="pay_reply_red_packet_label">Reply after claiming (one per line, random)</string>
     <string name="pay_reply_transfer_label">Reply after accepting (one per line, random)</string>
+    <string name="mm_text_model">Text model</string>
+    <string name="mm_text_model_fallback">Follow the vision model</string>
 </resources>

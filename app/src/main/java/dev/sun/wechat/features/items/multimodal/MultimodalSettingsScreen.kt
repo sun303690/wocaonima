@@ -323,6 +323,9 @@ private fun VisionApiContent() {
     var result by remember { mutableStateOf("") }
     var showModels by remember { mutableStateOf(false) }
     var custom by remember { mutableStateOf("") }
+    // 同一个选择对话框服务两个字段：视觉模型 / 纯文本模型
+    var pickingText by remember { mutableStateOf(false) }
+    var textModel by remember { mutableStateOf(MultimodalEngine.textModel) }
     var models by remember { mutableStateOf<List<String>>(emptyList()) }
     var loading by remember { mutableStateOf(false) }
     var modelError by remember { mutableStateOf("") }
@@ -376,6 +379,7 @@ private fun VisionApiContent() {
                 },
                 // 点开就拉：不靠用户再点一次「获取模型列表」
                 onClick = {
+                    pickingText = false
                     showModels = true
                     refreshModels()
                 },
@@ -390,6 +394,19 @@ private fun VisionApiContent() {
                     else -> "${models.size} 个可用"
                 },
                 onClick = { refreshModels() },
+            )
+        }
+
+        MiuixSettingsSectionTitle(stringResource(R.string.mm_text_model))
+        MiuixSettingsCard {
+            MiuixSettingsAction(
+                title = stringResource(R.string.mm_text_model),
+                summary = textModel.ifBlank { stringResource(R.string.mm_text_model_fallback) },
+                onClick = {
+                    pickingText = true
+                    showModels = true
+                    refreshModels()
+                },
             )
         }
 
@@ -424,7 +441,12 @@ private fun VisionApiContent() {
     if (showModels) {
         MiuixAlertDialog(
             onDismissRequest = { showModels = false },
-            title = { Text(stringResource(R.string.mm_model_pick), fontSize = 17.sp) },
+            title = {
+                Text(
+                    stringResource(if (pickingText) R.string.mm_text_model else R.string.mm_model_pick),
+                    fontSize = 17.sp,
+                )
+            },
             text = {
                 Column {
                     // 只列接口给的模型；内置预设已去掉，没拉到就提示去拉或手填
@@ -442,15 +464,21 @@ private fun VisionApiContent() {
                             modifier = Modifier.padding(bottom = 6.dp),
                         )
                     }
+                    val currentPick = if (pickingText) textModel else model
                     models.forEach { preset ->
                         Text(
-                            text = if (preset == model) "✓ $preset" else preset,
+                            text = if (preset == currentPick) "✓ $preset" else preset,
                             fontSize = 15.sp,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    model = preset
-                                    MultimodalEngine.visionModel = preset
+                                    if (pickingText) {
+                                        textModel = preset
+                                        MultimodalEngine.textModel = preset
+                                    } else {
+                                        model = preset
+                                        MultimodalEngine.visionModel = preset
+                                    }
                                     showModels = false
                                 }
                                 .padding(vertical = 7.dp),
@@ -469,8 +497,13 @@ private fun VisionApiContent() {
                 Button(onClick = {
                     val picked = custom.trim()
                     if (picked.isNotEmpty()) {
-                        model = picked
-                        MultimodalEngine.visionModel = picked
+                        if (pickingText) {
+                            textModel = picked
+                            MultimodalEngine.textModel = picked
+                        } else {
+                            model = picked
+                            MultimodalEngine.visionModel = picked
+                        }
                     }
                     showModels = false
                 }) { Text(stringResource(R.string.mm_confirm)) }

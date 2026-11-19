@@ -269,6 +269,84 @@ object VisionClient {
         }
     }
 
+    /**
+     * 用「多模态配置」里的同一套地址 / Key / 模型做一次纯文本对话，
+     * 走 OpenAI 兼容的 /chat/completions（非流式），供 AI 回复这类不需要图片的调用复用。
+     */
+    fun completeText(system: String?, user: String, maxTokens: Int = 1024): String {
+        val payload = JSONObject()
+            .put("model", textModelName())
+            .put("max_tokens", maxTokens)
+            .put("stream", false)
+            .put("messages", messagesOf(system, user))
+        client.newCall(request(payload)).execute().use { response ->
+            val body = response.body?.string().orEmpty()
+            if (!response.isSuccessful) {
+                throw IllegalStateException("接口返回 ${response.code}：${body.take(160)}")
+            }
+            val json = runCatching { JSONObject(body) }.getOrNull()
+                ?: throw IllegalStateException("返回不是 JSON：${body.take(120)}")
+            return parseContent(json)
+        }
+    }
+
+    /**
+     * 流式对话：同样走「多模态配置」里的地址 / Key / 文本模型，
+     * 逐块回调增量文本，返回完整结果。供智能回复、群聊分析这类需要打字机效果的调用复用。
+     * 必须在 IO 线程调用（内部是同步阻塞读取）。
+     */
+    fun streamChat(
+        system: String?,
+        user: String,
+        maxTokens: Int = 2048,
+        temperature: Double? = null,
+        onDelta: (String) -> Unit = {},
+    ): String {
+        val payload = JSONObject()
+            .put("model", textModelName())
+            .put("max_tokens", maxTokens)
+            .put("stream", true)
+            .put("messages", messagesOf(system, user))
+            .apply { if (temperature != null) put("temperature", temperature) }
+        client.newCall(request(payload)).execute().use { response ->
+            if (!response.isSuccessful) {
+                val detail = response.body?.string().orEmpty().take(160)
+                throw IllegalStateException("接口返回 ${response.code}：$detail")
+            }
+            val source = response.body?.source() ?: throw IllegalStateException("返回内容为空")
+            val text = StringBuilder()
+            while (true) {
+                val line = source.readUtf8Line() ?: break
+                if (line.isBlank() || !line.startsWith("data:")) continue
+                val data = line.removePrefix("data:").trim()
+                if (data.isEmpty()) continue
+                if (data == "[DONE]") break
+                val json = runCatching { JSONObject(data) }.getOrNull() ?: continue
+                val delta = json.optJSONArray("choices")
+                    ?.optJSONObject(0)
+                    ?.optJSONObject("delta")
+                    ?: continue
+                val piece = delta.optString("content")
+                if (piece.isEmpty()) continue
+                text.append(piece)
+                onDelta(piece)
+            }
+            return text.toString()
+        }
+    }
+
+    private fun messagesOf(system: String?, user: String): JSONArray = JSONArray().apply {
+        if (!system.isNullOrBlank()) {
+            put(JSONObject().put("role", "system").put("content", system))
+        }
+        put(JSONObject().put("role", "user").put("content", user))
+    }
+
+    /** 纯文字任务优先用文本模型，没配就退回视觉模型。 */
+    private fun textModelName(): String = MultimodalEngine.textModel.trim()
+        .ifBlank { MultimodalEngine.visionModel.trim() }
+        .ifBlank { throw IllegalStateException("还没选文本模型") }
+
     private fun modelName(): String =
         MultimodalEngine.visionModel.trim().ifBlank { throw IllegalStateException("还没选视觉模型") }
 

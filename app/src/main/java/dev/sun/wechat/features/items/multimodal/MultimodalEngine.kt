@@ -42,6 +42,9 @@ object MultimodalEngine {
     var visionApiKey by prefOption("mm_vision_api_key", "")
     var visionModel by prefOption("mm_vision_model", "")
 
+    /** AI 回复这类纯文字场景用的模型；留空则退回视觉模型。 */
+    var textModel by prefOption("mm_text_model", "")
+
     private const val IMAGE_PROMPT =
         "用一句中文描述这张图片的内容。如果图里有文字，把关键文字也说出来。不超过 60 字。"
     private const val STICKER_PROMPT =
@@ -86,6 +89,10 @@ object MultimodalEngine {
 
     /** 地址、Key、模型都齐了才算能真正发请求；缺一个后台线程就别起。 */
     fun visionUsable(): Boolean = visionReady() && visionModel.isNotBlank()
+
+    /** 纯文字任务可用：地址 + Key 齐了，且填了文本模型（没填退回视觉模型也算）。 */
+    fun textUsable(): Boolean =
+        visionReady() && (textModel.isNotBlank() || visionModel.isNotBlank())
 
     /**
      * 取一条消息的多模态文本（只读缓存，不联网）。

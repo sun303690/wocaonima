@@ -43,17 +43,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.composables.icons.materialsymbols.MaterialSymbols
 import com.composables.icons.materialsymbols.outlined.Auto_awesome
-import dev.sun.wechat.agent.data.WeAgentRepository
-import dev.sun.wechat.agent.data.WeAgentSettings
-import dev.sun.wechat.agent.model.LlmMessage
-import dev.sun.wechat.agent.model.LlmRole
-import dev.sun.wechat.agent.model.LlmStreamEvent
-import dev.sun.wechat.agent.model.ModelProviderManager
 import dev.sun.wechat.features.api.core.WeDatabaseApi
 import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.features.api.core.models.MessageInfo
 import dev.sun.wechat.features.api.core.models.MessageType
 import dev.sun.wechat.features.api.core.models.WeMessage
+import dev.sun.wechat.features.items.multimodal.MultimodalEngine
+import dev.sun.wechat.features.items.multimodal.VisionClient
+import dev.sun.wechat.utils.HostInfo
 import dev.sun.wechat.features.api.ui.WeChatMessageContextMenuApi
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature
@@ -716,10 +713,8 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
             val groupName = runCatching { WeDatabaseApi.getDisplayName(talker) }.getOrDefault(talker)
             val reportData = buildReportData(messages, membersMap, groupName)
 
-            // 配置了 WeAgent 模型时，用 AI 生成智能群聊洞察
-            val defaultModelId = WeAgentSettings.defaultModelId()
-                ?: WeAgentRepository.firstModelId()
-            if (defaultModelId != null) {
+            // 多模态配置里填了文本模型时，用 AI 生成智能群聊洞察
+            if (MultimodalEngine.textUsable()) {
                 val insight = aiGenerateReport(messages, membersMap, talker, reportData.toStatsText(), depth)
                 reportData.copy(aiInsight = insight)
             } else {
@@ -829,14 +824,11 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
         statsReport: String,
         depth: Int = 2,
     ): String {
-        val modelId = WeAgentSettings.defaultModelId()
-            ?: WeAgentRepository.firstModelId()
-            ?: throw IllegalStateException("未配置AI模型，请先在WeAgent设置中添加模型")
-        val model = WeAgentRepository.getModel(modelId)
-            ?: throw IllegalStateException("未找到模型: $modelId")
-        val provider = WeAgentRepository.getModelProvider(model.providerId)
-            ?: throw IllegalStateException("未找到模型提供者: ${model.providerId}")
-        val client = ModelProviderManager.clientFor(provider)
+        if (!MultimodalEngine.textUsable()) {
+            throw IllegalStateException(
+                HostInfo.application.getString(R.string.ai_reply_err_multimodal_unset),
+            )
+        }
 
         // 最近聊天片段（最多 30 条）
         val recentLines = messages.takeLast(30).joinToString("\n") { msg ->
@@ -847,35 +839,11 @@ object GroupChatSummary : SwitchFeature(), WeChatMessageContextMenuApi.IMenuItem
 
         val (systemPrompt, userPrompt) = buildAnalysisPrompt(depth, statsReport, recentLines)
 
-        val messages2 = listOf(
-            LlmMessage(role = LlmRole.SYSTEM, content = systemPrompt),
-            LlmMessage(role = LlmRole.USER, content = userPrompt),
+        val reportContent = VisionClient.streamChat(
+            system = systemPrompt,
+            user = userPrompt,
+            maxTokens = 4096,
         )
-
-        val request = ModelProviderManager.buildRequest(
-            model = model,
-            messages = messages2,
-            tools = emptyList(),
-            stream = true,
-        )
-
-        var reportContent = ""
-        client.stream(request).collect { event ->
-            when (event) {
-                is LlmStreamEvent.TextDelta -> {
-                    reportContent += event.text
-                }
-                is LlmStreamEvent.Completed -> {
-                    if (reportContent.isBlank()) {
-                        reportContent = event.message.content ?: ""
-                    }
-                }
-                is LlmStreamEvent.Failed -> {
-                    throw event.error
-                }
-                else -> {}
-            }
-        }
 
         val trimmed = reportContent.trim()
         if (trimmed.isBlank()) {

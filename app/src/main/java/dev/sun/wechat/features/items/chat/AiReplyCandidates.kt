@@ -1,6 +1,5 @@
 package dev.sun.wechat.features.items.chat
 
-import android.content.Intent
 
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
@@ -63,19 +62,14 @@ import com.composables.icons.materialsymbols.outlined.Keyboard_arrow_down
 import com.composables.icons.materialsymbols.outlined.Settings
 import com.composables.icons.materialsymbols.outlined.Tune
 import dev.sun.wechat.R
-import dev.sun.wechat.activity.agent.WeAgentSettingsActivity
-import dev.sun.wechat.agent.data.WeAgentRepository
-import dev.sun.wechat.agent.model.LlmMessage
-import dev.sun.wechat.agent.model.LlmRole
-import dev.sun.wechat.agent.model.LlmStreamEvent
-import dev.sun.wechat.agent.model.ModelProviderManager
 import dev.sun.wechat.features.api.core.WeDatabaseApi
 import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.features.api.ui.WeChatMessageContextMenuApi
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
-import dev.sun.wechat.features.items.chat_mood.AgentLlm
 import dev.sun.wechat.features.items.chat_mood.ReplyMessageSupport
+import dev.sun.wechat.features.items.multimodal.MultimodalEngine
+import dev.sun.wechat.features.items.multimodal.VisionClient
 import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.data.KvStore.prefOption
 import dev.sun.wechat.utils.BreezeTtsClient
@@ -953,17 +947,7 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
     @Composable
     private fun ShowComposeDialogScope.ApiSettingsContent(onTtsChanged: (Boolean) -> Unit) {
         val scope = rememberCoroutineScope()
-        // 模型改由 WeAgent 统一管理，这里只展示当前默认模型
-        var weagentModelLabel by remember { mutableStateOf("") }
-        LaunchedEffect(Unit) {
-            weagentModelLabel = withContext(Dispatchers.IO) {
-                runCatching {
-                    val id = WeAgentRepository.resolvedDefaultModelId()
-                    val model = id?.let { WeAgentRepository.getModel(it) }
-                    model?.displayName?.takeIf { it.isNotBlank() } ?: model?.modelIdRemote.orEmpty()
-                }.getOrDefault("")
-            }
-        }
+        // 模型统一由「多模态配置」提供，长按菜单里不再单独放模型入口
         var testing by remember { mutableStateOf(false) }
         var testOutcome by remember { mutableStateOf<Boolean?>(null) }
         var testError by remember { mutableStateOf<String?>(null) }
@@ -1029,30 +1013,6 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState()),
                 ) {
-                    SegmentedColumn(title = stringResource(R.string.ui_group_ai_settings_title)) {
-                        item {
-                            BaseWidget(
-                                iconPlaceholder = false,
-                                title = stringResource(R.string.ai_reply_model_row_title),
-                                description = weagentModelLabel.ifBlank {
-                                    stringResource(R.string.ai_reply_model_weagent_none)
-                                },
-                            )
-                        }
-                        item {
-                            BaseWidget(
-                                iconPlaceholder = false,
-                                title = stringResource(R.string.ai_reply_model_weagent_open),
-                                description = stringResource(R.string.ai_reply_model_weagent_hint),
-                                onClick = {
-                                    context.startActivity(
-                                        Intent(context, WeAgentSettingsActivity::class.java),
-                                    )
-                                },
-                            )
-                        }
-                    }
-
                     testOutcome?.let { ok ->
                         Text(
                             text = if (ok) {
@@ -1263,12 +1223,10 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                         testError = null
                         scope.launch {
                             val result = runCatching {
-                                val modelId = WeAgentRepository.resolvedDefaultModelId()
-                                    ?: error(localizedChatString(R.string.ai_reply_err_model_unset))
-                                val reply = AgentLlm.completeWithPrompts(
-                                    modelId = modelId,
+                                val reply = VisionClient.completeText(
                                     system = "你是连通性测试助手，只回一句很短的话。",
                                     user = "ping",
+                                    maxTokens = 32,
                                 )
                                 check(reply.isNotBlank()) { "模型没有返回内容" }
                             }
@@ -1304,13 +1262,10 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
         style: String,
         stylePrompt: String,
     ): List<String> = withContext(Dispatchers.IO) {
-        // 回复候选统一走 WeAgent 模型库：默认模型在「WeAgent 模型设置」里配一次，所有 AI 功能共用
-        val modelId = WeAgentRepository.resolvedDefaultModelId()
-            ?: error(localizedChatString(R.string.ai_reply_err_model_unset))
-        val model = WeAgentRepository.getModel(modelId)
-            ?: error(localizedChatString(R.string.ai_reply_err_model_unset))
-        val provider = WeAgentRepository.getModelProvider(model.providerId)
-            ?: error(localizedChatString(R.string.ai_reply_err_model_unset))
+        // 模型统一取「多模态配置」里的地址 / Key / 模型，不再单独维护一套
+        if (!MultimodalEngine.textUsable()) {
+            error(localizedChatString(R.string.ai_reply_err_multimodal_unset))
+        }
 
         val count = candidateCount.coerceIn(1, MAX_CANDIDATES)
         // 界面可以展开看全文，送进模型的只取前 MAX_SOURCE_CHARS 字，并在提示词里说明
@@ -1331,28 +1286,11 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
             }
         }
 
-        val request = ModelProviderManager.buildRequest(
-            model = model,
-            messages = listOf(
-                LlmMessage(role = LlmRole.SYSTEM, content = systemPrompt),
-                LlmMessage(
-                    role = LlmRole.USER,
-                    content = "对方说：$sourceForModel\n\n请生成${count}条回复：",
-                ),
-            ),
-            tools = emptyList(),
-            stream = true,
+        val text = VisionClient.completeText(
+            system = systemPrompt,
+            user = "对方说：$sourceForModel\n\n请生成${count}条回复：",
+            maxTokens = 2048,
         )
-
-        var text = ""
-        ModelProviderManager.clientFor(provider).stream(request).collect { event ->
-            when (event) {
-                is LlmStreamEvent.TextDelta -> text += event.text
-                is LlmStreamEvent.Completed -> if (text.isBlank()) text = event.message.content.orEmpty()
-                is LlmStreamEvent.Failed -> throw event.error
-                else -> Unit
-            }
-        }
         parseNumbered(text).take(count)
     }
 
