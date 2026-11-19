@@ -42,7 +42,6 @@ import dev.sun.wechat.features.api.core.models.MessageInfo
 import dev.sun.wechat.features.api.core.models.MessageType
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
-import dev.sun.wechat.features.items.multimodal.MultimodalEngine
 import dev.sun.wechat.features.items.multimodal.VisionClient
 import dev.sun.wechat.features.items.multimodal.MultimodalEngine
 import dev.sun.wechat.features.items.multimodal.MultimodalFeature
@@ -628,7 +627,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                 system = systemText,
                 user = dialogue,
                 maxTokens = config.maxTokens,
-                temperature = config.temperature,
+                temperature = config.temperature.toDouble(),
             )
         }
     }

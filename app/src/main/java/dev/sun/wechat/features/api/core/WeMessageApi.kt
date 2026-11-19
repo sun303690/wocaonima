@@ -60,6 +60,7 @@ import org.luckypray.dexkit.DexKitBridge
 import org.luckypray.dexkit.query.matchers.base.AccessFlagsMatcher
 import org.luckypray.dexkit.result.FieldUsingType
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 import java.lang.reflect.Constructor
