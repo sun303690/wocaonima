@@ -498,6 +498,7 @@ private fun VisionApiContent() {
             },
         )
     }
+}
 
 /** 纯文本接口页：地址 / Key / 模型全部独立配置，不与「视觉接口」页共用。
  *  例：文字走 A 家的 deepseek-chat，视觉走 B 家的 qwen-vl，互不影响。 */
@@ -655,5 +656,4 @@ private fun TextApiContent() {
             },
         )
     }
-}
 }
