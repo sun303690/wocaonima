@@ -39,6 +39,7 @@ import dev.sun.wechat.features.api.core.WeDatabaseApi
 import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.features.api.core.models.MessageInfo
 import dev.sun.wechat.features.api.core.models.MessageType
+import dev.sun.wechat.features.api.core.models.WeMessage
 import dev.sun.wechat.features.api.ui.WeChatMessageContextMenuApi
 import dev.sun.wechat.features.items.chat_mood.ReplyMessageSupport
 import dev.sun.wechat.features.items.chat_mood.VoiceReply
@@ -85,6 +86,9 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
 
     /** 同一条消息的媒体识别结果在整个进程里只算一次（key = serverId-typeCode）。 */
     private val mediaCache = ConcurrentHashMap<String, String>()
+
+    /** 一轮上下文里最多现场转写几条语音；命中 ASR 缓存的不算。 */
+    private const val MAX_LIVE_VOICE_TRANSCRIPTS = 1
 
     private fun stylePromptKey(name: String) = "asr_style_prompt_$name"
 
@@ -195,6 +199,21 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
     }
 
     private fun showSmartReplyDialog(activity: Activity, msgInfo: MessageInfo) {
+        // 视频消息：先抽帧识别画面内容，再拿识别结果生成回复（识别不到就退回 [视频] 占位）
+        val replyType = msgInfo.type
+        val isVideoReply = replyType?.code == MessageType.VIDEO.code ||
+            replyType?.code == MessageType.MICRO_VIDEO.code
+        if (isVideoReply && MediaVision.available()) {
+            showToast(activity, "正在识别视频…")
+            Thread {
+                val described = describeRepliedVideo(msgInfo)
+                activity.runOnUiThread {
+                    val text = if (described.isNullOrBlank()) msgMessageText(msgInfo) else "视频内容：$described"
+                    openSmartReplyDialog(activity, msgInfo, text)
+                }
+            }.start()
+            return
+        }
         // 语音消息：微信自带转写拿不到时，先用模块接的 ASR 识别，再拿识别结果生成回复
         val isVoice = msgInfo.type?.code == MessageType.VOICE.code
         val needAsr = isVoice && ReplyMessageSupport.voiceTranscript(msgInfo).isNullOrBlank() &&
@@ -231,7 +250,7 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
     override fun getMenuItems(): List<WeChatMessageContextMenuApi.MenuItem> = listOf(
         WeChatMessageContextMenuApi.MenuItem(
             id = MENU_ID,
-            text = "帮我回",
+            text = "AI 代回",
             drawable = AiSmartReplyIcon,
             imageVector = MaterialSymbols.Outlined.Auto_awesome,
             // 文字、语音、表情包都可以 AI 回复
@@ -381,6 +400,29 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
         )
     }
 
+    /** 被回复的这条是视频：交给 MediaVision 抽帧识别，失败返回 null。 */
+    private fun describeRepliedVideo(msg: MessageInfo): String? = runCatching {
+        MediaVision.describe(
+            msg = WeMessage(
+                msgId = 0L,
+                msgSvrId = msg.serverId,
+                talker = msg.talker,
+                content = "",
+                typeCode = msg.type?.code ?: MessageType.VIDEO.code,
+                createTime = 0L,
+                isSend = 0,
+                imgPath = null,
+            ),
+            cacheDir = File(HostInfo.application.cacheDir, "media-vision"),
+            imagePrompt = IMAGE_PROMPT,
+            stickerPrompt = STICKER_PROMPT,
+            animationPrompt = ANIMATION_PROMPT,
+            videoPrompt = VIDEO_PROMPT,
+        )
+    }
+        .onFailure { WeLogger.w(TAG, "describe replied video failed: ${it.message}") }
+        .getOrNull()
+
     private fun msgMessageText(msg: MessageInfo): String =
         // 文字用原文；语音用微信转写文本（没有则 [语音]）；表情用 [表情]
         ReplyMessageSupport.replyText(msg) ?: ""
@@ -390,14 +432,34 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
         return try {
             val now = System.currentTimeMillis()
             val rows = WeDatabaseApi.getMessagesInRange(talker, now - 7L * 86400000L, now)
-                .filter { it.content.isNotBlank() || MediaVision.isVisual(it.type) }
+                .filter {
+                    it.content.isNotBlank() ||
+                        MediaVision.isVisual(it.type) ||
+                        it.typeCode == MessageType.VOICE.code
+                }
                 .takeLast(limit)
             val withMedia = mediaContext && MediaVision.available()
             val cacheDir = File(HostInfo.application.cacheDir, "media-vision")
             withContext(Dispatchers.IO) {
+                var liveVoiceBudget = MAX_LIVE_VOICE_TRANSCRIPTS
+                // 语音消息的 content 是 voicemsg XML，直接拼进上下文只会污染提示词，改成缓存转写或现场识别。
+                fun voiceLine(msg: WeMessage): String {
+                    val path = msg.imgPath
+                    if (path.isNullOrBlank() || !AsrEngine.ready()) return "[语音]"
+                    val cached = runCatching { AsrEngine.cachedTranscript(path) }.getOrNull()
+                    if (!cached.isNullOrBlank()) return "[语音] $cached"
+                    if (!withMedia || liveVoiceBudget <= 0) return "[语音]"
+                    liveVoiceBudget--
+                    val fresh = runCatching { AsrEngine.transcriptForContext(path) }
+                        .onFailure { WeLogger.w(TAG, "voice transcript for context failed: ${it.message}") }
+                        .getOrNull()
+                    return if (fresh.isNullOrBlank()) "[语音]" else "[语音] $fresh"
+                }
                 rows.joinToString("\n") { msg ->
                     val head = if (msg.isSend != 0) "我：" else "对方："
-                    if (!withMedia || !MediaVision.isVisual(msg.type)) {
+                    if (msg.typeCode == MessageType.VOICE.code) {
+                        head + voiceLine(msg)
+                    } else if (!withMedia || !MediaVision.isVisual(msg.type)) {
                         head + msg.content
                     } else {
                         val label = msg.type?.displayName.orEmpty()
