@@ -132,7 +132,7 @@ object VisionClient {
             }
         }
         val request = Request.Builder()
-            .url(endpoint())
+            .url(endpoint(MultimodalEngine.visionBaseUrl))
             .addHeader("Authorization", "Bearer ${MultimodalEngine.visionApiKey.trim()}")
             .post(body)
             .build()
