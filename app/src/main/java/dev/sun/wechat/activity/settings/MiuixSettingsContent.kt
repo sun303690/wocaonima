@@ -9,6 +9,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -487,11 +489,71 @@ private fun MiuixFeatureRow(feature: BaseFeature, changed: () -> Unit) {
             (feature as? SwitchFeature)?.defaultEnabled == true,
         )
     }
+    var showPanel by remember(feature.technicalId) { mutableStateOf(false) }
     // 页面外壳已给 16dp 左右边距，这里不再叠加，避免卡片越缩越窄。
     Column(Modifier.fillMaxWidth()) {
         MiuixBaseItemContainer {
-            FeatureRow(item = feature, checked = checked, onCheckedChange = { changed() })
-            feature.Ui()
+            FeatureRow(
+                item = feature,
+                checked = checked,
+                onCheckedChange = { changed() },
+                onRowClick = { showPanel = true },
+            )
+        }
+    }
+    if (showPanel) MiuixFeaturePanel(feature) { showPanel = false }
+}
+
+/**
+ * 点功能行弹出的设置面板，内容是该功能自带的 [BaseFeature.Ui]。
+ *
+ * 不用 Miuix 的 OverlayDialog：它只有在 Miuix Scaffold 提供的 popup host 里才会渲染，
+ * 设置页是普通 LazyColumn、没有 host，弹窗会静默不显示，所以这里用平台 Dialog。
+ */
+@Composable
+private fun MiuixFeaturePanel(feature: BaseFeature, onDismiss: () -> Unit) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        val palette = LocalIosGroupedPalette.current
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(IosGrouped.cardRadius))
+                .background(palette.card),
+        ) {
+            Text(
+                stringResource(feature.nameRes),
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
+                color = palette.labelPrimary,
+            )
+            IosDivider(startInset = 20.dp)
+            // 功能自带设置项可能是任意长度，限定最大高度并允许滚动，避免弹窗顶出屏幕。
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 460.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+            ) {
+                feature.Ui()
+            }
+            IosDivider(startInset = 20.dp)
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { onDismiss() }
+                    .defaultMinSize(minHeight = IosGrouped.rowMinHeight)
+                    .padding(horizontal = 20.dp, vertical = 13.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(android.R.string.ok),
+                    fontSize = 16.sp,
+                    color = palette.accent,
+                )
+            }
         }
     }
 }

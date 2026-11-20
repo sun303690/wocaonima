@@ -1,9 +1,11 @@
 package dev.sun.wechat.activity.settings
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -13,11 +15,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,6 +40,7 @@ import dev.sun.wechat.features.core.featureCategoryComparator
 import dev.sun.wechat.i18n.LocalWeKitLocalizedContext
 import dev.sun.wechat.i18n.WeKitLocaleController
 import dev.sun.wechat.data.KvStore
+import dev.sun.wechat.ui.content.WeKitBasicDialog
 import dev.sun.wechat.ui.content.m3.BaseWidget
 import dev.sun.wechat.ui.content.m3.ExpressiveBackButton
 import dev.sun.wechat.ui.content.m3.SegmentedColumn
@@ -251,6 +254,8 @@ fun CategoryDetailScreen(categoryId: String, onBack: () -> Unit) {
         }
     }
 
+    var panelFeature by remember { mutableStateOf<BaseFeature?>(null) }
+
     M3ListScaffold(
         title = stringResource(featureCategoryTitleRes(categoryId)),
         navigationIcon = { ExpressiveBackButton(onClick = onBack) },
@@ -272,21 +277,36 @@ fun CategoryDetailScreen(categoryId: String, onBack: () -> Unit) {
         } else {
             item { Spacer(Modifier.height(12.dp)) }
             lazySegmentedItems(items, key = { it.technicalId }) { feature ->
-                var expanded by rememberSaveable(feature.technicalId) { mutableStateOf(false) }
-                // 有的功能自带设置项（+ 号菜单配色、加号菜单卡片化等），Miuix 引擎是常驻内联展示；
-                // Material3 这边折叠起来，点一下标题行展开，避免长列表被输入框撑得太长。
+                // 自带设置项的功能（+ 号菜单配色、加号菜单卡片化等）：Miuix 引擎常驻内联，
+                // Material3 这边点标题行弹一个面板对话框装这些设置项，长列表不被输入框撑长。
                 Column(Modifier.padding(horizontal = 16.dp)) {
                     FeatureRow(
                         item = feature,
                         checked = featureChecked(feature),
                         onCheckedChange = {},
-                        onRowClick = { expanded = !expanded },
+                        onRowClick = { panelFeature = feature },
                     )
-                    if (expanded) feature.Ui()
                 }
             }
         }
 
         item { Spacer(Modifier.height(CONTENT_BOTTOM_INSET)) }
+    }
+
+    val panel = panelFeature
+    WeKitBasicDialog(
+        show = panel != null,
+        title = panel?.localizedName(context).orEmpty(),
+        onDismissRequest = { panelFeature = null },
+    ) {
+        Column {
+            if (panel != null) panel.Ui()
+            Spacer(Modifier.height(16.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = { panelFeature = null }) {
+                    Text(stringResource(android.R.string.ok))
+                }
+            }
+        }
     }
 }
