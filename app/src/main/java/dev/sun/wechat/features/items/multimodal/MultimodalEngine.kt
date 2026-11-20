@@ -42,7 +42,10 @@ object MultimodalEngine {
     var visionApiKey by prefOption("mm_vision_api_key", "")
     var visionModel by prefOption("mm_vision_model", "")
 
-    /** AI 回复这类纯文字场景用的模型；留空则退回视觉模型。 */
+    // ---- 文字接口：同样独立配置，不与视觉接口共用地址 / Key ----
+    // 文字聊天和视觉识别常见于不同的服务商（一个便宜一个贵），绑在一起会让用户没法各挑各的。
+    var textBaseUrl by prefOption("mm_text_base_url", "")
+    var textApiKey by prefOption("mm_text_api_key", "")
     var textModel by prefOption("mm_text_model", "")
 
     private const val IMAGE_PROMPT =
@@ -90,9 +93,33 @@ object MultimodalEngine {
     /** 地址、Key、模型都齐了才算能真正发请求；缺一个后台线程就别起。 */
     fun visionUsable(): Boolean = visionReady() && visionModel.isNotBlank()
 
-    /** 纯文字任务可用：地址 + Key 齐了，且填了文本模型（没填退回视觉模型也算）。 */
-    fun textUsable(): Boolean =
-        visionReady() && (textModel.isNotBlank() || visionModel.isNotBlank())
+    /** 文字接口是否配好了（只能用于纯文字任务，跟视觉接口互不影响）。 */
+    fun textReady(): Boolean =
+        textBaseUrl.isNotBlank() && textApiKey.isNotBlank()
+
+    /**
+     * 纯文字任务可用：文字接口齐了（地址 + Key + 文本模型），
+     * 或者视觉接口能用——此时文字请求会回落到视觉那套地址 / Key / 模型。
+     */
+    fun textUsable(): Boolean = textBound() || visionUsable()
+
+    /**
+     * 文字接口是否整套可用（地址 + Key + 文字模型）。
+     * 只填了一半时不算可用——否则会出现「文字接口的地址 + 视觉接口的模型名」这种错配。
+     */
+    fun textBound(): Boolean = textReady() && textModel.isNotBlank()
+
+    /** 文字请求实际用的地址：文字接口整套配好就用自己的，否则用视觉接口的。 */
+    fun textEndpointBase(): String = if (textBound()) textBaseUrl.trim() else visionBaseUrl.trim()
+
+    /** 文字请求实际用的 Key，规则同 [textEndpointBase]。 */
+    fun textCredential(): String = if (textBound()) textApiKey.trim() else visionApiKey.trim()
+
+    /** 文字任务实际用的模型：文字模型优先，没填就用视觉模型。 */
+    fun textModelOrVision(): String = textModel.trim().ifBlank { visionModel.trim() }
+
+    /** 文字请求此刻是否在用视觉接口兜底（用于界面标注来源）。 */
+    fun textUsingVisionFallback(): Boolean = !textBound() && visionUsable()
 
     /**
      * 取一条消息的多模态文本（只读缓存，不联网）。

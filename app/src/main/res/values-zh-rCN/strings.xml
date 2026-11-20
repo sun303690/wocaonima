@@ -4658,5 +4658,5 @@
     <string name="pay_reply_red_packet_label">领取后回复（一行一条，随机发送）</string>
     <string name="pay_reply_transfer_label">收款后回复内容（一行一条，随机发送）</string>
     <string name="mm_text_model">纯文本模型</string>
-    <string name="mm_text_model_fallback">跟随视觉模型</string>
+    <string name="mm_text_api_page">文字接口</string>
 </resources>

@@ -49,6 +49,7 @@ fun MultimodalSettingsScreen(onBack: () -> Unit) {
     val title = when (page) {
         1 -> stringResource(R.string.mm_voice_api_page)
         2 -> stringResource(R.string.mm_vision_api_page)
+        3 -> stringResource(R.string.mm_text_api_page)
         else -> stringResource(R.string.feature_multimodal_name)
     }
 
@@ -64,9 +65,11 @@ fun MultimodalSettingsScreen(onBack: () -> Unit) {
             when (page) {
                 1 -> VoiceApiContent()
                 2 -> VisionApiContent()
+                3 -> TextApiContent()
                 else -> HomeContent(
                     onOpenVoice = { page = 1 },
                     onOpenVision = { page = 2 },
+                    onOpenText = { page = 3 },
                 )
             }
         }
@@ -74,7 +77,7 @@ fun MultimodalSettingsScreen(onBack: () -> Unit) {
 }
 
 @Composable
-private fun HomeContent(onOpenVoice: () -> Unit, onOpenVision: () -> Unit) {
+private fun HomeContent(onOpenVoice: () -> Unit, onOpenVision: () -> Unit, onOpenText: () -> Unit) {
     val context = LocalContext.current
     var voice by remember { mutableStateOf(AsrEngine.enabled) }
     var image by remember { mutableStateOf(MultimodalEngine.imageEnabled) }
@@ -131,6 +134,16 @@ private fun HomeContent(onOpenVoice: () -> Unit, onOpenVision: () -> Unit) {
                     MultimodalEngine.visionModel.ifBlank { noModel }
                 },
                 onClick = onOpenVision,
+                divider = true,
+            )
+            MiuixSettingsAction(
+                title = stringResource(R.string.mm_text_api_page),
+                summary = if (MultimodalEngine.textBaseUrl.isBlank()) {
+                    notSet
+                } else {
+                    MultimodalEngine.textModel.ifBlank { noModel }
+                },
+                onClick = onOpenText,
             )
         }
 
@@ -298,14 +311,14 @@ private fun VoiceApiContent() {
 }
 
 /**
- * 模型列表拉到之后：当前模型不在列表里（没填 / 换过服务商）就自动挑一个视觉模型并落盘。
+ * 模型列表拉到之后：只有当前还没填模型时才自动挑一个视觉模型并落盘。
  *
- * 只在明确不匹配时才覆盖，用户手动填的合法模型不会被冲掉。
+ * 一旦有值就不再自动覆盖，避免手填的自定义模型（常常不在 /models 返回里）被冲掉。
  */
 private fun applyPickedModel(candidates: List<String>, apply: (String) -> Unit) {
     if (candidates.isEmpty()) return
-    val current = MultimodalEngine.visionModel
-    if (current.isNotBlank() && candidates.any { it.equals(current, ignoreCase = true) }) return
+    // 只在还没填模型时自动挑一个：用户手填或点选过的模型（可能不在 /models 列表里）一律不覆盖
+    if (MultimodalEngine.visionModel.isNotBlank()) return
     val picked = VisionClient.pickVisionModel(candidates) ?: return
     MultimodalEngine.visionModel = picked
     apply(picked)
@@ -323,9 +336,6 @@ private fun VisionApiContent() {
     var result by remember { mutableStateOf("") }
     var showModels by remember { mutableStateOf(false) }
     var custom by remember { mutableStateOf("") }
-    // 同一个选择对话框服务两个字段：视觉模型 / 纯文本模型
-    var pickingText by remember { mutableStateOf(false) }
-    var textModel by remember { mutableStateOf(MultimodalEngine.textModel) }
     var models by remember { mutableStateOf<List<String>>(emptyList()) }
     var loading by remember { mutableStateOf(false) }
     var modelError by remember { mutableStateOf("") }
@@ -379,7 +389,6 @@ private fun VisionApiContent() {
                 },
                 // 点开就拉：不靠用户再点一次「获取模型列表」
                 onClick = {
-                    pickingText = false
                     showModels = true
                     refreshModels()
                 },
@@ -394,19 +403,6 @@ private fun VisionApiContent() {
                     else -> "${models.size} 个可用"
                 },
                 onClick = { refreshModels() },
-            )
-        }
-
-        MiuixSettingsSectionTitle(stringResource(R.string.mm_text_model))
-        MiuixSettingsCard {
-            MiuixSettingsAction(
-                title = stringResource(R.string.mm_text_model),
-                summary = textModel.ifBlank { stringResource(R.string.mm_text_model_fallback) },
-                onClick = {
-                    pickingText = true
-                    showModels = true
-                    refreshModels()
-                },
             )
         }
 
@@ -443,7 +439,7 @@ private fun VisionApiContent() {
             onDismissRequest = { showModels = false },
             title = {
                 Text(
-                    stringResource(if (pickingText) R.string.mm_text_model else R.string.mm_model_pick),
+                    stringResource(R.string.mm_model_pick),
                     fontSize = 17.sp,
                 )
             },
@@ -464,21 +460,15 @@ private fun VisionApiContent() {
                             modifier = Modifier.padding(bottom = 6.dp),
                         )
                     }
-                    val currentPick = if (pickingText) textModel else model
                     models.forEach { preset ->
                         Text(
-                            text = if (preset == currentPick) "✓ $preset" else preset,
+                            text = if (preset == model) "✓ $preset" else preset,
                             fontSize = 15.sp,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    if (pickingText) {
-                                        textModel = preset
-                                        MultimodalEngine.textModel = preset
-                                    } else {
-                                        model = preset
-                                        MultimodalEngine.visionModel = preset
-                                    }
+                                    model = preset
+                                    MultimodalEngine.visionModel = preset
                                     showModels = false
                                 }
                                 .padding(vertical = 7.dp),
@@ -497,13 +487,8 @@ private fun VisionApiContent() {
                 Button(onClick = {
                     val picked = custom.trim()
                     if (picked.isNotEmpty()) {
-                        if (pickingText) {
-                            textModel = picked
-                            MultimodalEngine.textModel = picked
-                        } else {
-                            model = picked
-                            MultimodalEngine.visionModel = picked
-                        }
+                        model = picked
+                        MultimodalEngine.visionModel = picked
                     }
                     showModels = false
                 }) { Text(stringResource(R.string.mm_confirm)) }
@@ -513,4 +498,162 @@ private fun VisionApiContent() {
             },
         )
     }
+
+/** 纯文本接口页：地址 / Key / 模型全部独立配置，不与「视觉接口」页共用。
+ *  例：文字走 A 家的 deepseek-chat，视觉走 B 家的 qwen-vl，互不影响。 */
+@Composable
+private fun TextApiContent() {
+    val context = LocalContext.current
+    val main = remember { Handler(Looper.getMainLooper()) }
+    var url by remember { mutableStateOf(MultimodalEngine.textBaseUrl) }
+    var key by remember { mutableStateOf(MultimodalEngine.textApiKey) }
+    var model by remember { mutableStateOf(MultimodalEngine.textModel) }
+    var testing by remember { mutableStateOf(false) }
+    var result by remember { mutableStateOf("") }
+    var showModels by remember { mutableStateOf(false) }
+    var custom by remember { mutableStateOf("") }
+    var models by remember { mutableStateOf<List<String>>(emptyList()) }
+    var loading by remember { mutableStateOf(false) }
+    var modelError by remember { mutableStateOf("") }
+
+    fun refreshModels() {
+        if (loading) return
+        loading = true
+        modelError = ""
+        VisionClient.fetchTextModels { list, error ->
+            main.post {
+                loading = false
+                modelError = error.orEmpty()
+                models = list.orEmpty()
+            }
+        }
+    }
+
+    // 进页面就按文字接口自己的地址 / Key 拉一次模型列表，方便直接点选
+    LaunchedEffect(Unit) {
+        if (MultimodalEngine.textEndpointBase().isNotBlank() && MultimodalEngine.textCredential().isNotBlank()) refreshModels()
+    }
+
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        MiuixSettingsSectionTitle(stringResource(R.string.mm_text_api_page))
+        MiuixSettingsCard {
+            MiuixCompatTextField(
+                value = url,
+                onValueChange = { url = it; MultimodalEngine.textBaseUrl = it.trim() },
+                label = stringResource(R.string.mm_vision_base_url),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+            )
+            MiuixCompatTextField(
+                value = key,
+                onValueChange = { key = it; MultimodalEngine.textApiKey = it.trim() },
+                label = stringResource(R.string.mm_vision_api_key),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+            )
+        }
+
+        MiuixSettingsCard {
+            MiuixSettingsAction(
+                title = stringResource(R.string.mm_text_model),
+                summary = model.ifBlank { stringResource(R.string.mm_model_not_set) },
+                onClick = {
+                    showModels = true
+                    refreshModels()
+                },
+                divider = true,
+            )
+            MiuixSettingsAction(
+                title = stringResource(R.string.mm_model_fetch),
+                summary = when {
+                    loading -> stringResource(R.string.mm_model_fetching)
+                    modelError.isNotEmpty() -> modelError
+                    models.isEmpty() -> stringResource(R.string.mm_model_empty)
+                    else -> "${models.size} 个可用"
+                },
+                onClick = { refreshModels() },
+            )
+        }
+
+        MiuixSettingsSectionTitle(stringResource(R.string.mm_test_connection))
+        MiuixSettingsCard {
+            MiuixSettingsAction(
+                title = stringResource(if (testing) R.string.mm_testing else R.string.mm_test_connection),
+                summary = result,
+                onClick = {
+                    if (!testing) {
+                        testing = true
+                        result = ""
+                        VisionClient.testTextConnection { _, message ->
+                            main.post {
+                                testing = false
+                                result = message
+                                showToast(context, message)
+                            }
+                        }
+                    }
+                },
+            )
+        }
+    }
+
+    if (showModels) {
+        MiuixAlertDialog(
+            onDismissRequest = { showModels = false },
+            title = { Text(stringResource(R.string.mm_text_model), fontSize = 17.sp) },
+            text = {
+                Column {
+                    if (loading) {
+                        Text(
+                            text = stringResource(R.string.mm_model_fetching),
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(bottom = 6.dp),
+                        )
+                    }
+                    if (models.isEmpty() && !loading) {
+                        Text(
+                            text = stringResource(R.string.mm_model_empty),
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(bottom = 6.dp),
+                        )
+                    }
+                    models.forEach { preset ->
+                        Text(
+                            text = if (preset == model) "✓ $preset" else preset,
+                            fontSize = 15.sp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    model = preset
+                                    MultimodalEngine.textModel = preset
+                                    showModels = false
+                                }
+                                .padding(vertical = 7.dp),
+                        )
+                    }
+                    MiuixCompatTextField(
+                        value = custom,
+                        onValueChange = { custom = it },
+                        label = stringResource(R.string.mm_model_custom),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    val picked = custom.trim()
+                    if (picked.isNotEmpty()) {
+                        model = picked
+                        MultimodalEngine.textModel = picked
+                    }
+                    showModels = false
+                }) { Text(stringResource(R.string.mm_confirm)) }
+            },
+            dismissButton = {
+                Button(onClick = { showModels = false }) { Text(stringResource(R.string.mm_cancel)) }
+            },
+        )
+    }
+}
 }

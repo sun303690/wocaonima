@@ -157,18 +157,35 @@ object VisionClient {
      * 先用 [cachedModels] 兜底秒开，网络失败时回落到它；两者都空才报错。
      * 回调在后台线程，调用方自己 post 回主线程。
      */
-    fun fetchModels(cb: (List<String>?, String?) -> Unit) {
-        if (MultimodalEngine.visionBaseUrl.isBlank()) {
-            cb(cachedModels.ifEmpty { null }, "还没填接口地址"); return
+    fun fetchModels(cb: (List<String>?, String?) -> Unit) =
+        fetchModelsFrom(MultimodalEngine.visionBaseUrl, MultimodalEngine.visionApiKey, "wekit-vision-models", cb)
+
+    /**
+     * 文字接口单独拉模型列表。
+     *
+     * 用文字接口自己的地址 / Key，不去碰视觉接口那份配置——两家服务商各管各的，
+     * 拉列表也不会互相覆盖缓存。
+     */
+    fun fetchTextModels(cb: (List<String>?, String?) -> Unit) =
+        fetchModelsFrom(MultimodalEngine.textEndpointBase(), MultimodalEngine.textCredential(), "wekit-text-models", cb)
+
+    private fun fetchModelsFrom(
+        base: String,
+        apiKey: String,
+        threadName: String,
+        cb: (List<String>?, String?) -> Unit,
+    ) {
+        if (base.isBlank()) {
+            cb(null, "还没填接口地址"); return
         }
-        if (MultimodalEngine.visionApiKey.isBlank()) {
-            cb(cachedModels.ifEmpty { null }, "还没填 Key"); return
+        if (apiKey.isBlank()) {
+            cb(null, "还没填 Key"); return
         }
-        thread(name = "wekit-vision-models") {
+        thread(name = threadName) {
             runCatching {
                 val request = Request.Builder()
-                    .url(modelsEndpoint())
-                    .addHeader("Authorization", "Bearer ${MultimodalEngine.visionApiKey.trim()}")
+                    .url(modelsEndpoint(base))
+                    .addHeader("Authorization", "Bearer ${apiKey.trim()}")
                     .get()
                     .build()
                 client.newCall(request).execute().use { response ->
@@ -181,19 +198,18 @@ object VisionClient {
                     parseModels(json)
                 }
             }.onSuccess { list ->
-                if (list.isNotEmpty()) cachedModels = list
+                if (list.isNotEmpty()) cachedModels[base] = list
                 WeLogger.d(TAG, "取到 ${list.size} 个模型")
-                cb(list.ifEmpty { cachedModels.ifEmpty { null } }, null)
+                cb(list.ifEmpty { cachedModels[base] }, null)
             }.onFailure { error ->
                 WeLogger.w(TAG, "拉模型列表失败：${error.message}")
-                cb(cachedModels.ifEmpty { null }, error.message ?: "拉取失败")
+                cb(cachedModels[base], error.message ?: "拉取失败")
             }
         }
     }
 
-    /** 最近一次成功拉到的模型列表（进程内缓存，设置页重进不再等网络）。 */
-    @Volatile
-    private var cachedModels: List<String> = emptyList()
+    /** 最近一次成功拉到的模型列表；按接口地址分桶，视觉与文字互不覆盖。 */
+    private val cachedModels = java.util.concurrent.ConcurrentHashMap<String, List<String>>()
 
     /**
      * 从候选里挑一个最像视觉模型的当默认值：优先名字带 vl / vision / 4o / 4v 的，
@@ -226,10 +242,45 @@ object VisionClient {
     }
 
     /** `/chat/completions` 与 `/models` 同级；用户填完整端点或只填 base 都兼容。 */
-    private fun modelsEndpoint(): String {
-        val base = MultimodalEngine.visionBaseUrl.trim().trimEnd('/')
-            .removeSuffix("/chat/completions")
+    private fun modelsEndpoint(rawBase: String): String {
+        val base = rawBase.trim().trimEnd('/').removeSuffix("/chat/completions")
         return if (base.endsWith("/models")) base else "$base/models"
+    }
+
+    /** 文字接口连通性测试：用文字接口自己的地址 / Key / 模型发一条 ping。 */
+    fun testTextConnection(cb: (Boolean, String) -> Unit) {
+        if (MultimodalEngine.textEndpointBase().isBlank()) {
+            cb(false, "还没填接口地址（文字接口和视觉接口都没配）"); return
+        }
+        if (MultimodalEngine.textCredential().isBlank()) {
+            cb(false, "还没填 Key（文字接口和视觉接口都没配）"); return
+        }
+        thread(name = "wekit-text-test") {
+            runCatching {
+                val payload = JSONObject()
+                    .put("model", textModelName())
+                    .put("max_tokens", 8)
+                    .put(
+                        "messages",
+                        JSONArray().put(JSONObject().put("role", "user").put("content", "ping")),
+                    )
+                client.newCall(textRequest(payload)).execute().use { response ->
+                    val body = response.body?.string().orEmpty()
+                    if (!response.isSuccessful) {
+                        throw IllegalStateException("接口返回 ${response.code}：${body.take(160)}")
+                    }
+                    val json = runCatching { JSONObject(body) }.getOrNull()
+                        ?: throw IllegalStateException("返回不是 JSON：${body.take(120)}")
+                    val text = parseContent(json)
+                    text.takeIf { it.isNotBlank() } ?: throw IllegalStateException("返回内容为空")
+                }
+            }.onSuccess { reply ->
+                cb(true, "连接成功：${reply.take(40)}")
+            }.onFailure { error ->
+                WeLogger.w(TAG, "文字接口测试失败：${error.message}")
+                cb(false, error.message ?: "测试失败")
+            }
+        }
     }
 
     /** 连通性测试：只发一条纯文本 ping，验证地址/Key/模型是否可用，不花图片 token。 */
@@ -279,7 +330,7 @@ object VisionClient {
             .put("max_tokens", maxTokens)
             .put("stream", false)
             .put("messages", messagesOf(system, user))
-        client.newCall(request(payload)).execute().use { response ->
+        client.newCall(textRequest(payload)).execute().use { response ->
             val body = response.body?.string().orEmpty()
             if (!response.isSuccessful) {
                 throw IllegalStateException("接口返回 ${response.code}：${body.take(160)}")
@@ -308,7 +359,7 @@ object VisionClient {
             .put("stream", true)
             .put("messages", messagesOf(system, user))
             .apply { if (temperature != null) put("temperature", temperature) }
-        client.newCall(request(payload)).execute().use { response ->
+        client.newCall(textRequest(payload)).execute().use { response ->
             if (!response.isSuccessful) {
                 val detail = response.body?.string().orEmpty().take(160)
                 throw IllegalStateException("接口返回 ${response.code}：$detail")
@@ -342,17 +393,23 @@ object VisionClient {
         put(JSONObject().put("role", "user").put("content", user))
     }
 
-    /** 纯文字任务优先用文本模型，没配就退回视觉模型。 */
-    private fun textModelName(): String = MultimodalEngine.textModel.trim()
-        .ifBlank { MultimodalEngine.visionModel.trim() }
+    /** 文字任务的模型：文字接口填了就用它，没填就回落到视觉接口的模型。 */
+    private fun textModelName(): String = MultimodalEngine.textModelOrVision()
         .ifBlank { throw IllegalStateException("还没选文本模型") }
 
     private fun modelName(): String =
         MultimodalEngine.visionModel.trim().ifBlank { throw IllegalStateException("还没选视觉模型") }
 
     private fun request(payload: JSONObject): Request = Request.Builder()
-        .url(endpoint())
+        .url(endpoint(MultimodalEngine.visionBaseUrl))
         .addHeader("Authorization", "Bearer ${MultimodalEngine.visionApiKey.trim()}")
+        .post(payload.toString().toRequestBody("application/json".toMediaType()))
+        .build()
+
+    /** 纯文字请求：文字接口配好就走它自己的地址与 Key，没配则回落视觉接口。 */
+    private fun textRequest(payload: JSONObject): Request = Request.Builder()
+        .url(endpoint(MultimodalEngine.textEndpointBase()))
+        .addHeader("Authorization", "Bearer ${MultimodalEngine.textCredential()}")
         .post(payload.toString().toRequestBody("application/json".toMediaType()))
         .build()
 
@@ -384,8 +441,8 @@ object VisionClient {
     }
 
     /** 允许用户直接填完整端点；否则拼上标准路径。 */
-    private fun endpoint(): String {
-        val base = MultimodalEngine.visionBaseUrl.trim().trimEnd('/')
+    private fun endpoint(rawBase: String): String {
+        val base = rawBase.trim().trimEnd('/')
         return if (base.endsWith("/chat/completions")) base else "$base/chat/completions"
     }
 

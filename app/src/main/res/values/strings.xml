@@ -4628,5 +4628,5 @@
     <string name="pay_reply_red_packet_label">Reply after claiming (one per line, random)</string>
     <string name="pay_reply_transfer_label">Reply after accepting (one per line, random)</string>
     <string name="mm_text_model">Text model</string>
-    <string name="mm_text_model_fallback">Follow the vision model</string>
+    <string name="mm_text_api_page">Text API</string>
 </resources>

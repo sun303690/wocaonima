@@ -42,8 +42,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import dev.sun.wechat.activity.agent.WeAgentSettingsActivity
-import dev.sun.wechat.agent.data.WeAgentRepository
+import dev.sun.wechat.features.items.multimodal.MultimodalEngine
+import dev.sun.wechat.features.items.multimodal.MultimodalSettingsActivity
 import dev.sun.wechat.features.items.chat.TextToSpeech
 import dev.sun.wechat.features.items.chat.doubaoVoiceLabel
 import dev.sun.wechat.features.items.chat.showBreezeVoicePicker
@@ -91,7 +91,6 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var modelId by remember { mutableStateOf<String?>(null) }
     var modelResult by remember { mutableStateOf("") }
     var modelBusy by remember { mutableStateOf(false) }
 
@@ -112,10 +111,6 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
     var showEmotionPicker by remember { mutableStateOf(false) }
     var voiceBusy by remember { mutableStateOf(false) }
     var editField by remember { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(Unit) {
-        modelId = runCatching { WeAgentRepository.resolvedDefaultModelId() }.getOrNull()
-    }
 
     val isDoubao = backend == TextToSpeech.BACKEND_DOUBAO
     val isBreeze = backend == TextToSpeech.BACKEND_BREEZE
@@ -146,19 +141,38 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
             TextButton(onClick = onClose) { Text("关闭") }
         }
 
-        Text("模型配置", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        Text("模型", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("AI 回复使用的模型", style = MaterialTheme.typography.bodyLarge)
                 Text(
-                    modelId ?: "未配置：请先到「WeAgent 模型设置」添加服务商与模型",
+                    if (MultimodalEngine.textUsingVisionFallback()) {
+                        "模型来源：文字接口未配置，使用「多模态」→「视觉接口」的模型"
+                    } else {
+                        "模型来源：跟随「多模态」→「文字接口」"
+                    },
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Text(
+                    MultimodalEngine.textModelOrVision()
+                        .ifBlank { "未配置：请先到「多模态」里填好接口地址、Key 和模型" },
                     style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    if (MultimodalEngine.textReady()) {
+                        "接口：${MultimodalEngine.textEndpointBase()} · Key 已填"
+                    } else if (MultimodalEngine.textUsingVisionFallback()) {
+                        "接口：${MultimodalEngine.textEndpointBase()}（视觉接口承接） · Key 已填"
+                    } else {
+                        "接口：未配置（缺少地址或 Key）"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = {
-                        context.startActivity(Intent(context, WeAgentSettingsActivity::class.java))
-                    }) { Text("模型设置") }
+                        context.startActivity(Intent(context, MultimodalSettingsActivity::class.java))
+                    }) { Text("多模态设置") }
                     Button(
                         enabled = !modelBusy,
                         onClick = {
