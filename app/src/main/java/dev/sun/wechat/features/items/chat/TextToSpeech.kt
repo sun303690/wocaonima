@@ -86,6 +86,7 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
 import java.security.MessageDigest
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -115,12 +116,16 @@ object TextToSpeech :
     /** 硅基流动 TTS（OpenAI 兼容 /audio/speech，CosyVoice2）。 */
     const val BACKEND_SILICON = 3
 
+    /** 天X API 的 ULikeCam 文字转语音：458 个音色，接口回 JSON 里的 CDN 直链。 */
+    const val BACKEND_TIAX = 4
+
     /** 底部「切换后端」菜单的顺序与文案 */
     private val BACKEND_LABELS = listOf(
         BACKEND_BREEZE to "Breeze",
         BACKEND_SILICON to "硅基流动",
         BACKEND_DOUBAO to "豆包",
         BACKEND_MOFA to "魔方",
+        BACKEND_TIAX to "天X API",
     )
 
     // 豆包网页端逆向协议: 鉴权在 WebSocket 握手阶段完成, 依赖登录态 Cookie
@@ -131,6 +136,10 @@ object TextToSpeech :
     private const val DOUBAO_AID = 497858
     private const val DOUBAO_VERSION_CODE = 20800
     private const val DOUBAO_PC_VERSION = "2.46.3"
+
+    /** 天X API 的默认站址与默认音色（音色名单：https://www.tiax.pw/API/ys.php，共 458 个）。 */
+    private const val TIAX_DEFAULT_BASE = "https://www.tiax.pw"
+    private const val TIAX_DEFAULT_VOICE = "懒羊羊"
 
     /** 服务端不保证主动关闭连接, 静默这么久即视为合成结束 */
     private const val DOUBAO_IDLE_GAP_MS = 2500L
@@ -161,6 +170,11 @@ object TextToSpeech :
     var siliconApiKey by prefOption("tts_silicon_api_key", "")
     var siliconModel by prefOption("tts_silicon_model", "FunAudioLLM/CosyVoice2-0.5B")
     var siliconVoice by prefOption("tts_silicon_voice", "FunAudioLLM/CosyVoice2-0.5B:alex")
+
+    /** 天X API（ULikeCam 音色库）：站址、Key、音色，音色既能写名字也能写编号。 */
+    var tiaxBaseUrl by prefOption("tts_tiax_base_url", TIAX_DEFAULT_BASE)
+    var tiaxApiKey by prefOption("tts_tiax_api_key", "")
+    var tiaxVoice by prefOption("tts_tiax_voice", TIAX_DEFAULT_VOICE)
 
     /** 入口一: 长按聊天消息气泡的菜单 */
     private var entryBubble by prefOption("tts_entry_bubble", false)
@@ -314,12 +328,14 @@ object TextToSpeech :
             val isDoubao = backendMode == BACKEND_DOUBAO
             val isBreeze = backendMode == BACKEND_BREEZE
             val isSilicon = backendMode == BACKEND_SILICON
+            val isTiax = backendMode == BACKEND_TIAX
             var voiceId by remember {
                 mutableStateOf(
                     when (backendMode) {
                         BACKEND_DOUBAO -> doubaoSpeaker
                         BACKEND_BREEZE -> breezeVoice
                         BACKEND_SILICON -> siliconVoice
+                        BACKEND_TIAX -> tiaxVoice
                         else -> selectedVoice
                     }
                 )
@@ -405,6 +421,18 @@ object TextToSpeech :
                                     )
                                 },
                             )
+                        } else if (isTiax) {
+                            // 天X 有 458 个音色，下拉框塞不下，点开可搜索的列表挑
+                            BaseWidget(
+                                title = "天X 音色",
+                                description = tiaxVoice.ifBlank { "未设置" },
+                                onClick = {
+                                    showTiaxVoicePicker(context, tiaxVoice, tiaxBaseUrl) { voice, _ ->
+                                        tiaxVoice = voice
+                                        voiceId = voice
+                                    }
+                                },
+                            )
                         } else if (isSilicon) {
                             BaseWidget(
                                 title = "硅基流动音色",
@@ -461,7 +489,7 @@ object TextToSpeech :
 
                         Spacer(Modifier.height(8.dp))
 
-                        if (!isDoubao) {
+                        if (!isDoubao && !isTiax) {
                             DropDownMenuWidget(
                                 title = "语气",
                                 description = null,
@@ -531,6 +559,27 @@ object TextToSpeech :
                                         generating = true
                                         // 语气直接作为接口的 instructions 文本传过去
                                         generateVoiceBreeze(inputText.trim(), voiceId, emotion) { path, err ->
+                                            generating = false
+                                            if (path != null) {
+                                                previewPath = path
+                                                showPreviewDialog(context, talker, path)
+                                            } else {
+                                                showToast(context, "生成失败：$err")
+                                            }
+                                        }
+                                        return@Button
+                                    }
+                                    if (isTiax) {
+                                        if (tiaxApiKey.isBlank()) {
+                                            showToast(context, "请先在设置中填写天X API Key")
+                                            showSettingsDialog(context) { credentialsRevision++ }
+                                            return@Button
+                                        }
+                                        generating = true
+                                        generateVoiceTiax(
+                                            inputText.trim(),
+                                            voice = voiceId.ifBlank { tiaxVoice },
+                                        ) { path, err ->
                                             generating = false
                                             if (path != null) {
                                                 previewPath = path
@@ -625,12 +674,14 @@ object TextToSpeech :
                                                     when (backendMode) {
                                                         BACKEND_DOUBAO -> doubaoSpeaker = voiceId
                                                         BACKEND_BREEZE -> breezeVoice = voiceId
+                                                        BACKEND_TIAX -> tiaxVoice = voiceId
                                                         else -> selectedVoice = voiceId
                                                     }
                                                     backendMode = mode
                                                     voiceId = when (mode) {
                                                         BACKEND_DOUBAO -> doubaoSpeaker
                                                         BACKEND_BREEZE -> breezeVoice
+                                                        BACKEND_TIAX -> tiaxVoice
                                                         else -> selectedVoice
                                                     }
                                                     backend = mode
@@ -675,6 +726,9 @@ object TextToSpeech :
             var siliconModelState by remember { mutableStateOf(siliconModel) }
             var siliconVoiceState by remember { mutableStateOf(siliconVoice) }
             var breezeKeyState by remember { mutableStateOf(breezeKey) }
+            var tiaxKeyState by remember { mutableStateOf(tiaxApiKey) }
+            var tiaxVoiceState by remember { mutableStateOf(tiaxVoice) }
+            var tiaxBaseState by remember { mutableStateOf(tiaxBaseUrl) }
             var breezeModelState by remember { mutableStateOf(breezeModel) }
             // DropDownMenuWidget 内部是 options.first { it.value == value }，当前值必须在选项里
             var modelOptions by remember {
@@ -899,6 +953,49 @@ object TextToSpeech :
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.fillMaxWidth(),
                         )
+                        SegmentedColumn(title = "天X API") {
+                            item {
+                                TextFieldDialogWidget(
+                                    title = "API Key",
+                                    value = tiaxKeyState,
+                                    onValueChange = {
+                                        tiaxKeyState = it
+                                        tiaxApiKey = it.trim()
+                                    },
+                                    dialogTitle = "设置天X API Key",
+                                    confirmLabel = "确认",
+                                    dismissLabel = "取消",
+                                    valueHint = "在 tiax.pw 后台获取",
+                                    password = true,
+                                )
+                            }
+                            item {
+                                BaseWidget(
+                                    title = "音色",
+                                    description = tiaxVoiceState.ifBlank { "未设置" },
+                                    onClick = {
+                                        showTiaxVoicePicker(context, tiaxVoiceState, tiaxBaseState) { voice, _ ->
+                                            tiaxVoiceState = voice
+                                            tiaxVoice = voice
+                                        }
+                                    },
+                                )
+                            }
+                            item {
+                                TextFieldDialogWidget(
+                                    title = "接口地址",
+                                    value = tiaxBaseState,
+                                    onValueChange = {
+                                        tiaxBaseState = it
+                                        tiaxBaseUrl = it.trim().ifBlank { "https://www.tiax.pw" }
+                                    },
+                                    dialogTitle = "设置天X 接口地址",
+                                    confirmLabel = "确认",
+                                    dismissLabel = "取消",
+                                    valueHint = "默认 https://www.tiax.pw",
+                                )
+                            }
+                        }
                         SegmentedColumn(title = "豆包") {
                             item {
                                 TextFieldDialogWidget(
@@ -1160,6 +1257,84 @@ object TextToSpeech :
         }.start()
     }
 
+    /**
+     * 天X API 的文字转语音：`GET {base}/API/yuyin2.php?text=&voice=&apikey=`。
+     *
+     * 接口不会直接给音频字节，而是回 `{"code":"200","url":"https://…mp3?签名"}`，
+     * 所以这里发两次请求：先拿直链，再把 mp3 拉下来落盘。音色可写名字（懒羊羊）
+     * 也可写编号（编号见 https://www.tiax.pw/API/ys.php，共 458 个）。
+     */
+    fun generateVoiceTiax(
+        text: String,
+        voice: String = tiaxVoice,
+        key: String = tiaxApiKey,
+        baseUrl: String = tiaxBaseUrl,
+        cb: (String?, String) -> Unit,
+    ) {
+        Thread {
+            var outPath: String? = null
+            var error = ""
+            try {
+                val php = baseUrl.trim().trimEnd('/').let {
+                    if (it.endsWith(".php")) it else "$it/API/yuyin2.php"
+                }
+                val query = listOf(
+                    "text" to text,
+                    "voice" to voice.ifBlank { TIAX_DEFAULT_VOICE },
+                    "apikey" to key.trim(),
+                ).joinToString("&") { (k, v) -> "$k=${URLEncoder.encode(v, "UTF-8")}" }
+                val conn = URL("$php?$query").openConnection() as HttpURLConnection
+                conn.requestMethod = "GET"
+                conn.connectTimeout = 15000
+                conn.readTimeout = 120000
+                conn.setRequestProperty("Accept", "application/json")
+                val code = conn.responseCode
+                val body = runCatching {
+                    (if (code in 200..299) conn.inputStream else conn.errorStream)
+                        ?.use { it.readBytes() } ?: ByteArray(0)
+                }.getOrDefault(ByteArray(0))
+                runCatching { conn.disconnect() }
+                val payload = String(body, Charsets.UTF_8)
+                if (code !in 200..299) {
+                    error = "接口返回 $code：${payload.take(160)}"
+                } else {
+                    val json = runCatching { JSONObject(payload) }.getOrNull()
+                    val bizCode = json?.optString("code").orEmpty()
+                    val audioUrl = json?.optString("url").orEmpty()
+                    when {
+                        json == null -> error = "接口没回 JSON：${payload.take(120)}"
+                        bizCode.isNotBlank() && bizCode != "200" && bizCode != "0" ->
+                            error = "接口返回 $bizCode：${json.optString("message").ifBlank { payload.take(120) }}"
+                        audioUrl.isBlank() -> error = "接口没给音频地址：${payload.take(120)}"
+                    }
+                    if (error.isEmpty()) {
+                        val audio = URL(audioUrl).openConnection() as HttpURLConnection
+                        audio.connectTimeout = 15000
+                        audio.readTimeout = 120000
+                        audio.setRequestProperty("User-Agent", "WeKit")
+                        val bytes = audio.inputStream.use { it.readBytes() }
+                        runCatching { audio.disconnect() }
+                        if (bytes.size < 512) {
+                            error = "音频只有 ${bytes.size} 字节"
+                        } else {
+                            val dir = File(KnownPaths.moduleCache.toFile(), "wcs_tts").apply { mkdirs() }
+                            val dest = File(dir, "tiax_${System.currentTimeMillis()}.mp3")
+                            dest.writeBytes(bytes)
+                            outPath = dest.absolutePath
+                            lastWavPath = outPath
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                error = e.message ?: "exception"
+                WeLogger.w(TAG, "tiax tts failed: $error")
+            }
+            val result = outPath
+            val reason = error
+            mh.post { cb(result, reason) }
+        }.start()
+    }
+
     private fun doubaoWsUrl(speaker: String): String {
         // 伪装成一次全新的网页会话: 三个身份字段每次随机
         val dev = (7_400_000_000_000_000_000L + Random.nextLong(999_999_999_999_999_999L)).toString()
@@ -1333,6 +1508,14 @@ object TextToSpeech :
                     return
                 }
                 generateVoiceSilicon(text = text, cb = cb)
+            }
+
+            BACKEND_TIAX -> {
+                if (tiaxApiKey.isBlank()) {
+                    cb(null, "未填写天X API Key")
+                    return
+                }
+                generateVoiceTiax(text = text, cb = cb)
             }
 
             BACKEND_BREEZE -> {

@@ -170,22 +170,26 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
 
     private fun isDoubaoBackend(): Boolean = ttsBackend == TextToSpeech.BACKEND_DOUBAO
     private fun isBreezeBackend(): Boolean = ttsBackend == TextToSpeech.BACKEND_BREEZE
+    private fun isTiaxBackend(): Boolean = ttsBackend == TextToSpeech.BACKEND_TIAX
 
     private val TTS_BACKEND_ORDER = listOf(
         TextToSpeech.BACKEND_BREEZE,
         TextToSpeech.BACKEND_DOUBAO,
+        TextToSpeech.BACKEND_TIAX,
         TextToSpeech.BACKEND_MOFA,
     )
 
     private fun backendLabelRes(mode: Int): Int = when (mode) {
         TextToSpeech.BACKEND_BREEZE -> R.string.ai_reply_tts_backend_breeze
         TextToSpeech.BACKEND_DOUBAO -> R.string.ai_reply_tts_backend_doubao
+        TextToSpeech.BACKEND_TIAX -> R.string.ai_reply_tts_backend_tiax
         else -> R.string.ai_reply_tts_backend_mofang
     }
 
     private fun effectiveVoiceId(): String = when {
         isDoubaoBackend() -> TextToSpeech.customVoiceId.ifBlank { ttsDoubaoSpeaker.ifBlank { TextToSpeech.DOUBAO_VOICES.first().id } }
         isBreezeBackend() -> TextToSpeech.customVoiceId.ifBlank { ttsVoiceId }
+        isTiaxBackend() -> TextToSpeech.tiaxVoice
         else -> TextToSpeech.customVoiceId.ifBlank { TextToSpeech.selectedVoice }
     }
 
@@ -201,6 +205,7 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
     private fun ttsCredentialsReady(): Boolean = when {
         isDoubaoBackend() -> ttsDoubaoCookie.isNotBlank()
         isBreezeBackend() -> ttsApiKey.isNotBlank() && ttsVoiceId.isNotBlank()
+        isTiaxBackend() -> TextToSpeech.tiaxApiKey.isNotBlank()
         else -> ttsApiKey.isNotBlank()
     }
 
@@ -963,7 +968,11 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
         val doubaoTts = ttsBackendState == TextToSpeech.BACKEND_DOUBAO
         val breezeTts = ttsBackendState == TextToSpeech.BACKEND_BREEZE
         val mofaTts = ttsBackendState == TextToSpeech.BACKEND_MOFA
+        val tiaxTts = ttsBackendState == TextToSpeech.BACKEND_TIAX
         var mofaApiKeyState by remember { mutableStateOf(TextToSpeech.apiKey) }
+        var tiaxKeyState by remember { mutableStateOf(TextToSpeech.tiaxApiKey) }
+        var tiaxVoiceState by remember { mutableStateOf(TextToSpeech.tiaxVoice) }
+        var tiaxBaseState by remember { mutableStateOf(TextToSpeech.tiaxBaseUrl) }
         var breezeModelState by remember { mutableStateOf(TextToSpeech.breezeModel) }
         var breezeModelOptions by remember {
             mutableStateOf(listOf(DropdownOption(TextToSpeech.breezeModel, TextToSpeech.breezeModel)))
@@ -1088,6 +1097,19 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                                         valueHint = stringResource(R.string.ai_reply_tts_breeze_key_hint),
                                         password = true,
                                     )
+                                    tiaxTts -> TextFieldDialogWidget(
+                                        title = stringResource(R.string.ai_reply_tts_api_key),
+                                        value = tiaxKeyState,
+                                        onValueChange = {
+                                            tiaxKeyState = it.trim()
+                                            TextToSpeech.tiaxApiKey = tiaxKeyState
+                                        },
+                                        dialogTitle = stringResource(R.string.ai_reply_tts_api_key),
+                                        confirmLabel = stringResource(R.string.dialog_confirm),
+                                        dismissLabel = stringResource(R.string.dialog_cancel),
+                                        valueHint = stringResource(R.string.ai_reply_tts_tiax_key_hint),
+                                        password = true,
+                                    )
                                     else -> TextFieldDialogWidget(
                                         title = stringResource(R.string.ai_reply_tts_api_key),
                                         value = mofaApiKeyState,
@@ -1140,6 +1162,18 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                                             )
                                         },
                                     )
+                                    tiaxTts -> TextFieldDialogWidget(
+                                        title = stringResource(R.string.ai_reply_tts_voice),
+                                        value = tiaxVoiceState,
+                                        onValueChange = {
+                                            tiaxVoiceState = it.trim()
+                                            TextToSpeech.tiaxVoice = tiaxVoiceState
+                                        },
+                                        dialogTitle = stringResource(R.string.ai_reply_tts_voice),
+                                        confirmLabel = stringResource(R.string.dialog_confirm),
+                                        dismissLabel = stringResource(R.string.dialog_cancel),
+                                        valueHint = stringResource(R.string.ai_reply_tts_tiax_voice_hint),
+                                    )
                                     else -> DropDownMenuWidget(
                                         title = stringResource(R.string.ai_reply_tts_voice),
                                         description = null,
@@ -1149,6 +1183,22 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                                             ttsVoiceState = it
                                             TextToSpeech.selectedVoice = it
                                         },
+                                    )
+                                }
+                            }
+                            if (tiaxTts) {
+                                item {
+                                    TextFieldDialogWidget(
+                                        title = stringResource(R.string.ai_reply_tts_tiax_base),
+                                        value = tiaxBaseState,
+                                        onValueChange = {
+                                            tiaxBaseState = it.trim()
+                                            TextToSpeech.tiaxBaseUrl = tiaxBaseState.ifBlank { "https://www.tiax.pw" }
+                                        },
+                                        dialogTitle = stringResource(R.string.ai_reply_tts_tiax_base),
+                                        confirmLabel = stringResource(R.string.dialog_confirm),
+                                        dismissLabel = stringResource(R.string.dialog_cancel),
+                                        valueHint = stringResource(R.string.ai_reply_tts_tiax_base_hint),
                                     )
                                 }
                             }
