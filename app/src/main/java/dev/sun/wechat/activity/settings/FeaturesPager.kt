@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -271,12 +272,17 @@ fun CategoryDetailScreen(categoryId: String, onBack: () -> Unit) {
         } else {
             item { Spacer(Modifier.height(12.dp)) }
             lazySegmentedItems(items, key = { it.technicalId }) { feature ->
+                var expanded by rememberSaveable(feature.technicalId) { mutableStateOf(false) }
+                // 有的功能自带设置项（+ 号菜单配色、加号菜单卡片化等），Miuix 引擎是常驻内联展示；
+                // Material3 这边折叠起来，点一下标题行展开，避免长列表被输入框撑得太长。
                 Column(Modifier.padding(horizontal = 16.dp)) {
                     FeatureRow(
                         item = feature,
                         checked = featureChecked(feature),
                         onCheckedChange = {},
+                        onRowClick = { expanded = !expanded },
                     )
+                    if (expanded) feature.Ui()
                 }
             }
         }

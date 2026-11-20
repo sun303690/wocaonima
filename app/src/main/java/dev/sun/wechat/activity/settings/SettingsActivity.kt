@@ -399,6 +399,8 @@ fun FeatureRow(
     item: BaseFeature,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
+    /** 给自带设置项（[BaseFeature.Ui]）的功能用：点标题区展开／收起那些设置项。 */
+    onRowClick: (() -> Unit)? = null,
 ) {
     val context = LocalComponentActivity.current
     val localizedContext = LocalWeKitLocalizedContext.current
@@ -465,6 +467,7 @@ fun FeatureRow(
             iconPlaceholder = false,
             title = localizedName,
             description = localizedDescription,
+            onClick = onRowClick,
             checked = checked,
             onCheckedChange = { toggle(it) },
         )
