@@ -32,7 +32,7 @@ import dev.sun.wechat.data.KvStore
 import dev.sun.wechat.features.api.ui.WeMainActivityBeautifyApi
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.core.SwitchFeature
-import dev.sun.wechat.ui.content.miuix.MiuixCompatTextField
+import dev.sun.wechat.ui.content.miuix.MiuixColorPickerWidget
 import dev.sun.wechat.utils.WeLogger
 import java.io.File
 import top.yukonga.miuix.kmp.basic.Text
@@ -244,7 +244,7 @@ object PlusMenuCard : SwitchFeature() {
         obj.javaClass.getDeclaredField(name).apply { isAccessible = true }.get(obj)
     }.onFailure { WeLogger.e(TAG, "read field $name failed", it) }.getOrNull()
 
-    /** 自定义加号菜单配色：四个色值输入 + 背景图路径提示（键名与 WePeak 一致） */
+    /** 自定义加号菜单配色：四个取色器 + 背景图路径提示（键名与 WePeak 一致） */
     @Composable
     override fun Ui() {
         val context = LocalContext.current
@@ -253,44 +253,40 @@ object PlusMenuCard : SwitchFeature() {
         var bgLight by remember { mutableStateOf(KvStore.getStringOrDef(KEY_BG_LIGHT, DEF_BG_LIGHT)) }
         var bgDark by remember { mutableStateOf(KvStore.getStringOrDef(KEY_BG_DARK, DEF_BG_DARK)) }
 
-        MiuixCompatTextField(
+        MiuixColorPickerWidget(
+            title = stringResource(R.string.plus_menu_text_light),
             value = textLight,
             onValueChange = {
                 textLight = it
                 KvStore.putString(KEY_TEXT_LIGHT, it)
             },
-            label = stringResource(R.string.plus_menu_text_light),
-            singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
-        MiuixCompatTextField(
+        MiuixColorPickerWidget(
+            title = stringResource(R.string.plus_menu_text_dark),
             value = textDark,
             onValueChange = {
                 textDark = it
                 KvStore.putString(KEY_TEXT_DARK, it)
             },
-            label = stringResource(R.string.plus_menu_text_dark),
-            singleLine = true,
             modifier = Modifier.padding(top = 8.dp)
         )
-        MiuixCompatTextField(
+        MiuixColorPickerWidget(
+            title = stringResource(R.string.plus_menu_bg_light),
             value = bgLight,
             onValueChange = {
                 bgLight = it
                 KvStore.putString(KEY_BG_LIGHT, it)
             },
-            label = stringResource(R.string.plus_menu_bg_light),
-            singleLine = true,
             modifier = Modifier.padding(top = 8.dp)
         )
-        MiuixCompatTextField(
+        MiuixColorPickerWidget(
+            title = stringResource(R.string.plus_menu_bg_dark),
             value = bgDark,
             onValueChange = {
                 bgDark = it
                 KvStore.putString(KEY_BG_DARK, it)
             },
-            label = stringResource(R.string.plus_menu_bg_dark),
-            singleLine = true,
             modifier = Modifier.padding(top = 8.dp)
         )
         val bgPath = bgImageFile(context).absolutePath
