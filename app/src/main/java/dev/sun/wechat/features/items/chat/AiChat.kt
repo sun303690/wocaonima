@@ -40,6 +40,7 @@ import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
 import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.features.api.core.models.MessageInfo
 import dev.sun.wechat.features.api.core.models.MessageType
+import dev.sun.wechat.features.items.multimodal.MediaVision
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
 import dev.sun.wechat.features.items.multimodal.VisionClient
@@ -57,8 +58,10 @@ import dev.sun.wechat.ui.content.miuix.DropdownOption
 import dev.sun.wechat.ui.content.miuix.MiuixIntNumberPickerWidget
 import dev.sun.wechat.ui.content.miuix.MiuixSegmentedColumn
 import kotlin.math.roundToInt
+import dev.sun.wechat.utils.HostInfo
 import dev.sun.wechat.utils.WeLogger
 import dev.sun.wechat.utils.android.showToast
+import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicLong
@@ -99,6 +102,19 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     private const val MAX_OUTPUT_TOKENS = 32768
     /** 一次历史上下文里最多现场补几条语音转写（每条都要调一次语音识别接口，慢且花钱）。 */
     private const val MAX_LIVE_VOICE_TRANSCRIPTS = 1
+
+    /** 一轮上下文里最多现场识别几条媒体；其余先放占位符，等下一轮命中缓存再补全。窗口只有 10 条，所以不会超过 10。 */
+    private const val MAX_LIVE_MEDIA_DESCRIPTIONS = 8
+
+    private const val MEDIA_PROMPT_IMAGE = "请用中文一句话概括这张图片的内容，只输出概括结果。"
+    private const val MEDIA_PROMPT_STICKER = "请用中文一句话说明这个表情包表达的意思，只输出概括结果。"
+    private const val MEDIA_PROMPT_ANIMATION = "请用中文一句话概括这个动图的内容，只输出概括结果。"
+    private const val MEDIA_PROMPT_VIDEO = "请用中文一句话概括这个视频的内容，只输出概括结果。"
+
+    /** 媒体识别结果缓存，key = msgSvrId-typeCode；命中就不再请求，省钱也省时间。 */
+    private val mediaDescriptions = ConcurrentHashMap<String, String>()
+
+    private fun mediaCacheDir(): File = File(HostInfo.application.cacheDir, "ai-chat-media").apply { mkdirs() }
     /** 现场补语音转写时的最长等待，超时先用「[语音]」占位，识别结果仍会进缓存。 */
     private const val VOICE_WAIT_MS = 8_000L
     private const val MAX_REPLY_DELAY_MS = 60_000L
@@ -126,6 +142,9 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     internal var monitorAuthorizedChats by KvStore.prefOption("ai_chat_monitor_authorized_chats", true)
     internal var monitorOnly by KvStore.prefOption("ai_chat_monitor_only", false)
     internal var historyBackfillCount by KvStore.prefOption("ai_chat_history_backfill_count", 10)
+
+    /** 上下文里的图片/表情/动图/视频是否送视觉模型识别（默认关，按张计费）。 */
+    internal var mediaContext by KvStore.prefOption("ai_chat_media_context", false)
     internal var groupMaxReplyChars by KvStore.prefOption("ai_chat_group_max_reply_chars", 500)
     var voiceReplyEnabled by KvStore.prefOption("ai_chat_voice_reply_enabled", false)
 
@@ -156,6 +175,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         val monitorOnly: Boolean,
         val historyBackfillCount: Int,
         val groupMaxReplyChars: Int,
+        val mediaContext: Boolean,
     )
 
     private fun snapshot(): Config = Config(
@@ -176,6 +196,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         monitorOnly = monitorOnly,
         historyBackfillCount = 10,
         groupMaxReplyChars = groupMaxReplyChars.coerceIn(100, 4000),
+        mediaContext = mediaContext,
     )
 
     /** 白名单：命中才回；黑名单：命中就跳过（空名单=全部处理）。 */
@@ -489,18 +510,23 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         }
     }
 
+    /** 从数据库回填最近 10 条消息做上下文；群聊和私聊都走这里（私聊原来只累积文本框，媒体消息会被丢掉）。 */
     private fun refreshRecentGroupContext(talker: String, history: MutableList<LlmMessage>, config: Config): Int {
-        if (!isGroupTalker(talker) || !WeDatabaseApi.isReady) return 0
+        if (!WeDatabaseApi.isReady) return 0
         val rows = runCatching { WeDatabaseApi.getMessages(talker, 1, 10) }
             .getOrElse { WeLogger.w(TAG, "failed to refresh recent group context for $talker", it); emptyList() }
             .asReversed()
             .filter { row ->
                 val type = MessageType.fromCode(row.typeCode)
-                (type?.isText == true && row.content.isNotBlank()) || type?.code == MessageType.VOICE.code
+                (type?.isText == true && row.content.isNotBlank()) ||
+                    type?.code == MessageType.VOICE.code ||
+                    (config.mediaContext && MediaVision.isVisual(type))
             }
             .takeLast(10)
         // 语音进上下文要花钱：缓存没命中时只现场识别 1 条（限时 8 秒），其余先放占位符，下一轮命中缓存再补全。
         var liveBudget = MAX_LIVE_VOICE_TRANSCRIPTS
+        var liveMediaBudget = MAX_LIVE_MEDIA_DESCRIPTIONS
+        var mediaDescribed = 0
         var transcribed = 0
         synchronized(history) {
             history.clear()
@@ -530,6 +556,47 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                     history += LlmMessage(if (message.isSend != 0) LlmRole.ASSISTANT else LlmRole.USER, text)
                     return@forEach
                 }
+                if (config.mediaContext && MediaVision.isVisual(type)) {
+                    val key = "${message.msgSvrId}-${message.typeCode}"
+                    val cached = mediaDescriptions[key]
+                    val described = when {
+                        cached != null -> cached
+                        !MediaVision.available() -> null
+                        liveMediaBudget > 0 -> {
+                            liveMediaBudget--
+                            runCatching {
+                                MediaVision.describe(
+                                    message,
+                                    mediaCacheDir(),
+                                    MEDIA_PROMPT_IMAGE,
+                                    MEDIA_PROMPT_STICKER,
+                                    MEDIA_PROMPT_ANIMATION,
+                                    MEDIA_PROMPT_VIDEO,
+                                )
+                            }
+                                .onFailure { WeLogger.w(TAG, "media describe for context failed: ${it.message}") }
+                                .getOrNull()
+                                ?.also { mediaDescriptions[key] = it }
+                        }
+                        else -> null
+                    }
+                    if (!described.isNullOrBlank()) mediaDescribed++
+                    val label = when {
+                        type?.isSticker == true -> "表情"
+                        type?.code == MessageType.VIDEO.code -> "视频"
+                        else -> "图片"
+                    }
+                    val body = if (described.isNullOrBlank()) "[$label]" else "[$label 分析] $described"
+                    // 群聊里媒体消息的 content 同样带 "wxid:\n" 前缀，按文本分支的规则标出发送者，模型才知道是谁发的图。
+                    val (mediaSender, _) = splitGroupSender(talker, message.content)
+                    val text = when {
+                        message.isSend != 0 -> "[WeChat sender: self]\n$body"
+                        mediaSender != null -> "[WeChat sender: $mediaSender]\n$body"
+                        else -> body
+                    }
+                    history += LlmMessage(if (message.isSend != 0) LlmRole.ASSISTANT else LlmRole.USER, text)
+                    return@forEach
+                }
                 val (sender, body) = splitGroupSender(talker, message.content)
                 val text = when {
                     message.isSend != 0 -> "[WeChat sender: self]\n$body"
@@ -540,6 +607,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
             }
         }
         if (transcribed > 0) WeLogger.i(TAG, "voice messages transcribed for context: talker=$talker, count=$transcribed")
+        if (mediaDescribed > 0) WeLogger.i(TAG, "media messages described for context: talker=$talker, count=$mediaDescribed")
         return rows.size
     }
 
