@@ -567,10 +567,10 @@
     <string name="feature_add_main_screen_fab_description">向微信主屏幕添加浮動操作按鈕</string>
     <string name="feature_plus_menu_card_name">加號選單卡片化</string>
     <string name="feature_plus_menu_card_description">將主介面右上角加號的原生選單換成卡片面板</string>
-    <string name="plus_menu_text_light">選單文字顏色（淺色模式，十六進位）</string>
-    <string name="plus_menu_text_dark">選單文字顏色（深色模式，十六進位）</string>
-    <string name="plus_menu_bg_light">選單背景顏色（淺色模式，十六進位）</string>
-    <string name="plus_menu_bg_dark">選單背景顏色（深色模式，十六進位）</string>
+    <string name="plus_menu_text_light">選單文字顏色（淺色模式）</string>
+    <string name="plus_menu_text_dark">選單文字顏色（深色模式）</string>
+    <string name="plus_menu_bg_light">選單背景顏色（淺色模式）</string>
+    <string name="plus_menu_bg_dark">選單背景顏色（深色模式）</string>
     <string name="plus_menu_bg_image_hint">可選背景圖：把 plus_menu_bg.png 放進 Android/data/com.tencent.mm/files/wekit/（重開選單即生效）</string>
     <string name="plus_menu_card_title">快捷操作</string>
     <string name="feature_apply_dialog_background_blur_name">對話框窗口級背景模糊</string>
@@ -4318,6 +4318,8 @@
     <string name="smart_reply_context_limit">參考上下文條數（訊息）</string>
     <string name="smart_reply_count">生成備選數（條）</string>
     <string name="smart_reply_media_context">辨識圖片和影片</string>
+    <string name="smart_reply_voice_context">辨識語音</string>
+    <string name="smart_reply_voice_context_summary">生成回覆時，把最近訊息裡的語音轉成文字；語音介面沒配好就只留佔位。</string>
     <string name="smart_reply_media_context_summary">生成回覆時，把最近訊息裡的圖片、貼圖、影片也讀成文字，一併交給模型參考。</string>
 
     <string name="smart_reply_style">語氣預設</string>
@@ -4632,6 +4634,11 @@
     <string name="ai_reply_tts_switch_short">語音回覆</string>
     <string name="ai_reply_tts_backend">語音後端</string>
     <string name="ai_reply_tts_backend_breeze">Breeze 藍</string>
+    <string name="ai_reply_tts_backend_tiax">天X API</string>
+    <string name="ai_reply_tts_tiax_key_hint">在 tiax.pw 使用者中心取得的 API Key</string>
+    <string name="ai_reply_tts_tiax_base">介面位址</string>
+    <string name="ai_reply_tts_tiax_base_hint">預設 https://www.tiax.pw，換鏡像才改</string>
+    <string name="ai_reply_tts_tiax_voice_hint">音色名稱或編號，共 458 個，名單見 tiax.pw/API/ys.php</string>
     <string name="ai_reply_tts_breeze_key_hint">在 breezeblue.ai 的開發者 API Keys 頁面創建</string>
     <string name="ai_reply_tts_breeze_unselected">未選擇音色</string>
     <string name="ai_reply_tts_breeze_model">模型</string>

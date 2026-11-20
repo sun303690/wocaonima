@@ -606,10 +606,10 @@
     <string name="feature_add_main_screen_fab_description">Add floating action buttons to WeChat home screen</string>
     <string name="feature_plus_menu_card_name">Plus menu card</string>
     <string name="feature_plus_menu_card_description">Show the + menu on the home screen as a card panel</string>
-    <string name="plus_menu_text_light">Menu text color (light mode, hex)</string>
-    <string name="plus_menu_text_dark">Menu text color (dark mode, hex)</string>
-    <string name="plus_menu_bg_light">Menu background color (light mode, hex)</string>
-    <string name="plus_menu_bg_dark">Menu background color (dark mode, hex)</string>
+    <string name="plus_menu_text_light">Menu text color (light mode)</string>
+    <string name="plus_menu_text_dark">Menu text color (dark mode)</string>
+    <string name="plus_menu_bg_light">Menu background color (light mode)</string>
+    <string name="plus_menu_bg_dark">Menu background color (dark mode)</string>
     <string name="plus_menu_bg_image_hint">Optional background image: put plus_menu_bg.png into Android/data/com.tencent.mm/files/wekit/ (re-open the menu to apply)</string>
     <string name="plus_menu_card_title">Quick actions</string>
     <string name="feature_apply_dialog_background_blur_name">Dialog background blur</string>
@@ -4309,6 +4309,8 @@
     <string name="smart_reply_context_limit">Reference context (messages)</string>
     <string name="smart_reply_count">Candidate count</string>
     <string name="smart_reply_media_context">Read images and videos</string>
+    <string name="smart_reply_voice_context">Transcribe voice messages</string>
+    <string name="smart_reply_voice_context_summary">When generating replies, transcribe voice messages in recent messages; placeholders stay if the speech interface is not configured.</string>
     <string name="smart_reply_media_context_summary">When generating replies, also caption images, stickers and videos in recent messages so the model can use them.</string>
 
     <string name="smart_reply_style">Tone preset</string>
@@ -4543,6 +4545,11 @@
     <string name="ai_reply_tts_switch_summary">Generate and send a voice reply from a candidate</string>
     <string name="ai_reply_tts_backend">Voice backend</string>
     <string name="ai_reply_tts_backend_breeze">Breeze Blue</string>
+    <string name="ai_reply_tts_backend_tiax">TianX API</string>
+    <string name="ai_reply_tts_tiax_key_hint">API key from your tiax.pw account (user center)</string>
+    <string name="ai_reply_tts_tiax_base">API base URL</string>
+    <string name="ai_reply_tts_tiax_base_hint">Default https://www.tiax.pw, change it only for a mirror</string>
+    <string name="ai_reply_tts_tiax_voice_hint">Voice name or number, 458 available (tiax.pw/API/ys.php)</string>
     <string name="ai_reply_tts_breeze_key_hint">Created on the breezeblue.ai developer API keys page</string>
     <string name="ai_reply_tts_breeze_unselected">No voice selected</string>
     <string name="ai_reply_tts_breeze_model">Model</string>
