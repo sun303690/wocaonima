@@ -90,8 +90,28 @@ object MultimodalEngine {
     fun visionReady(): Boolean =
         visionBaseUrl.isNotBlank() && visionApiKey.isNotBlank()
 
-    /** 地址、Key、模型都齐了才算能真正发请求；缺一个后台线程就别起。 */
-    fun visionUsable(): Boolean = visionReady() && visionModel.isNotBlank()
+    /** 视觉接口整套配好（地址 + Key + 视觉模型）。 */
+    fun visionBound(): Boolean = visionReady() && visionModel.isNotBlank()
+
+    /**
+     * 视觉任务可用：视觉接口整套配好就用它自己，否则整组回落到文字接口。
+     *
+     * 一家多模态服务商只填一次（文字接口那页）也能读图；回落是整组的，
+     * 不会出现「视觉接口的地址 + 文字接口的模型名」这种错配。
+     */
+    fun visionUsable(): Boolean = visionBound() || textBound()
+
+    /** 视觉请求实际用的地址：视觉接口整套配好就用自己的，否则用文字接口的。 */
+    fun visionEndpointBase(): String = if (visionBound()) visionBaseUrl.trim() else textBaseUrl.trim()
+
+    /** 视觉请求实际用的 Key，规则同 [visionEndpointBase]。 */
+    fun visionCredential(): String = if (visionBound()) visionApiKey.trim() else textApiKey.trim()
+
+    /** 视觉任务实际用的模型：视觉模型优先，没填就用文字模型。 */
+    fun visionModelOrText(): String = visionModel.trim().ifBlank { textModel.trim() }
+
+    /** 视觉请求当前是否借用了文字接口的配置（设置页用来说清「现在走的是谁」）。 */
+    fun visionUsingTextFallback(): Boolean = !visionBound() && textBound()
 
     /** 文字接口是否配好了（只能用于纯文字任务，跟视觉接口互不影响）。 */
     fun textReady(): Boolean =

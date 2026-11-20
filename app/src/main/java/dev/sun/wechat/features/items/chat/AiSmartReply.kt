@@ -102,6 +102,7 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
 
     /** 生成回复时是否把历史窗口里的图片 / 表情 / 视频也读成文字，喂给模型当上下文。 */
     var mediaContext by prefOption("ai_reply_media_context", false)
+    var voiceContext by prefOption("ai_reply_voice_context", false)
     var replyCount by prefOption("ai_reply_count", 20)
     private var lastSelectedStyle by prefOption("ai_reply_last_selected_style", "智能全能")
 
@@ -133,6 +134,7 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
         var contextInput by remember { mutableStateOf(contextLimit.toString()) }
         var countInput by remember { mutableStateOf(replyCount.toString()) }
         var mediaContextInput by remember { mutableStateOf(mediaContext) }
+        var voiceContextInput by remember { mutableStateOf(voiceContext) }
         AlertDialogContent(
             title = { Text(stringResource(R.string.feature_ai_smart_reply_name)) },
             text = {
@@ -170,6 +172,14 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
                                 summary = stringResource(R.string.smart_reply_media_context_summary),
                             )
                         }
+                        item {
+                            MiuixSwitchWidget(
+                                title = stringResource(R.string.smart_reply_voice_context),
+                                checked = voiceContextInput,
+                                onCheckedChange = { voiceContextInput = it },
+                                summary = stringResource(R.string.smart_reply_voice_context_summary),
+                            )
+                        }
                     }
                 }
             },
@@ -178,6 +188,7 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
                     contextLimit = contextInput.toIntOrNull()?.coerceIn(1, 50) ?: 10
                     replyCount = countInput.toIntOrNull()?.coerceIn(1, 20) ?: 20
                     mediaContext = mediaContextInput
+                    voiceContext = voiceContextInput
                     onDismiss()
                 }) { Text(stringResource(R.string.dialog_confirm)) }
             },
@@ -448,7 +459,8 @@ object AiSmartReply : WeChatMessageContextMenuApi.IMenuItemsProvider {
                     if (path.isNullOrBlank() || !AsrEngine.ready()) return "[语音]"
                     val cached = runCatching { AsrEngine.cachedTranscript(path) }.getOrNull()
                     if (!cached.isNullOrBlank()) return "[语音] $cached"
-                    if (!withMedia || liveVoiceBudget <= 0) return "[语音]"
+                    // 语音只看自己的开关和语音接口（AsrEngine），不受视觉闸门限制。
+                    if (!voiceContext || liveVoiceBudget <= 0) return "[语音]"
                     liveVoiceBudget--
                     val fresh = runCatching { AsrEngine.transcriptForContext(path) }
                         .onFailure { WeLogger.w(TAG, "voice transcript for context failed: ${it.message}") }

@@ -48,7 +48,7 @@ object VisionClient {
 
     /** 同步调用视觉接口，返回模型给的一句话描述；失败抛异常（调用方一般在后台线程）。 */
     fun describe(file: File, prompt: String): String {
-        if (!MultimodalEngine.visionReady()) throw IllegalStateException("未配置视觉接口")
+        if (!MultimodalEngine.visionUsable()) throw IllegalStateException("未配置视觉接口")
         if (!file.isFile || file.length() == 0L) throw IllegalStateException("图片文件不存在")
         val dataUri = encode(file) ?: throw IllegalStateException("不支持的图片格式")
 
@@ -96,7 +96,7 @@ object VisionClient {
      * 三段拼出一个完整 JSON 请求体，长度可预算所以能带上 Content-Length。
      */
     fun describeVideo(file: File, prompt: String): String {
-        if (!MultimodalEngine.visionReady()) throw IllegalStateException("未配置视觉接口")
+        if (!MultimodalEngine.visionUsable()) throw IllegalStateException("未配置视觉接口")
         if (!file.isFile || file.length() == 0L) throw IllegalStateException("视频文件不存在")
         if (file.length() > MAX_VIDEO_BYTES) {
             throw IllegalStateException("视频 ${file.length() / 1024 / 1024}MB 超过 10MB 上限")
@@ -132,8 +132,8 @@ object VisionClient {
             }
         }
         val request = Request.Builder()
-            .url(endpoint(MultimodalEngine.visionBaseUrl))
-            .addHeader("Authorization", "Bearer ${MultimodalEngine.visionApiKey.trim()}")
+            .url(endpoint(MultimodalEngine.visionEndpointBase()))
+            .addHeader("Authorization", "Bearer ${MultimodalEngine.visionCredential()}")
             .post(body)
             .build()
         val response = runCatching { client.newCall(request).execute() }.getOrElse {
@@ -158,7 +158,7 @@ object VisionClient {
      * 回调在后台线程，调用方自己 post 回主线程。
      */
     fun fetchModels(cb: (List<String>?, String?) -> Unit) =
-        fetchModelsFrom(MultimodalEngine.visionBaseUrl, MultimodalEngine.visionApiKey, "wekit-vision-models", cb)
+        fetchModelsFrom(MultimodalEngine.visionEndpointBase(), MultimodalEngine.visionCredential(), "wekit-vision-models", cb)
 
     /**
      * 文字接口单独拉模型列表。
@@ -285,10 +285,10 @@ object VisionClient {
 
     /** 连通性测试：只发一条纯文本 ping，验证地址/Key/模型是否可用，不花图片 token。 */
     fun testConnection(cb: (Boolean, String) -> Unit) {
-        if (MultimodalEngine.visionBaseUrl.isBlank()) {
+        if (MultimodalEngine.visionEndpointBase().isBlank()) {
             cb(false, "还没填接口地址"); return
         }
-        if (MultimodalEngine.visionApiKey.isBlank()) {
+        if (MultimodalEngine.visionCredential().isBlank()) {
             cb(false, "还没填 Key"); return
         }
         thread(name = "wekit-vision-test") {
@@ -397,12 +397,12 @@ object VisionClient {
     private fun textModelName(): String = MultimodalEngine.textModelOrVision()
         .ifBlank { throw IllegalStateException("还没选文本模型") }
 
-    private fun modelName(): String =
-        MultimodalEngine.visionModel.trim().ifBlank { throw IllegalStateException("还没选视觉模型") }
+    private fun modelName(): String = MultimodalEngine.visionModelOrText()
+        .ifBlank { throw IllegalStateException("还没选视觉模型") }
 
     private fun request(payload: JSONObject): Request = Request.Builder()
-        .url(endpoint(MultimodalEngine.visionBaseUrl))
-        .addHeader("Authorization", "Bearer ${MultimodalEngine.visionApiKey.trim()}")
+        .url(endpoint(MultimodalEngine.visionEndpointBase()))
+        .addHeader("Authorization", "Bearer ${MultimodalEngine.visionCredential()}")
         .post(payload.toString().toRequestBody("application/json".toMediaType()))
         .build()
 

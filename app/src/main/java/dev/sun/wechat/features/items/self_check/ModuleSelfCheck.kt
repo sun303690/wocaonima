@@ -401,7 +401,9 @@ object ModuleSelfCheck {
             label = "视觉接口",
             section = section,
             value = when {
-                visionUsable -> "已配置 · ${MultimodalEngine.visionModel}"
+                visionUsable && MultimodalEngine.visionUsingTextFallback() ->
+                    "借用文字接口 · ${MultimodalEngine.visionModelOrText()}"
+                visionUsable -> "已配置 · ${MultimodalEngine.visionModelOrText()}"
                 visionReady -> "缺模型"
                 else -> "未配置"
             },
@@ -412,6 +414,9 @@ object ModuleSelfCheck {
                 appendLine("Key：${maskSecret(MultimodalEngine.visionApiKey)}")
                 appendLine("模型：${MultimodalEngine.visionModel.ifBlank { "未选" }}")
                 append("OpenAI 兼容接口，路径要能拼出 /chat/completions，模型列表来自 /models。")
+                if (MultimodalEngine.visionUsingTextFallback()) {
+                    append("\n视觉接口没配整套，图片/表情/视频请求整组借用文字接口的地址、Key 与模型。")
+                }
                 if (visionReady && !visionUsable) append("\n地址和 Key 有了但模型是空的：后台识别会被直接跳过，图片/表情都不会有描述。")
             },
         )
