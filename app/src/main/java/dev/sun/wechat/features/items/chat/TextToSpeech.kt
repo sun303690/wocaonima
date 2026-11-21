@@ -4,6 +4,7 @@ import android.media.MediaPlayer
 import android.os.Handler
 import android.os.Looper
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -155,6 +157,9 @@ object TextToSpeech :
     /** 天X API 的默认站址与默认音色（音色名单：https://www.tiax.pw/API/ys.php，共 458 个）。 */
     private const val TIAX_DEFAULT_BASE = "https://www.tiax.pw"
     private const val TIAX_DEFAULT_VOICE = "1"
+    /** 天X 没有语速参数，客户端改时长；0.6~1.5 之外容易听出破音或金属声。 */
+    private const val TIAX_MIN_SPEED = 0.6f
+    private const val TIAX_MAX_SPEED = 1.5f
 
     /** 服务端不保证主动关闭连接, 静默这么久即视为合成结束 */
     private const val DOUBAO_IDLE_GAP_MS = 2500L
@@ -190,6 +195,7 @@ object TextToSpeech :
     var tiaxBaseUrl by prefOption("tts_tiax_base_url", TIAX_DEFAULT_BASE)
     var tiaxApiKey by prefOption("tts_tiax_api_key", "")
     var tiaxVoice by prefOption("tts_tiax_voice", TIAX_DEFAULT_VOICE)
+    var tiaxSpeed by prefOption("tts_tiax_speed", 1.0f)
 
     /** 入口一: 长按聊天消息气泡的菜单 */
     private var entryBubble by prefOption("tts_entry_bubble", false)
@@ -751,6 +757,7 @@ object TextToSpeech :
             var tiaxKeyState by remember { mutableStateOf(tiaxApiKey) }
             var tiaxVoiceState by remember { mutableStateOf(tiaxVoice) }
             var tiaxBaseState by remember { mutableStateOf(tiaxBaseUrl) }
+            var tiaxSpeedState by remember { mutableStateOf(tiaxSpeed) }
             var breezeModelState by remember { mutableStateOf(breezeModel) }
             // DropDownMenuWidget 内部是 options.first { it.value == value }，当前值必须在选项里
             var modelOptions by remember {
@@ -1004,6 +1011,20 @@ object TextToSpeech :
                                 )
                             }
                             item {
+                                // 天X 没有独立的情绪参数，语气体现在音色名上；这里把当前音色的分类显示出来，
+                                // 点开选择器顶部就能按语气筛选
+                                BaseWidget(
+                                    title = "语气",
+                                    description = toneOf(tiaxVoiceLabel(tiaxVoiceState)) ?: "按音色分类筛选（温柔 / 可爱 / 磁性 / 方言…）",
+                                    onClick = {
+                                        showTiaxVoicePicker(context, tiaxVoiceState, tiaxBaseState) { voice, _ ->
+                                            tiaxVoiceState = voice
+                                            tiaxVoice = voice
+                                        }
+                                    },
+                                )
+                            }
+                            item {
                                 TextFieldDialogWidget(
                                     title = "接口地址",
                                     value = tiaxBaseState,
@@ -1015,6 +1036,18 @@ object TextToSpeech :
                                     confirmLabel = "确认",
                                     dismissLabel = "取消",
                                     valueHint = "默认 https://www.tiax.pw",
+                                )
+                            }
+                            item {
+                                BaseWidget(
+                                    title = "语速",
+                                    description = tiaxSpeedLabel(tiaxSpeedState),
+                                    onClick = {
+                                        showTiaxSpeedDialog(context, tiaxSpeedState) { value ->
+                                            tiaxSpeedState = value
+                                            tiaxSpeed = value
+                                        }
+                                    },
                                 )
                             }
                         }
@@ -1288,6 +1321,59 @@ object TextToSpeech :
      * 音色**只能发序号**（编号见 https://www.tiax.pw/API/ys.php，共 458 个）：实测发名字
      * 会被服务端静默忽略并回落 1 号音色，所以这里统一归一化成序号。
      */
+    /** 语速档位：天X 没有语速参数，只能本地改时长。 */
+    private val TIAX_SPEEDS = listOf(0.7f, 0.8f, 0.9f, 1.0f, 1.1f, 1.2f, 1.3f)
+
+    private fun tiaxSpeedLabel(speed: Float): String {
+        val fixed = speed.coerceIn(TIAX_MIN_SPEED, TIAX_MAX_SPEED)
+        val scale = String.format(java.util.Locale.US, "%.1f×", fixed)
+        return when {
+            kotlin.math.abs(fixed - 1f) < 0.01f -> "$scale（原速）"
+            fixed < 1f -> "$scale（更慢，音调会低一点）"
+            else -> "$scale（更快，音调会高一点）"
+        }
+    }
+
+    private fun showTiaxSpeedDialog(
+        context: android.content.Context,
+        current: Float,
+        onPicked: (Float) -> Unit,
+    ) {
+        showComposeDialog(context) {
+            AlertDialogContent(
+                title = { Text("天X 语速") },
+                text = {
+                    Column {
+                        Text("接口不支持语速参数，改的是本地时长；变快慢会连带改变音调。")
+                        Spacer(Modifier.height(8.dp))
+                        TIAX_SPEEDS.forEach { speed ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onPicked(speed)
+                                        onDismiss()
+                                    }
+                                    .padding(vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(tiaxSpeedLabel(speed), modifier = Modifier.weight(1f))
+                                if (kotlin.math.abs(speed - current) < 0.01f) {
+                                    Icon(
+                                        MaterialSymbols.Outlined.Check,
+                                        contentDescription = "当前语速",
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                },
+                dismissButton = { TextButton(text = "关闭", onClick = onDismiss) },
+            )
+        }
+    }
+
     fun generateVoiceTiax(
         text: String,
         voice: String = tiaxVoice,
@@ -1343,7 +1429,20 @@ object TextToSpeech :
                         } else {
                             val dir = File(KnownPaths.moduleCache.toFile(), "wcs_tts").apply { mkdirs() }
                             val dest = File(dir, "tiax_${System.currentTimeMillis()}.mp3")
-                            dest.writeBytes(bytes)
+                            val speed = tiaxSpeed.coerceIn(TIAX_MIN_SPEED, TIAX_MAX_SPEED)
+                            val tempoApplied = if (kotlin.math.abs(speed - 1f) < 0.01f) {
+                                dest.writeBytes(bytes)
+                                true
+                            } else {
+                                // 接口不支持语速参数，只能落到本地改时长；失败就退回原速，别让用户拿不到语音
+                                val raw = File(dir, "tiax_raw_${System.currentTimeMillis()}.mp3")
+                                raw.writeBytes(bytes)
+                                val done = AudioUtils.changeTempo(raw.absolutePath, dest.absolutePath, speed)
+                                raw.delete()
+                                if (!done) dest.writeBytes(bytes)
+                                done
+                            }
+                            WeLogger.i(TAG, "tiax tts ok: bytes=${bytes.size}, speed=$speed, tempoApplied=$tempoApplied")
                             outPath = dest.absolutePath
                             lastWavPath = outPath
                         }

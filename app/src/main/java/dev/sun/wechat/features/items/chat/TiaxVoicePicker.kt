@@ -3,8 +3,11 @@ package dev.sun.wechat.features.items.chat
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,14 +18,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.composables.icons.materialsymbols.MaterialSymbols
 import com.composables.icons.materialsymbols.outlined.Check
 import com.composables.icons.materialsymbols.outlined.Refresh
@@ -121,6 +132,31 @@ fun normalizeTiaxVoice(value: String, baseUrl: String): String {
 }
 
 /**
+ * 天X 的「语气」并不是接口参数（`yuyin2.php` 只认 text/voice/apikey，
+ * 外加 emotion/speed/pitch 实测都被忽略），语气体现在音色名上，
+ * 所以这里按音色名归类，给选择器做筛选标签。
+ */
+data class TiaxVoiceTone(val title: String, val keywords: List<String>)
+
+/** 音色表里出现过的语气/角色分类；顺序即界面上的顺序。 */
+val TIAX_TONES: List<TiaxVoiceTone> = listOf(
+    TiaxVoiceTone("温柔", listOf("温柔")),
+    TiaxVoiceTone("可爱", listOf("可爱", "萝莉", "萌", "童声", "小孩")),
+    TiaxVoiceTone("甜", listOf("甜", "撒娇", "少女")),
+    TiaxVoiceTone("磁性", listOf("磁性", "低沉")),
+    TiaxVoiceTone("御姐", listOf("御姐", "女王", "成熟女")),
+    TiaxVoiceTone("冷酷", listOf("冷酷", "冷漠", "霸道")),
+    TiaxVoiceTone("大叔", listOf("大叔", "中年", "老者", "爷爷")),
+    TiaxVoiceTone("少年", listOf("少年", "青年", "男孩")),
+    TiaxVoiceTone("方言", listOf("方言", "粤语", "东北", "四川", "台湾", "河南", "天津", "陕西")),
+    TiaxVoiceTone("外语", listOf("英语", "日语", "韩语", "英文", "俄语")),
+)
+
+/** 取音色名命中的第一个语气分类；没命中返回 null（归到「全部」）。 */
+fun toneOf(label: String): String? =
+    TIAX_TONES.firstOrNull { tone -> tone.keywords.any { label.contains(it) } }?.title
+
+/**
  * 天X 音色选择弹窗。
  *
  * 458 个音色塞不进下拉框，所以开一个可搜索的列表；先铺本地缓存，再后台刷新一次。
@@ -179,12 +215,14 @@ fun showTiaxVoicePicker(
         val loading by loadingState
         val status by statusState
         var query by remember { mutableStateOf("") }
-        val filtered = when {
-            query.isBlank() -> voices
-            else -> voices.filter {
-                it.label.contains(query, ignoreCase = true) || it.value.contains(query, ignoreCase = true)
+        var tone by remember { mutableStateOf<String?>(null) }
+        val filtered = voices
+            .filter { tone == null || toneOf(it.label) == tone }
+            .filter {
+                query.isBlank() ||
+                    it.label.contains(query, ignoreCase = true) ||
+                    it.value.contains(query, ignoreCase = true)
             }
-        }
 
         AlertDialogContent(
             title = { Text("选择天X 音色") },
@@ -208,6 +246,21 @@ fun showTiaxVoicePicker(
                                 contentDescription = "重新拉取音色表",
                                 modifier = Modifier.size(20.dp),
                             )
+                        }
+                    }
+
+                    Spacer(Modifier.height(6.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        ToneChip(title = "全部", selected = tone == null) { tone = null }
+                        TIAX_TONES.forEach { item ->
+                            ToneChip(
+                                title = item.title,
+                                selected = tone == item.title,
+                            ) { tone = if (tone == item.title) null else item.title }
                         }
                     }
 
@@ -270,6 +323,26 @@ fun showTiaxVoicePicker(
                 }
             },
             dismissButton = { TextButton(text = "关闭", onClick = onDismiss) },
+        )
+    }
+}
+
+/** 语气筛选标签：选中态用实心主色，未选中用半透明黑底，不依赖主题语义色。 */
+@Composable
+private fun ToneChip(title: String, selected: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(if (selected) Color(0xFF6750A4) else Color(0x14000000))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+    ) {
+        BasicText(
+            text = title,
+            style = TextStyle(
+                color = if (selected) Color.White else Color(0xFF49454F),
+                fontSize = 14.sp,
+            ),
         )
     }
 }
