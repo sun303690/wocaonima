@@ -128,6 +128,21 @@ object TextToSpeech :
         BACKEND_TIAX to "天X API",
     )
 
+    /** 当前后端的展示名。 */
+    fun backendLabel(): String = BACKEND_LABELS.firstOrNull { it.first == backend }?.second ?: "未选择"
+
+    /** 「后端 · 音色」一行摘要，给设置列表与 AI 群聊页展示。 */
+    fun voiceSummary(): String {
+        val voice = when (backend) {
+            BACKEND_DOUBAO -> doubaoSpeakerName.ifBlank { DoubaoSamanthaTts.voiceLabel(doubaoSpeaker) }
+            BACKEND_BREEZE -> breezeVoiceName.ifBlank { breezeVoice }
+            BACKEND_SILICON -> siliconVoice
+            BACKEND_TIAX -> tiaxVoiceLabel(tiaxVoice)
+            else -> DEFAULT_VOICES.firstOrNull { it.voiceId == selectedVoice }?.label ?: selectedVoice
+        }
+        return backendLabel() + if (voice.isBlank()) "" else " · $voice"
+    }
+
     // 豆包网页端逆向协议: 鉴权在 WebSocket 握手阶段完成, 依赖登录态 Cookie
     private const val DOUBAO_WS = "wss://ws-samantha.doubao.com/samantha/audio/tts"
     private const val DOUBAO_ORIGIN = "https://www.doubao.com"
@@ -309,6 +324,13 @@ object TextToSpeech :
                                     inputBarEntry = it
                                     entryInputBar = it
                                 },
+                            )
+                        }
+                        item {
+                            BaseWidget(
+                                title = "语音配置",
+                                description = voiceSummary(),
+                                onClick = { showSettingsDialog(context) },
                             )
                         }
                     }

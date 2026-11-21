@@ -146,136 +146,22 @@ class AiChatSettingsActivity : ComponentActivity() {
 
     @Composable private fun VoicePage() = Page {
         var voiceEnabled by remember { mutableStateOf(AiChat.voiceReplyEnabled) }
-        var backend by remember { mutableStateOf(TextToSpeech.backend) }
-        var breezeKey by remember { mutableStateOf(TextToSpeech.breezeKey) }
-        var cookie by remember { mutableStateOf(TextToSpeech.doubaoCookie) }
-        var mofaKey by remember { mutableStateOf(TextToSpeech.apiKey) }
-        var voiceId by remember { mutableStateOf(currentVoiceId()) }
-        var emotion by remember { mutableStateOf(TextToSpeech.selectedEmotion) }
-        val doubaoTts = backend == TextToSpeech.BACKEND_DOUBAO
-        val breezeTts = backend == TextToSpeech.BACKEND_BREEZE
+        var summary by remember { mutableStateOf(TextToSpeech.voiceSummary()) }
 
         Block("自动文字转语音", "对方发来消息，AI 生成回复后自动转成语音发送") {
             ToggleRow("自动转语音发送", "开启后 AI 回复以语音消息发出，不再发送文字", voiceEnabled) { voiceEnabled = it; AiChat.voiceReplyEnabled = it }
         }
-        Block("语音参数", "与「文字转语音」「帮忙回」共用同一套设置") {
-            MiuixRadioButtonWidget(
-                title = "Breeze Blue",
-                description = "音色丰富，支持克隆音色",
-                selected = breezeTts,
-                onSelect = {
-                    backend = TextToSpeech.BACKEND_BREEZE
-                    TextToSpeech.backend = TextToSpeech.BACKEND_BREEZE
-                    voiceId = currentVoiceId()
-                },
-            )
-            MiuixRadioButtonWidget(
-                title = "豆包",
-                description = "需要豆包 Cookie",
-                selected = doubaoTts,
-                onSelect = {
-                    backend = TextToSpeech.BACKEND_DOUBAO
-                    TextToSpeech.backend = TextToSpeech.BACKEND_DOUBAO
-                    voiceId = currentVoiceId()
-                },
-            )
-            MiuixRadioButtonWidget(
-                title = "配音魔方",
-                description = "旧魔方接口",
-                selected = backend == TextToSpeech.BACKEND_MOFA,
-                onSelect = {
-                    backend = TextToSpeech.BACKEND_MOFA
-                    TextToSpeech.backend = TextToSpeech.BACKEND_MOFA
-                    voiceId = currentVoiceId()
-                },
-            )
-            if (breezeTts) {
-                TextFieldDialogWidget(
-                    title = "Breeze API Key",
-                    value = breezeKey,
-                    onValueChange = { breezeKey = it.trim(); TextToSpeech.breezeKey = breezeKey },
-                    dialogTitle = "设置 Breeze API Key",
-                    confirmLabel = "确认",
-                    dismissLabel = "取消",
-                    valueHint = "在 breezeblue.ai 的 Developer → API Keys 创建",
-                    password = true,
-                )
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("音色")
-                        Text(TextToSpeech.breezeVoiceName.ifBlank { voiceId }, style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-                    }
-                    Button({
-                        showBreezeVoicePicker(this@AiChatSettingsActivity, voiceId, breezeKey) { id, name ->
-                            TextToSpeech.breezeVoice = id
-                            TextToSpeech.breezeVoiceName = name
-                            voiceId = id
-                        }
-                    }) { Text("选择音色") }
+        Block("语音", "后端、Key 与音色都在「文字转语音」功能页里配置，这里只挑用哪个") {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("选择语音")
+                    Text(summary, style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
                 }
-            } else if (doubaoTts) {
-                TextFieldDialogWidget(
-                    title = "豆包 Cookie",
-                    value = cookie,
-                    onValueChange = { cookie = it.trim(); TextToSpeech.doubaoCookie = cookie },
-                    dialogTitle = "设置豆包 Cookie",
-                    confirmLabel = "确认",
-                    dismissLabel = "取消",
-                    valueHint = "需包含 sessionid / sid_guard / uid_tt",
-                    password = true,
-                )
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("音色")
-                        Text(doubaoSpeakerLabel(voiceId), style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
-                    }
-                    Button({
-                        showDoubaoVoicePicker(this@AiChatSettingsActivity, voiceId, cookie) { id, name ->
-                            TextToSpeech.doubaoSpeaker = id
-                            TextToSpeech.doubaoSpeakerName = name
-                            voiceId = id
-                        }
-                    }) { Text("选择音色") }
-                }
-            } else {
-                TextFieldDialogWidget(
-                    title = "魔方 API Key",
-                    value = mofaKey,
-                    onValueChange = { mofaKey = it.trim(); TextToSpeech.apiKey = mofaKey },
-                    dialogTitle = "设置魔方 API Key",
-                    confirmLabel = "确认",
-                    dismissLabel = "取消",
-                    valueHint = "在 peiyinmofang.com 创建",
-                    password = true,
-                )
-                MiuixDropDownMenuWidget(
-                    iconPlaceholder = false,
-                    title = "音色",
-                    description = null,
-                    value = voiceId,
-                    options = TextToSpeech.DEFAULT_VOICES.map { DropdownOption(it.voiceId, it.label) },
-                    onValueChange = { voiceId = it; TextToSpeech.selectedVoice = it },
-                )
+                Button({
+                    TextToSpeech.showVoiceConfig(this@AiChatSettingsActivity) { summary = TextToSpeech.voiceSummary() }
+                }) { Text("去配置") }
             }
-            MiuixDropDownMenuWidget(
-                iconPlaceholder = false,
-                title = "情绪",
-                description = "生成语音时使用的情绪语气",
-                value = emotion,
-                options = TextToSpeech.EMOTIONS.map { DropdownOption(it.first, it.first) },
-                enabled = !doubaoTts,
-                onValueChange = { emotion = it; TextToSpeech.selectedEmotion = it },
-            )
         }
+
     }
 }
-
-private fun currentVoiceId(): String = when (TextToSpeech.backend) {
-    TextToSpeech.BACKEND_DOUBAO -> TextToSpeech.customVoiceId.ifBlank { TextToSpeech.doubaoSpeaker.ifBlank { TextToSpeech.DOUBAO_VOICES.first().id } }
-    TextToSpeech.BACKEND_BREEZE -> TextToSpeech.customVoiceId.ifBlank { TextToSpeech.breezeVoice }
-    else -> TextToSpeech.customVoiceId.ifBlank { TextToSpeech.selectedVoice }
-}
-
-private fun doubaoSpeakerLabel(id: String): String =
-    if (TextToSpeech.doubaoSpeakerName.isNotBlank() && TextToSpeech.doubaoSpeaker == id) TextToSpeech.doubaoSpeakerName
-    else TextToSpeech.DOUBAO_VOICES.firstOrNull { it.id == id }?.label ?: id
