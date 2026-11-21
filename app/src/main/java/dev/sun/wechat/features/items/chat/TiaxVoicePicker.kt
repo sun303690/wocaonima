@@ -41,15 +41,16 @@ import java.net.URL
 
 private const val TAG = "TiaxVoicePicker"
 
-/** 音色表的本地缓存键：一次拉到之后离线也能选。 */
-private const val TIAX_VOICES_CACHE = "tts_tiax_voices_cache"
+/** 音色表的本地缓存键：一次拉到之后离线也能选。
+ *  v2：早期版本把音色名当接口值（服务端不认名字，一律回落 1 号音色），改为存序号。 */
+private const val TIAX_VOICES_CACHE = "tts_tiax_voices_cache_v2"
 
 /** 天X 音色表地址，相对接口地址。 */
 private const val TIAX_VOICES_PATH = "/API/ys.php"
 
 private val tiaxMainHandler = Handler(Looper.getMainLooper())
 
-/** 天X 的一个音色：[value] 是发给接口的值（音色名），[label] 是列表里显示的文字（带序号）。 */
+/** 天X 的一个音色：[value] 是发给接口的值（**序号**，服务端只认数字），[label] 是列表里显示的文字（序号 + 名称）。 */
 data class TiaxVoiceOption(val value: String, val label: String)
 
 /** 读本地缓存的音色表；没拉过就返回空列表。 */
@@ -90,18 +91,40 @@ fun fetchTiaxVoices(baseUrl: String, timeoutMs: Int = 20_000): List<TiaxVoiceOpt
             val match = pattern.find(line) ?: return@mapNotNull null
             val index = match.groupValues[1]
             val name = match.groupValues[2]
-            TiaxVoiceOption(name, "$index. $name")
+            TiaxVoiceOption(index, "$index. $name")
         }.toList()
     } finally {
         runCatching { conn.disconnect() }
     }
 }
 
+/** 把接口值（序号）翻成给人看的文字；缓存里没有就原样返回。 */
+fun tiaxVoiceLabel(value: String): String {
+    if (value.isBlank()) return ""
+    val hit = loadTiaxVoiceCache().firstOrNull { it.value == value }
+    return hit?.label ?: value
+}
+
+/**
+ * 归一化音色参数：接口只认序号，传名字会被静默忽略（回落 1 号音色）。
+ *
+ * 老版本存的是音色名，这里按缓存表反查出序号；查不到就原样返回，交给服务端回落。
+ */
+fun normalizeTiaxVoice(value: String, baseUrl: String): String {
+    val raw = value.trim()
+    if (raw.isEmpty() || raw.all { it.isDigit() }) return raw
+    loadTiaxVoiceCache().firstOrNull { it.label.endsWith(raw) || it.label == raw }
+        ?.let { return it.value }
+    return runCatching {
+        fetchTiaxVoices(baseUrl).firstOrNull { it.label.endsWith(raw) || it.label == raw }?.value
+    }.getOrNull() ?: raw
+}
+
 /**
  * 天X 音色选择弹窗。
  *
  * 458 个音色塞不进下拉框，所以开一个可搜索的列表；先铺本地缓存，再后台刷新一次。
- * 选中即回调并关闭，[onPicked] 的两个参数分别是接口值（音色名）与显示文字。
+ * 选中即回调并关闭，[onPicked] 的两个参数分别是接口值（序号）与显示文字。
  */
 fun showTiaxVoicePicker(
     context: Context,
@@ -196,7 +219,7 @@ fun showTiaxVoicePicker(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(status.ifBlank { "共 ${voices.size} 个音色" })
-                        Text("当前：${currentVoice.ifBlank { "未选择" }}")
+                        Text("当前：${tiaxVoiceLabel(currentVoice).ifBlank { "未选择" }}")
                     }
 
                     Spacer(Modifier.height(6.dp))

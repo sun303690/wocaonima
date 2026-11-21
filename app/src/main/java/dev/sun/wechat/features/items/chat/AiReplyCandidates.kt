@@ -1162,17 +1162,22 @@ object AiReplyCandidates : ClickableFeature(), WeChatMessageContextMenuApi.IMenu
                                             )
                                         },
                                     )
-                                    tiaxTts -> TextFieldDialogWidget(
+                                    tiaxTts -> BaseWidget(
                                         title = stringResource(R.string.ai_reply_tts_voice),
-                                        value = tiaxVoiceState,
-                                        onValueChange = {
-                                            tiaxVoiceState = it.trim()
-                                            TextToSpeech.tiaxVoice = tiaxVoiceState
+                                        description = tiaxVoiceLabel(tiaxVoiceState)
+                                            .ifBlank { stringResource(R.string.ai_reply_tts_breeze_unselected) },
+                                        onClick = {
+                                            showTiaxVoicePicker(context, tiaxVoiceState, tiaxBaseState) { voice, _ ->
+                                                tiaxVoiceState = voice
+                                                TextToSpeech.tiaxVoice = voice
+                                            }
                                         },
-                                        dialogTitle = stringResource(R.string.ai_reply_tts_voice),
-                                        confirmLabel = stringResource(R.string.dialog_confirm),
-                                        dismissLabel = stringResource(R.string.dialog_cancel),
-                                        valueHint = stringResource(R.string.ai_reply_tts_tiax_voice_hint),
+                                        trailingContent = {
+                                            Icon(
+                                                imageVector = MaterialSymbols.Outlined.Chevron_right,
+                                                contentDescription = null,
+                                            )
+                                        },
                                     )
                                     else -> DropDownMenuWidget(
                                         title = stringResource(R.string.ai_reply_tts_voice),

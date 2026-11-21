@@ -139,7 +139,7 @@ object TextToSpeech :
 
     /** 天X API 的默认站址与默认音色（音色名单：https://www.tiax.pw/API/ys.php，共 458 个）。 */
     private const val TIAX_DEFAULT_BASE = "https://www.tiax.pw"
-    private const val TIAX_DEFAULT_VOICE = "懒羊羊"
+    private const val TIAX_DEFAULT_VOICE = "1"
 
     /** 服务端不保证主动关闭连接, 静默这么久即视为合成结束 */
     private const val DOUBAO_IDLE_GAP_MS = 2500L
@@ -425,7 +425,7 @@ object TextToSpeech :
                             // 天X 有 458 个音色，下拉框塞不下，点开可搜索的列表挑
                             BaseWidget(
                                 title = "天X 音色",
-                                description = tiaxVoice.ifBlank { "未设置" },
+                                description = tiaxVoiceLabel(tiaxVoice).ifBlank { "未设置" },
                                 onClick = {
                                     showTiaxVoicePicker(context, tiaxVoice, tiaxBaseUrl) { voice, _ ->
                                         tiaxVoice = voice
@@ -972,7 +972,7 @@ object TextToSpeech :
                             item {
                                 BaseWidget(
                                     title = "音色",
-                                    description = tiaxVoiceState.ifBlank { "未设置" },
+                                    description = tiaxVoiceLabel(tiaxVoiceState).ifBlank { "未设置" },
                                     onClick = {
                                         showTiaxVoicePicker(context, tiaxVoiceState, tiaxBaseState) { voice, _ ->
                                             tiaxVoiceState = voice
@@ -1261,8 +1261,10 @@ object TextToSpeech :
      * 天X API 的文字转语音：`GET {base}/API/yuyin2.php?text=&voice=&apikey=`。
      *
      * 接口不会直接给音频字节，而是回 `{"code":"200","url":"https://…mp3?签名"}`，
-     * 所以这里发两次请求：先拿直链，再把 mp3 拉下来落盘。音色可写名字（懒羊羊）
-     * 也可写编号（编号见 https://www.tiax.pw/API/ys.php，共 458 个）。
+     * 所以这里发两次请求：先拿直链，再把 mp3 拉下来落盘。
+     *
+     * 音色**只能发序号**（编号见 https://www.tiax.pw/API/ys.php，共 458 个）：实测发名字
+     * 会被服务端静默忽略并回落 1 号音色，所以这里统一归一化成序号。
      */
     fun generateVoiceTiax(
         text: String,
@@ -1280,7 +1282,7 @@ object TextToSpeech :
                 }
                 val query = listOf(
                     "text" to text,
-                    "voice" to voice.ifBlank { TIAX_DEFAULT_VOICE },
+                    "voice" to normalizeTiaxVoice(voice.ifBlank { TIAX_DEFAULT_VOICE }, baseUrl),
                     "apikey" to key.trim(),
                 ).joinToString("&") { (k, v) -> "$k=${URLEncoder.encode(v, "UTF-8")}" }
                 val conn = URL("$php?$query").openConnection() as HttpURLConnection
