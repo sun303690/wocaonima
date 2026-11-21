@@ -60,6 +60,12 @@ object DoubaoSamanthaTts {
 
     private const val RISK_CODE = "710022002"
 
+    /** 命中风控时自动换音色重试的次数（不含首次） */
+    private const val MAX_SPEAKER_RETRIES = 2
+
+    /** 换音色重试前的间隔 */
+    private const val SPEAKER_RETRY_GAP_MS = 2_000L
+
     /** 试听用的固定短句 */
     const val AUDITION_TEXT = "你好，我是豆包语音"
 
@@ -128,37 +134,46 @@ object DoubaoSamanthaTts {
         ratePercent: Int,
         callback: (String?, String) -> Unit,
     ) {
-        // once 保证回调最多投递一次: 线程被中断/内部抛异常时用错误兜底, 不让调用方永久等待
-        val once = AtomicBoolean(false)
-        try {
-            runSynthesisBody(text, speaker, cookie, ratePercent, callback, once)
-        } catch (t: Throwable) {
-            deliver(callback, null, "合成异常: " + (t.message ?: t.toString()), once)
+        // 调用方 (synthesize) 已起在工作线程上, 这里同步跑, 重试也在同一线程里等
+        run {
+            // once 保证回调最多投递一次: 线程被中断/内部抛异常时用错误兜底, 不让调用方永久等待
+            val once = AtomicBoolean(false)
+            val candidates = VOICES.map { it.first }
+            var index = candidates.indexOf(speaker).coerceAtLeast(0)
+            var current = candidates.getOrElse(index) { speaker }
+
+            var path: String? = null
+            var error = ""
+            var attempt = 0
+            while (true) {
+                val (ok, err) = runCatching { runSynthesisOnce(text, current, cookie, ratePercent) }
+                    .getOrElse { null to ("合成异常: " + (it.message ?: it.toString())) }
+                path = ok
+                error = err
+                // 只有风控码才值得换音色再试: 其它错误（Cookie 失效 / 文本为空 / 超时）换音色也没用
+                if (ok != null || !err.contains(RISK_CODE) || attempt >= MAX_SPEAKER_RETRIES) break
+                attempt++
+                index = (index + 1) % candidates.size
+                current = candidates[index]
+                WeLogger.w(TAG, "samantha tts 命中风控，自动换音色重试 #$attempt: $current")
+                if (runCatching { Thread.sleep(SPEAKER_RETRY_GAP_MS) }.isFailure) break
+            }
+            deliver(callback, path, if (path == null) error else "", once)
         }
     }
 
-    private fun runSynthesisBody(
+    /** 一次合成尝试；成功返回 (文件路径, "")，失败返回 (null, 错误文案)。 */
+    private fun runSynthesisOnce(
         text: String,
         speaker: String,
         cookie: String,
         ratePercent: Int,
-        callback: (String?, String) -> Unit,
-        once: AtomicBoolean,
-    ) {
-        if (cookie.isBlank()) {
-            deliver(callback, null, "未填写豆包 Cookie", once)
-            return
-        }
-        if (text.isBlank()) {
-            deliver(callback, null, "文本为空", once)
-            return
-        }
+    ): Pair<String?, String> {
+        if (cookie.isBlank()) return null to "未填写豆包 Cookie"
+        if (text.isBlank()) return null to "文本为空"
 
-        val blocked = acquireSlot()
-        if (blocked != null) {
-            deliver(callback, null, blocked, once)
-            return
-        }
+        val blocked = acquireSlot() ?: ""
+        if (blocked.isNotEmpty()) return null to blocked
 
         val audio = ByteArrayOutputStream()
         val done = CountDownLatch(1)
@@ -189,7 +204,8 @@ object DoubaoSamanthaTts {
                 val event = obj.optString("event")
                 val code = obj.optInt("code", 0)
                 if (event == "error" || code != 0) {
-                    errorRef.compareAndSet("", describe(code, obj.optString("message")))
+                    // 风控码也要走 friendly：否则只把 code 丢给用户，既不说明原因也不进冷却
+                    errorRef.compareAndSet("", friendly(describe(code, obj.optString("message"))))
                     webSocket.cancel()
                     done.countDown()
                 }
@@ -226,16 +242,14 @@ object DoubaoSamanthaTts {
             }
         } catch (_: InterruptedException) {
             ws.cancel()
-            deliver(callback, null, "合成被中断", once)
-            return
+            return null to "合成被中断"
         }
         ws.cancel()
 
         val bytes = synchronized(audio) { audio.toByteArray() }
         if (bytes.isEmpty()) {
             val raw = errorRef.get().ifEmpty { "接收超时 (${RECV_TIMEOUT_MS / 1000} 秒内没有收到音频)" }
-            deliver(callback, null, friendly(raw), once)
-            return
+            return null to friendly(raw)
         }
 
         val dest = File(HostInfo.application.cacheDir, "tts_${System.currentTimeMillis()}.aac")
@@ -243,7 +257,7 @@ object DoubaoSamanthaTts {
         if (errorRef.get().isNotEmpty()) {
             WeLogger.w(TAG, "部分音频已落盘, 但服务端报错: ${errorRef.get()}")
         }
-        deliver(callback, dest.absolutePath, "", once)
+        return dest.absolutePath to ""
     }
 
     /** 拿到一次请求槽位；返回 null 表示可以发，否则返回给用户看的拒绝原因。会阻塞到满足最小间隔。 */
@@ -266,11 +280,17 @@ object DoubaoSamanthaTts {
         return "$raw（已进入 ${RISK_COOLDOWN_MS / 1000} 秒冷却）"
     }
 
-    private fun describe(code: Int, message: String): String = when {
-        code != 0 && message.isNotEmpty() -> "code=$code $message"
-        code != 0 -> "code=$code 合成失败"
-        message.isNotEmpty() -> message
-        else -> "服务端返回 error 但未说明原因"
+    private fun describe(code: Int, message: String): String {
+        val detail = when {
+            code != 0 && message.isNotEmpty() -> "code=$code $message"
+            code != 0 -> "code=$code 合成失败"
+            message.isNotEmpty() -> message
+            else -> "服务端返回 error 但未说明原因"
+        }
+        // 710022002 是豆包网页接口的风控/限流码，直说人话，别让用户对着数字猜
+        return if (code != 0 && code.toString() == RISK_CODE) {
+            "豆包风控拦截（$detail）：网页接口判定请求过于频繁，换音色/换后端或稍后再试"
+        } else detail
     }
 
     private fun buildUrl(speaker: String, ratePercent: Int): String {
