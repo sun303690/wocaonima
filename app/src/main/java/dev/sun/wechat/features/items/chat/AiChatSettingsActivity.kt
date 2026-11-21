@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import dev.sun.wechat.ui.content.m3.TextFieldDialogWidget
 import dev.sun.wechat.ui.content.miuix.DropdownOption
 import dev.sun.wechat.ui.content.miuix.MiuixCompatTextField
@@ -114,7 +115,9 @@ class AiChatSettingsActivity : ComponentActivity() {
         var chars by remember { mutableStateOf(AiChat.maxContextChars.toString()) }
         var mediaContext by remember { mutableStateOf(AiChat.mediaContext) }
         var voiceContext by remember { mutableStateOf(AiChat.voiceContext) }
+        var liveIdentify by remember { mutableStateOf(AiChat.liveIdentify) }
         var whitelistCount by remember { mutableIntStateOf(AiChat.whitelist.size) }
+        var showAdvanced by remember { mutableStateOf(false) }
         Block("自动回复", "只有授权会话会进入模型") { ToggleRow("启用 AI 自动回复", "关闭后不接收、不请求、不发送", enabled) { enabled = it; AiChat.isEnabled = it } }
         Block("授权会话", "白名单 $whitelistCount 个 · 黑名单 ${AiChat.blacklist.size} 个") {
             Button({
@@ -137,12 +140,114 @@ class AiChatSettingsActivity : ComponentActivity() {
                 "把最近消息里的语音转成文字再写进上下文；需要先在多模态里配好语音接口。语音文件没下载过（没在微信里点开过）的会跳过",
                 voiceContext,
             ) { voiceContext = it; AiChat.voiceContext = it }
+            ToggleRow(
+                "现场识别图片/语音",
+                "开启后回填上下文时会实时调用视觉/语音接口识别最近几条消息，按量计费的接口每识别一条都会产生费用；关闭时只使用已经识别过的结果，其余留占位符",
+                liveIdentify,
+            ) { liveIdentify = it; AiChat.liveIdentify = it }
             Button({ AiChat.clearContext() }, Modifier.fillMaxWidth()) { Text("清除全部上下文") }
         }
+        Block("高级设置", "人设提示词、群聊触发方式、采样参数、仅监控等 11 项") {
+            Button({ showAdvanced = true }, Modifier.fillMaxWidth()) { Text("打开高级设置") }
+        }
+        if (showAdvanced) AdvancedDialog { showAdvanced = false }
     }
 
     @Composable private fun Edit(label: String, value: String, onChange: (String) -> Unit) =
         MiuixCompatTextField(value, onChange, Modifier.fillMaxWidth(), label = label)
+
+    /** 高级设置弹窗：把 AiChat 里一直没有入口的 11 项集中放一处，点开就能改，不用就地折叠。 */
+    @Composable
+    private fun AdvancedDialog(onDismiss: () -> Unit) {
+        var systemPrompt by remember { mutableStateOf(AiChat.systemPrompt) }
+        var trigger by remember { mutableIntStateOf(AiChat.groupTriggerMode) }
+        var keywords by remember { mutableStateOf(AiChat.groupKeywords) }
+        var prefix by remember { mutableStateOf(AiChat.groupPrefix) }
+        var maxReplyChars by remember { mutableStateOf(AiChat.groupMaxReplyChars.toString()) }
+        var rounds by remember { mutableStateOf(AiChat.contextRounds.toString()) }
+        var tokens by remember { mutableStateOf(AiChat.maxTokens.toString()) }
+        var tempInput by remember { mutableStateOf(AiChat.temperature.toString()) }
+        var delayInput by remember { mutableStateOf(AiChat.replyDelayMs.toString()) }
+        var backfill by remember { mutableStateOf(AiChat.historyBackfillCount.toString()) }
+        var monitorOnly by remember { mutableStateOf(AiChat.monitorOnly) }
+
+        Dialog(onDismissRequest = onDismiss) {
+            Column(
+                Modifier
+                    .fillMaxWidth(0.94f)
+                    .fillMaxHeight(0.84f)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(MiuixTheme.colorScheme.background),
+            ) {
+                dev.sun.wechat.ui.content.miuix.MiuixSecondaryBar(title = "高级设置", onBack = onDismiss)
+                Column(
+                    Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Block("人设", "写清 AI 是谁、用什么语气说话；留空就用内置默认人设") {
+                        MiuixCompatTextField(
+                            systemPrompt,
+                            { systemPrompt = it; AiChat.systemPrompt = it },
+                            Modifier.fillMaxWidth().height(140.dp),
+                            label = "系统提示词",
+                        )
+                    }
+                    Block("群聊触发", "群里什么消息才会让 AI 开口") {
+                        MiuixDropDownMenuWidget(
+                            title = "触发方式",
+                            description = "关键词模式只看关键词，前缀模式只看指令前缀",
+                            value = trigger,
+                            options = TRIGGER_OPTIONS,
+                            onValueChange = { trigger = it; AiChat.groupTriggerMode = it },
+                        )
+                        if (trigger == TRIGGER_KEYWORD) {
+                            Edit("关键词，多个用逗号分隔", keywords) { keywords = it; AiChat.groupKeywords = it }
+                        }
+                        if (trigger == TRIGGER_PREFIX) {
+                            Edit("指令前缀，例如 /ai", prefix) { prefix = it; AiChat.groupPrefix = it }
+                        }
+                        Edit("群聊回复字数上限（100–4000）", maxReplyChars) {
+                            maxReplyChars = it
+                            it.toIntOrNull()?.let { n -> AiChat.groupMaxReplyChars = n.coerceIn(100, 4000) }
+                        }
+                    }
+                    Block("上下文", "调大更聪明，也更费 token") {
+                        Edit("上下文轮数（0–20）", rounds) {
+                            rounds = it
+                            it.toIntOrNull()?.let { n -> AiChat.contextRounds = n.coerceIn(0, 20) }
+                        }
+                        Edit("单次输出上限 maxTokens（1–32768）", tokens) {
+                            tokens = it
+                            it.toIntOrNull()?.let { n -> AiChat.maxTokens = n.coerceIn(1, 32768) }
+                        }
+                        Edit("温度 0–2，越大越随机", tempInput) {
+                            tempInput = it
+                            it.toFloatOrNull()?.let { v -> AiChat.temperature = v.coerceIn(0f, 2f) }
+                        }
+                        Edit("回复延迟毫秒（0–60000）", delayInput) {
+                            delayInput = it
+                            it.toLongOrNull()?.let { n -> AiChat.replyDelayMs = n.coerceIn(0L, 60_000L) }
+                        }
+                        Edit("历史回填条数（1–50）", backfill) {
+                            backfill = it
+                            it.toIntOrNull()?.let { n -> AiChat.historyBackfillCount = n.coerceIn(1, 50) }
+                        }
+                    }
+                    Block("监控", "只记录不回复，先用它确认触发条件对不对") {
+                        ToggleRow(
+                            "仅监控模式",
+                            "开启后不发送任何消息，只在日志里记录命中的会话与内容",
+                            monitorOnly,
+                        ) { monitorOnly = it; AiChat.monitorOnly = it }
+                    }
+                }
+                Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.End) {
+                    Button(onClick = onDismiss) { Text("完成") }
+                }
+            }
+        }
+    }
+
 
     @Composable private fun VoicePage() = Page {
         var voiceEnabled by remember { mutableStateOf(AiChat.voiceReplyEnabled) }
@@ -163,5 +268,19 @@ class AiChatSettingsActivity : ComponentActivity() {
             }
         }
 
+    }
+
+    private companion object {
+        /** 与 AiChat 里的私有常量对齐：0 全部 / 1 @我 / 2 关键词 / 3 前缀。 */
+        private const val TRIGGER_ALL = 0
+        private const val TRIGGER_MENTION = 1
+        private const val TRIGGER_KEYWORD = 2
+        private const val TRIGGER_PREFIX = 3
+        private val TRIGGER_OPTIONS = listOf(
+            DropdownOption(TRIGGER_ALL, "所有消息"),
+            DropdownOption(TRIGGER_MENTION, "@我"),
+            DropdownOption(TRIGGER_KEYWORD, "关键词"),
+            DropdownOption(TRIGGER_PREFIX, "指令前缀"),
+        )
     }
 }

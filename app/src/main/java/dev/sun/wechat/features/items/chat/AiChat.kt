@@ -40,6 +40,7 @@ import dev.sun.wechat.features.api.core.WeDatabaseListenerApi
 import dev.sun.wechat.features.api.core.WeMessageApi
 import dev.sun.wechat.features.api.core.models.MessageInfo
 import dev.sun.wechat.features.api.core.models.MessageType
+import dev.sun.wechat.features.items.chat_mood.ReplyMessageSupport
 import dev.sun.wechat.features.items.multimodal.MediaVision
 import dev.sun.wechat.features.core.ClickableFeature
 import dev.sun.wechat.features.core.FeatureCategoryIds
@@ -102,6 +103,8 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     private const val MAX_OUTPUT_TOKENS = 32768
     /** 一次历史上下文里最多现场补几条语音转写（每条都要调一次语音识别接口，慢且花钱）。 */
     private const val MAX_LIVE_VOICE_TRANSCRIPTS = 3
+    /** 一次回填里最多反射读几条微信内存转写（binder 调用有开销，只做兜底）。 */
+    private const val MAX_VOICE_REFLECT = 3
 
     /** 语音消息 content 里可能直接带文件名（`msg_xxx.amr`），历史消息 imgPath 为空时靠它兜底。 */
     private val VOICE_NAME_IN_CONTENT = Regex("""msg_[0-9A-Za-z_\-]+\.(?:amr|silk)""")
@@ -149,6 +152,8 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     /** 上下文里的图片/表情/动图/视频是否送视觉模型识别（默认关，按张计费）。 */
     internal var mediaContext by KvStore.prefOption("ai_chat_media_context", false)
     internal var voiceContext by KvStore.prefOption("ai_chat_voice_context", true)
+    /** 是否允许回填上下文时现场调用视觉/语音接口识别；默认关闭，避免产生接口费用。 */
+    internal var liveIdentify by KvStore.prefOption("ai_chat_live_identify", false)
     internal var groupMaxReplyChars by KvStore.prefOption("ai_chat_group_max_reply_chars", 500)
     var voiceReplyEnabled by KvStore.prefOption("ai_chat_voice_reply_enabled", false)
 
@@ -181,6 +186,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         val groupMaxReplyChars: Int,
         val mediaContext: Boolean,
         val voiceContext: Boolean,
+        val liveIdentify: Boolean,
     )
 
     private fun snapshot(): Config = Config(
@@ -199,10 +205,11 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         maxContextChars = maxContextChars.coerceIn(1000, 100000),
         monitorAuthorizedChats = monitorAuthorizedChats,
         monitorOnly = monitorOnly,
-        historyBackfillCount = 10,
+        historyBackfillCount = historyBackfillCount.coerceIn(1, 50),
         groupMaxReplyChars = groupMaxReplyChars.coerceIn(100, 4000),
         mediaContext = mediaContext,
         voiceContext = voiceContext,
+        liveIdentify = liveIdentify,
     )
 
     /** 白名单：命中才回；黑名单：命中就跳过（空名单=全部处理）。 */
@@ -517,10 +524,10 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         }
     }
 
-    /** 从数据库回填最近 10 条消息做上下文；群聊和私聊都走这里（私聊原来只累积文本框，媒体消息会被丢掉）。 */
+    /** 从数据库回填最近若干条消息做上下文（默认 10，条数可在「高级设置」里调）；群聊和私聊都走这里。 */
     private fun refreshRecentGroupContext(talker: String, history: MutableList<LlmMessage>, config: Config): Int {
         if (!WeDatabaseApi.isReady) return 0
-        val rows = runCatching { WeDatabaseApi.getMessages(talker, 1, 10) }
+        val rows = runCatching { WeDatabaseApi.getMessages(talker, 1, config.historyBackfillCount) }
             .getOrElse { WeLogger.w(TAG, "failed to refresh recent group context for $talker", it); emptyList() }
             .asReversed()
             .filter { row ->
@@ -529,10 +536,12 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                     type?.code == MessageType.VOICE.code ||
                     (config.mediaContext && MediaVision.isVisual(type))
             }
-            .takeLast(10)
-        // 语音进上下文要花钱：缓存没命中时只现场识别 1 条（限时 8 秒），其余先放占位符，下一轮命中缓存再补全。
-        var liveBudget = MAX_LIVE_VOICE_TRANSCRIPTS
-        var liveMediaBudget = MAX_LIVE_MEDIA_DESCRIPTIONS
+            .takeLast(config.historyBackfillCount)
+        // 默认只读缓存、不联网：缓存没命中就留占位符，绝不主动调接口（按量计费时每次请求都是钱）。
+        // 想让它现场识别最近几条，在设置里打开「现场识别图片/语音」。
+        var liveBudget = if (config.liveIdentify) MAX_LIVE_VOICE_TRANSCRIPTS else 0
+        var reflectBudget = MAX_VOICE_REFLECT
+        var liveMediaBudget = if (config.liveIdentify) MAX_LIVE_MEDIA_DESCRIPTIONS else 0
         var mediaDescribed = 0
         var transcribed = 0
         var voiceSkipped = 0
@@ -563,7 +572,24 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                             null
                         }
                         else -> {
-                            val cached = runCatching { AsrEngine.cachedTranscript(encPath) }.getOrNull()
+                            // 优先用微信自己转的文字（VoiceTranscriptStore，走腾讯、不产生接口费用）；
+                            // 其次用模块自己识别过的磁盘缓存；两者都没有就留占位符，不联网。
+                            // 三路取文字，前两路都不联网、不花钱：
+                            // ① 内存里已记下的微信转写；② 反射去微信内存 bean 里读这条的转写
+                            //（微信自己转过的才有，含之前播放/转写过的历史语音）；
+                            // ③ 模块自己识别过的磁盘缓存。
+                            val fromWeChat = VoiceTranscriptStore.get(message.msgId)
+                                ?: if (reflectBudget > 0 && message.msgSvrId > 0) {
+                                    reflectBudget--
+                                    runCatching {
+                                        val info = MessageInfo(
+                                            WeMessageApi.getMsgInfoInstanceByMsgSvrId(message.msgSvrId, talker)
+                                        )
+                                        ReplyMessageSupport.voiceTranscript(info)
+                                    }.getOrNull()?.also { VoiceTranscriptStore.put(message.msgId, it) }
+                                } else null
+                            val cached = fromWeChat
+                                ?: runCatching { AsrEngine.cachedTranscript(encPath) }.getOrNull()
                             if (cached != null) {
                                 cached
                             } else if (liveBudget > 0) {
