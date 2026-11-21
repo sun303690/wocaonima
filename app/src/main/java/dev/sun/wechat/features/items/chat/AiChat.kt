@@ -289,7 +289,8 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                     // imgPath 偶发为空，退到 content（有的版本语音名只在 content 里）。
                     val encPath = values.getAsString("imgPath")?.takeIf { it.isNotBlank() }
                         ?: values.getAsString("content")?.takeIf { it.startsWith("msg_") }
-                    if (MultimodalFeature.isEnabled && AsrEngine.ready() && !encPath.isNullOrBlank()) {
+                    // 这里同样只看语音接口自身是否配好，不受「多模态识别」总开关（默认关）影响
+                    if (AsrEngine.ready() && !encPath.isNullOrBlank()) {
                         WeLogger.i(TAG, "语音无微信转写，改用 ASR：talker=$talker, localId=$localId")
                         transcript = runCatching {
                             withContext(Dispatchers.IO) { AsrEngine.transcribeEncPath(encPath) }
@@ -535,6 +536,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         var mediaDescribed = 0
         var transcribed = 0
         var voiceSkipped = 0
+        var asrNotReady = 0
         synchronized(history) {
             history.clear()
             rows.forEach { message ->
@@ -545,8 +547,17 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                     val encPath = message.imgPath?.trim()?.takeIf { it.isNotEmpty() }
                         ?: VOICE_NAME_IN_CONTENT.find(message.content.orEmpty())?.value
                     val transcript = when {
-                        // 多模态识别总开关管全部：关掉时语音一律不识别，只留占位符
-                        !MultimodalFeature.isEnabled || !config.voiceContext -> null
+                        // 语音识别用的是多模态「语音接口」那一页的配置（AsrEngine，含它自己的开关）。
+                        // 这里只看语音接口本身是否可用，不再挂在「多模态识别」总开关上——
+                        // 总开关默认关闭，会让配好语音接口的人以为功能坏了。
+                        !config.voiceContext -> {
+                            voiceSkipped++
+                            null
+                        }
+                        !AsrEngine.ready() -> {
+                            asrNotReady++
+                            null
+                        }
                         encPath == null -> {
                             voiceSkipped++
                             null
@@ -629,7 +640,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
             }
         }
         if (transcribed > 0) WeLogger.i(TAG, "voice messages transcribed for context: talker=$talker, count=$transcribed, skipped=$voiceSkipped")
-        else if (voiceSkipped > 0) WeLogger.i(TAG, "voice messages not transcribed for context: talker=$talker, skipped=$voiceSkipped（文件未下载或预算用尽）")
+        else if (voiceSkipped > 0 || asrNotReady > 0) WeLogger.i(TAG, "voice messages not transcribed for context: talker=$talker, skipped=$voiceSkipped, asrNotReady=$asrNotReady（未配置语音接口 / 文件未下载 / 预算用尽）")
         if (mediaDescribed > 0) WeLogger.i(TAG, "media messages described for context: talker=$talker, count=$mediaDescribed")
         return rows.size
     }
