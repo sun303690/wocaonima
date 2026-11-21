@@ -95,6 +95,7 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
     var modelBusy by remember { mutableStateOf(false) }
 
     var voiceReply by remember { mutableStateOf(TextToSpeech.voiceReplyEnabled) }
+    var voicePanelSummary by remember { mutableStateOf(TextToSpeech.voiceSummary()) }
     var backend by remember { mutableStateOf(TextToSpeech.backend) }
     // 配音魔方与 Breeze Blue 是两套凭据，之前共用 apiKey 并把值写进 breezeKey，
     // 导致 TextToSpeech.apiKey 永远为空，VoiceReply.ready() 判定未配置。
@@ -109,21 +110,10 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
     var customVoice by remember { mutableStateOf(TextToSpeech.customVoiceId) }
     var showMofaPicker by remember { mutableStateOf(false) }
     var showEmotionPicker by remember { mutableStateOf(false) }
-    var voiceBusy by remember { mutableStateOf(false) }
     var editField by remember { mutableStateOf<String?>(null) }
 
-    val isDoubao = backend == TextToSpeech.BACKEND_DOUBAO
     val isBreeze = backend == TextToSpeech.BACKEND_BREEZE
     val apiKey = if (isBreeze) breezeKeyState else mofaKey
-    val voiceLabel = when {
-        customVoice.isNotBlank() -> "自定义：$customVoice"
-        isDoubao -> doubaoVoiceLabel(doubaoVoice)
-        isBreeze -> breezeVoiceName.ifBlank { breezeVoice.ifBlank { "未选择（点击选择 Breeze 音色）" } }
-        else -> mofaVoice.ifBlank { "未选择（点击选择配音魔方音色）" }
-    }
-    val effectiveMofaVoice = customVoice.ifBlank { mofaVoice }
-    val effectiveDoubaoVoice = customVoice.ifBlank { doubaoVoice }
-    val effectiveBreezeVoice = customVoice.ifBlank { breezeVoice }
 
     Column(
         modifier = Modifier
@@ -225,116 +215,15 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
                     )
                 }
                 HorizontalDivider()
-
-                BackendRow(
-                    title = "魔方（Breeze Blue）",
-                    desc = "API Key 已内置，可自行替换",
-                    selected = !isDoubao,
-                ) {
-                    backend = TextToSpeech.BACKEND_BREEZE
-                    TextToSpeech.backend = TextToSpeech.BACKEND_BREEZE
-                }
-                BackendRow(
-                    title = "豆包",
-                    desc = "需要已登录的豆包 Cookie",
-                    selected = isDoubao,
-                ) {
-                    backend = TextToSpeech.BACKEND_DOUBAO
-                    TextToSpeech.backend = TextToSpeech.BACKEND_DOUBAO
-                }
-                HorizontalDivider()
-
                 SettingsRow(
-                    title = if (isBreeze) "Breeze API Key" else "配音魔方 API Key",
-                    value = if (apiKey.isBlank()) "未填写" else "••••••••",
-                    actionText = "编辑",
-                ) { editField = "key" }
-                SettingsRow(
-                    title = "豆包 Cookie",
-                    value = if (cookie.isBlank()) "未填写" else "••••••••",
-                    actionText = "编辑",
-                ) { editField = "cookie" }
-                HorizontalDivider()
-                SettingsRow(
-                    title = "音色",
-                    value = voiceLabel,
+                    title = "语音设置",
+                    value = voicePanelSummary,
+                    actionText = "去配置",
                 ) {
-                    if (isDoubao) {
-                        showDoubaoVoicePicker(context, doubaoVoice, cookie) { id, name ->
-                            doubaoVoice = id
-                            customVoice = ""
-                            TextToSpeech.customVoiceId = ""
-                            TextToSpeech.doubaoSpeaker = id
-                            TextToSpeech.doubaoSpeakerName = name
-                        }
-                    } else if (isBreeze) {
-                        showBreezeVoicePicker(context, breezeVoice, apiKey) { id, name ->
-                            breezeVoice = id
-                            breezeVoiceName = name
-                            customVoice = ""
-                            TextToSpeech.customVoiceId = ""
-                            TextToSpeech.breezeVoice = id
-                            TextToSpeech.breezeVoiceName = name
-                        }
-                    } else {
-                        showMofaPicker = true
+                    TextToSpeech.showVoiceConfig(context) {
+                        voicePanelSummary = TextToSpeech.voiceSummary()
                     }
                 }
-                SettingsRow(
-                    title = "自定义音色",
-                    value = customVoice.ifBlank { "未设置（使用上面的预设音色）" },
-                    actionText = "编辑",
-                ) { editField = "custom" }
-                SettingsRow(
-                    title = "语气",
-                    value = if (isDoubao) "豆包音色自带语气" else emotion,
-                    actionText = if (isDoubao) null else "选择",
-                ) { if (!isDoubao) showEmotionPicker = true }
-
-                Button(
-                    enabled = !voiceBusy,
-                    onClick = {
-                        val sample = "这是一段语音测试，听到就说明配置可用。"
-                        voiceBusy = true
-                        if (isDoubao) {
-                            if (cookie.isBlank()) {
-                                voiceBusy = false
-                                toast(context, "请先填写豆包 Cookie")
-                            } else {
-                                TextToSpeech.generateVoiceDoubao(sample, effectiveDoubaoVoice, cookie) { path, err ->
-                                    voiceBusy = false
-                                    if (path != null) playWav(path) else toast(context, "合成失败：$err")
-                                }
-                            }
-                        } else if (isBreeze) {
-                            if (apiKey.isBlank()) {
-                                voiceBusy = false
-                                toast(context, "请先填写 Breeze API Key")
-                            } else if (effectiveBreezeVoice.isBlank()) {
-                                voiceBusy = false
-                                toast(context, "请先选择 Breeze 音色")
-                            } else {
-                                TextToSpeech.generateVoiceBreeze(sample, effectiveBreezeVoice, emotion, key = apiKey) { path, err ->
-                                    voiceBusy = false
-                                    if (path != null) playWav(path) else toast(context, "合成失败：$err")
-                                }
-                            }
-                        } else {
-                            if (apiKey.isBlank()) {
-                                voiceBusy = false
-                                toast(context, "请先填写语音 API Key")
-                            } else {
-                                val vec = TextToSpeech.EMOTIONS.firstOrNull { it.first == emotion }?.second
-                                    ?: TextToSpeech.EMOTIONS.first().second
-                                TextToSpeech.generateVoice(sample, effectiveMofaVoice, vec, apiKey) { path, err ->
-                                    voiceBusy = false
-                                    if (path != null) playWav(path) else toast(context, "合成失败：$err")
-                                }
-                            }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text(if (voiceBusy) "合成中…" else "测试语音") }
             }
         }
     }
