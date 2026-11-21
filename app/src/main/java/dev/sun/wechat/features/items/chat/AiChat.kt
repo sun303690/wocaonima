@@ -101,7 +101,10 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     private const val MAX_CONTEXT_ROUNDS = 20
     private const val MAX_OUTPUT_TOKENS = 32768
     /** 一次历史上下文里最多现场补几条语音转写（每条都要调一次语音识别接口，慢且花钱）。 */
-    private const val MAX_LIVE_VOICE_TRANSCRIPTS = 1
+    private const val MAX_LIVE_VOICE_TRANSCRIPTS = 3
+
+    /** 语音消息 content 里可能直接带文件名（`msg_xxx.amr`），历史消息 imgPath 为空时靠它兜底。 */
+    private val VOICE_NAME_IN_CONTENT = Regex("""msg_[0-9A-Za-z_\-]+\.(?:amr|silk)""")
 
     /** 一轮上下文里最多现场识别几条媒体；其余先放占位符，等下一轮命中缓存再补全。窗口只有 10 条，所以不会超过 10。 */
     private const val MAX_LIVE_MEDIA_DESCRIPTIONS = 8
@@ -145,6 +148,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
 
     /** 上下文里的图片/表情/动图/视频是否送视觉模型识别（默认关，按张计费）。 */
     internal var mediaContext by KvStore.prefOption("ai_chat_media_context", false)
+    internal var voiceContext by KvStore.prefOption("ai_chat_voice_context", true)
     internal var groupMaxReplyChars by KvStore.prefOption("ai_chat_group_max_reply_chars", 500)
     var voiceReplyEnabled by KvStore.prefOption("ai_chat_voice_reply_enabled", false)
 
@@ -176,6 +180,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         val historyBackfillCount: Int,
         val groupMaxReplyChars: Int,
         val mediaContext: Boolean,
+        val voiceContext: Boolean,
     )
 
     private fun snapshot(): Config = Config(
@@ -197,6 +202,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         historyBackfillCount = 10,
         groupMaxReplyChars = groupMaxReplyChars.coerceIn(100, 4000),
         mediaContext = mediaContext,
+        voiceContext = voiceContext,
     )
 
     /** 白名单：命中才回；黑名单：命中就跳过（空名单=全部处理）。 */
@@ -528,16 +534,23 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         var liveMediaBudget = MAX_LIVE_MEDIA_DESCRIPTIONS
         var mediaDescribed = 0
         var transcribed = 0
+        var voiceSkipped = 0
         synchronized(history) {
             history.clear()
             rows.forEach { message ->
                 val type = MessageType.fromCode(message.typeCode)
                 if (type?.code == MessageType.VOICE.code) {
-                    val encPath = message.imgPath
+                    // 历史语音的 imgPath 常为空（微信只把文件名写进 content 的 XML 或压根没下载），
+                    // 所以按 imgPath → content 里的文件名 → 空 三级兜底。
+                    val encPath = message.imgPath?.trim()?.takeIf { it.isNotEmpty() }
+                        ?: VOICE_NAME_IN_CONTENT.find(message.content.orEmpty())?.value
                     val transcript = when {
                         // 多模态识别总开关管全部：关掉时语音一律不识别，只留占位符
-                        !MultimodalFeature.isEnabled -> null
-                        encPath == null -> null
+                        !MultimodalFeature.isEnabled || !config.voiceContext -> null
+                        encPath == null -> {
+                            voiceSkipped++
+                            null
+                        }
                         else -> {
                             val cached = runCatching { AsrEngine.cachedTranscript(encPath) }.getOrNull()
                             if (cached != null) {
@@ -545,13 +558,22 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                             } else if (liveBudget > 0) {
                                 liveBudget--
                                 runCatching { AsrEngine.transcriptForContext(encPath, VOICE_WAIT_MS) }
-                                    .onFailure { WeLogger.w(TAG, "voice transcript for context failed: ${it.message}") }
+                                    .onFailure {
+                                        voiceSkipped++
+                                        WeLogger.w(TAG, "voice transcript for context failed: ${it.message}")
+                                    }
                                     .getOrNull()
-                            } else null
+                            } else {
+                                voiceSkipped++
+                                null
+                            }
                         }
                     }
                     if (!transcript.isNullOrBlank()) transcribed++
-                    val body = if (transcript.isNullOrBlank()) "[语音]" else "[语音] $transcript"
+                    val body = when {
+                        !transcript.isNullOrBlank() -> "[语音] $transcript"
+                        else -> "[语音]"
+                    }
                     val text = if (message.isSend != 0) "[WeChat sender: self]\n$body" else body
                     history += LlmMessage(if (message.isSend != 0) LlmRole.ASSISTANT else LlmRole.USER, text)
                     return@forEach
@@ -606,7 +628,8 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                 history += LlmMessage(if (message.isSend != 0) LlmRole.ASSISTANT else LlmRole.USER, text)
             }
         }
-        if (transcribed > 0) WeLogger.i(TAG, "voice messages transcribed for context: talker=$talker, count=$transcribed")
+        if (transcribed > 0) WeLogger.i(TAG, "voice messages transcribed for context: talker=$talker, count=$transcribed, skipped=$voiceSkipped")
+        else if (voiceSkipped > 0) WeLogger.i(TAG, "voice messages not transcribed for context: talker=$talker, skipped=$voiceSkipped（文件未下载或预算用尽）")
         if (mediaDescribed > 0) WeLogger.i(TAG, "media messages described for context: talker=$talker, count=$mediaDescribed")
         return rows.size
     }

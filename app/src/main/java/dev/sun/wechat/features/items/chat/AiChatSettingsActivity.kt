@@ -113,6 +113,7 @@ class AiChatSettingsActivity : ComponentActivity() {
         var daily by remember { mutableStateOf(AiChat.dailyLimit.toString()) }
         var chars by remember { mutableStateOf(AiChat.maxContextChars.toString()) }
         var mediaContext by remember { mutableStateOf(AiChat.mediaContext) }
+        var voiceContext by remember { mutableStateOf(AiChat.voiceContext) }
         var whitelistCount by remember { mutableIntStateOf(AiChat.whitelist.size) }
         Block("自动回复", "只有授权会话会进入模型") { ToggleRow("启用 AI 自动回复", "关闭后不接收、不请求、不发送", enabled) { enabled = it; AiChat.isEnabled = it } }
         Block("授权会话", "白名单 $whitelistCount 个 · 黑名单 ${AiChat.blacklist.size} 个") {
@@ -131,6 +132,11 @@ class AiChatSettingsActivity : ComponentActivity() {
                 "把最近消息里的图片、表情包、动图、视频送去视觉模型识别后写进上下文；按张计费，同一张只识别一次",
                 mediaContext,
             ) { mediaContext = it; AiChat.mediaContext = it }
+            ToggleRow(
+                "上下文识别语音",
+                "把最近消息里的语音转成文字再写进上下文；需要先在多模态里配好语音接口。语音文件没下载过（没在微信里点开过）的会跳过",
+                voiceContext,
+            ) { voiceContext = it; AiChat.voiceContext = it }
             Button({ AiChat.clearContext() }, Modifier.fillMaxWidth()) { Text("清除全部上下文") }
         }
     }
