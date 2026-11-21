@@ -318,11 +318,13 @@ fun showTiaxVoicePicker(
                     Spacer(Modifier.height(8.dp))
 
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        TextButton(text = "刷新", onClick = { refresh() })
+                        TextButton(onClick = { refresh() }) { Text("刷新") }
                     }
                 }
             },
-            dismissButton = { TextButton(text = "关闭", onClick = onDismiss) },
+            dismissButton = {
+                    TextButton(onClick = { onDismiss() }) { Text("关闭") }
+                },
         )
     }
 }

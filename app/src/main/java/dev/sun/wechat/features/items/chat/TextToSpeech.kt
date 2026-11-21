@@ -1369,7 +1369,9 @@ object TextToSpeech :
                         }
                     }
                 },
-                dismissButton = { TextButton(text = "关闭", onClick = onDismiss) },
+                dismissButton = {
+                    TextButton(onClick = { onDismiss() }) { Text("关闭") }
+                },
             )
         }
     }
