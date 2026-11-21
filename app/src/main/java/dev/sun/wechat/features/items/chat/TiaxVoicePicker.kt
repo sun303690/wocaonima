@@ -45,7 +45,6 @@ import top.yukonga.miuix.kmp.basic.CircularProgressIndicator
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import java.net.HttpURLConnection
 import java.net.URL
@@ -318,12 +317,12 @@ fun showTiaxVoicePicker(
                     Spacer(Modifier.height(8.dp))
 
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        TextButton(onClick = { refresh() }) { Text("刷新") }
+                        Text("刷新", modifier = Modifier.clickable { refresh() })
                     }
                 }
             },
             dismissButton = {
-                    TextButton(onClick = { onDismiss() }) { Text("关闭") }
+                    Text("关闭", modifier = Modifier.clickable { onDismiss() })
                 },
         )
     }
