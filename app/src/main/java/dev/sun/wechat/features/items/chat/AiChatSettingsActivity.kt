@@ -313,7 +313,7 @@ class AiChatSettingsActivity : ComponentActivity() {
                                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                                 )
                             }
-                            Switch(monitorOnly) { monitorOnly = it; AiChat.monitorOnly = it }
+                            Switch(monitorOnly, { monitorOnly = it; AiChat.monitorOnly = it })
                         }
                     }
                     Spacer(Modifier.height(8.dp))
