@@ -774,18 +774,36 @@ object TextToSpeech :
                 tiaxVoice = value
                 onPicked(voiceSummary())
             }
-            BACKEND_SILICON -> TextFieldDialogWidget(
-                title = "硅基流动音色",
-                value = siliconVoice,
-                onValueChange = {
-                    siliconVoice = it
-                    onPicked(voiceSummary())
-                },
-                dialogTitle = "填写音色 ID",
-                confirmLabel = "确定",
-                dismissLabel = "取消",
-                valueHint = "FunAudioLLM/CosyVoice2-0.5B:alex",
-            )
+            // TextFieldDialogWidget 是 @Composable，这个函数不是，所以自己搭一个同样的输入弹窗
+            BACKEND_SILICON -> showComposeDialog(context) {
+                var text by remember { mutableStateOf(siliconVoice) }
+                AlertDialogContent(
+                    title = { Text("硅基流动音色") },
+                    text = {
+                        Column {
+                            Text("填音色 ID，例如 FunAudioLLM/CosyVoice2-0.5B:alex")
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = text,
+                                onValueChange = { text = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                label = { Text("音色 ID") },
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        TextButton({
+                            siliconVoice = text.trim()
+                            onPicked(voiceSummary())
+                            onDismiss()
+                        }) { Text("确定") }
+                    },
+                    dismissButton = {
+                        TextButton(onDismiss) { Text(stringResource(R.string.dialog_close)) }
+                    },
+                )
+            }
             else -> showComposeDialog(context) {
                 AlertDialogContent(
                     title = { Text("配音魔方音色") },
