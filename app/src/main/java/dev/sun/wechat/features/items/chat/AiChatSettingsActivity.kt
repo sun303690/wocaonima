@@ -120,8 +120,6 @@ class AiChatSettingsActivity : ComponentActivity() {
         var modelBusy by remember { mutableStateOf(false) }
         var modelResult by remember { mutableStateOf("") }
         val modelScope = rememberCoroutineScope()
-        var cooldown by remember { mutableStateOf(AiChat.cooldownSeconds.toString()) }
-        var daily by remember { mutableStateOf(AiChat.dailyLimit.toString()) }
         var chars by remember { mutableStateOf(AiChat.maxContextChars.toString()) }
         var mediaContext by remember { mutableStateOf(AiChat.mediaContext) }
         var voiceContext by remember { mutableStateOf(AiChat.voiceContext) }
@@ -178,8 +176,6 @@ class AiChatSettingsActivity : ComponentActivity() {
             }, Modifier.fillMaxWidth()) { Text("选择联系人或群聊") }
         }
         Block("频率与上下文") {
-            Edit("冷却秒数", cooldown) { cooldown = it; it.toIntOrNull()?.let { n -> AiChat.cooldownSeconds = n.coerceIn(0, 3600) } }
-            Edit("单会话每日上限，0 不限制", daily) { daily = it; it.toIntOrNull()?.let { n -> AiChat.dailyLimit = n.coerceIn(0, 10000) } }
             Edit("上下文字符上限", chars) { chars = it; it.toIntOrNull()?.let { n -> AiChat.maxContextChars = n.coerceIn(1000, 100000) } }
             ToggleRow(
                 "上下文识别图片/表情",

@@ -366,12 +366,17 @@ object VisionClient {
             }
             val source = response.body?.source() ?: throw IllegalStateException("返回内容为空")
             val text = StringBuilder()
+            var dataLines = 0
+            var parsedLines = 0
+            var sampleData = ""
             while (true) {
                 val line = source.readUtf8Line() ?: break
                 if (line.isBlank() || !line.startsWith("data:")) continue
                 val data = line.removePrefix("data:").trim()
                 if (data.isEmpty()) continue
                 if (data == "[DONE]") break
+                dataLines++
+                if (sampleData.isEmpty()) sampleData = data.take(300)
                 val json = runCatching { JSONObject(data) }.getOrNull() ?: continue
                 val delta = json.optJSONArray("choices")
                     ?.optJSONObject(0)
@@ -379,8 +384,24 @@ object VisionClient {
                     ?: continue
                 val piece = delta.optString("content")
                 if (piece.isEmpty()) continue
+                parsedLines++
                 text.append(piece)
                 onDelta(piece)
+            }
+            // 流式解析拿不到内容时没有任何提示会很难查：把 data 行数与首行原文记下来
+            if (text.isEmpty()) {
+                WeLogger.w(
+                    TAG,
+                    "streamChat 没有取到内容: dataLines=$dataLines, contentLines=$parsedLines, sample=$sampleData",
+                )
+                // 有的 OpenAI 兼容服务不支持 stream，或 SSE 结构不一样：退回一次性请求，别让回复凭空消失
+                val fallback = runCatching { completeText(system, user, maxTokens) }
+                    .onFailure { WeLogger.w(TAG, "非流式兜底也失败：${it.message}") }
+                    .getOrNull()
+                if (!fallback.isNullOrBlank()) {
+                    onDelta(fallback)
+                    return fallback
+                }
             }
             return text.toString()
         }

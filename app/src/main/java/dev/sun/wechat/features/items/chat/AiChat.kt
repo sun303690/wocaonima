@@ -146,8 +146,6 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     var contextRounds by KvStore.prefOption("ai_chat_context_rounds", 6)
     var replyDelayMs by KvStore.prefOption("ai_chat_reply_delay_ms", 0L)
     internal var listMode by KvStore.prefOption("ai_chat_list_mode", LIST_WHITELIST)
-    internal var cooldownSeconds by KvStore.prefOption("ai_chat_cooldown_seconds", 15)
-    internal var dailyLimit by KvStore.prefOption("ai_chat_daily_limit", 100)
     internal var maxContextChars by KvStore.prefOption("ai_chat_max_context_chars", 12000)
     internal var monitorAuthorizedChats by KvStore.prefOption("ai_chat_monitor_authorized_chats", true)
     internal var historyBackfillCount by KvStore.prefOption("ai_chat_history_backfill_count", 10)
@@ -179,8 +177,6 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         val replyDelayMs: Long,
         val listMode: Int,
         val targets: Set<String>,
-        val cooldownMs: Long,
-        val dailyLimit: Int,
         val maxContextChars: Int,
         val monitorAuthorizedChats: Boolean,
         val historyBackfillCount: Int,
@@ -198,8 +194,6 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         replyDelayMs = replyDelayMs.coerceIn(0L, MAX_REPLY_DELAY_MS),
         listMode = listMode,
         targets = if (listMode == LIST_BLACKLIST) blacklist else whitelist,
-        cooldownMs = cooldownSeconds.coerceIn(0, 3600) * 1000L,
-        dailyLimit = dailyLimit.coerceIn(0, 10000),
         maxContextChars = maxContextChars.coerceIn(1000, 100000),
         monitorAuthorizedChats = monitorAuthorizedChats,
         historyBackfillCount = historyBackfillCount.coerceIn(1, 50),
@@ -217,10 +211,8 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     private val configVersion = AtomicLong(0)
     private val memories = ConcurrentHashMap<String, MutableList<LlmMessage>>()
     private val handledIds = ConcurrentHashMap<String, Boolean>()
-    private val lastReplyAt = ConcurrentHashMap<String, Long>()
     private val inFlight = ConcurrentHashMap<String, Boolean>()
     private val pendingGroupMessages = ConcurrentHashMap<String, String>()
-    private val dailyCounts = ConcurrentHashMap<String, Int>()
     @Volatile private var lastReceiveAt = 0L
     @Volatile private var lastSendAt = 0L
     @Volatile private var lastFailure: String? = null
@@ -246,10 +238,8 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     override fun onDisable() {
         WeDatabaseListenerApi.removeListener(this)
         memories.clear()
-        lastReplyAt.clear()
         inFlight.clear()
         pendingGroupMessages.clear()
-        dailyCounts.clear()
     }
 
     override fun onClick(context: ComponentActivity) {
@@ -376,8 +366,6 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         // 白名单/黑名单已决定哪些会话会进来；群聊不再按 @/关键词/前缀 过滤，进来就回
         val triggeredContent = content
         val now = System.currentTimeMillis()
-        if (!isGroup && config.cooldownMs > 0 && now - (lastReplyAt[talker] ?: 0L) < config.cooldownMs) return
-        if (!isGroup && config.dailyLimit > 0 && (dailyCounts[dailyKey(talker)] ?: 0) >= config.dailyLimit) return
         if (inFlight.putIfAbsent(talker, true) != null) {
             if (isGroup) pendingGroupMessages[talker] = triggeredContent
             WeLogger.i(TAG, "AI reply queued: busy, talker=$talker")
@@ -473,6 +461,12 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                     "backfilled=$backfilledCount, contextMessages=$contextMessageCount, contextChars=$contextCharCount",
             )
 
+            WeLogger.i(
+                TAG,
+                "AI request start: talker=$talker, model=${MultimodalEngine.textModelOrVision()}, " +
+                    "endpoint=${MultimodalEngine.textEndpointBase()}, messages=${messages.size}, " +
+                    "maxTokens=${config.maxTokens}, temperature=${config.temperature}",
+            )
             val reply = requestModel(config, messages)
 
             // 生成期间配置可能已改（换了名单/模型/轮数），此时不再发出这条回复
@@ -494,7 +488,16 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                 return
             }
             val rawText = reply.getOrThrow().trim()
-            if (rawText.isEmpty()) return
+            if (rawText.isEmpty()) {
+                // 模型返回空文本时原来静默退出，日志里只停在 context prepared，看不出卡在哪
+                WeLogger.w(
+                    TAG,
+                    "AI reply empty: talker=$talker, model=${MultimodalEngine.textModelOrVision()}, " +
+                        "endpoint=${MultimodalEngine.textEndpointBase()}",
+                )
+                lastFailure = "模型返回空文本"
+                return
+            }
             val text = if (isGroupTalker(talker)) sanitizeGroupReply(rawText, config.groupMaxReplyChars) else rawText
             val useVoice = voiceReplyEnabled
             val sent = if (useVoice) sendReplyAsVoice(talker, text) else WeMessageApi.sendText(talker, text)
@@ -511,8 +514,6 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
             }
             lastSendAt = System.currentTimeMillis()
             lastFailure = null
-            lastReplyAt[talker] = lastSendAt
-            dailyCounts.merge(dailyKey(talker), 1, Int::plus)
             WeLogger.i(
                 TAG,
                 "AI replied to talker=$talker, replyChars=${text.length}, " +
@@ -723,9 +724,6 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
             if (chars + size > maxChars) false else { chars += size; true }
         }.asReversed()
     }
-
-    private fun dailyKey(talker: String): String =
-        java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.ROOT).format(java.util.Date()) + ':' + talker
 
     internal fun clearContext(talker: String? = null) {
         if (talker == null) memories.clear() else memories.remove(talker)
