@@ -216,12 +216,12 @@ private fun AiReplyConfigScreen(onClose: () -> Unit) {
                 }
                 HorizontalDivider()
                 SettingsRow(
-                    title = "语音设置",
+                    title = "选择语音",
                     value = voicePanelSummary,
-                    actionText = "去配置",
+                    actionText = "选择",
                 ) {
-                    TextToSpeech.showVoiceConfig(context) {
-                        voicePanelSummary = TextToSpeech.voiceSummary()
+                    TextToSpeech.showVoicePicker(context) { summary ->
+                        voicePanelSummary = summary
                     }
                 }
             }

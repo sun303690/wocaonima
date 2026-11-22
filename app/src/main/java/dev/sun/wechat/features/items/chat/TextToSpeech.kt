@@ -303,6 +303,7 @@ object TextToSpeech :
         showComposeDialog(context) {
             var bubbleEntry by remember { mutableStateOf(entryBubble) }
             var inputBarEntry by remember { mutableStateOf(entryInputBar) }
+            var aiVoiceReply by remember { mutableStateOf(voiceReplyEnabled) }
 
             AlertDialogContent(
                 title = { Text(stringResource(R.string.feature_text_to_speech_name)) },
@@ -329,6 +330,18 @@ object TextToSpeech :
                                 onCheckedChange = {
                                     inputBarEntry = it
                                     entryInputBar = it
+                                },
+                            )
+                        }
+                        item {
+                            SwitchWidget(
+                                iconPlaceholder = false,
+                                title = "AI 回复也发语音",
+                                description = "AI 群聊、AI 代回、帮我回·找话题生成的回复都用语音发出；合成失败自动回落文字",
+                                checked = aiVoiceReply,
+                                onCheckedChange = {
+                                    aiVoiceReply = it
+                                    voiceReplyEnabled = it
                                 },
                             )
                         }
@@ -741,6 +754,65 @@ object TextToSpeech :
     }
 
     /** 供 AI 回复面板等处打开的语音配置弹窗。 */
+    /**
+     * 只挑音色：按当前后端打开对应的音色选择，不碰 Key / Cookie。
+     * AI 群聊、AI 代回这类「只需要换声音」的地方用它。
+     */
+    fun showVoicePicker(context: android.content.Context, onPicked: (String) -> Unit = {}) {
+        when (backend) {
+            BACKEND_BREEZE -> showBreezeVoicePicker(context, breezeVoice, breezeKey) { id, name ->
+                breezeVoice = id
+                breezeVoiceName = name
+                onPicked(voiceSummary())
+            }
+            BACKEND_DOUBAO -> showDoubaoVoicePicker(context, doubaoSpeaker, doubaoCookie) { id, name ->
+                doubaoSpeaker = id
+                doubaoSpeakerName = name
+                onPicked(voiceSummary())
+            }
+            BACKEND_TIAX -> showTiaxVoicePicker(context, tiaxVoice, tiaxBaseUrl) { value, _ ->
+                tiaxVoice = value
+                onPicked(voiceSummary())
+            }
+            BACKEND_SILICON -> TextFieldDialogWidget(
+                title = "硅基流动音色",
+                value = siliconVoice,
+                onValueChange = {
+                    siliconVoice = it
+                    onPicked(voiceSummary())
+                },
+                dialogTitle = "填写音色 ID",
+                confirmLabel = "确定",
+                dismissLabel = "取消",
+                valueHint = "FunAudioLLM/CosyVoice2-0.5B:alex",
+            )
+            else -> showComposeDialog(context) {
+                AlertDialogContent(
+                    title = { Text("配音魔方音色") },
+                    text = {
+                        SegmentedColumn(title = "选择音色") {
+                            DEFAULT_VOICES.forEach { voice ->
+                                item {
+                                    BaseWidget(
+                                        title = voice.label,
+                                        description = voice.voiceId,
+                                        onClick = {
+                                            selectedVoice = voice.voiceId
+                                            onPicked(voiceSummary())
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onDismiss) { Text(stringResource(R.string.dialog_close)) }
+                    },
+                )
+            }
+        }
+    }
+
     fun showVoiceConfig(context: android.content.Context, onSaved: () -> Unit = {}) {
         showSettingsDialog(context, onSaved)
     }
