@@ -102,7 +102,8 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     private const val MAX_CONTEXT_ROUNDS = 20
     private const val MAX_OUTPUT_TOKENS = 32768
     /** 一次历史上下文里最多现场补几条语音转写（每条都要调一次语音识别接口，慢且花钱）。 */
-    private const val MAX_LIVE_VOICE_TRANSCRIPTS = 3
+    /** 一次回填里最多现场调用几次语音接口；命中的会写盘缓存，下一轮直接复用。 */
+    private const val MAX_LIVE_VOICE_CALLS = 10
     /** 一次回填里最多反射读几条微信内存转写（binder 调用有开销，只做兜底）。 */
     private const val MAX_VOICE_REFLECT = 3
 
@@ -127,21 +128,24 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
 
     private const val LIST_WHITELIST = 0
     private const val LIST_BLACKLIST = 1
-    private const val GROUP_TRIGGER_ALL = 0
-    private const val GROUP_TRIGGER_MENTION = 1
-    private const val GROUP_TRIGGER_KEYWORD = 2
-    private const val GROUP_TRIGGER_PREFIX = 3
+
+    /**
+     * 出厂默认人设：直接取内置「可爱妹妹」模板的提示词，
+     * 这样界面上「人设」下拉能反查到它（[personaKeyOf] 按 prompt 原文比对）。
+     */
+    private val DEFAULT_SYSTEM_PROMPT: String =
+        AI_PERSONAS.firstOrNull { it.key == "cute_sister" }?.prompt.orEmpty()
+
+    /** 老版本装过、人设仍是空串时补一次默认值，之后用户自己清空不再重置。 */
+    private const val PERSONA_SEEDED_KEY = "ai_chat_persona_seeded"
 
     // ---- 配置（键名与 Nuke 的 AIChatConfig 字段一一对应） ----
-    internal var systemPrompt by KvStore.prefOption("ai_chat_system_prompt", "")
+    internal var systemPrompt by KvStore.prefOption("ai_chat_system_prompt", DEFAULT_SYSTEM_PROMPT)
     var temperature by KvStore.prefOption("ai_chat_temperature", 0.7f)
     var maxTokens by KvStore.prefOption("ai_chat_max_tokens", 512)
     var contextRounds by KvStore.prefOption("ai_chat_context_rounds", 6)
     var replyDelayMs by KvStore.prefOption("ai_chat_reply_delay_ms", 0L)
     internal var listMode by KvStore.prefOption("ai_chat_list_mode", LIST_WHITELIST)
-    internal var groupTriggerMode by KvStore.prefOption("ai_chat_group_trigger_mode", GROUP_TRIGGER_MENTION)
-    internal var groupKeywords by KvStore.prefOption("ai_chat_group_keywords", "")
-    internal var groupPrefix by KvStore.prefOption("ai_chat_group_prefix", "/ai")
     internal var cooldownSeconds by KvStore.prefOption("ai_chat_cooldown_seconds", 15)
     internal var dailyLimit by KvStore.prefOption("ai_chat_daily_limit", 100)
     internal var maxContextChars by KvStore.prefOption("ai_chat_max_context_chars", 12000)
@@ -174,9 +178,6 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         val replyDelayMs: Long,
         val listMode: Int,
         val targets: Set<String>,
-        val groupTriggerMode: Int,
-        val groupKeywords: Set<String>,
-        val groupPrefix: String,
         val cooldownMs: Long,
         val dailyLimit: Int,
         val maxContextChars: Int,
@@ -197,9 +198,6 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         replyDelayMs = replyDelayMs.coerceIn(0L, MAX_REPLY_DELAY_MS),
         listMode = listMode,
         targets = if (listMode == LIST_BLACKLIST) blacklist else whitelist,
-        groupTriggerMode = groupTriggerMode,
-        groupKeywords = groupKeywords.split(',', '，', '\n').map { it.trim() }.filter { it.isNotEmpty() }.toSet(),
-        groupPrefix = groupPrefix.trim(),
         cooldownMs = cooldownSeconds.coerceIn(0, 3600) * 1000L,
         dailyLimit = dailyLimit.coerceIn(0, 10000),
         maxContextChars = maxContextChars.coerceIn(1000, 100000),
@@ -231,7 +229,17 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     private val scope = CoroutineScope(SupervisorJob() + Executors.newSingleThreadExecutor().asCoroutineDispatcher())
 
     override fun onEnable() {
+        seedDefaultPersona()
         WeDatabaseListenerApi.addListener(this)
+    }
+
+    private fun seedDefaultPersona() {
+        if (KvStore.getStringOrDef(PERSONA_SEEDED_KEY, "").isNotEmpty()) return
+        if (KvStore.getStringOrDef("ai_chat_system_prompt", "").isBlank()) {
+            KvStore.putString("ai_chat_system_prompt", DEFAULT_SYSTEM_PROMPT)
+            WeLogger.i(TAG, "seeded default persona: cute_sister")
+        }
+        KvStore.putString(PERSONA_SEEDED_KEY, "1")
     }
 
     override fun onDisable() {
@@ -350,7 +358,8 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         val isGroup = isGroupTalker(talker)
         if (config.monitorAuthorizedChats && isGroup) appendObservedMessage(talker, content, isSend = false)
         if (config.monitorOnly && isGroup) return
-        val triggeredContent = applyGroupTrigger(talker, content, config) ?: return
+        // 白名单/黑名单已决定哪些会话会进来；群聊不再按 @/关键词/前缀 过滤，进来就回
+        val triggeredContent = content
         val now = System.currentTimeMillis()
         if (!isGroup && config.cooldownMs > 0 && now - (lastReplyAt[talker] ?: 0L) < config.cooldownMs) return
         if (!isGroup && config.dailyLimit > 0 && (dailyCounts[dailyKey(talker)] ?: 0) >= config.dailyLimit) return
@@ -443,7 +452,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
             val contextCharCount = messages.sumOf { it.content?.length ?: 0 }
             WeLogger.i(
                 TAG,
-                "AI context prepared: talker=$talker, trigger=${triggerName(config.groupTriggerMode)}, " +
+                "AI context prepared: talker=$talker, " +
                     "persona=${activePersona?.id ?: "default"}, memories=${persistentMemories.size}, " +
                     "backfilled=$backfilledCount, contextMessages=$contextMessageCount, contextChars=$contextCharCount",
             )
@@ -537,9 +546,9 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                     (config.mediaContext && MediaVision.isVisual(type))
             }
             .takeLast(config.historyBackfillCount)
-        // 默认只读缓存、不联网：缓存没命中就留占位符，绝不主动调接口（按量计费时每次请求都是钱）。
-        // 想让它现场识别最近几条，在设置里打开「现场识别图片/语音」。
-        var liveBudget = if (config.liveIdentify) MAX_LIVE_VOICE_TRANSCRIPTS else 0
+        // 语音走「语音接口」：只要语音接口配好了，语音消息一律现场识别（识别结果会写盘缓存，
+        // 同一条只会请求一次）。图片/表情/视频体积大、单价高，仍由「现场识别」开关控制。
+        var voiceLiveBudget = MAX_LIVE_VOICE_CALLS
         var reflectBudget = MAX_VOICE_REFLECT
         var liveMediaBudget = if (config.liveIdentify) MAX_LIVE_MEDIA_DESCRIPTIONS else 0
         var mediaDescribed = 0
@@ -572,38 +581,35 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                             null
                         }
                         else -> {
-                            // 优先用微信自己转的文字（VoiceTranscriptStore，走腾讯、不产生接口费用）；
-                            // 其次用模块自己识别过的磁盘缓存；两者都没有就留占位符，不联网。
-                            // 三路取文字，前两路都不联网、不花钱：
-                            // ① 内存里已记下的微信转写；② 反射去微信内存 bean 里读这条的转写
-                            //（微信自己转过的才有，含之前播放/转写过的历史语音）；
-                            // ③ 模块自己识别过的磁盘缓存。
-                            val fromWeChat = VoiceTranscriptStore.get(message.msgId)
-                                ?: if (reflectBudget > 0 && message.msgSvrId > 0) {
-                                    reflectBudget--
-                                    runCatching {
-                                        val info = MessageInfo(
-                                            WeMessageApi.getMsgInfoInstanceByMsgSvrId(message.msgSvrId, talker)
-                                        )
-                                        ReplyMessageSupport.voiceTranscript(info)
-                                    }.getOrNull()?.also { VoiceTranscriptStore.put(message.msgId, it) }
+                            // 取文字的顺序：① 语音接口 ② 微信自带转写 ③ 占位符。
+                            // ① 语音接口：先用模块识别过的磁盘缓存，没命中就现场请求（每轮有预算，
+                            //    识别成功会写盘，同一条只请求一次）。
+                            val fromAsr = runCatching { AsrEngine.cachedTranscript(encPath) }.getOrNull()
+                                ?: if (voiceLiveBudget > 0) {
+                                    voiceLiveBudget--
+                                    runCatching { AsrEngine.transcriptForContext(encPath, VOICE_WAIT_MS) }
+                                        .onFailure {
+                                            WeLogger.w(TAG, "voice transcript for context failed: ${it.message}")
+                                        }
+                                        .getOrNull()
                                 } else null
-                            val cached = fromWeChat
-                                ?: runCatching { AsrEngine.cachedTranscript(encPath) }.getOrNull()
-                            if (cached != null) {
-                                cached
-                            } else if (liveBudget > 0) {
-                                liveBudget--
-                                runCatching { AsrEngine.transcriptForContext(encPath, VOICE_WAIT_MS) }
-                                    .onFailure {
-                                        voiceSkipped++
-                                        WeLogger.w(TAG, "voice transcript for context failed: ${it.message}")
-                                    }
-                                    .getOrNull()
-                            } else {
-                                voiceSkipped++
-                                null
-                            }
+                            // ② 语音接口没结果（未下载 / 接口失败 / 预算用完）才退到微信自带转写：
+                            //    内存里已记下的，或反射去微信内存 bean 里读这条的（含之前转写过的历史语音）。
+                            val fromWeChat = if (fromAsr.isNullOrBlank()) {
+                                VoiceTranscriptStore.get(message.msgId)
+                                    ?: if (reflectBudget > 0 && message.msgSvrId > 0) {
+                                        reflectBudget--
+                                        runCatching {
+                                            val info = MessageInfo(
+                                                WeMessageApi.getMsgInfoInstanceByMsgSvrId(message.msgSvrId, talker)
+                                            )
+                                            ReplyMessageSupport.voiceTranscript(info)
+                                        }.getOrNull()?.also { VoiceTranscriptStore.put(message.msgId, it) }
+                                    } else null
+                            } else null
+                            val best = fromAsr ?: fromWeChat
+                            if (best.isNullOrBlank()) voiceSkipped++
+                            best
                         }
                     }
                     if (!transcript.isNullOrBlank()) transcribed++
@@ -669,30 +675,6 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         else if (voiceSkipped > 0 || asrNotReady > 0) WeLogger.i(TAG, "voice messages not transcribed for context: talker=$talker, skipped=$voiceSkipped, asrNotReady=$asrNotReady（未配置语音接口 / 文件未下载 / 预算用尽）")
         if (mediaDescribed > 0) WeLogger.i(TAG, "media messages described for context: talker=$talker, count=$mediaDescribed")
         return rows.size
-    }
-
-    private fun applyGroupTrigger(talker: String, content: String, config: Config): String? {
-        if (!talker.endsWith("@chatroom") && !talker.endsWith("@im.chatroom")) return content
-        val (_, body) = splitGroupSender(talker, content)
-        return when (config.groupTriggerMode) {
-            GROUP_TRIGGER_ALL -> content
-            GROUP_TRIGGER_MENTION -> if (body.contains("@${dev.sun.wechat.features.api.core.WeApi.selfWxId}", true)) content else null
-            GROUP_TRIGGER_KEYWORD -> if (config.groupKeywords.any { body.contains(it, true) }) content else null
-            GROUP_TRIGGER_PREFIX -> if (config.groupPrefix.isNotEmpty() && body.startsWith(config.groupPrefix)) {
-                val stripped = body.removePrefix(config.groupPrefix).trimStart()
-                val sender = splitGroupSender(talker, content).first
-                sender?.let { "$it:\n$stripped" } ?: stripped
-            } else null
-            else -> null
-        }
-    }
-
-    private fun triggerName(mode: Int): String = when (mode) {
-        GROUP_TRIGGER_ALL -> "all"
-        GROUP_TRIGGER_MENTION -> "mention"
-        GROUP_TRIGGER_KEYWORD -> "keyword"
-        GROUP_TRIGGER_PREFIX -> "prefix"
-        else -> "unknown"
     }
 
     private fun sanitizeGroupReply(text: String, maxChars: Int): String {
@@ -795,430 +777,4 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         }
     }
 
-    internal fun showConfigDialog(context: ComponentActivity) {
-        dev.sun.wechat.ui.utils.showComposeDialog(context, directlyDismissable = false) {
-            val promptInput = remember { mutableStateOf(systemPrompt) }
-            val personaKeyInput = remember { mutableStateOf(personaKeyOf(systemPrompt)) }
-            val temperatureTenInput = remember { mutableStateOf((temperature * 10).roundToInt().coerceIn(0, 20)) }
-            val tokensInput = remember { mutableStateOf(maxTokens.coerceIn(1, MAX_OUTPUT_TOKENS)) }
-            val roundsInput = remember { mutableStateOf(contextRounds.coerceIn(0, MAX_CONTEXT_ROUNDS)) }
-            val delayInput = remember { mutableStateOf(replyDelayMs.coerceIn(0L, MAX_REPLY_DELAY_MS).toInt()) }
-            val modeInput = remember { mutableStateOf(listMode) }
-            val groupTriggerInput = remember { mutableStateOf(groupTriggerMode) }
-            val groupKeywordsInput = remember { mutableStateOf(groupKeywords) }
-            val groupPrefixInput = remember { mutableStateOf(groupPrefix) }
-            val cooldownInput = remember { mutableStateOf(cooldownSeconds.coerceIn(0, 3600)) }
-            val dailyLimitInput = remember { mutableStateOf(dailyLimit.coerceIn(0, 10000)) }
-            val contextCharsInput = remember { mutableStateOf(maxContextChars.coerceIn(1000, 100000)) }
-            val monitorInput = remember { mutableStateOf(monitorAuthorizedChats) }
-            val monitorOnlyInput = remember { mutableStateOf(monitorOnly) }
-            val backfillInput = remember { mutableStateOf(historyBackfillCount.coerceIn(0, 200)) }
-            val whitelistInput = remember { mutableStateOf(whitelist) }
-            val blacklistInput = remember { mutableStateOf(blacklist) }
-            val customPersonasInput = remember { mutableStateOf(loadCustomPersonas()) }
-            val showSavePersonaDialog = remember { mutableStateOf(false) }
-            val personaNameInput = remember { mutableStateOf("") }
-            val localizedContext by rememberUpdatedState(LocalWeKitLocalizedContext.current)
-            val composeContext = LocalContext.current
-            val exportPersonasLauncher = rememberLauncherForActivityResult(
-                ActivityResultContracts.CreateDocument("application/json"),
-            ) { uri ->
-                if (uri != null) runCatching {
-                    composeContext.contentResolver.openOutputStream(uri, "w")!!.bufferedWriter().use {
-                        it.write(exportPersonas())
-                    }
-                }.onSuccess { showToast("人设已导出") }
-                    .onFailure { showToast("导出失败: ${it.message}") }
-            }
-            val importPersonasLauncher = rememberLauncherForActivityResult(
-                ActivityResultContracts.OpenDocument(),
-            ) { uri ->
-                if (uri != null) runCatching {
-                    val text = composeContext.contentResolver.openInputStream(uri)!!.bufferedReader().use { it.readText() }
-                    importPersonas(text)
-                    customPersonasInput.value = loadCustomPersonas()
-                }.onSuccess { showToast("人设已导入") }
-                    .onFailure { showToast("导入失败: ${it.message}") }
-            }
-
-            fun openPicker() {
-                val useWhitelist = modeInput.value == LIST_WHITELIST
-                val current = if (useWhitelist) whitelistInput.value else blacklistInput.value
-                // 不关掉设置框, 否则配完名单回来时其它未保存的输入会丢
-                dev.sun.wechat.ui.utils.showComposeDialog(context) {
-                    ContactsSelector(
-                        title = stringResource(
-                            if (useWhitelist) R.string.ai_chat_select_whitelist_title else R.string.ai_chat_select_blacklist_title,
-                        ),
-                        contacts = WeDatabaseApi.getFriends() + WeDatabaseApi.getGroups(),
-                        initialSelectedWxIds = current,
-                        onDismiss = onDismiss,
-                    ) { selected ->
-                        if (useWhitelist) whitelistInput.value = selected else blacklistInput.value = selected
-                        showToast(localizedContext.getString(R.string.ai_chat_selected_count, selected.size))
-                        onDismiss()
-                    }
-                }
-            }
-
-            AlertDialogContent(
-                icon = { Icon(MaterialSymbols.Outlined.Auto_awesome, contentDescription = null) },
-                title = { Text(stringResource(R.string.ai_chat_config_title)) },
-                text = {
-                    Column(Modifier.verticalScroll(rememberScrollState())) {
-                        MiuixDropDownMenuWidget(
-                            iconPlaceholder = false,
-                            title = "人物设定",
-                            description = "选一个人物设定自动填入系统人设，之后可手动微调",
-                            value = personaKeyInput.value,
-                            options = listOf(DropdownOption(PERSONA_CUSTOM, "自定义")) +
-                                AI_PERSONAS.map { DropdownOption(it.key, it.name) } +
-                                customPersonasInput.value.map {
-                                    DropdownOption(CUSTOM_PERSONA_PREFIX + it.name, it.name)
-                                },
-                            onValueChange = { key ->
-                                personaKeyInput.value = key
-                                when {
-                                    key == PERSONA_CUSTOM -> { /* 自定义：保持当前 prompt 不变 */ }
-                                    key.startsWith(CUSTOM_PERSONA_PREFIX) -> {
-                                        val name = key.removePrefix(CUSTOM_PERSONA_PREFIX)
-                                        customPersonasInput.value.firstOrNull { it.name == name }?.let {
-                                            promptInput.value = it.prompt
-                                        }
-                                    }
-                                    else -> AI_PERSONAS.firstOrNull { it.key == key }?.let {
-                                        promptInput.value = it.prompt
-                                    }
-                                }
-                            },
-                        )
-                        MiuixBaseWidget(
-                            iconPlaceholder = false,
-                            title = "导出全部人设",
-                            description = "导出自定义、联系人和群聊专属人设（不包含 API Key）",
-                            onClick = { exportPersonasLauncher.launch("wekit-ai-personas.json") },
-                            trailingContent = { Icon(MaterialSymbols.Outlined.Save, null) },
-                        )
-                        MiuixBaseWidget(
-                            iconPlaceholder = false,
-                            title = "导入人设",
-                            description = "导入 WeKit 人设 JSON；同名项目会被文件内容替换",
-                            onClick = { importPersonasLauncher.launch(arrayOf("application/json", "text/plain")) },
-                            trailingContent = { Icon(MaterialSymbols.Outlined.Chevron_right, null) },
-                        )
-                        FieldRow(
-                            label = stringResource(R.string.ai_chat_system_prompt),
-                            value = promptInput.value,
-                            onValueChange = {
-                                promptInput.value = it
-                                personaKeyInput.value = personaKeyOf(it)
-                            },
-                            description = stringResource(R.string.ai_chat_system_prompt_description),
-                            singleLine = false,
-                        )
-                        if (personaKeyInput.value == PERSONA_CUSTOM && promptInput.value.isNotBlank()) {
-                            MiuixBaseWidget(
-                                iconPlaceholder = false,
-                                title = "保存为我的设定",
-                                description = "把当前系统人设定个名字存起来，下次直接从下拉里选",
-                                onClick = {
-                                    personaNameInput.value = ""
-                                    showSavePersonaDialog.value = true
-                                },
-                                trailingContent = {
-                                    Icon(
-                                        MaterialSymbols.Outlined.Save,
-                                        contentDescription = null,
-                                        tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                    )
-                                },
-                            )
-                        }
-                        if (personaKeyInput.value.startsWith(CUSTOM_PERSONA_PREFIX)) {
-                            MiuixBaseWidget(
-                                iconPlaceholder = false,
-                                title = "删除此设定",
-                                description = "从我的设定里移除「" +
-                                    personaKeyInput.value.removePrefix(CUSTOM_PERSONA_PREFIX) + "」",
-                                onClick = {
-                                    val name = personaKeyInput.value.removePrefix(CUSTOM_PERSONA_PREFIX)
-                                    deleteCustomPersona(name)
-                                    customPersonasInput.value = loadCustomPersonas()
-                                    personaKeyInput.value = PERSONA_CUSTOM
-                                },
-                                trailingContent = {
-                                    Icon(
-                                        MaterialSymbols.Outlined.Delete,
-                                        contentDescription = null,
-                                        tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                    )
-                                },
-                            )
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        MiuixIntNumberPickerWidget(
-                            iconPlaceholder = false,
-                            title = stringResource(R.string.ai_chat_temperature),
-                            description = "0~20，数值 ÷10 即温度（0.0~2.0），越大越有创造性",
-                            value = temperatureTenInput.value,
-                            startInt = 0,
-                            endInt = 20,
-                            stepSize = 1,
-                            valueSuffix = "",
-                            onValueChange = { temperatureTenInput.value = it },
-                        )
-                        MiuixIntNumberPickerWidget(
-                            iconPlaceholder = false,
-                            title = stringResource(R.string.ai_chat_max_tokens),
-                            description = stringResource(R.string.ai_chat_max_tokens_description),
-                            value = tokensInput.value,
-                            startInt = 256,
-                            endInt = MAX_OUTPUT_TOKENS,
-                            stepSize = 256,
-                            valueSuffix = " tokens",
-                            onValueChange = { tokensInput.value = it },
-                        )
-                        MiuixIntNumberPickerWidget(
-                            iconPlaceholder = false,
-                            title = stringResource(R.string.ai_chat_context_rounds),
-                            description = stringResource(R.string.ai_chat_context_rounds_description),
-                            value = roundsInput.value,
-                            startInt = 0,
-                            endInt = MAX_CONTEXT_ROUNDS,
-                            stepSize = 1,
-                            valueSuffix = " 轮",
-                            onValueChange = { roundsInput.value = it },
-                        )
-                        MiuixIntNumberPickerWidget(
-                            iconPlaceholder = false,
-                            title = stringResource(R.string.ai_chat_reply_delay),
-                            description = stringResource(R.string.ai_chat_reply_delay_description),
-                            value = delayInput.value,
-                            startInt = 0,
-                            endInt = MAX_REPLY_DELAY_MS.toInt(),
-                            stepSize = 1000,
-                            valueSuffix = " ms",
-                            onValueChange = { delayInput.value = it },
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        MiuixDropDownMenuWidget(
-                            iconPlaceholder = false,
-                            title = "群聊触发方式",
-                            description = "仅影响群聊；私聊仍按授权名单回复",
-                            value = groupTriggerInput.value,
-                            options = listOf(
-                                DropdownOption(GROUP_TRIGGER_ALL, "全部消息"),
-                                DropdownOption(GROUP_TRIGGER_MENTION, "被 @ 时"),
-                                DropdownOption(GROUP_TRIGGER_KEYWORD, "包含关键词"),
-                                DropdownOption(GROUP_TRIGGER_PREFIX, "指定前缀"),
-                            ),
-                            onValueChange = { groupTriggerInput.value = it },
-                        )
-                        if (groupTriggerInput.value == GROUP_TRIGGER_KEYWORD) FieldRow(
-                            "群聊关键词", groupKeywordsInput.value,
-                            { groupKeywordsInput.value = it }, "使用逗号或换行分隔", false,
-                        )
-                        if (groupTriggerInput.value == GROUP_TRIGGER_PREFIX) FieldRow(
-                            "群聊触发前缀", groupPrefixInput.value,
-                            { groupPrefixInput.value = it }, "例如 /ai，发送给模型前自动移除",
-                        )
-                        MiuixIntNumberPickerWidget(
-                            iconPlaceholder = false, title = "单会话冷却时间",
-                            description = "避免连续消息触发刷屏", value = cooldownInput.value,
-                            startInt = 0, endInt = 3600, stepSize = 5, valueSuffix = " 秒",
-                            onValueChange = { cooldownInput.value = it },
-                        )
-                        MiuixIntNumberPickerWidget(
-                            iconPlaceholder = false, title = "单会话每日上限",
-                            description = "0 表示不限制", value = dailyLimitInput.value,
-                            startInt = 0, endInt = 10000, stepSize = 10, valueSuffix = " 条",
-                            onValueChange = { dailyLimitInput.value = it },
-                        )
-                        MiuixIntNumberPickerWidget(
-                            iconPlaceholder = false, title = "上下文字符上限",
-                            description = "超出时优先保留最近消息", value = contextCharsInput.value,
-                            startInt = 1000, endInt = 100000, stepSize = 1000, valueSuffix = " 字符",
-                            onValueChange = { contextCharsInput.value = it },
-                        )
-                        MiuixIntNumberPickerWidget(
-                            iconPlaceholder = false, title = "历史消息回读条数",
-                            description = "每次自动回复前固定读取微信群最近 10 条文本消息", value = 10,
-                            startInt = 10, endInt = 10, stepSize = 1, valueSuffix = " 条",
-                            onValueChange = { },
-                        )
-                        MiuixDropDownMenuWidget(
-                            iconPlaceholder = false, title = "授权群聊上下文监控",
-                            description = "监听授权群聊消息并持续加入现场上下文",
-                            value = if (monitorInput.value) 1 else 0,
-                            options = listOf(DropdownOption(1, "开启"), DropdownOption(0, "关闭")),
-                            onValueChange = { monitorInput.value = it == 1 },
-                        )
-                        MiuixDropDownMenuWidget(
-                            iconPlaceholder = false, title = "群聊仅监控不回复",
-                            description = "开启后只收集授权群聊上下文，不触发模型回复",
-                            value = if (monitorOnlyInput.value) 1 else 0,
-                            options = listOf(DropdownOption(1, "开启"), DropdownOption(0, "关闭")),
-                            onValueChange = { monitorOnlyInput.value = it == 1 },
-                        )
-                        MiuixBaseWidget(
-                            iconPlaceholder = false,
-                            title = "AI 自动回复诊断",
-                            description = buildString {
-                                append("消息 Hook: ")
-                                append(if (WeMessageApi.methodMsgInfoStorageInsertMessage.isAvailable) "可用" else "不可用")
-                                append(" · 模型: ")
-                                append(if (MultimodalEngine.textUsable()) MultimodalEngine.textModel.ifBlank { MultimodalEngine.visionModel } else "请先在多模态设置里填地址、Key 和模型")
-                                append("\n收件: ").append(if (lastReceiveAt == 0L) "暂无" else java.util.Date(lastReceiveAt))
-                                append(" · 发送: ").append(if (lastSendAt == 0L) "暂无" else java.util.Date(lastSendAt))
-                                append("\n处理中: ").append(inFlight.size)
-                                lastFailure?.let { append(" · 最近失败: ").append(it) }
-                            },
-                            onClick = {
-                                val target = whitelistInput.value.firstOrNull()
-                                if (target == null) showToast("请先在白名单中选择一个测试联系人")
-                                else if (WeMessageApi.sendText(target, "WeKit AI 发送链路测试")) showToast("测试消息已提交")
-                                else showToast("测试消息发送失败")
-                            },
-                            trailingContent = { Icon(MaterialSymbols.Outlined.Chevron_right, null) },
-                        )
-                        MiuixBaseWidget(
-                            iconPlaceholder = false, title = "清除全部 AI 上下文",
-                            description = "立即丢弃当前内存中的所有会话上下文",
-                            onClick = { clearContext(); showToast("AI 上下文已清除") },
-                            trailingContent = { Icon(MaterialSymbols.Outlined.Delete, null) },
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        MiuixDropDownMenuWidget(
-                            iconPlaceholder = false,
-                            title = stringResource(R.string.ai_chat_list_mode),
-                            description = stringResource(
-                                if (modeInput.value == LIST_WHITELIST) R.string.ai_chat_whitelist_description
-                                else R.string.ai_chat_blacklist_description,
-                            ),
-                            value = modeInput.value,
-                            options = listOf(
-                                DropdownOption(LIST_WHITELIST, stringResource(R.string.ai_chat_list_whitelist)),
-                                DropdownOption(LIST_BLACKLIST, stringResource(R.string.ai_chat_list_blacklist)),
-                            ),
-                            onValueChange = { modeInput.value = it },
-                        )
-                        MiuixBaseWidget(
-                            iconPlaceholder = false,
-                            title = stringResource(
-                                if (modeInput.value == LIST_WHITELIST) R.string.ai_chat_configure_whitelist
-                                else R.string.ai_chat_configure_blacklist,
-                            ),
-                            description = stringResource(
-                                R.string.ai_chat_selected_count,
-                                (if (modeInput.value == LIST_WHITELIST) whitelistInput.value else blacklistInput.value).size,
-                            ),
-                            onClick = { openPicker() },
-                            trailingContent = {
-                                Icon(
-                                    MaterialSymbols.Outlined.Chevron_right,
-                                    contentDescription = null,
-                                    tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                )
-                            },
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(onClick = {
-                        val previous = snapshot()
-                        systemPrompt = promptInput.value.trim()
-                        temperature = (temperatureTenInput.value / 10f).coerceIn(0f, 2f)
-                        maxTokens = tokensInput.value.coerceIn(1, MAX_OUTPUT_TOKENS)
-                        contextRounds = roundsInput.value.coerceIn(0, MAX_CONTEXT_ROUNDS)
-                        replyDelayMs = delayInput.value.toLong().coerceIn(0L, MAX_REPLY_DELAY_MS)
-                        listMode = modeInput.value
-                        groupTriggerMode = groupTriggerInput.value
-                        groupKeywords = groupKeywordsInput.value.trim()
-                        groupPrefix = groupPrefixInput.value.trim()
-                        cooldownSeconds = cooldownInput.value
-                        dailyLimit = dailyLimitInput.value
-                        maxContextChars = contextCharsInput.value
-                        monitorAuthorizedChats = monitorInput.value
-                        monitorOnly = monitorOnlyInput.value
-                        historyBackfillCount = 10
-                        whitelist = whitelistInput.value
-                        blacklist = blacklistInput.value
-
-                        val now = snapshot()
-                        // 名单/轮数等变化后，旧上下文不再适用：清空并让在途回复作废
-                        if (now.contextRounds != previous.contextRounds ||
-                            now.listMode != previous.listMode ||
-                            now.targets != previous.targets
-                        ) {
-                            memories.clear()
-                        }
-                        configVersion.incrementAndGet()
-                        onDismiss()
-                    }) { Text(stringResource(R.string.action_save)) }
-                },
-                dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.dialog_cancel)) } },
-            )
-            if (showSavePersonaDialog.value) {
-                MiuixAlertDialog(
-                    onDismissRequest = { showSavePersonaDialog.value = false },
-                    icon = { Icon(MaterialSymbols.Outlined.Save, contentDescription = null) },
-                    title = { Text("保存人物设定") },
-                    text = {
-                        TextField(
-                            value = personaNameInput.value,
-                            onValueChange = { personaNameInput.value = it },
-                            label = "设定名称（如：我的分身）",
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    },
-                    confirmButton = {
-                        Button(onClick = {
-                            val name = personaNameInput.value.trim()
-                            if (name.isNotEmpty()) {
-                                saveCustomPersona(name, promptInput.value)
-                                customPersonasInput.value = loadCustomPersonas()
-                                personaKeyInput.value = CUSTOM_PERSONA_PREFIX + name
-                                showSavePersonaDialog.value = false
-                            }
-                        }) { Text(stringResource(R.string.action_save)) }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showSavePersonaDialog.value = false }) {
-                            Text(stringResource(R.string.dialog_cancel))
-                        }
-                    },
-                )
-            }
-        }
-    }
-
-    @Composable
-    private fun FieldRow(
-        label: String,
-        value: String,
-        onValueChange: (String) -> Unit,
-        description: String,
-        singleLine: Boolean = true,
-    ) {
-        Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-            Text(
-                text = label,
-                style = MiuixTheme.textStyles.title3,
-                modifier = Modifier.padding(bottom = 4.dp),
-            )
-            TextField(
-                value = value,
-                onValueChange = onValueChange,
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = singleLine,
-            )
-            Text(
-                text = description,
-                style = MiuixTheme.textStyles.footnote1,
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-        }
-    }
 }
