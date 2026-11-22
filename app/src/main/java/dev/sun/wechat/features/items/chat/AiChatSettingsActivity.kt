@@ -217,7 +217,6 @@ class AiChatSettingsActivity : ComponentActivity() {
         var rounds by remember { mutableStateOf(AiChat.contextRounds.toString()) }
         var tokens by remember { mutableStateOf(AiChat.maxTokens.toString()) }
         var tempInput by remember { mutableStateOf(AiChat.temperature.toString()) }
-        var monitorOnly by remember { mutableStateOf(AiChat.monitorOnly) }
 
         Dialog(onDismissRequest = onDismiss) {
             Column(
@@ -303,19 +302,6 @@ class AiChatSettingsActivity : ComponentActivity() {
                             it.toFloatOrNull()?.let { v -> AiChat.temperature = v.coerceIn(0f, 2f) }
                         }
                     }
-                    AdvancedSection("监控") {
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text("仅监控模式")
-                                Text(
-                                    "只记录命中的会话与内容，不发送任何消息",
-                                    style = MiuixTheme.textStyles.footnote1,
-                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                                )
-                            }
-                            Switch(monitorOnly, { monitorOnly = it; AiChat.monitorOnly = it })
-                        }
-                    }
                     Spacer(Modifier.height(8.dp))
                 }
             }
@@ -396,21 +382,17 @@ class AiChatSettingsActivity : ComponentActivity() {
     }
 
     @Composable private fun VoicePage() = Page {
-        var voiceEnabled by remember { mutableStateOf(AiChat.voiceReplyEnabled) }
         var summary by remember { mutableStateOf(TextToSpeech.voiceSummary()) }
 
-        Block("自动文字转语音", "对方发来消息，AI 生成回复后自动转成语音发送") {
-            ToggleRow("自动转语音发送", "开启后 AI 回复以语音消息发出，不再发送文字", voiceEnabled) { voiceEnabled = it; AiChat.voiceReplyEnabled = it }
-        }
-        Block("语音", "后端、Key 与音色都在「文字转语音」功能页里配置，这里只挑用哪个") {
+        Block("语音", "AI 回复用哪套声音；发不发语音、Key 与音色都在「文字转语音」功能里配") {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("选择语音")
                     Text(summary, style = MiuixTheme.textStyles.footnote1, color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
                 }
                 Button({
-                    TextToSpeech.showVoiceConfig(this@AiChatSettingsActivity) { summary = TextToSpeech.voiceSummary() }
-                }) { Text("去配置") }
+                    TextToSpeech.showVoicePicker(this@AiChatSettingsActivity) { summary = it }
+                }) { Text("选择") }
             }
         }
 

@@ -150,7 +150,6 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     internal var dailyLimit by KvStore.prefOption("ai_chat_daily_limit", 100)
     internal var maxContextChars by KvStore.prefOption("ai_chat_max_context_chars", 12000)
     internal var monitorAuthorizedChats by KvStore.prefOption("ai_chat_monitor_authorized_chats", true)
-    internal var monitorOnly by KvStore.prefOption("ai_chat_monitor_only", false)
     internal var historyBackfillCount by KvStore.prefOption("ai_chat_history_backfill_count", 10)
 
     /** 上下文里的图片/表情/动图/视频是否送视觉模型识别（默认关，按张计费）。 */
@@ -159,7 +158,9 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     /** 是否允许回填上下文时现场调用视觉/语音接口识别；默认关闭，避免产生接口费用。 */
     internal var liveIdentify by KvStore.prefOption("ai_chat_live_identify", false)
     internal var groupMaxReplyChars by KvStore.prefOption("ai_chat_group_max_reply_chars", 500)
-    var voiceReplyEnabled by KvStore.prefOption("ai_chat_voice_reply_enabled", false)
+    /** 语音回复开关统一在「文字转语音」功能里配，AI 群聊只读它的值。 */
+    private val voiceReplyEnabled: Boolean
+        get() = TextToSpeech.voiceReplyEnabled
 
     internal var whitelist: Set<String>
         get() = KvStore.getStringSetOrDef("ai_chat_whitelist", emptySet())
@@ -182,7 +183,6 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         val dailyLimit: Int,
         val maxContextChars: Int,
         val monitorAuthorizedChats: Boolean,
-        val monitorOnly: Boolean,
         val historyBackfillCount: Int,
         val groupMaxReplyChars: Int,
         val mediaContext: Boolean,
@@ -202,7 +202,6 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         dailyLimit = dailyLimit.coerceIn(0, 10000),
         maxContextChars = maxContextChars.coerceIn(1000, 100000),
         monitorAuthorizedChats = monitorAuthorizedChats,
-        monitorOnly = monitorOnly,
         historyBackfillCount = historyBackfillCount.coerceIn(1, 50),
         groupMaxReplyChars = groupMaxReplyChars.coerceIn(100, 4000),
         mediaContext = mediaContext,
@@ -229,7 +228,9 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
     private val scope = CoroutineScope(SupervisorJob() + Executors.newSingleThreadExecutor().asCoroutineDispatcher())
 
     override fun onEnable() {
-        seedDefaultPersona()
+        // 人设播种只影响文案，出错也必须把消息监听挂上，否则整个功能静默失效
+        runCatching { seedDefaultPersona() }
+            .onFailure { WeLogger.w(TAG, "seed default persona failed: ${it.message}") }
         WeDatabaseListenerApi.addListener(this)
     }
 
@@ -274,11 +275,15 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                 messageType == MessageType.VIDEO ||
                 messageType == MessageType.MICRO_VIDEO
             )
-        if (messageType?.isText != true && !isVoice && !isMultimodal) return
+        if (messageType?.isText != true && !isVoice && !isMultimodal) {
+            WeLogger.d(TAG, "AI insert ignored: unsupported type=$type talker=${values.getAsString("talker")}")
+            return
+        }
         val isSend = values.getAsInteger("isSend") ?: return
         if (isSend != 0) return
         val talker = values.getAsString("talker").orEmpty()
         if (talker.isBlank() || talker.startsWith("gh_")) return
+        WeLogger.d(TAG, "AI insert accepted: type=$type talker=$talker voice=$isVoice multimodal=$isMultimodal")
 
         // 微信同一条消息可能插入多次，按 msgSvrId/localId 去重
         val dedupeKey = values.getAsString("msgSvrId")?.takeIf { it.isNotBlank() && it != "0" }
@@ -290,13 +295,18 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
             // 转写文本只活在微信内存 bean（不落数据库），由消息行绑定（MessageSniffer）
             // 记进 VoiceTranscriptStore。这里延迟等自动转写落地再取；取不到（没开
             // 自动转写/一直没转完）就放弃这条语音，绝不拿 voicemsg 的 XML 当正文瞎回复。
+            // 微信转写缓存（VoiceTranscriptStore）是用 field_msgId 记的，消息表的 localId 是另一列，
+            // 两个都查一遍才拿得到历史语音的转写文本；都缺时才放弃这条。
             val localId = values.getAsInteger("localId")?.toLong()
-            if (localId == null) return
+                ?: values.getAsInteger("msgId")?.toLong()
+                ?: return
+            val msgIdKey = values.getAsInteger("msgId")?.toLong()
             scope.launch {
                 var transcript: String? = null
-                repeat(16) {
+                for (attempt in 0 until 16) {
                     transcript = VoiceTranscriptStore.get(localId)
-                    if (!transcript.isNullOrBlank()) return@repeat
+                        ?: msgIdKey?.let { VoiceTranscriptStore.get(it) }
+                    if (!transcript.isNullOrBlank()) break
                     delay(500)
                 }
                 // 微信没给转写文本时，用模块自己接的 ASR 识别一遍（失败就放弃这条语音）
@@ -313,7 +323,10 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
                             WeLogger.w(TAG, "ASR 识别失败：${it.message}")
                             null
                         }
-                        transcript?.takeIf { it.isNotBlank() }?.let { VoiceTranscriptStore.put(localId, it) }
+                        transcript?.takeIf { it.isNotBlank() }?.let {
+                            VoiceTranscriptStore.put(localId, it)
+                            msgIdKey?.let { id -> VoiceTranscriptStore.put(id, it) }
+                        }
                     }
                 }
                 if (transcript.isNullOrBlank()) {
@@ -351,13 +364,15 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         dispatchNewMessage(talker, content)
     }
 
-    /** 新消息（文字原文或语音转写文本）统一入口：观察/群触发/冷却/限流后交给模型。 */
+    /** 新消息（文字原文、语音转写文本或多模态描述）统一入口：名单过滤/观察/冷却/限流后交给模型。 */
     private fun dispatchNewMessage(talker: String, content: String) {
         val config = snapshot()
-        if (!config.allowsTalker(talker)) return
+        if (!config.allowsTalker(talker)) {
+            WeLogger.i(TAG, "AI reply skipped: talker not in list, talker=$talker, mode=${if (config.listMode == LIST_WHITELIST) "whitelist" else "blacklist"}, size=${config.targets.size}")
+            return
+        }
         val isGroup = isGroupTalker(talker)
         if (config.monitorAuthorizedChats && isGroup) appendObservedMessage(talker, content, isSend = false)
-        if (config.monitorOnly && isGroup) return
         // 白名单/黑名单已决定哪些会话会进来；群聊不再按 @/关键词/前缀 过滤，进来就回
         val triggeredContent = content
         val now = System.currentTimeMillis()
@@ -365,6 +380,7 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
         if (!isGroup && config.dailyLimit > 0 && (dailyCounts[dailyKey(talker)] ?: 0) >= config.dailyLimit) return
         if (inFlight.putIfAbsent(talker, true) != null) {
             if (isGroup) pendingGroupMessages[talker] = triggeredContent
+            WeLogger.i(TAG, "AI reply queued: busy, talker=$talker")
             return
         }
         lastReceiveAt = now
@@ -480,7 +496,8 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
             val rawText = reply.getOrThrow().trim()
             if (rawText.isEmpty()) return
             val text = if (isGroupTalker(talker)) sanitizeGroupReply(rawText, config.groupMaxReplyChars) else rawText
-            val sent = if (voiceReplyEnabled) sendReplyAsVoice(talker, text) else WeMessageApi.sendText(talker, text)
+            val useVoice = voiceReplyEnabled
+            val sent = if (useVoice) sendReplyAsVoice(talker, text) else WeMessageApi.sendText(talker, text)
             if (!sent) {
                 lastFailure = "微信发送 API 返回失败"
                 WeLogger.e(TAG, "failed to send AI reply to talker=$talker")
@@ -496,7 +513,11 @@ object AiChat : ClickableFeature(), WeDatabaseListenerApi.IInsertListener {
             lastFailure = null
             lastReplyAt[talker] = lastSendAt
             dailyCounts.merge(dailyKey(talker), 1, Int::plus)
-            WeLogger.i(TAG, "AI replied to talker=$talker, replyChars=${text.length}, truncated=${text.length < rawText.length}")
+            WeLogger.i(
+                TAG,
+                "AI replied to talker=$talker, replyChars=${text.length}, " +
+                    "truncated=${text.length < rawText.length}, voice=$useVoice",
+            )
         }.onFailure {
             lastFailure = it.message ?: it.javaClass.simpleName
             WeLogger.e(TAG, "AI chat processing failed", it)
