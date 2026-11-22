@@ -454,13 +454,16 @@ object VisionClient {
         if (mime != null && raw.size <= MAX_RAW_BYTES) return dataUri(mime, raw)
         if (mime == null) {
             // WXGF 等微信私有格式先尝试系统解码，解不出来就没法识别
-            WeLogger.d(TAG, "未知图片格式，尝试解码 file=${file.name}")
+            val head = headHex(raw)
+            val kind = if (isWxgf(raw)) "wxgf 微信私有容器" else "未知魔数"
+            WeLogger.d(TAG, "未知图片格式 file=${file.name} 大小=${raw.size} 类型=$kind 头部=$head")
         }
         val bitmap = runCatching { BitmapFactory.decodeFile(file.absolutePath) }.getOrNull()
             ?: run {
                 WeLogger.d(
                     TAG,
-                    "图片解码失败（可能是原图还没下载完）file=${file.name} 大小=${raw.size} 字节"
+                    "图片解码失败 file=${file.name} 大小=${raw.size} 字节 头部=${headHex(raw)}" +
+                        "（魔数未知时是微信私有容器，系统解码器也解不开）"
                 )
                 return mime?.let { dataUri(it, raw) }
             }
@@ -485,6 +488,15 @@ object VisionClient {
         val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
         return "data:$mime;base64,$base64"
     }
+
+    /** 文件头前 16 字节，用来判断微信图片到底是 jpg/png 还是 wxgf 之类的私有容器。 */
+    private fun headHex(bytes: ByteArray, count: Int = 16): String =
+        bytes.take(count).joinToString(" ") { "%02X".format(it) }
+
+    /** 微信私有图片容器（魔数 wxgf），BitmapFactory 解不了。 */
+    private fun isWxgf(bytes: ByteArray): Boolean =
+        bytes.size >= 4 && bytes[0] == 'w'.code.toByte() && bytes[1] == 'x'.code.toByte() &&
+            bytes[2] == 'g'.code.toByte() && bytes[3] == 'f'.code.toByte()
 
     private fun detectMime(bytes: ByteArray): String? {
         if (bytes.size < 12) return null

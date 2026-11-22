@@ -409,7 +409,17 @@ object WeDatabaseApi : ApiFeature(), IResolveDex {
                 } while (cursor.moveToNext())
             }
         } catch (e: Exception) {
-            WeLogger.e(TAG, "sql query failed", e)
+            // AI 会写错列名（例如 userinfo 表只有 id/type/value 三列）；这类是调用方的语法问题，
+            // 打整屏堆栈只会把日志淹掉，这里只留一行可读原因 + SQL 片段，方便回给模型自我纠正。
+            val raw = e.message.orEmpty()
+            val column = Regex("no such column:\\s*(\\S+)").find(raw)?.groupValues?.get(1)
+            val table = Regex("no such table:\\s*(\\S+)").find(raw)?.groupValues?.get(1)
+            val hint = when {
+                column != null -> "列不存在：$column（先确认表结构再用这个列名）"
+                table != null -> "表不存在：$table"
+                else -> raw.substringBefore(", while compiling").ifBlank { e.javaClass.simpleName }
+            }
+            WeLogger.w(TAG, "sql query failed: $hint | sql=${statement.take(160)}")
         } finally {
             cursor?.close()
         }

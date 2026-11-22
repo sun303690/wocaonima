@@ -62,6 +62,9 @@ object MultimodalEngine {
      */
     private const val RETRY_COOLDOWN_MS = 10 * 60 * 1000L
 
+    /** 确定性失败（格式本身解不出来）的冷却时长：一天只重试一次就够，重试也不会变好。 */
+    private const val LONG_COOLDOWN_MS = 24 * 60 * 60 * 1000L
+
     /** 内存层缓存，避免每次都读盘。 */
     private val memory = LruCache<String, String>(maxLimit = 256)
 
@@ -85,6 +88,9 @@ object MultimodalEngine {
      * 因为重启往往意味着微信这边已经把图片/语音下载完了。上限 512 条，够覆盖一次会话。
      */
     private val failedAt = LruCache<String, Long>(maxLimit = 512)
+
+    /** 确定性失败的 key（如图片格式解不出来），冷却期内不再重试。 */
+    private val longFailedAt = LruCache<String, Long>(maxLimit = 256)
 
     /** 视觉接口是否配好了（不代表图片/表情开关打开了）。 */
     fun visionReady(): Boolean =
@@ -212,7 +218,7 @@ object MultimodalEngine {
                         TAG,
                         "识别为空 key=$key${if (reason.isNullOrBlank()) "" else " 原因=$reason"}"
                     )
-                    markRetryCooldown(key)
+                    if (isPermanentFailure(reason)) markRetryCooldownLong(key) else markRetryCooldown(key)
                 }
                 onDone?.invoke(text)
             } catch (e: Exception) {
@@ -378,6 +384,12 @@ object MultimodalEngine {
 
     /** 这条语音/图片是否还在失败冷却期内。 */
     private fun retryCoolingDown(key: String): Boolean {
+        val longAt = synchronized(longFailedAt) { longFailedAt[key] }
+        if (longAt != null) {
+            if (System.currentTimeMillis() - longAt < LONG_COOLDOWN_MS) return true
+            synchronized(longFailedAt) { longFailedAt.remove(key) }
+            return false
+        }
         val at = synchronized(failedAt) { failedAt[key] } ?: return false
         if (System.currentTimeMillis() - at < RETRY_COOLDOWN_MS) return true
         synchronized(failedAt) { failedAt.remove(key) }
@@ -387,6 +399,17 @@ object MultimodalEngine {
     /** 记一次失败，冷却期内不再重试（到点自动放行）。 */
     private fun markRetryCooldown(key: String) {
         synchronized(failedAt) { failedAt[key] = System.currentTimeMillis() }
+    }
+
+    /** 记录确定性失败：一天内不再重试（图片格式解不出来这类重试也不会有变化）。 */
+    private fun markRetryCooldownLong(key: String) {
+        synchronized(longFailedAt) { longFailedAt[key] = System.currentTimeMillis() }
+    }
+
+    /** 判断这条失败原因是不是确定性的（重试也不会好）。 */
+    private fun isPermanentFailure(reason: String?): Boolean {
+        val text = reason ?: return false
+        return text.contains("不支持的图片格式") || text.contains("wxgf")
     }
 
     /** 识别成功后清掉冷却标记，避免残留条目挤掉别的 key。 */
@@ -399,6 +422,7 @@ object MultimodalEngine {
         memory.clear()
         failedStickers.clear()
         synchronized(failedAt) { failedAt.clear() }
+        synchronized(longFailedAt) { longFailedAt.clear() }
         runCatching { cacheDir().deleteRecursively() }
     }
 }
