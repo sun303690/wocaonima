@@ -759,75 +759,113 @@ object TextToSpeech :
      * AI 群聊、AI 代回这类「只需要换声音」的地方用它。
      */
     fun showVoicePicker(context: android.content.Context, onPicked: (String) -> Unit = {}) {
-        when (backend) {
-            BACKEND_BREEZE -> showBreezeVoicePicker(context, breezeVoice, breezeKey) { id, name ->
-                breezeVoice = id
-                breezeVoiceName = name
-                onPicked(voiceSummary())
-            }
-            BACKEND_DOUBAO -> showDoubaoVoicePicker(context, doubaoSpeaker, doubaoCookie) { id, name ->
-                doubaoSpeaker = id
-                doubaoSpeakerName = name
-                onPicked(voiceSummary())
-            }
-            BACKEND_TIAX -> showTiaxVoicePicker(context, tiaxVoice, tiaxBaseUrl) { value, _ ->
-                tiaxVoice = value
-                onPicked(voiceSummary())
-            }
-            // TextFieldDialogWidget 是 @Composable，这个函数不是，所以自己搭一个同样的输入弹窗
-            BACKEND_SILICON -> showComposeDialog(context) {
-                var text by remember { mutableStateOf(siliconVoice) }
-                AlertDialogContent(
-                    title = { Text("硅基流动音色") },
-                    text = {
-                        Column {
-                            Text("填音色 ID，例如 FunAudioLLM/CosyVoice2-0.5B:alex")
-                            Spacer(Modifier.height(8.dp))
-                            OutlinedTextField(
-                                value = text,
-                                onValueChange = { text = it },
-                                modifier = Modifier.fillMaxWidth(),
-                                singleLine = true,
-                                label = { Text("音色 ID") },
-                            )
-                        }
-                    },
-                    confirmButton = {
-                        TextButton({
-                            siliconVoice = text.trim()
-                            onPicked(voiceSummary())
-                            onDismiss()
-                        }) { Text("确定") }
-                    },
-                    dismissButton = {
-                        TextButton(onDismiss) { Text(stringResource(R.string.dialog_close)) }
-                    },
-                )
-            }
-            else -> showComposeDialog(context) {
-                AlertDialogContent(
-                    title = { Text("配音魔方音色") },
-                    text = {
-                        SegmentedColumn(title = "选择音色") {
-                            DEFAULT_VOICES.forEach { voice ->
-                                item {
-                                    BaseWidget(
-                                        title = voice.label,
-                                        description = voice.voiceId,
-                                        onClick = {
-                                            selectedVoice = voice.voiceId
-                                            onPicked(voiceSummary())
-                                        },
-                                    )
+        // 两级入口：先选后端，再选音色。只按当前 backend 分派时，用户在豆包就永远进不去别家的音色。
+        fun voiceLabelOf(id: Int): String = when (id) {
+            BACKEND_DOUBAO -> doubaoSpeakerName.ifBlank { DoubaoSamanthaTts.voiceLabel(doubaoSpeaker) }
+            BACKEND_BREEZE -> breezeVoiceName.ifBlank { breezeVoice }
+            BACKEND_SILICON -> siliconVoice
+            BACKEND_TIAX -> tiaxVoiceLabel(tiaxVoice)
+            else -> DEFAULT_VOICES.firstOrNull { it.voiceId == selectedVoice }?.label ?: selectedVoice
+        }
+
+        fun pickVoiceOf(id: Int) {
+            when (id) {
+                BACKEND_BREEZE -> showBreezeVoicePicker(context, breezeVoice, breezeKey) { picked, name ->
+                    breezeVoice = picked
+                    breezeVoiceName = name
+                    onPicked(voiceSummary())
+                }
+                BACKEND_DOUBAO -> showDoubaoVoicePicker(context, doubaoSpeaker, doubaoCookie) { picked, name ->
+                    doubaoSpeaker = picked
+                    doubaoSpeakerName = name
+                    onPicked(voiceSummary())
+                }
+                BACKEND_TIAX -> showTiaxVoicePicker(context, tiaxVoice, tiaxBaseUrl) { value, _ ->
+                    tiaxVoice = value
+                    onPicked(voiceSummary())
+                }
+                // TextFieldDialogWidget 是 @Composable，这个函数不是，所以自己搭一个同样的输入弹窗
+                BACKEND_SILICON -> showComposeDialog(context) {
+                    var text by remember { mutableStateOf(siliconVoice) }
+                    AlertDialogContent(
+                        title = { Text("硅基流动音色") },
+                        text = {
+                            Column {
+                                Text("填音色 ID，例如 FunAudioLLM/CosyVoice2-0.5B:alex")
+                                Spacer(Modifier.height(8.dp))
+                                OutlinedTextField(
+                                    value = text,
+                                    onValueChange = { text = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true,
+                                    label = { Text("音色 ID") },
+                                )
+                            }
+                        },
+                        confirmButton = {
+                            TextButton({
+                                siliconVoice = text.trim()
+                                onPicked(voiceSummary())
+                                onDismiss()
+                            }) { Text("确定") }
+                        },
+                        dismissButton = {
+                            TextButton(onDismiss) { Text(stringResource(R.string.dialog_close)) }
+                        },
+                    )
+                }
+                else -> showComposeDialog(context) {
+                    AlertDialogContent(
+                        title = { Text("配音魔方音色") },
+                        text = {
+                            SegmentedColumn(title = "选择音色") {
+                                DEFAULT_VOICES.forEach { voice ->
+                                    item {
+                                        BaseWidget(
+                                            title = voice.label,
+                                            description = voice.voiceId,
+                                            onClick = {
+                                                selectedVoice = voice.voiceId
+                                                onPicked(voiceSummary())
+                                            },
+                                        )
+                                    }
                                 }
                             }
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onDismiss) { Text(stringResource(R.string.dialog_close)) }
-                    },
-                )
+                        },
+                        dismissButton = {
+                            TextButton(onDismiss) { Text(stringResource(R.string.dialog_close)) }
+                        },
+                    )
+                }
             }
+        }
+
+        showComposeDialog(context) {
+            AlertDialogContent(
+                title = { Text("选择语音") },
+                text = {
+                    SegmentedColumn(title = "先选后端，再选音色") {
+                        BACKEND_LABELS.forEach { (id, label) ->
+                            item {
+                                BaseWidget(
+                                    title = if (id == backend) "$label（当前）" else label,
+                                    description = voiceLabelOf(id).ifBlank { "还没选音色" },
+                                    onClick = {
+                                        backend = id
+                                        onDismiss()
+                                        // 等这个弹窗真正关掉再开音色列表，避免两个 Dialog 抢窗口
+                                        mh.postDelayed({ pickVoiceOf(id) }, 150L)
+                                    },
+                                )
+                            }
+                        }
+                    }
+                },
+                dismissButton = {
+                    TextButton(onDismiss) { Text(stringResource(R.string.dialog_close)) }
+                },
+            )
         }
     }
 
